@@ -259,8 +259,8 @@ local function timecardFace(props: Props): { [string]: React.ReactNode }
 				textSize = 20,
 				align = "center",
 				anchor = Vector2.new(0.5, 0),
-				position = UDim2.fromOffset(center.X, center.Y + VM.SLOT / 2 + 64),
-				size = UDim2.fromOffset(140, 24),
+				position = UDim2.fromOffset(center.X, center.Y + VM.SLOT / 2 + 62),
+				size = UDim2.fromOffset(176, 30),
 				fit = true,
 				zIndex = 3,
 			})
@@ -375,8 +375,8 @@ local function workOrderFace(props: Props): { [string]: React.ReactNode }
 			hue = "night",
 			small = true,
 			radius = 22,
-			position = UDim2.fromOffset(340, 202),
-			size = UDim2.fromOffset(280, 44),
+			position = UDim2.fromOffset(280, 202),
+			size = UDim2.fromOffset(340, 44),
 			children = nodes({
 				clock = e(ToonIcon, {
 					icon = "clock",
@@ -389,7 +389,7 @@ local function workOrderFace(props: Props): { [string]: React.ReactNode }
 					text = VM.newJob(props.now or 0),
 					textSize = 22,
 					position = UDim2.fromOffset(52, 7),
-					size = UDim2.fromOffset(216, 30),
+					size = UDim2.fromOffset(276, 30),
 					fit = true,
 					zIndex = 4,
 				}),
@@ -411,7 +411,8 @@ local function workOrderFace(props: Props): { [string]: React.ReactNode }
 			text = "PAID",
 			hue = "mint",
 			textSize = 26,
-			position = UDim2.fromOffset(238, 204),
+			-- Stamped over the full bar's end.
+			position = UDim2.fromOffset(516, 130),
 			size = UDim2.fromOffset(96, 40),
 		})
 	end
@@ -478,7 +479,7 @@ local function Panel(props: Props): React.ReactNode
 					zIndex = 6,
 				}),
 				tabs = e("Frame", {
-					Size = UDim2.fromOffset(500, 56),
+					Size = UDim2.fromOffset(560, 56),
 					Position = UDim2.fromOffset(22, 26),
 					BackgroundTransparency = 1,
 					ZIndex = 5,
@@ -491,22 +492,22 @@ local function Panel(props: Props): React.ReactNode
 					timecard = e(ToonButton, {
 						text = "TIMECARD",
 						icon = "clock",
-						textSize = 26,
+						textSize = 24,
 						variant = "sky",
 						selected = not job,
 						receded = job,
-						size = UDim2.fromOffset(230, 56),
+						size = UDim2.fromOffset(240, 56),
 						layoutOrder = 1,
 						onActivated = props.onTimecard or props.onToggle,
 					}),
 					daily = e(ToonButton, {
 						text = "TODAY'S JOB",
 						icon = "jobs",
-						textSize = 26,
+						textSize = 24,
 						variant = "primary",
 						selected = job,
 						receded = not job,
-						size = UDim2.fromOffset(250, 56),
+						size = UDim2.fromOffset(290, 56),
 						layoutOrder = 2,
 						onActivated = props.onWorkOrder or props.onToggle,
 					}),
