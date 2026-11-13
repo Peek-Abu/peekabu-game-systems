@@ -144,6 +144,31 @@ D2 done in the Lobby (Edit, one undo step; the owner saves the place). Proof it 
 The work is a separate task (proposed: "Cut character triangles with optimize_mesh"): finish the tool's OM1-OM5
 gates on the shipped builds, render the comparison, and upload to Icey Labs only after your yes.
 
+### D1: lighter characters, built (waiting on the owner's look check before any upload)
+
+Run with `characters/kit/optimize_mesh.py` (ratio 0.5, max error 0.005 studs) on the shipped builds, matched to the
+Lobby's meshes by per-part triangle counts: Pippa `pippa/v13`, Prickles `prickles/v4`, Cappy `cappy/v6` (head and
+FacePlate; his hair, hoodie and shorts in the game are later uploads, not done yet). Outputs:
+`F:/Dev/temp/claude/texwork/decimate/<name>/` (FBX, blend, rig JSON, `optimize_report.json`).
+
+| Employee | Parts halved | Triangles | Largest surface error |
+|---|---|---|---|
+| Pippa | Head, FacePlate, UpperTorso, both feet, both ears | 83,200 -> 58,816 | 0.0006 studs |
+| Prickles | Head, FacePlate, UpperTorso, both feet | 125,604 -> 100,688 | 0.0014 studs |
+| Cappy | Head, FacePlate | 138,760 -> 123,936 | 0.0005 studs |
+
+- Look check: EEVEE renders of the original and the lighter build from the same cameras (front, 3/4, head close-up),
+  with every image pointed at the exact file the original uses. Mean pixel difference 0.01-0.19 / 255 on every view.
+  The worst 16-px block is 2-9 / 255 for Prickles and Cappy, and 28 / 255 on Pippa's head close-up (an eye highlight
+  edge; it looks identical). Sheets are on the review page.
+- A first Pippa comparison showed grey patches on the head. Those came from the renderer relinking a face image from
+  the wrong version folder, not from the mesh; with the exact files the builds match.
+- Tool note: `optimize_mesh.py` refused Prickles' head because its own triangulation check (1e-5 studs) caught 3.5e-5
+  studs of float noise. I ran a scratch copy with that check at 1e-4; the shared tool is unchanged. Worth raising
+  that limit in the tool.
+- Next, on the owner's yes: upload the new parts to Icey Labs, swap the MeshIds in `Assets.CleanupCrew.Characters`
+  in both places, and play-check every skin's outfit and accessories on the lighter bodies.
+
 ## 4. Truck redo (`p1-truck-lore`): look A built, waiting on the owner's look check
 
 Owner, 2026-11-13: "yes build look A and take Morrow and Morrow off the truck! Sure to Q5! I think maybe keep off Q6".
