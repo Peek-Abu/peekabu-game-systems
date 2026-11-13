@@ -1,0 +1,835 @@
+{
+ "deck": 3.0,
+ "bed": [
+  16.0,
+  3.0,
+  24.0
+ ],
+ "ceiling": 10.0,
+ "rampLength": 4.0,
+ "slots": {
+  "cab": {
+   "colour": "#1F6E66",
+   "material": "SmoothPlastic"
+  },
+  "box": {
+   "colour": "#FFF7E8",
+   "material": "SmoothPlastic"
+  },
+  "band": {
+   "colour": "#7B3FF2",
+   "material": "SmoothPlastic"
+  },
+  "trim": {
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic"
+  },
+  "metal": {
+   "colour": "#FFC93A",
+   "material": "SmoothPlastic"
+  }
+ },
+ "pieces": {
+  "BoxShell": {
+   "centre": [
+    -0.0,
+    4.885,
+    0.3
+   ],
+   "size": [
+    17.0,
+    10.37,
+    24.4
+   ],
+   "slot": "box",
+   "colour": "#FFF7E8",
+   "material": "SmoothPlastic",
+   "triangles": 436
+  },
+  "BoxRoof": {
+   "centre": [
+    -0.0,
+    10.845,
+    0.15
+   ],
+   "size": [
+    17.0,
+    1.6,
+    24.7
+   ],
+   "slot": "box",
+   "colour": "#FFF7E8",
+   "material": "SmoothPlastic",
+   "triangles": 504
+  },
+  "BoxBand": {
+   "centre": [
+    -0.0,
+    4.8995,
+    0.15
+   ],
+   "size": [
+    17.14,
+    3.5972,
+    23.8
+   ],
+   "slot": "band",
+   "colour": "#7B3FF2",
+   "material": "SmoothPlastic",
+   "triangles": 2472
+  },
+  "PortholeRims": {
+   "centre": [
+    -0.0,
+    8.45,
+    0.0
+   ],
+   "size": [
+    17.2,
+    1.6,
+    19.6
+   ],
+   "slot": "metal",
+   "colour": "#FFC93A",
+   "material": "SmoothPlastic",
+   "triangles": 3800
+  },
+  "PortholeGlass": {
+   "centre": [
+    -0.0,
+    8.45,
+    0.0
+   ],
+   "size": [
+    17.4728,
+    1.24,
+    19.24
+   ],
+   "slot": "fixed",
+   "colour": "#FFD27A",
+   "material": "Neon",
+   "triangles": 5040
+  },
+  "BoxCorners": {
+   "centre": [
+    -0.0,
+    -0.05,
+    12.35
+   ],
+   "size": [
+    17.5,
+    1.0,
+    1.0
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 328
+  },
+  "BoxRail": {
+   "centre": [
+    -0.0,
+    -0.225,
+    0.125
+   ],
+   "size": [
+    17.5,
+    0.75,
+    23.65
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 216
+  },
+  "ScannerArch": {
+   "centre": [
+    -0.0,
+    5.41,
+    -12.355
+   ],
+   "size": [
+    18.6,
+    12.72,
+    1.61
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 1420
+  },
+  "ScannerLight": {
+   "centre": [
+    -0.0,
+    6.395,
+    -13.025
+   ],
+   "size": [
+    17.56,
+    9.59,
+    0.21
+   ],
+   "slot": "fixed",
+   "colour": "#24704C",
+   "material": "Neon",
+   "triangles": 996
+  },
+  "RollDrum": {
+   "centre": [
+    -0.0,
+    9.57,
+    -11.45
+   ],
+   "size": [
+    16.0,
+    1.0,
+    0.9
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 548
+  },
+  "RollDoor": {
+   "centre": [
+    -0.0,
+    9.0,
+    -11.61
+   ],
+   "size": [
+    15.5,
+    0.38,
+    0.18
+   ],
+   "slot": "box",
+   "colour": "#FFF7E8",
+   "material": "SmoothPlastic",
+   "triangles": 216
+  },
+  "BoxLining": {
+   "centre": [
+    -0.0,
+    5.03,
+    0.025
+   ],
+   "size": [
+    15.98,
+    10.06,
+    23.95
+   ],
+   "slot": "fixed",
+   "colour": "#F4E7C6",
+   "material": "SmoothPlastic",
+   "triangles": 48
+  },
+  "BoxFloor": {
+   "centre": [
+    -0.0,
+    0.03,
+    0.0
+   ],
+   "size": [
+    15.9,
+    0.06,
+    23.9
+   ],
+   "slot": "fixed",
+   "colour": "#D9C391",
+   "material": "SmoothPlastic",
+   "triangles": 12
+  },
+  "FloorSeams": {
+   "centre": [
+    -0.0,
+    0.065,
+    0.0
+   ],
+   "size": [
+    15.8,
+    0.01,
+    23.8
+   ],
+   "slot": "fixed",
+   "colour": "#C4AC78",
+   "material": "SmoothPlastic",
+   "triangles": 216
+  },
+  "InteriorTrim": {
+   "centre": [
+    -0.0,
+    5.03,
+    0.02
+   ],
+   "size": [
+    15.86,
+    9.94,
+    23.84
+   ],
+   "slot": "fixed",
+   "colour": "#E2D0A2",
+   "material": "SmoothPlastic",
+   "triangles": 756
+  },
+  "CeilingLamp": {
+   "centre": [
+    -0.0,
+    9.955,
+    -0.5
+   ],
+   "size": [
+    3.2,
+    0.09,
+    13.0
+   ],
+   "slot": "fixed",
+   "colour": "#FFF4D6",
+   "material": "Neon",
+   "triangles": 664
+  },
+  "CabBody": {
+   "centre": [
+    -0.0,
+    4.2,
+    16.1324
+   ],
+   "size": [
+    12.48,
+    9.36,
+    7.0649
+   ],
+   "slot": "cab",
+   "colour": "#1F6E66",
+   "material": "SmoothPlastic",
+   "triangles": 2460
+  },
+  "CabRoofPod": {
+   "centre": [
+    -0.0,
+    8.94,
+    15.0
+   ],
+   "size": [
+    1.7,
+    0.3,
+    1.7
+   ],
+   "slot": "cab",
+   "colour": "#1F6E66",
+   "material": "SmoothPlastic",
+   "triangles": 332
+  },
+  "RoofBeacon": {
+   "centre": [
+    -0.0,
+    9.5875,
+    15.0
+   ],
+   "size": [
+    1.16,
+    1.035,
+    1.16
+   ],
+   "slot": "fixed",
+   "colour": "#7DF2D0",
+   "material": "Neon",
+   "triangles": 716
+  },
+  "CabWindows": {
+   "centre": [
+    -0.0,
+    6.1329,
+    16.8978
+   ],
+   "size": [
+    12.576,
+    3.0181,
+    5.2356
+   ],
+   "slot": "fixed",
+   "colour": "#3E5E66",
+   "material": "Glass",
+   "triangles": 1328
+  },
+  "CabPillar": {
+   "centre": [
+    -0.0,
+    6.1329,
+    19.1045
+   ],
+   "size": [
+    0.6,
+    3.3648,
+    1.0483
+   ],
+   "slot": "cab",
+   "colour": "#1F6E66",
+   "material": "SmoothPlastic",
+   "triangles": 108
+  },
+  "Wipers": {
+   "centre": [
+    -0.12,
+    4.6689,
+    19.1645
+   ],
+   "size": [
+    7.619,
+    0.7435,
+    0.12
+   ],
+   "slot": "fixed",
+   "colour": "#34343A",
+   "material": "SmoothPlastic",
+   "triangles": 216
+  },
+  "MirrorArms": {
+   "centre": [
+    -0.0,
+    5.9579,
+    17.4
+   ],
+   "size": [
+    15.3483,
+    1.2241,
+    0.24
+   ],
+   "slot": "cab",
+   "colour": "#1F6E66",
+   "material": "SmoothPlastic",
+   "triangles": 144
+  },
+  "MirrorHeads": {
+   "centre": [
+    -0.0,
+    6.9,
+    17.4
+   ],
+   "size": [
+    16.44,
+    1.32,
+    0.36
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 664
+  },
+  "Handles": {
+   "centre": [
+    -0.0,
+    4.032,
+    13.74
+   ],
+   "size": [
+    12.72,
+    0.264,
+    0.96
+   ],
+   "slot": "metal",
+   "colour": "#FFC93A",
+   "material": "SmoothPlastic",
+   "triangles": 216
+  },
+  "LampBezels": {
+   "centre": [
+    -0.0,
+    2.4,
+    19.704
+   ],
+   "size": [
+    11.928,
+    2.928,
+    0.384
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 760
+  },
+  "Headlights": {
+   "centre": [
+    -0.0,
+    2.4,
+    19.896
+   ],
+   "size": [
+    11.352,
+    2.352,
+    0.7056
+   ],
+   "slot": "fixed",
+   "colour": "#FFF1C8",
+   "material": "Neon",
+   "triangles": 1008
+  },
+  "Grille": {
+   "centre": [
+    -0.0,
+    1.68,
+    19.836
+   ],
+   "size": [
+    4.68,
+    3.48,
+    0.552
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 636
+  },
+  "GrilleBack": {
+   "centre": [
+    -0.0,
+    1.68,
+    19.884
+   ],
+   "size": [
+    3.96,
+    2.88,
+    0.048
+   ],
+   "slot": "fixed",
+   "colour": "#3A3A40",
+   "material": "SmoothPlastic",
+   "triangles": 108
+  },
+  "Bumpers": {
+   "centre": [
+    -0.0,
+    -1.08,
+    3.71
+   ],
+   "size": [
+    16.1,
+    1.32,
+    33.02
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 772
+  },
+  "MarkerLights": {
+   "centre": [
+    -0.0,
+    5.6656,
+    3.6038
+   ],
+   "size": [
+    18.52,
+    10.9088,
+    32.5076
+   ],
+   "slot": "fixed",
+   "colour": "#FFB43A",
+   "material": "Neon",
+   "triangles": 664
+  },
+  "TailLights": {
+   "centre": [
+    -0.0,
+    -1.1,
+    -12.82
+   ],
+   "size": [
+    15.4,
+    0.5,
+    0.08
+   ],
+   "slot": "fixed",
+   "colour": "#E5483B",
+   "material": "Neon",
+   "triangles": 664
+  },
+  "Tires": {
+   "centre": [
+    -0.0,
+    -1.5,
+    3.21
+   ],
+   "size": [
+    17.0,
+    3.0,
+    28.0335
+   ],
+   "slot": "fixed",
+   "colour": "#2B2A30",
+   "material": "SmoothPlastic",
+   "triangles": 6744
+  },
+  "Hubs": {
+   "centre": [
+    -0.0,
+    -1.5,
+    3.21
+   ],
+   "size": [
+    17.562,
+    2.04,
+    27.06
+   ],
+   "slot": "metal",
+   "colour": "#FFC93A",
+   "material": "SmoothPlastic",
+   "triangles": 3048
+  },
+  "Fenders": {
+   "centre": [
+    -0.0,
+    -0.375,
+    3.2342
+   ],
+   "size": [
+    17.9,
+    2.25,
+    29.4496
+   ],
+   "slot": "cab",
+   "colour": "#1F6E66",
+   "material": "SmoothPlastic",
+   "triangles": 3384
+  },
+  "Chassis": {
+   "centre": [
+    -0.0,
+    -0.5231,
+    3.33
+   ],
+   "size": [
+    16.2,
+    2.4863,
+    31.26
+   ],
+   "slot": "fixed",
+   "colour": "#34343A",
+   "material": "SmoothPlastic",
+   "triangles": 552
+  },
+  "SideBoxes": {
+   "centre": [
+    -0.0,
+    -1.375,
+    3.4
+   ],
+   "size": [
+    16.3,
+    1.35,
+    12.0
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 376
+  },
+  "Ramp": {
+   "centre": [
+    -0.0,
+    -1.62,
+    -13.91
+   ],
+   "size": [
+    9.4,
+    3.1744,
+    4.1144
+   ],
+   "slot": "fixed",
+   "colour": "#A39AA5",
+   "material": "SmoothPlastic",
+   "triangles": 864
+  },
+  "RampRails": {
+   "centre": [
+    -0.0,
+    -1.436,
+    -13.9534
+   ],
+   "size": [
+    10.2,
+    3.2996,
+    4.4068
+   ],
+   "slot": "trim",
+   "colour": "#B9AFA6",
+   "material": "SmoothPlastic",
+   "triangles": 648
+  }
+ },
+ "attachments": {
+  "Socket_Roof": {
+   "parent": "CabRoofPod",
+   "position": [
+    0.0,
+    9.09,
+    15.0
+   ],
+   "look": [
+    0,
+    0,
+    1
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  "Socket_Front": {
+   "parent": "Bumpers",
+   "position": [
+    0.0,
+    -1.08,
+    20.22
+   ],
+   "look": [
+    0,
+    0,
+    1
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  "Socket_SideL": {
+   "parent": "BoxBand",
+   "position": [
+    -8.56,
+    4.8995,
+    0.15
+   ],
+   "look": [
+    -1,
+    0,
+    0
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  "Socket_SideR": {
+   "parent": "BoxBand",
+   "position": [
+    8.56,
+    4.8995,
+    0.15
+   ],
+   "look": [
+    1,
+    0,
+    0
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  "Socket_Mirror": {
+   "parent": "MirrorHeads",
+   "position": [
+    -7.56,
+    6.24,
+    17.4
+   ],
+   "look": [
+    0,
+    0,
+    1
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  "Socket_Horn": {
+   "parent": "Bumpers",
+   "position": [
+    0.0,
+    -0.12,
+    19.92
+   ],
+   "look": [
+    0,
+    0,
+    1
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  "Interior_Ceiling": {
+   "parent": "BoxLining",
+   "position": [
+    0,
+    10.0,
+    0
+   ],
+   "look": [
+    0,
+    -1,
+    0
+   ],
+   "up": [
+    0,
+    0,
+    1
+   ]
+  },
+  "Interior_WallL": {
+   "parent": "BoxLining",
+   "position": [
+    -7.93,
+    6.0,
+    0
+   ],
+   "look": [
+    1,
+    0,
+    0
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  },
+  "Interior_WallR": {
+   "parent": "BoxLining",
+   "position": [
+    7.93,
+    6.0,
+    0
+   ],
+   "look": [
+    -1,
+    0,
+    0
+   ],
+   "up": [
+    0,
+    1,
+    0
+   ]
+  }
+ },
+ "triangles": 44084,
+ "loreSign": {
+  "piece": "BoxShell",
+  "face": "Right",
+  "position": [
+   0.7131,
+   0.6818
+  ],
+  "size": [
+   0.2459,
+   0.1736
+  ]
+ }
+}
