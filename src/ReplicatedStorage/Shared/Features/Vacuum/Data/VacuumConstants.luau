@@ -153,8 +153,11 @@ return table.freeze({
 		rows = 4,
 		clearance = 0.01,
 		maxDepth = 1,
-		-- The plate leans with the back's slope (a hood behind the shoulders) at most this far from upright.
-		maxTilt = math.rad(25),
+		-- The plate leans with the back's slope (a hood behind the shoulders) at most this far from upright. Measured
+		-- 2026-11-13 over every employee and skin: backs slope -12.6 to +11 degrees, except Cappy's hood (23); at 25
+		-- his pack lay along the hood and read as tipping over. 12 keeps every other back as fitted and stands Cappy's
+		-- pack up, about 0.14 studs off his lower back.
+		maxTilt = math.rad(12),
 	}),
 	-- On a player's character: the VacuumSkinRegistry skin their outfit wants (Employee writes it from the Cosmetic
 	-- loadout, Vacuum wears it and swaps the pack when it changes; nil = Standard Issue).
