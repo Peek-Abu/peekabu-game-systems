@@ -6,7 +6,8 @@
 	stamp, which turns to ARRIVED once this client is ready. The card's picture and the tip's portrait follow the run's
 	map like its words: the map's photo (the Office's officeWide; the School's own slot, and while that is empty the
 	School map card's icon instead) and its monster's portrait (OccupantPortraitAssets). `advance` moves the loading bar
-	toward the client's readiness. Pure.
+	toward the client's readiness. `welcome` is a first join's welcome card in the hub (the game's name, a line, a tip
+	and the bar's words). Pure.
 
 	@class ShiftTransitViewModel
 ]=]
@@ -44,6 +45,15 @@ export type SlipView = {
 	photo: string?,
 	photoIcon: UIAssets.ToonIcon,
 	portrait: UIAssets.ToonIcon,
+}
+
+-- A first join's welcome card (kid reading level).
+export type WelcomeView = {
+	title: string,
+	line: string,
+	tip: string,
+	bar: string,
+	arrived: boolean,
 }
 
 -- Each map's trip-card photo (UIAssets.toonPhotos; "" = not uploaded yet) and the icon its map card wears
@@ -102,6 +112,16 @@ function ShiftTransitViewModel.advance(shown: number, target: number, arrived: b
 		nextValue = shown + (goal - shown) * (1 - math.exp(-rate * dt))
 	end
 	return math.clamp(math.max(shown, nextValue), 0, 1)
+end
+
+function ShiftTransitViewModel.welcome(arrived: boolean): WelcomeView
+	return {
+		title = "ODD HOURS",
+		line = "Your crew is getting ready for work.",
+		tip = "Clean up the mess. Hide from the monsters!",
+		bar = if arrived then "ALL SET!" else "GETTING READY...",
+		arrived = arrived,
+	}
 end
 
 function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arrived: boolean): SlipView

@@ -203,7 +203,8 @@ export type TransitSnapshot = {
 }
 
 -- What this client's transit screen shows: nothing, plain black (the client booting, a respawn) or the route slip.
-export type TransitCover = "none" | "black" | "slip"
+-- "welcome": a first join to the hub, while the art loads (ShiftTransitRules.welcoming).
+export type TransitCover = "none" | "black" | "slip" | "welcome"
 
 -- Whether a held client may reveal: ready, still waiting (for `reason`), or out of time (reveal anyway).
 export type TransitVerdict = "ready" | "waiting" | "timeout"

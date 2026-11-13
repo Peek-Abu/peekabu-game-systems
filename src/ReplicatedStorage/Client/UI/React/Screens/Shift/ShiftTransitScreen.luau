@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftTransitScreen: the transit screen's root, mounted on the Overlay layer by ShiftServiceClient (above the HUD and
-	every panel). Draws ShiftTransitPanel from ShiftTransitStore (the cover, the ARRIVED stamp, the loading bar's progress, the slip's lines through
+	every panel). Draws ShiftTransitPanel from ShiftTransitStore (the cover, the welcome card on a first join to the hub, the ARRIVED stamp, the loading bar's progress, the slip's lines through
 	ShiftTransitViewModel) at the screen's scale (ShiftTransitViewModel.fit).
 
 	@class ShiftTransitScreen
@@ -19,14 +19,16 @@ local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local function ShiftTransitScreen(): React.ReactNode
 	local covered = ReactCharm.useAtom(ShiftTransitStore.covered)
 	local slip = ReactCharm.useAtom(ShiftTransitStore.slip)
+	local welcome = ReactCharm.useAtom(ShiftTransitStore.welcome)
 	local arrived = ReactCharm.useAtom(ShiftTransitStore.arrived)
 	local snapshot = ReactCharm.useAtom(ShiftTransitStore.snapshot)
 	local progress = ReactCharm.useAtom(ShiftTransitStore.progress)
 	local fadeSeconds = ReactCharm.useAtom(ShiftTransitStore.fadeSeconds)
 	local viewport = usePaperViewport()
 	local props: ShiftTransitPanel.ShiftTransitPanelProps = {
-		cover = ShiftTransitStore.coverOf(covered, slip),
+		cover = ShiftTransitStore.coverOf(covered, slip, welcome),
 		view = if covered and slip then ShiftTransitViewModel.slip(snapshot, arrived) else nil,
+		welcome = if covered and welcome and not slip then ShiftTransitViewModel.welcome(arrived) else nil,
 		scale = ShiftTransitViewModel.fit(viewport),
 		progress = progress,
 		fadeSeconds = fadeSeconds,

@@ -8,7 +8,11 @@
 	a coloured plate), the truck's number on a sticker), the map's monster's tip and portrait on a
 	dark plate with Gloom pooled along its floor, the company truck render driving in on speed lines, and the grape
 	loading bar: a real progress bar that follows this client's readiness (`progress`) and never goes back, easing to
-	full with DOORS OPEN! once this client is ready, then the cover fades. A fading-out cover keeps its last lines. Presentational: the words are ShiftTransitViewModel.slip.
+	full with DOORS OPEN! once this client is ready, then the cover fades. With cover "welcome" (a first join to the hub,
+	while the art loads) it carries the welcome card on the same canvas: the game's name and a line on the cream card,
+	Pippa saluting beside it, a tip on the dark goo plate and the same loading bar (it follows the preload, then ALL
+	SET!). A fading-out cover keeps its last lines. Presentational: the words are ShiftTransitViewModel.slip and
+	ShiftTransitViewModel.welcome.
 
 	@class ShiftTransitPanel
 ]=]
@@ -36,6 +40,8 @@ local e = React.createElement
 export type ShiftTransitPanelProps = {
 	cover: ShiftTypes.TransitCover,
 	view: ShiftTransitViewModel.SlipView?,
+	-- The welcome card's words, with cover "welcome".
+	welcome: ShiftTransitViewModel.WelcomeView?,
 	-- ShiftTransitViewModel.fit of this screen.
 	scale: number,
 	-- How far this client is toward its reveal (ShiftTransitStore.progress): the loading bar's target.
@@ -166,14 +172,13 @@ end
 
 -- The grape loading bar: it follows the client's readiness (`progress`, ShiftTransitRules.progress) and never goes
 -- back (ShiftTransitViewModel.advance moves it every frame), and eases to full once this client has arrived.
-local function LoadBar(props: { view: ShiftTransitViewModel.SlipView, progress: number }): React.ReactNode
-	local view = props.view
+local function LoadBar(props: { label: string, arrived: boolean, progress: number }): React.ReactNode
 	local fill, setFill = React.useBinding(0)
 	-- The latest target and arrival, read by the frame loop without re-subscribing it.
 	local target = React.useRef(props.progress)
-	local arrived = React.useRef(view.arrived)
+	local arrived = React.useRef(props.arrived)
 	target.current = props.progress
-	arrived.current = view.arrived
+	arrived.current = props.arrived
 	React.useEffect(function(): () -> ()
 		local connection = RunService.RenderStepped:Connect(function(deltaTime: number)
 			local shown = fill:getValue()
@@ -189,7 +194,7 @@ local function LoadBar(props: { view: ShiftTransitViewModel.SlipView, progress: 
 	return e(ToonBar, {
 		kind = "load",
 		fill = fill,
-		label = view.bar,
+		label = props.label,
 		labelSize = 30,
 		position = UDim2.fromOffset(40, 660),
 		size = UDim2.fromOffset(CANVAS.X - 80, 50),
@@ -207,7 +212,7 @@ local function trip(view: ShiftTransitViewModel.SlipView, progress: number): Rea
 			drop = 10,
 			zIndex = 2,
 		}),
-		bar = e(LoadBar, { view = view, progress = progress }),
+		bar = e(LoadBar, { label = view.bar, arrived = view.arrived, progress = progress }),
 	}
 	-- Speed lines behind the truck.
 	for index = 1, 5 do
@@ -223,6 +228,64 @@ local function trip(view: ShiftTransitViewModel.SlipView, progress: number): Rea
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, nodes)
 end
 
+-- A first join's welcome card: the game's name and a line on the cream card, Pippa saluting, a tip, the bar.
+local function greeting(view: ShiftTransitViewModel.WelcomeView, progress: number): React.ReactNode
+	local face: Nodes = {
+		title = e(ToonText, {
+			text = view.title,
+			textSize = 120,
+			position = UDim2.fromOffset(36, 40),
+			size = UDim2.fromOffset(688, 132),
+			fit = true,
+		}),
+		line = e(ToonText, {
+			text = view.line,
+			font = "body",
+			textSize = 32,
+			position = UDim2.fromOffset(40, 196),
+			size = UDim2.fromOffset(680, 64),
+			wrapped = true,
+			fit = true,
+		}),
+	}
+	local tipFace: Nodes = {
+		line = e(ToonText, {
+			text = view.tip,
+			font = "body",
+			color = COLOR.white,
+			textSize = 30,
+			position = UDim2.fromOffset(32, 22),
+			size = UDim2.fromOffset(696, 60),
+			wrapped = true,
+			fit = true,
+		}),
+	}
+	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
+		card = e(ToonPanel, {
+			size = Vector2.new(760, 300),
+			position = UDim2.fromOffset(80, 130),
+			pop = true,
+			children = face,
+		}),
+		tip = e(ToonPanel, {
+			hue = "night",
+			size = Vector2.new(760, 110),
+			position = UDim2.fromOffset(80, 480),
+			gloss = false,
+			goo = { kind = "pool", from = 160, to = 700, scale = 0.45 },
+			children = tipFace,
+		}),
+		pippa = e(ToonIcon, {
+			image = UIAssets.toonPhotos.pippaSaluteCut,
+			position = UDim2.fromOffset(900, 10),
+			size = UDim2.fromOffset(520, 620),
+			drop = 10,
+			zIndex = 2,
+		}),
+		bar = e(LoadBar, { label = view.bar, arrived = view.arrived, progress = progress }),
+	})
+end
+
 local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 	local covered = props.cover ~= "none"
 	-- The cover's GroupTransparency: 0 opaque, 1 gone.
@@ -231,11 +294,15 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 	-- The last kind and lines covered, kept through the fade out.
 	local lastKind = React.useRef(props.cover)
 	local lastView = React.useRef(props.view)
+	local lastWelcome = React.useRef(props.welcome)
 	if covered then
 		lastKind.current = props.cover
 	end
 	if props.view ~= nil then
 		lastView.current = props.view
+	end
+	if props.welcome ~= nil then
+		lastWelcome.current = props.welcome
 	end
 
 	React.useEffect(function(): () -> ()
@@ -289,6 +356,8 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 	end
 	local view = lastView.current
 	local withSlip = lastKind.current == "slip" and view ~= nil
+	local welcome = lastWelcome.current
+	local withWelcome = lastKind.current == "welcome" and welcome ~= nil
 	return e(PaperScaleContext.Context.Provider, { value = scale }, {
 		cover = e("CanvasGroup", {
 			Size = UDim2.fromScale(1, 1),
@@ -308,6 +377,17 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 				}, {
 					scale = e("UIScale", { Scale = props.scale }),
 					trip = trip(view, props.progress),
+				})
+				else nil,
+			welcome = if withWelcome and welcome ~= nil
+				then e("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(CANVAS.X, CANVAS.Y),
+					BackgroundTransparency = 1,
+				}, {
+					scale = e("UIScale", { Scale = props.scale }),
+					greeting = greeting(welcome, props.progress),
 				})
 				else nil,
 		}),

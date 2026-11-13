@@ -15,6 +15,9 @@
 	  When ready, or out of
 	  time (logged with what it still waited for), it reports ready for that hold (ShiftEvents.TransitReady), stamps
 	  ARRIVED for TRANSIT_ARRIVED_SECONDS, then clears.
+	- a first join to the hub (the lobby place): the welcome card (ShiftTransitRules.welcoming) while the art preload
+	  runs (UIPreloadStore: its progress is the bar's) and until the first sync, at most TRANSIT_WELCOME_SECONDS, then
+	  ALL SET! for TRANSIT_ARRIVED_SECONDS. Once per client.
 	- booting: plain black until the first shift and transit sync, at most TRANSIT_BOOT_SECONDS.
 	- a respawn during a running shift (after a catch): a black blink of TRANSIT_BLINK_SECONDS, no slip.
 	- an office entrance's teleport (ShiftEvents.EntranceFade from OfficeEntranceSystem): black from the cover packet
@@ -35,6 +38,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftEvents = require(ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents)
@@ -44,6 +48,7 @@ local OfficeAtmosphereSystem = require(ReplicatedStorage.Client.Features.Office.
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local ShiftTransitRules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftTransitRules)
 local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
+local UIPreloadStore = require(ReplicatedStorage.Client.Features.UI.State.UIPreloadStore)
 
 local log = Logger.new("ShiftTransitSystem")
 
@@ -76,6 +81,12 @@ local entranceUntil: number? = nil
 -- The frame times since an entrance's uncover arrived, while its cover waits for the frames to settle (nil: none).
 local entranceFrames: { number }? = nil
 local bootUntil = 0
+-- When this client started (os.clock()), whether its first join's welcome card is over, and its ALL SET! beat's end.
+local startedAt = 0
+local welcomed = false
+local welcomeArrivedUntil: number? = nil
+-- The hub (the lobby): an unpublished place (PlaceId 0) plays both roles, as the server does.
+local hub = game.PlaceId == DepotConstants.HUB_PLACE_ID or game.PlaceId == 0
 local synced = false
 local waitingFor = ""
 local counters = { shown = 0, timeouts = 0 }
@@ -200,10 +211,31 @@ local function step()
 		settledLights = -1
 	end
 	local arriving = now < arrivedUntil
+	-- A first join's welcome card: up while the hub's art loads and the first sync comes, then ALL SET! briefly.
+	local welcoming = false
+	if not welcomed then
+		welcoming = ShiftTransitRules.welcoming({
+			hub = hub,
+			ready = UIPreloadStore.ready(),
+			synced = synced,
+			elapsed = now - startedAt,
+		})
+		if not welcoming then
+			welcomed = true
+			if hub then
+				welcomeArrivedUntil = now + ShiftConstants.TRANSIT_ARRIVED_SECONDS
+			end
+		end
+	end
+	local welcomeArriving = welcomeArrivedUntil ~= nil and now < welcomeArrivedUntil
+	local welcome = welcoming or welcomeArriving
+	if welcome and not pending then
+		progress = if welcomeArriving then 1 else UIPreloadStore.progress()
+	end
 	local booting = not synced and now < bootUntil
 	local blinking = blinkUntil ~= nil and now < blinkUntil
 	-- Any other cover fades at the transit's own pace.
-	if (pending or arriving or booting or blinking) and ShiftTransitStore.fadeSeconds() ~= nil then
+	if (pending or arriving or booting or blinking or welcome) and ShiftTransitStore.fadeSeconds() ~= nil then
 		ShiftTransitStore.fadeSeconds(nil)
 	end
 	local blackUntil = blinkUntil
@@ -212,6 +244,7 @@ local function step()
 	end
 	local cover = ShiftTransitRules.cover({
 		held = pending or arriving,
+		welcome = welcome,
 		booting = booting,
 		blinkUntil = blackUntil,
 		now = now,
@@ -224,8 +257,13 @@ local function step()
 	if ShiftTransitStore.slip() ~= slip then
 		ShiftTransitStore.slip(slip)
 	end
-	if ShiftTransitStore.arrived() ~= arriving then
-		ShiftTransitStore.arrived(arriving)
+	local isWelcome = cover == "welcome"
+	if ShiftTransitStore.welcome() ~= isWelcome then
+		ShiftTransitStore.welcome(isWelcome)
+	end
+	local stamped = arriving or (isWelcome and welcomeArriving)
+	if ShiftTransitStore.arrived() ~= stamped then
+		ShiftTransitStore.arrived(stamped)
 	end
 	if arriving then
 		progress = 1
@@ -281,6 +319,7 @@ function ShiftTransitSystem.start()
 		return
 	end
 	bootUntil = os.clock() + ShiftConstants.TRANSIT_BOOT_SECONDS
+	startedAt = os.clock()
 	local elapsed = CHECK_INTERVAL
 	local ticking = RunService.Heartbeat:Connect(function(deltaTime: number)
 		settledFrames += 1
@@ -310,6 +349,7 @@ function ShiftTransitSystem.stop()
 	table.clear(streaming)
 	ShiftTransitStore.covered(false)
 	ShiftTransitStore.slip(false)
+	ShiftTransitStore.welcome(false)
 	ShiftTransitStore.arrived(false)
 	ShiftTransitStore.progress(0)
 	ShiftTransitStore.fadeSeconds(nil)
@@ -319,7 +359,11 @@ end
 
 function ShiftTransitSystem.getState(): ShiftTransitState
 	return {
-		cover = ShiftTransitStore.coverOf(ShiftTransitStore.covered(), ShiftTransitStore.slip()),
+		cover = ShiftTransitStore.coverOf(
+			ShiftTransitStore.covered(),
+			ShiftTransitStore.slip(),
+			ShiftTransitStore.welcome()
+		),
 		readyFor = readyFor,
 		waitingFor = waitingFor,
 		shown = counters.shown,

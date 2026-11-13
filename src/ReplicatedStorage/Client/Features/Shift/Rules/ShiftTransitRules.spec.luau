@@ -44,9 +44,43 @@ return function()
 			)
 		end)
 
+		it("shows the welcome card on a first join to the hub, under a slip but over the boot's black", function()
+			expect(ShiftTransitRules.cover({ held = false, welcome = true, booting = true, now = 0 })).to.equal(
+				"welcome"
+			)
+			expect(ShiftTransitRules.cover({ held = true, welcome = true, booting = false, now = 0 })).to.equal("slip")
+		end)
+
 		it("shows nothing otherwise", function()
 			expect(ShiftTransitRules.cover({ held = false, booting = false, blinkUntil = 5, now = 5 })).to.equal("none")
 			expect(ShiftTransitRules.cover({ held = false, booting = false, now = 0 })).to.equal("none")
+		end)
+	end)
+
+	describe("welcoming", function()
+		local function welcome(extra)
+			local value = { hub = true, ready = false, synced = false, elapsed = 0 }
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("holds the welcome card in the hub until the art is in and the client has synced", function()
+			expect(ShiftTransitRules.welcoming(welcome())).to.equal(true)
+			expect(ShiftTransitRules.welcoming(welcome({ ready = true }))).to.equal(true)
+			expect(ShiftTransitRules.welcoming(welcome({ synced = true }))).to.equal(true)
+			expect(ShiftTransitRules.welcoming(welcome({ ready = true, synced = true }))).to.equal(false)
+		end)
+
+		it("never shows outside the hub", function()
+			expect(ShiftTransitRules.welcoming(welcome({ hub = false }))).to.equal(false)
+		end)
+
+		it("lifts after TRANSIT_WELCOME_SECONDS whatever is still loading", function()
+			local over = ShiftConstants.TRANSIT_WELCOME_SECONDS
+			expect(ShiftTransitRules.welcoming(welcome({ elapsed = over - 0.1 }))).to.equal(true)
+			expect(ShiftTransitRules.welcoming(welcome({ elapsed = over }))).to.equal(false)
 		end)
 	end)
 

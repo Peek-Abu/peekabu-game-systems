@@ -145,6 +145,10 @@ return table.freeze({
 	ENTRANCE_SETTLE_MAX_SECONDS = 1,
 	-- A client starts black until its first shift and transit sync (at most BOOT_SECONDS), so nothing unlit shows.
 	TRANSIT_BOOT_SECONDS = 4,
+	-- A first join to the hub shows the welcome card while the art loads (ShiftTransitRules.welcoming), at most this
+	-- long (longer than UIPreloadRules.ESSENTIAL_TIMEOUT, so the preload's own timeout lifts it first), then ALL SET!
+	-- for TRANSIT_ARRIVED_SECONDS before it fades.
+	TRANSIT_WELCOME_SECONDS = 15,
 	-- A respawn (after a catch) blinks black this long, then fades out: no load screen.
 	TRANSIT_BLINK_SECONDS = 0.25,
 	TRANSIT_WAIT_TEXT = "Waiting for the rest of the crew.",

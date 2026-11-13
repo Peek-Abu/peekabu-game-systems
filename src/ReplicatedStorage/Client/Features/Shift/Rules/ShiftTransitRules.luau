@@ -2,8 +2,12 @@
 --[=[
 	ShiftTransitRules: what this client's transit screen shows, and whether a held client may reveal (ShiftTransitSystem).
 
-	`cover`: the route slip while the client is held (and through its ARRIVED stamp), plain black while the client
-	boots (until its first sync, so nothing unlit shows) and during a respawn blink; otherwise nothing.
+	`cover`: the route slip while the client is held (and through its ARRIVED stamp), the welcome card on a first join
+	to the hub (`welcoming`), plain black while the client boots (until its first sync, so nothing unlit shows) and
+	during a respawn blink; otherwise nothing.
+
+	`welcoming`: a first join to the hub keeps the welcome card up until the art is in (UIPreloadStore.ready) and the
+	client has synced, at most TRANSIT_WELCOME_SECONDS.
 
 	`verdict`: a held client is ready once its hold is built and the new office is here (its layout seed seen), its
 	character stands within TRANSIT_PLACE_TOLERANCE of its spot, the area around the spot is streamed in, the lighting
@@ -32,11 +36,24 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 export type CoverInput = {
 	-- Held by a transit this client has not finished (or showing its ARRIVED stamp).
 	held: boolean,
+	-- A first join to the hub, still loading (`welcoming`).
+	welcome: boolean?,
 	-- Booting: no shift sync yet, within TRANSIT_BOOT_SECONDS.
 	booting: boolean,
 	-- A respawn blink runs until this os.clock() time.
 	blinkUntil: number?,
 	now: number,
+}
+
+export type WelcomeInput = {
+	-- This server is the hub (the lobby place).
+	hub: boolean,
+	-- The essential art is in (UIPreloadStore.ready).
+	ready: boolean,
+	-- The first shift and transit sync arrived.
+	synced: boolean,
+	-- Seconds since the client started.
+	elapsed: number,
 }
 
 export type VerdictInput = {
@@ -62,6 +79,9 @@ function ShiftTransitRules.cover(input: CoverInput): ShiftTypes.TransitCover
 	if input.held then
 		return "slip"
 	end
+	if input.welcome == true then
+		return "welcome"
+	end
 	if input.booting then
 		return "black"
 	end
@@ -70,6 +90,14 @@ function ShiftTransitRules.cover(input: CoverInput): ShiftTypes.TransitCover
 		return "black"
 	end
 	return "none"
+end
+
+-- Whether a first join's welcome card is still up (see the class notes).
+function ShiftTransitRules.welcoming(input: WelcomeInput): boolean
+	if not input.hub or input.elapsed >= ShiftConstants.TRANSIT_WELCOME_SECONDS then
+		return false
+	end
+	return not (input.ready and input.synced)
 end
 
 --[=[

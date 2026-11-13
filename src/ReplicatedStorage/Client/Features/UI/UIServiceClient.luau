@@ -13,6 +13,7 @@
 	   keeps its keystrokes). A future Input system can take these over as keymaps-as-data.
 	3. **Mounts the always-on roots** at start — the HUD on the `Hud` layer, a `SceneHost` on `Panel` and on `Wheel` — and starts the
 	   UI's sounds (UISoundSystem: the tiers PaperButton plays, the hold prompts' wind-up and done).
+	4. **Starts the art preload** at init (UIPreloadSystem: faces, pictures, characters, behind the first load screen).
 
 	The shared state it drives lives elsewhere and is required directly (UISuppression, SceneStack,
 	UIRoot) — this service owns only the lifecycle, the same split as StateSyncClientStore/StateSyncServiceClient.
@@ -34,6 +35,7 @@ local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local HudRoot = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRoot)
 local SceneHost = require(ReplicatedStorage.Client.UI.React.SceneHost)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
+local UIPreloadSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UIPreloadSystem)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 
 local log = Logger.new("UIServiceClient")
@@ -76,6 +78,9 @@ local UIServiceClient: UIServiceClient = {
 		@param self UIServiceClient -- The service instance
 	]=]
 	init = function(_self)
+		-- The art preload starts first thing (its own thread): faces, pictures and characters load behind the first
+		-- load screen (ShiftTransitSystem waits on UIPreloadStore.ready in the hub).
+		UIPreloadSystem.start()
 		-- Reconcile the initial stack (usually empty) so a scene pushed before boot is honored.
 		UISuppression.reconcile(UIStore.sceneStack())
 		janitor:Add(
@@ -141,6 +146,7 @@ local UIServiceClient: UIServiceClient = {
 		UISuppression.reconcile({})
 		janitor:Cleanup()
 		UISoundSystem.stop()
+		UIPreloadSystem.stop()
 		self._hudMounted = false
 	end,
 
@@ -154,6 +160,7 @@ local UIServiceClient: UIServiceClient = {
 			sceneDepth = SceneStack.depth(),
 			suppression = UISuppression.counts(),
 			sounds = UISoundSystem.getState(),
+			preload = UIPreloadSystem.getState(),
 		}
 	end,
 }
