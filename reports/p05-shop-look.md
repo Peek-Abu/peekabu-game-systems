@@ -54,4 +54,11 @@ Questions on the page, split into look / layout / rules:
 
 No sparkle, diamond or 4-point-star motifs. Mock-up sources are in this session's scratchpad (`rarity/kit/kit.html`); the Pippa cut-out is from the 2026-11-13 skin-page capture.
 
-**Nothing is built for this row yet.** It waits on the owner's yes.
+**Owner's pick (2026-11-14): B.** "B is solid. Lets implement this and leave this open for p1 / post p0.5". The owner's firm rule from the same day: the item must always be clearly visible, and nothing may cover a skin. So the model stays where and as big as it was, and B's extras sit only around and behind it.
+
+### B built (commit `38c2b071`)
+- `Shop/ShopRarityLookViewModel` (new, specced) maps a tier to its look: colours, rays (none on Common and Uncommon, stronger from Rare to Epic to Legendary, plus a second counter-turning layer on Legendary), the tier word, and Odd's goo and red edges.
+- `Toon/ToonBackdrop` gets additive props: `counterRays`, `word` (faint display text behind the hero), `edge` (vignette colour, stronger when set) and `goo` (a ToonGoo cap along the top edge). Every other screen passes none of them and looks as before.
+- `Shop/ShopScreen` changes only at its backdrop call plus a `HERO_X` constant: an open item's page takes the look, and the lists and tabs keep the coral-to-grape backdrop.
+- Lint, format and types are clean. Not yet play-checked; it goes in the same Lobby Play as the spin.
+- The Launch List row stays open for later polish (sounds, VFX, per-tier poses).
