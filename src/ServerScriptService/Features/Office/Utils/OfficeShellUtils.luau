@@ -206,6 +206,13 @@ end
 	inside the rough opening, proud on both faces; an open doorway wider than 8 gets plaster pilasters at both jambs,
 	which stand proud of every trim on both faces (the deepest trim plus 0.05: nothing shares their face plane, so
 	nothing z-fights with them); a narrow open one gets nothing.
+
+	A pilaster carries the wall's bands (wainscot, rail and skirt) round its three open faces, so a wall's band turns
+	the pilaster instead of stopping dead against it: on each wall face (marked with that face's `side`, so a kit dresses
+	it for the room that face looks into) and on the face into the opening, split at the wall line so each half takes
+	its own side's finish. A face band is a collar from the wall's own band surface out past the pilaster's face, and
+	runs past both pilaster sides by its depth: it closes over the step where the pilaster stands proud of the wall's
+	trim (no plaster sliver between the two bands) and over the opening corner, where the opening halves stop at it.
 ]=]
 function OfficeShellUtils.doorCasing(door: Door, edge: Edge): { ShellBox }
 	local shell = OfficeConstants.SHELL
@@ -222,6 +229,35 @@ function OfficeShellUtils.doorCasing(door: Door, edge: Edge): { ShellBox }
 			local y = { 0, OfficeConstants.WALL_HEIGHT }
 			table.insert(boxes, box("Pilaster", "plaster", true, where, { lo, lo + shell.pilaster }, y, across))
 			table.insert(boxes, box("Pilaster", "plaster", true, where, { hi - shell.pilaster, hi }, y, across))
+			local function band(name: string, material: ShellMaterial, proud: number, y0: number, y1: number)
+				-- (inward: +1 for the low pilaster, whose opening face looks toward +along; -1 for the high one)
+				for _, jamb in { { lo, lo + shell.pilaster, 1 }, { hi - shell.pilaster, hi, -1 } } do
+					local a0, a1, inward = jamb[1], jamb[2], jamb[3]
+					local open = if inward > 0 then a1 else a0
+					local faceRange = { a0 - proud, a1 + proud }
+					local openRange = between(open, open + inward * proud)
+					for _, side in { -1, 1 } do
+						local wallFace = box(
+							name,
+							material,
+							false,
+							where,
+							faceRange,
+							{ y0, y1 },
+							between(side * (shell.slab + proud), side * (reach + proud))
+						)
+						wallFace.side = side
+						table.insert(boxes, wallFace)
+						local openFace =
+							box(name, material, false, where, openRange, { y0, y1 }, between(0, side * reach))
+						openFace.side = side
+						table.insert(boxes, openFace)
+					end
+				end
+			end
+			band("Wainscot", "oak", shell.wainscotProud, 0, shell.wainscotHeight)
+			band("Rail", "rail", shell.railDepth, shell.wainscotHeight, shell.wainscotHeight + shell.railHeight)
+			band("Skirt", "skirt", shell.skirtProud, 0, shell.skirtHeight)
 		end
 		return boxes
 	end

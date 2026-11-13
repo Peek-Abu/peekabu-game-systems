@@ -583,6 +583,24 @@ return function()
 			expect(Shell.themed("plaster", nil, "hallway")).to.equal("plaster")
 		end)
 
+		it(
+			"dresses a face that looks into no room as a hall (a junction's mouth), and a room's face as its type",
+			function()
+				expect(Shell.dressOf(nil)).to.equal("hallway")
+				expect(Shell.dressOf({
+					id = "c1",
+					name = "Classroom",
+					roomType = "classroom",
+					minX = 0,
+					maxX = 1,
+					minZ = 0,
+					maxZ = 1,
+				})).to.equal("classroom")
+				local kit = "school-maple-hill"
+				expect(Shell.themed("oak", kit, Shell.dressOf(nil))).to.equal("schoolHallBand")
+			end
+		)
+
 		it("gives every themed material a look", function()
 			for _, theme in Constants.SHELL_THEMES do
 				for _, floor in theme.floors do

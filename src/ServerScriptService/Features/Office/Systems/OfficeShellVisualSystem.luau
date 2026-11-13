@@ -112,6 +112,19 @@ function OfficeShellVisualSystem.themed(
 end
 
 --[=[
+	The dress a wall face takes when it looks into `room` (the room type `themed` reads): the room's type, and the
+	hall's for a face that looks into no room at all (the open mouth of a junction or the gap between two walls seen
+	from a hall). Only circulation is open space without a room; dressing such a face as a room put a room's paint and
+	rail beside a hall's band (owner play-check, 2026-11-12).
+]=]
+function OfficeShellVisualSystem.dressOf(room: OfficeTypes.Room?): string?
+	if room == nil then
+		return "hallway"
+	end
+	return OfficeArtKeyUtils.roomType(room)
+end
+
+--[=[
 	Gives `part` the material's Material, colour and transparency, and its MaterialVariant when `hasVariant` (default:
 	MaterialService has a variant of that name) says the place has one.
 ]=]
@@ -259,8 +272,11 @@ local function facadeGaps(layout: OfficeTypes.Layout, segment: OfficeTypes.Segme
 		end
 		if edge ~= nil and (door.kind or "open") == "open" then
 			for _, box in OfficeShellUtils.doorCasing(door, edge) do
-				for _, gap in OfficeShellUtils.boxGaps(segment, box) do
-					table.insert(gaps, gap)
+				-- Only the pilasters stop a run's trim: their bands (the collars) lie over the wall's own trim ends.
+				if box.name == "Pilaster" then
+					for _, gap in OfficeShellUtils.boxGaps(segment, box) do
+						table.insert(gaps, gap)
+					end
 				end
 			end
 		end
@@ -296,7 +312,26 @@ local function faceMaterial(
 	local probeX = if horizontal then midX else midX + side * FACE_PROBE
 	local probeZ = if horizontal then midZ + side * FACE_PROBE else midZ
 	local room = OfficeLayoutUtils.roomAt(layout, probeX, probeZ)
-	return OfficeShellVisualSystem.themed(box.material, kitId, OfficeArtKeyUtils.roomType(room))
+	return OfficeShellVisualSystem.themed(box.material, kitId, OfficeShellVisualSystem.dressOf(room))
+end
+
+-- The material a doorway's casing box takes in its layout's kit: a box with a `side` (a pilaster's bands) is dressed for
+-- the room on that side of the doorway (door.a's on the room side of `edge`, door.b's on the other).
+local function casingMaterial(
+	layout: OfficeTypes.Layout,
+	door: OfficeTypes.Door,
+	edge: OfficeTypes.Edge,
+	box: OfficeTypes.ShellBox
+): OfficeTypes.ShellMaterial
+	local side = box.side
+	local kitId = layout.artKit
+	if side == nil or kitId == nil or OfficeConstants.SHELL_THEMES[kitId] == nil then
+		return box.material
+	end
+	local roomSide = if edge == "minZ" or edge == "minX" then 1 else -1
+	local id = if side == roomSide then door.a else door.b
+	local room = if id ~= nil then OfficeLayoutUtils.room(layout, id) else nil
+	return OfficeShellVisualSystem.themed(box.material, kitId, OfficeShellVisualSystem.dressOf(room))
 end
 
 local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Folder, hasVariant: HasVariant?)
@@ -343,7 +378,7 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
 		if edge ~= nil then
 			for _, box in OfficeShellUtils.doorCasing(door, edge) do
-				build(box, origin, shell, hasVariant)
+				build(box, origin, shell, hasVariant, casingMaterial(layout, door, edge, box))
 			end
 			if door.kind == "solid" or door.kind == "glass" then
 				build(lintel(door, edge == "minZ" or edge == "maxZ"), origin, shell, hasVariant)

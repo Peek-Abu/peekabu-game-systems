@@ -343,11 +343,11 @@ return function()
 		it("a wide open archway gets pilasters", function()
 			local door = { a = "a", b = "b", x = 10, z = 0, width = 14 }
 			local boxes = OfficeShellUtils.doorCasing(door, "minZ")
-			expect(#named(boxes, "plaster")).to.equal(2)
-			expect(#named(boxes, "oak")).to.equal(0)
+			local pilasters = named(boxes, "plaster")
+			expect(#pilasters).to.equal(2)
 			-- Like a casing, proud of every trim on both faces: half a wall plus the deepest trim (the rail) plus 0.05.
 			local reach = OfficeConstants.WALL_THICKNESS / 2 + S.railDepth + 0.05
-			for _, box in boxes do
+			for _, box in pilasters do
 				expect(box.size.X).to.be.near(0.6, 1e-6)
 				expect(footprint(box).maxZ).to.be.near(reach, 1e-6)
 				expect(footprint(box).minZ).to.be.near(-reach, 1e-6)
@@ -356,13 +356,86 @@ return function()
 			expect(#OfficeShellUtils.doorCasing(narrow, "minZ")).to.equal(0)
 		end)
 
+		it("a pilaster carries the wall's wainscot, rail and skirt round both faces and its opening face", function()
+			-- A wide archway on the z = 0 line (x 3 .. 17): each pilaster's three open faces (the two wall faces and the face
+			-- into the opening) get every band, the opening face split at the wall line so each half takes its own side.
+			local door = { a = "a", b = "b", x = 10, z = 0, width = 14 }
+			local boxes = OfficeShellUtils.doorCasing(door, "minZ")
+			local reach = OfficeConstants.WALL_THICKNESS / 2 + S.railDepth + 0.05
+			local bands = {
+				{ "oak", S.wainscotProud, 0, S.wainscotHeight },
+				{ "rail", S.railDepth, S.wainscotHeight, S.wainscotHeight + S.railHeight },
+				{ "skirt", S.skirtProud, 0, S.skirtHeight },
+			}
+			for _, pilaster in named(boxes, "plaster") do
+				local p = footprint(pilaster)
+				local opening = if p.minX < 10 then p.maxX else p.minX
+				local inward = if p.minX < 10 then 1 else -1
+				for _, band in bands do
+					local material, proud, y0, y1 = band[1], band[2], band[3], band[4]
+					local found = { wallMinus = 0, wallPlus = 0, openMinus = 0, openPlus = 0 }
+					for _, box in named(boxes, material) do
+						local f = footprint(box)
+						local bottom = box.cframe.Position.Y - box.size.Y / 2
+						local overlapsAlong = f.maxX > p.minX - 1e-6
+							and f.minX < p.maxX + proud + 1e-6
+							and f.minX > p.minX - proud - 1e-6
+						local collar = math.abs(f.minX - (p.minX - proud)) < 1e-6
+							and math.abs(f.maxX - (p.maxX + proud)) < 1e-6
+						-- A face band is a collar from the wall's band surface out past the pilaster, over both its sides.
+						local inner = S.slab + proud
+						if
+							overlapsAlong
+							and math.abs(bottom - y0) < 1e-6
+							and math.abs(bottom + box.size.Y - y1) < 1e-6
+						then
+							expect(box.collide).to.equal(false)
+							if
+								collar
+								and math.abs(f.minZ - inner) < 1e-6
+								and math.abs(f.maxZ - (reach + proud)) < 1e-6
+							then
+								found.wallPlus += 1
+								expect(box.side).to.equal(1)
+							elseif
+								collar
+								and math.abs(f.maxZ + inner) < 1e-6
+								and math.abs(f.minZ + reach + proud) < 1e-6
+							then
+								found.wallMinus += 1
+								expect(box.side).to.equal(-1)
+							elseif math.abs((if inward > 0 then f.minX else f.maxX) - opening) < 1e-6 then
+								expect(
+									math.abs((if inward > 0 then f.maxX else f.minX) - (opening + inward * proud))
+										< 1e-6
+								).to.equal(true)
+								if f.minZ > -1e-6 then
+									expect(f.maxZ).to.be.near(reach, 1e-6)
+									expect(box.side).to.equal(1)
+									found.openPlus += 1
+								else
+									expect(f.minZ).to.be.near(-reach, 1e-6)
+									expect(f.maxZ).to.be.near(0, 1e-6)
+									expect(box.side).to.equal(-1)
+									found.openMinus += 1
+								end
+							end
+						end
+					end
+					expect(`{material} {found.wallMinus}{found.wallPlus}{found.openMinus}{found.openPlus}`).to.equal(
+						`{material} 1111`
+					)
+				end
+			end
+		end)
+
 		it(
 			"boxGaps: a run's trim stops at both sides of a pilaster it would pass through, on that face only",
 			function()
 				-- A wide archway on the x = 0 line from z = 0, and the z = 0 wall running +X from the junction: the pilaster
 				-- (z 0 .. 0.6) stands 0.1 proud of that wall's +Z face, so its +Z trim would run through it.
 				local door = { a = "a", b = "w", x = 0, z = 5, width = 10, kind = "open" }
-				local pilasters = OfficeShellUtils.doorCasing(door, "minX")
+				local pilasters = named(OfficeShellUtils.doorCasing(door, "minX"), "plaster")
 				local low = pilasters[1]
 				for _, box in pilasters do
 					if box.cframe.Position.Z < low.cframe.Position.Z then
