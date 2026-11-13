@@ -32,6 +32,7 @@ return function()
 			local warmed = 0
 			UIPreloadSystem.start({
 				art = root,
+				screen = {},
 				images = { "rbxassetid://1" },
 				preload = function(items)
 					table.insert(loaded, items)
@@ -63,6 +64,7 @@ return function()
 			local calls = 0
 			UIPreloadSystem.start({
 				art = root,
+				screen = {},
 				images = {},
 				warm = function()
 					return function() end
@@ -83,6 +85,7 @@ return function()
 			local root = art()
 			UIPreloadSystem.start({
 				art = root,
+				screen = {},
 				images = {},
 				timeout = 0.05,
 				preload = function()
@@ -102,6 +105,7 @@ return function()
 			local calls = 0
 			local options = {
 				art = root,
+				screen = {},
 				images = {},
 				warm = function()
 					return function() end

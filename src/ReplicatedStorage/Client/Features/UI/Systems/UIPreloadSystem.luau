@@ -33,6 +33,8 @@ local log = Logger.new("UIPreloadSystem")
 export type Options = {
 	art: Instance?,
 	images: { string }?,
+	-- The load screen's own pictures, loaded first.
+	screen: { string }?,
 	preload: ((items: { Instance | string }) -> ())?,
 	timeout: number?,
 	-- Runs once every batch is done; returns its cancel.
@@ -108,12 +110,39 @@ local function placeImages(): { string }
 	return UIPreloadRules.imageIds(lists)
 end
 
+-- The welcome card's pictures (ShiftTransitPanel's greeting): Pippa saluting and the goo of its tip plate.
+local function placeScreen(): { string }
+	return UIPreloadRules.imageIds({
+		{ UIAssets.toonPhotos.pippaSaluteCut, UIAssets.toon.poolTile, UIAssets.toon.gooEnds },
+	})
+end
+
+--[=[
+	One batch through ContentProvider:PreloadAsync. An image id goes in on an ImageLabel: PreloadAsync fails a bare
+	image id string (measured 2026-11-13: every one "could not load"), but loads the image an ImageLabel names. A
+	content id the art leaves empty is not a failure.
+]=]
 local function placePreload(items: { Instance | string })
-	ContentProvider:PreloadAsync(items, function(contentId: string, status: Enum.AssetFetchStatus)
-		if status == Enum.AssetFetchStatus.Failure then
+	local list: { Instance } = {}
+	local labels: { ImageLabel } = {}
+	for _, item in items do
+		if typeof(item) == "string" then
+			local label = Instance.new("ImageLabel")
+			label.Image = item
+			table.insert(labels, label)
+			table.insert(list, label)
+		else
+			table.insert(list, item)
+		end
+	end
+	ContentProvider:PreloadAsync(list, function(contentId: string, status: Enum.AssetFetchStatus)
+		if status == Enum.AssetFetchStatus.Failure and contentId ~= "" then
 			log:warn(`could not load {contentId}`)
 		end
 	end)
+	for _, label in labels do
+		label:Destroy()
+	end
 end
 
 -- Every employee in every skin, in the pose their Shop and Inventory cards use ("crew"), warmed into the preview cache.
@@ -142,8 +171,11 @@ function UIPreloadSystem.start(options: Options?)
 	generation += 1
 	local mine = generation
 	local given: Options = options or {}
-	local batches =
-		UIPreloadRules.batches(if given.art ~= nil then given.art else placeArt(), given.images or placeImages())
+	local batches = UIPreloadRules.batches(
+		if given.art ~= nil then given.art else placeArt(),
+		given.images or placeImages(),
+		given.screen or placeScreen()
+	)
 	local preload = given.preload or placePreload
 	local timeout = given.timeout or UIPreloadRules.ESSENTIAL_TIMEOUT
 	local total = 0

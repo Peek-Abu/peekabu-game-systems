@@ -5,6 +5,7 @@
 	shop's and the inventory's pictures and 3D cards pop in.
 
 	The order (owner, 2026-11-12: faces first, then the shop and the inventory):
+	0. the load screen's own pictures (`screen`), so the welcome card is whole while the rest loads;
 	1. each employee's face sets (`faces:<Name>`: every Folder under the template named Faces..., its skins' sets too);
 	2. the UI's pictures (`images`: icons, photos, stickers; UIAssets);
 	3. each employee's whole model (`character:<Name>`: meshes, textures, the uniform);
@@ -89,10 +90,18 @@ end
 
 --[=[
 	The batches to load, in order, from the CleanupCrew art folder `art` (nil: none in this place) and the UI's picture
-	ids `images` (`imageIds`). Batches with nothing in them are left out.
+	ids `images` (`imageIds`), the load screen's own picture ids `screen` first. Batches with nothing in them are left
+	out.
 ]=]
-function UIPreloadRules.batches(art: Instance?, images: { string }): { Batch }
+function UIPreloadRules.batches(art: Instance?, images: { string }, screen: { string }?): { Batch }
 	local batches: { Batch } = {}
+	if screen ~= nil and #screen > 0 then
+		local items: { Instance | string } = {}
+		for _, id in screen do
+			table.insert(items, id)
+		end
+		table.insert(batches, { name = "screen", items = items, essential = true })
+	end
 	local roster = if art ~= nil then characters(art) else {}
 	for _, character in roster do
 		local sets = faceSets(character)
