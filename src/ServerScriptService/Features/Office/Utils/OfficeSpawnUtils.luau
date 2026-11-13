@@ -229,11 +229,11 @@ local function pileOrder(
 	-- the shift keeps every pile it rolled, and its Gloom. The spares after them (a top-up's) never crowd either.
 	local used: { Marker } = {}
 	local spare: { Marker } = {}
-	local wanted = 0
+	local rolled = 0
 	for _, room in dirty do
 		local markers = shuffled(byRoom[room], rng)
 		local count = math.min(rng:NextInteger(options.pilesPerRoom.min, options.pilesPerRoom.max), #markers)
-		wanted += count
+		rolled += count
 		local taken = 0
 		for _, marker in markers do
 			if taken < count and not crowds(marker, used) then
@@ -253,7 +253,7 @@ local function pileOrder(
 	end
 	local rest: { Marker } = {}
 	for _, marker in spare do
-		if #used < wanted and not crowds(marker, used) then
+		if #used < rolled and not crowds(marker, used) then
 			table.insert(used, marker)
 		else
 			table.insert(rest, marker)
