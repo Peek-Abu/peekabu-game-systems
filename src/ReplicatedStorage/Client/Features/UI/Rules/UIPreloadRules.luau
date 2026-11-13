@@ -90,10 +90,10 @@ end
 
 --[=[
 	The batches to load, in order, from the CleanupCrew art folder `art` (nil: none in this place) and the UI's picture
-	ids `images` (`imageIds`), the load screen's own picture ids `screen` first. Batches with nothing in them are left
+	ids `images` (`imageIds`), the load screen's own art `screen` (ids or Instances) first. Batches with nothing in them are left
 	out.
 ]=]
-function UIPreloadRules.batches(art: Instance?, images: { string }, screen: { string }?): { Batch }
+function UIPreloadRules.batches(art: Instance?, images: { string }, screen: { Instance | string }?): { Batch }
 	local batches: { Batch } = {}
 	if screen ~= nil and #screen > 0 then
 		local items: { Instance | string } = {}

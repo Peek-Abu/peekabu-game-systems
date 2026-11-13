@@ -34,7 +34,7 @@ export type Options = {
 	art: Instance?,
 	images: { string }?,
 	-- The load screen's own pictures, loaded first.
-	screen: { string }?,
+	screen: { Instance | string }?,
 	preload: ((items: { Instance | string }) -> ())?,
 	timeout: number?,
 	-- Runs once every batch is done; returns its cancel.
@@ -112,11 +112,19 @@ local function placeImages(): { string }
 	return UIPreloadRules.imageIds(lists)
 end
 
--- The welcome card's pictures (ShiftTransitPanel's greeting): Pippa saluting and the goo of its tip plate.
-local function placeScreen(): { string }
-	return UIPreloadRules.imageIds({
-		{ UIAssets.toonPhotos.pippaSaluteCut, UIAssets.toon.poolTile, UIAssets.toon.gooEnds },
-	})
+-- The welcome card's own art (ShiftTransitPanel's greeting): Pippa's model (drawn waving on it) and the goo of its tip
+-- plate.
+local function placeScreen(art: Instance?): { Instance | string }
+	local items: { Instance | string } = {}
+	local characters = if art ~= nil then art:FindFirstChild("Characters") else nil
+	local pippa = if characters ~= nil then characters:FindFirstChild("Pippa") else nil
+	if pippa ~= nil then
+		table.insert(items, pippa)
+	end
+	for _, id in UIPreloadRules.imageIds({ { UIAssets.toon.poolTile, UIAssets.toon.gooEnds } }) do
+		table.insert(items, id)
+	end
+	return items
 end
 
 --[=[
@@ -173,11 +181,8 @@ function UIPreloadSystem.start(options: Options?)
 	generation += 1
 	local mine = generation
 	local given: Options = options or {}
-	local batches = UIPreloadRules.batches(
-		if given.art ~= nil then given.art else placeArt(),
-		given.images or placeImages(),
-		given.screen or placeScreen()
-	)
+	local art = if given.art ~= nil then given.art else placeArt()
+	local batches = UIPreloadRules.batches(art, given.images or placeImages(), given.screen or placeScreen(art))
 	local preload = given.preload or placePreload
 	local timeout = given.timeout or UIPreloadRules.ESSENTIAL_TIMEOUT
 	local total = 0
