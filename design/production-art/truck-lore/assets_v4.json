@@ -1,0 +1,22 @@
+{
+ "group": 189923277,
+ "uploaded": "2026-11-13",
+ "model": {
+  "name": "Truck v4 Night Bakery Van",
+  "assetId": 94655249327854,
+  "source": "Truck_v4.fbx (build_truck_v4.py)"
+ },
+ "decals": {
+  "loreSign": 74575119736869,
+  "paintColor": 135127847966340,
+  "paintNormal": 129129956082610,
+  "paintRough": 89452180093827
+ },
+ "note": "Open Cloud makes Decals (type 13); the Image ids (type 1) come from InsertService:LoadAsset(decal).Texture in Studio.",
+ "images": {
+  "loreSign": 122225529513930,
+  "paintColor": 138264076346730,
+  "paintNormal": 108711044187760,
+  "paintRough": 91431433008800
+ }
+}

@@ -409,7 +409,9 @@ piece(
 # back, under the swoosh. The game draws it on BoxShell's Right face (whose box is the wall's outer surface): the
 # rectangle in that face's SurfaceGui is in the JSON's "loreSign".
 LORE_X, LORE_Y0, LORE_Y1, LORE_Z0, LORE_Z1 = HB + 0.5, 1.2, 3.0, -10.9, -4.9
-piece("BoxRail", "trim", mirrored(lambda s: rbox(*sx(s, HB + 0.3, HB + 0.75), -0.6, 0.15, -(LH - 0.3), LH - 0.05, 0.12)))
+REAR_GUARD_FRONT = -6.0 + 1.5 + 0.85  # the front axle of the rear pair, its tyre radius and guard
+# the rail stops in front of the rear wheels' guards (the wheels stand beside the box)
+piece("BoxRail", "trim", mirrored(lambda s: rbox(*sx(s, HB + 0.3, HB + 0.75), -0.6, 0.15, REAR_GUARD_FRONT, LH - 0.05, 0.12)))
 
 # ---- back frame (the scanner arch) ------------------------------------------------------------------------------
 AZ0, AZ1 = -(LH + 0.95), -(LH - 0.35)  # the posts' depth (v2: -8.95..-7.65)
@@ -630,32 +632,36 @@ piece(
 WHEEL_R = 1.5
 WHEEL_Y = G + WHEEL_R
 TYRE_W = 1.6
-WHEEL_X_REAR = HB - 0.3  # the tyre's outer face sits flush with the box's wall
+TYRE_W_REAR = 1.4
+# Owner 2026-11-13: the rear wheels and their guards clipped into the box (under the box their tops reached above its
+# floor). They now stand just outside the walls: the tyre's inner face 0.02 off the wall, the guard a flare on it.
+WHEEL_X_REAR = HB + 0.5 + 0.02 + TYRE_W_REAR / 2
 WHEEL_X_FRONT = 5.75 * S
 FRONT_Z = cab_pt((0, 0, 11.2))[2]
 AXLES = ((-6.0, WHEEL_X_REAR), (-9.3, WHEEL_X_REAR), (FRONT_Z, WHEEL_X_FRONT))
 tyres, hubs, fenders = [], [], []
 for z, wx in AXLES:
+    tw = TYRE_W if z > 0 else TYRE_W_REAR
     for s in (-1, 1):
         c = (s * wx, WHEEL_Y, z)
-        tyres.append(cyl("x", c, WHEEL_R - 0.08, TYRE_W, 0.3, 28))
+        tyres.append(cyl("x", c, WHEEL_R - 0.08, tw, 0.3, 28))
         n = 18
         for i in range(n):
             bm = bmesh.new()
             bmesh.ops.create_cube(bm, size=1.0)
-            hw = TYRE_W / 2 - 0.12
+            hw = tw / 2 - 0.12
             for v in bm.verts:
                 v.co = B((c[0] + (hw if v.co.x > 0 else -hw), c[1] + (WHEEL_R if v.co.y > 0 else WHEEL_R - 0.2), z + (0.22 if v.co.z > 0 else -0.22)))
             spin(bm, "x", 2 * math.pi * i / n, c)
             tyres.append(finish(new_obj(bm), 0.05, 1))
-        out = s * (wx + TYRE_W / 2)
+        out = s * (wx + tw / 2)
         hubs.append(cyl("x", (out - s * 0.02, WHEEL_Y, z), 1.02, 0.14, 0.04, 24))
         hubs.append(dome((out + s * 0.05, WHEEL_Y, z), 0.55, (0.42, 1, 1), 16, 8))
         if z > 0:
             fenders.append(arc_x((0, WHEEL_Y, z), WHEEL_R + 0.15, WHEEL_R + 0.75, *sx(s, 4.6 * S, 6.85 * S), segs=20, bev=0.14))
         else:
-            # under the box: the flare stays outside the lining (x > HB), so it never shows inside the bed
-            fenders.append(arc_x((0, WHEEL_Y, z), WHEEL_R + 0.15, WHEEL_R + 0.7, *sx(s, HB, HB + 0.95), segs=20, bev=0.12))
+            # beside the box: a flare from the wall's outer face to just past the tyre (never inside the wall)
+            fenders.append(arc_x((0, WHEEL_Y, z), WHEEL_R + 0.15, WHEEL_R + 0.7, *sx(s, HB + 0.5, wx + tw / 2 + 0.15), segs=20, bev=0.12))
 piece("Tires", "fixed", tyres, TYRE)
 piece("Hubs", "metal", hubs)
 piece("Fenders", "cab", fenders)

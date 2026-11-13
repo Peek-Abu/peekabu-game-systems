@@ -97,21 +97,18 @@ return function()
 			end
 		)
 
-		it(
-			"flags the cab's and the Luton's collision as camera walls (no shell core stands in them), nothing else",
-			function()
-				Visual.buildWith(bed, folder, nil)
-				for _, entry in Constants.COLLISION do
-					local part = bed:FindFirstChild(entry.name)
-					local flagged = part:GetAttribute(CameraOccluderConstants.ATTRIBUTE)
-					if entry.name == "TruckCab" or entry.name == "TruckLuton" then
-						expect(flagged).to.equal(true)
-					else
-						expect(flagged).to.equal(nil)
-					end
+		it("flags the cab's collision as a camera wall (no shell core stands in it), nothing else", function()
+			Visual.buildWith(bed, folder, nil)
+			for _, entry in Constants.COLLISION do
+				local part = bed:FindFirstChild(entry.name)
+				local flagged = part:GetAttribute(CameraOccluderConstants.ATTRIBUTE)
+				if entry.name == "TruckCab" then
+					expect(flagged).to.equal(true)
+				else
+					expect(flagged).to.equal(nil)
 				end
 			end
-		)
+		end)
 
 		it("builds an opaque camera shell under the bed, which the default camera stops at", function()
 			Visual.buildWith(bed, folder, nil)
@@ -208,18 +205,28 @@ return function()
 			expect(scanner:GetAttribute(DepotConstants.SCANNER_IDLE_ATTRIBUTE)).to.equal(Constants.SCANNER_IDLE)
 		end)
 
-		it("paints the livery on both box sides and lights the box", function()
+		it("draws no side line, and lights the graybox's box", function()
 			local art = Visual.buildWith(bed, folder, nil)
-			local faces = {}
+			expect(art:FindFirstChildWhichIsA("SurfaceGui", true)).to.equal(nil)
+			expect(art:FindFirstChild(Constants.ROOF_PIECE):FindFirstChildWhichIsA("SurfaceLight")).to.be.ok()
+		end)
+
+		it("draws the old sign once, on the art's BoxShell Right face, where LORE_SIGN says", function()
+			local art = Visual.buildWith(bed, folder, fakeTemplate(true))
+			local guis = {}
 			for _, gui in art:GetDescendants() do
 				if gui:IsA("SurfaceGui") then
-					faces[gui.Face] = true
-					expect(gui:FindFirstChildWhichIsA("ImageLabel").Image).to.equal(Constants.LIVERY_IMAGE)
+					table.insert(guis, gui)
 				end
 			end
-			expect(faces[Enum.NormalId.Left]).to.equal(true)
-			expect(faces[Enum.NormalId.Right]).to.equal(true)
-			expect(art:FindFirstChild(Constants.ROOF_PIECE):FindFirstChildWhichIsA("SurfaceLight")).to.be.ok()
+			expect(#guis).to.equal(1)
+			local gui = guis[1]
+			expect(gui.Parent.Name).to.equal(Constants.LORE_SIGN.piece)
+			expect(gui.Face).to.equal(Constants.LORE_SIGN.face)
+			local image = gui:FindFirstChildWhichIsA("ImageLabel")
+			expect(image.Image).to.equal(Constants.LORE_SIGN.image)
+			expect(image.Position).to.equal(Constants.LORE_SIGN.position)
+			expect(image.Size).to.equal(Constants.LORE_SIGN.size)
 		end)
 
 		it("uses an approved template, placed by its pivot on the deck, and makes it inert", function()

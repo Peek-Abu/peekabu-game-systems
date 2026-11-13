@@ -52,11 +52,9 @@ return function()
 			expect(CargoConstants.BED_HEIGHT >= extent(solid("TruckRoof"), "Y", -1)).to.equal(true)
 		end)
 
-		it("lets the camera stop at the Luton over the cab", function()
-			local luton = solid("TruckLuton")
-			expect(luton).to.be.ok()
-			expect(luton.occludes).to.equal(true)
-			expect(extent(luton, "Y", -1) >= extent(solid("TruckCab"), "Y", 1) - 1e-6).to.equal(true)
+		-- Truck v4 (2026-11-13) has no Luton: the cab roof is open (the beacon), so nothing stands over the cab.
+		it("has no camera wall over the cab", function()
+			expect(solid("TruckLuton")).to.equal(nil)
 		end)
 
 		it("has a walkable ramp from the ground to the bed's back edge", function()
@@ -151,25 +149,20 @@ return function()
 			end
 		end)
 
-		it("paints the livery on the band's outer faces, on the art and the graybox alike", function()
-			local graybox = {}
-			for _, entry in Constants.GRAYBOX do
-				graybox[entry.name] = true
+		-- Owner 2026-11-13: no side line on the truck; the old company's sign shows faintly through the paint instead.
+		it("puts the old sign low on the right wall toward the back, inside the face", function()
+			local sign = Constants.LORE_SIGN
+			expect(sign.piece).to.equal("BoxShell")
+			expect(sign.face).to.equal(Enum.NormalId.Right)
+			expect(string.match(sign.image, "^rbxassetid://%d+$")).to.be.ok()
+			for _, axis in { "X", "Y" } do
+				local at, size = sign.position[axis].Scale, sign.size[axis].Scale
+				expect(at >= 0 and size > 0 and at + size <= 1).to.equal(true)
 			end
-			local sides = { art = {}, graybox = {} }
-			for _, target in Constants.LIVERY_FACES do
-				expect(target.face == Enum.NormalId.Left or target.face == Enum.NormalId.Right).to.equal(true)
-				if target.piece == Constants.BAND_PIECE then
-					sides.art[target.face] = true
-				else
-					expect(graybox[target.piece]).to.equal(true)
-					sides.graybox[target.face] = true
-				end
-			end
-			for _, found in sides do
-				expect(found[Enum.NormalId.Left]).to.equal(true)
-				expect(found[Enum.NormalId.Right]).to.equal(true)
-			end
+			-- Seen from +X the face's left edge is toward the cab: the back half is the right half; the lower half.
+			expect(sign.position.X.Scale >= 0.5).to.equal(true)
+			expect(sign.position.Y.Scale >= 0.5).to.equal(true)
+			expect(Constants.LIVERY_FACES).to.equal(nil)
 		end)
 
 		it("gives every graybox piece a name, a size and a known shape", function()

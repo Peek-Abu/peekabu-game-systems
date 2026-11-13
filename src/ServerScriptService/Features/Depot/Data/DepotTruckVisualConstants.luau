@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	DepotTruckVisualConstants: the crew truck (v3, look A "Night Shift" at size B "Moving Van",
-	characters/truck/build_truck_v3.py; docs/superpowers/specs/2026-11-04-truck-size-design.md) in DECK
+	DepotTruckVisualConstants: the crew truck (v4 "Night Bakery Van" at size B "Moving Van",
+	design/production-art/truck-lore/build_truck_v4.py; docs/superpowers/specs/2026-11-04-truck-size-design.md) in DECK
 	SPACE: studs from the middle of the bed's top face, +Y up, +Z toward the cab, -Z the open back and the ramp. The
 	bed (16 x DECK x 24, the queue pad / banking bed) is the floor; everything here sits round it, so the bed's
 	whole footprint stays clear inside the box (walls outside x = +-8, the doorway 16 wide and under the roll drum).
@@ -21,7 +21,9 @@
 	  of the front wall at CLOCK_MOUNT (its back centre, facing the open back); PAPERWORK frames the office's
 	  interactable parts there: the clock's hit box round the art, and the overtime sheet on the other side.
 	- GRAYBOX: the fallback look when the approved template (TEMPLATE_PATH, RuntimeApproved) is missing.
-	- LIVERY: the side line on the band's outer faces (BAND_PIECE on the art, BandLeft/BandRight on the graybox).
+	- LORE_SIGN: the old company's sign, painted over, that shows faintly low on the right wall toward the back (owner
+	  2026-11-13: the company is lore to find, not on every asset; no side line). On the art only: a SurfaceGui on
+	  BoxShell's Right face (whose box is the wall's outer surface), the image at the builder's `loreSign` rectangle.
 	- SOCKETS / INTERIOR_SLOTS: the attachments the template carries for truck parts (crew hosting batch 6; unused
 	  until then). Interior slots are on the walls and ceiling only: the box's floor is the bed, always clear.
 
@@ -50,7 +52,8 @@ export type Solid = {
 	occludes: boolean?,
 }
 
-export type LiveryFace = { piece: string, face: Enum.NormalId }
+-- A picture on one face of an art piece: a SurfaceGui with the image at `position` / `size` (scale) in that face.
+export type LoreSign = { piece: string, face: Enum.NormalId, image: string, position: UDim2, size: UDim2 }
 
 local TEAL = Color3.fromRGB(31, 110, 102)
 local IVORY = Color3.fromRGB(229, 221, 197)
@@ -121,8 +124,6 @@ local COLLISION: { Solid } = {
 	-- The cab has no shell core (its art is not a plain box), so its proxy is the camera's wall: without it the camera
 	-- went through the cab, and stood inside or behind it, whenever a player had the truck's front behind them.
 	solid("TruckCab", Vector3.new(0, 3.4, 16.35), Vector3.new(12.8, 10.6, 7.7), "Block", true),
-	-- The Luton (the box running on over the cab roof) sits on the cab: the camera's wall up there too.
-	solid("TruckLuton", Vector3.new(0, 9.75, 14.925), Vector3.new(17, 2.1, 4.85), "Block", true),
 	-- A wedge rises toward +Z: its tall face meets the bed's back edge, its foot is on the ground RAMP_LENGTH out.
 	solid("TruckRamp", Vector3.new(0, -1.5, -14), Vector3.new(9.4, 3, 4), "Wedge"),
 }
@@ -212,14 +213,17 @@ local CLOCK_GRAYBOX: { Piece } = {
 	piece("ClockCards", Vector3.new(1.2, -0.15, -0.15), Vector3.new(0.7, 1.2, 0.3), TEAL),
 }
 
--- The art's band strip: one mesh across both sides, so its Left/Right faces are the band's outer faces.
+-- The art's band strip (the wavy swoosh): one mesh across both sides, a paint slot a truck skin recolours.
 local BAND_PIECE = "BoxBand"
 
-local LIVERY_FACES: { LiveryFace } = {
-	{ piece = BAND_PIECE, face = Enum.NormalId.Left },
-	{ piece = BAND_PIECE, face = Enum.NormalId.Right },
-	{ piece = "BandLeft", face = Enum.NormalId.Left },
-	{ piece = "BandRight", face = Enum.NormalId.Right },
+-- design/production-art/truck-lore/lore_sign.png (Icey Labs decal 74575119736869 -> this image); its rectangle is
+-- Truck_v4.json "loreSign" (seen from +X the face's left edge is toward the cab).
+local LORE_SIGN: LoreSign = {
+	piece = "BoxShell",
+	face = Enum.NormalId.Right,
+	image = "rbxassetid://122225529513930",
+	position = UDim2.fromScale(0.7131, 0.6818),
+	size = UDim2.fromScale(0.2459, 0.1736),
 }
 
 -- Attachment names on the template (characters/truck/v2/Truck_v2.json has where each one sits).
@@ -265,14 +269,11 @@ return table.freeze({
 	CLOCK_MOUNT = CLOCK_MOUNT,
 	CLOCK_GRAYBOX = table.freeze(CLOCK_GRAYBOX),
 	PAPERWORK = table.freeze(PAPERWORK),
-	-- The band's side line (characters/truck/v3/livery_v3.png, "WE CLEAN UP THE NIGHT!"; Icey Labs decal
-	-- 76089610185696 -> this image).
-	LIVERY_IMAGE = "rbxassetid://86901531935857",
 	BAND_PIECE = BAND_PIECE,
-	LIVERY_FACES = table.freeze(LIVERY_FACES),
+	LORE_SIGN = table.freeze(LORE_SIGN),
 	SOCKETS = table.freeze(SOCKETS),
 	INTERIOR_SLOTS = table.freeze(INTERIOR_SLOTS),
-	LIVERY_PIXELS_PER_STUD = 100,
+	LORE_PIXELS_PER_STUD = 100,
 	-- The warm lamp under the roof.
 	ROOF_PIECE = "BoxRoof",
 	LAMP_COLOR = Color3.fromRGB(255, 226, 170),

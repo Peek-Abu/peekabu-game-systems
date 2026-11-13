@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	DepotTruckVisualSystem: the Morrow & Morrow "Mobile Recovery Unit" (truck design A) round a truck bed, for the
+	DepotTruckVisualSystem: the crew truck (the in-world "Mobile Recovery Unit"; art v4) round a truck bed, for the
 	depot's queue trucks and the office's loading-bay truck. The bed part stays the authority (queue pad, banking
 	bed, load prompt) at its full size; this only adds round it, in DepotTruckVisualConstants' deck space:
 
@@ -17,7 +17,7 @@
 	  with all its descendants);
 	- the time clock on the inside of the front wall (template CLOCK_TEMPLATE_PATH or a graybox). The office's
 	  Clock out and Start overtime parts go at `paperwork(bed, which)`;
-	- the box-side livery (a SurfaceGui per side), a warm lamp under the roof, and the scanner arch light tagged
+	- the old company's painted-over sign on the art's right wall (LORE_SIGN), a warm lamp under the roof, and the scanner arch light tagged
 	  for the client's bank flash (DepotTruckScannerSystem) with its sweep path;
 	- the art tagged DepotConstants.TRUCK_ART_TAG with a link to its bed, and the shell cores marked, for the hub's
 	  ghost bays (the client's DepotTruckGhostSystem; it draws only trucks on a held Queue pad).
@@ -114,27 +114,29 @@ local function art(deck: CFrame, source: Model?, clockSource: Model?): Model
 	return model
 end
 
-local function livery(model: Model)
-	for _, target in Constants.LIVERY_FACES do
-		local part = model:FindFirstChild(target.piece)
-		if part ~= nil and part:IsA("BasePart") then
-			local gui = Instance.new("SurfaceGui")
-			gui.Name = "Livery"
-			gui.Face = target.face
-			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-			gui.PixelsPerStud = Constants.LIVERY_PIXELS_PER_STUD
-			gui.LightInfluence = 1
-			gui.MaxDistance = 250
-			local image = Instance.new("ImageLabel")
-			image.Name = "Livery"
-			image.BackgroundTransparency = 1
-			image.Size = UDim2.fromScale(1, 1)
-			image.Image = Constants.LIVERY_IMAGE
-			image.ScaleType = Enum.ScaleType.Stretch
-			image.Parent = gui
-			gui.Parent = part
-		end
+-- The old company's painted-over sign (Constants.LORE_SIGN): on the art only; the graybox has no such wall.
+local function loreSign(model: Model)
+	local sign = Constants.LORE_SIGN
+	local part = model:FindFirstChild(sign.piece)
+	if part == nil or not part:IsA("BasePart") then
+		return
 	end
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "LoreSign"
+	gui.Face = sign.face
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = Constants.LORE_PIXELS_PER_STUD
+	gui.LightInfluence = 1
+	gui.MaxDistance = 60
+	local image = Instance.new("ImageLabel")
+	image.Name = "LoreSign"
+	image.BackgroundTransparency = 1
+	image.Position = sign.position
+	image.Size = sign.size
+	image.Image = sign.image
+	image.ScaleType = Enum.ScaleType.Stretch
+	image.Parent = gui
+	gui.Parent = part
 end
 
 local function lamp(model: Model)
@@ -226,7 +228,7 @@ end
 function DepotTruckVisualSystem.buildWith(bed: BasePart, parent: Instance, source: Model?, clockSource: Model?): Model
 	local deck = bed.CFrame * CFrame.new(0, bed.Size.Y / 2, 0)
 	local model = art(deck, source, clockSource)
-	livery(model)
+	loreSign(model)
 	lamp(model)
 	scanner(model, deck)
 	bed.Transparency = Constants.BED_TRANSPARENCY
