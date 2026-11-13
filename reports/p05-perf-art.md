@@ -169,7 +169,30 @@ FacePlate; his hair, hoodie and shorts in the game are later uploads, not done y
 - Next, on the owner's yes: upload the new parts to Icey Labs, swap the MeshIds in `Assets.CleanupCrew.Characters`
   in both places, and play-check every skin's outfit and accessories on the lighter bodies.
 
-## 4. Truck redo (`p1-truck-lore`): look A built, waiting on the owner's look check
+## 4. Truck redo (`p1-truck-lore`): v4 is in both places (owner to save both), ready for the owner's play-check
+
+Shipped (2026-11-13). Owner: T1 "fine", T2 pass, plus one fix: "move wheels to side for back wheels? The top of
+wheel / guard is clipping into truck!!"
+- Fix: the rear tyres now stand beside the box (inner face 0.02 off the wall, tyres 1.4 wide); the guards are flares on
+  the wall; the bottom rail stops in front of them. The truck is 20.4 studs wide. The hub bays are 28 apart (Lobby
+  x 20 / -8 / -36; the Shift test depot the same), so 7.6 studs stay between trucks. `681292cd`: `TRUCK_WIDTH` 20.5,
+  `HALF_WIDTH` 10.25, the graybox's rear tyres beside the box. No bay was moved.
+- Uploaded to Icey Labs (owner verified on economy.roblox.com): model 94655249327854; images (decal -> image) old sign
+  74575119736869 -> 122225529513930, paint color 135127847966340 -> 138264076346730, normal 129129956082610 ->
+  108711044187760, rough 89452180093827 -> 91431433008800 (`design/production-art/truck-lore/assets_v4.json`).
+- Template `ReplicatedStorage.Assets.CleanupCrew.Truck` in both places: 39 MeshParts at their deck-space centres,
+  `PaintSlot`, anchored and inert, Box fidelity, CabWindows Glass 0.25. The 22 paint-slot pieces carry a
+  SurfaceAppearance (the paint set; its `Color` is the slot colour), and there are 9 attachments.
+  `RuntimeApproved`, `SourceAsset`. Rollback: delete `Truck`, rename `Truck_v3` back.
+- Code `299a572e`: no `TruckLuton` camera wall (no Luton), no side line, `LORE_SIGN` (a SurfaceGui on the art's
+  BoxShell Right face). Specs updated first.
+- Checked in play, Shift and Lobby with the code synced: every truck (3 hub bays + the office) builds the
+  approved-mesh art from 94655249327854 with the sign; no `TruckLuton`; no layout errors. In-Roblox captures in the
+  notes folder (`truck-v4-in-roblox-shift-2026-11-13.jpg`, next to v3).
+- For later truck skins (crew hosting batch 6): recolour a slot through the SurfaceAppearance's `Color`, not the
+  MeshPart's (a SurfaceAppearance ignores the part colour).
+
+Earlier step (look A built, waiting on the owner's look check):
 
 Owner, 2026-11-13: "yes build look A and take Morrow and Morrow off the truck! Sure to Q5! I think maybe keep off Q6".
 
