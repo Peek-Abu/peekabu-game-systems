@@ -55,3 +55,34 @@ Today: `DepotTimecardPanel.luau` (620x390, Timecard + Today's Job faces). Concep
 
 ## Not done
 - Nothing built in game yet (all three rows need the owner's yes first). No uploads.
+
+## Owner picks, round 1 (read 2026-11-13 from the review page db `picks`)
+- Yes: featured A (spotlight), daily B (calendar tick), stickers = sticker sheet (packs B, "less gloss?"), inventory A
+  (backpack, "less gloss / AI look"), locker uses the locker icon, shine = soap bubbles, pattern = bubble rings, colour
+  per screen, clipboard layout A, clipboard words cut.
+- No / redo: shop (all "AI-like"; bag B could work with its strap fixed), locks rule (Gloom lock and the others look
+  glossy/AI; only the price tag is decent), Let's Go ("give me more, less AI, not soap-looking"), Pippa renders (hands
+  clip into the head; asks about the lavender Pippa). Clipboard look: "I'd have to see it".
+- Note on the "white borders" the owner saw on the locks: the PNGs are transparent; the white is the lilac rim light,
+  and the review page also previews each icon on a cream plate.
+
+## Built (470f20f9)
+- Soap bubbles replace the 4-point star in every reward/earned VFX burst: `VfxAssets.TEXTURES.bubble` (the Bubble
+  Ride bubble, already Icey Labs) in Ability, Cargo, truck pop, Emote, Employee, Occupant and Vacuum bursts. `star`
+  stays only for Cappy's Spot It locator (a marker, not a reward).
+- Light panels: `ToonSurface` pattern `rings` (the bubble tile tinted violet) replaces `sparkle`; the sparkle tile
+  is dropped from `UIAssets.toon`.
+- Colour per screen: Shop menu bar mint, Inventory sky, Guide header gold, Settings night (`DepotHubViewModel.pageHue`,
+  `ToonPanel` header `hue`). The clipboard board is coral.
+- Gloom Locker source band shows the locker render instead of the Gloom lock.
+- Company Clipboard rebuilt (`DepotTimecardPanel` + new specced `DepotClipboardViewModel`): coral board, steel clip,
+  TIMECARD (sky) / TODAY'S JOB (mint) tabs, punch track with the key and Gleam hung on punches 3 and 5, PUNCH IN!,
+  paycheck dots; today's job in big words with bar, +100 chip, "NEW JOB IN 5H 12M", SHOW IN SHIFTS. The stamp lands on
+  the punch slot.
+- Uploaded to Icey Labs (Decals, Approved, Creator = group 189923277): featured spotlight 86065362565121, daily
+  calendar 123972910876460, soap bubbles 111550379423940. Their Image ids need a Studio Edit InsertService call before
+  they can be wired (featured tab, daily gift/sign, UI ToonSparkle image).
+
+## Round 2 on the review page
+Matte, hand-painted icons (no plastic gloss) for: style (matte spotlight/calendar), backpack, sticker sheet, shop,
+price tag, Let's Go; plus "which Pippa: coral / lavender / both".
