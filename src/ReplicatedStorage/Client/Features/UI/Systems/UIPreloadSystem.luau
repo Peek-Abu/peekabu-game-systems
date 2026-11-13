@@ -23,6 +23,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local EmployeePoseRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeePoseRegistry)
 local EmployeePoseRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeePoseRules)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePreviewSystem)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UIPreloadRules = require(ReplicatedStorage.Client.Features.UI.Rules.UIPreloadRules)
@@ -115,12 +116,10 @@ end
 -- The welcome card's own art (ShiftTransitPanel's greeting): Pippa's model (drawn waving on it) and the goo of its tip
 -- plate.
 local function placeScreen(art: Instance?): { Instance | string }
-	local items: { Instance | string } = {}
-	local characters = if art ~= nil then art:FindFirstChild("Characters") else nil
-	local pippa = if characters ~= nil then characters:FindFirstChild("Pippa") else nil
-	if pippa ~= nil then
-		table.insert(items, pippa)
-	end
+	local employee = ShiftConstants.WELCOME_EMPLOYEE
+	local def = EmployeeRegistry.get(employee)
+	local skin = if def ~= nil then def.skins[ShiftConstants.WELCOME_SKIN] else nil
+	local items = UIPreloadRules.lookArt(art, employee, skin)
 	for _, id in UIPreloadRules.imageIds({ { UIAssets.toon.poolTile, UIAssets.toon.gooEnds } }) do
 		table.insert(items, id)
 	end

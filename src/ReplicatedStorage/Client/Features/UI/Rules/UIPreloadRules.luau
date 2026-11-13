@@ -16,6 +16,10 @@
 	@class UIPreloadRules
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
+
 local UIPreloadRules = {}
 
 -- The longest the first load screen waits for the essential art before the game shows anyway (s).
@@ -135,6 +139,61 @@ function UIPreloadRules.batches(art: Instance?, images: { string }, screen: { In
 		end
 	end
 	return batches
+end
+
+--[=[
+	Everything one look (an employee in a skin) needs loaded to draw at once: the template, the skin's body, piece and
+	style palettes (set as TextureIDs at runtime, so the template alone never fetches them), its accessories and its
+	outfit from the art folder `art`. Pieces the art does not have are skipped; nil art gives nothing.
+]=]
+function UIPreloadRules.lookArt(
+	art: Instance?,
+	employee: string,
+	skin: EmployeeRegistry.SkinDef?
+): { Instance | string }
+	local items: { Instance | string } = {}
+	if art == nil then
+		return items
+	end
+	local characters = art:FindFirstChild("Characters")
+	local template = if characters ~= nil then characters:FindFirstChild(employee) else nil
+	if template ~= nil then
+		table.insert(items, template)
+	end
+	if skin == nil then
+		return items
+	end
+	local accessories = art:FindFirstChild("Accessories")
+	for _, name in skin.accessories do
+		local piece = if accessories ~= nil then accessories:FindFirstChild(name) else nil
+		if piece ~= nil then
+			table.insert(items, piece)
+		end
+	end
+	local outfitName = skin.outfit
+	local outfits = art:FindFirstChild("Outfits")
+	local outfit = if outfitName ~= nil and outfits ~= nil then outfits:FindFirstChild(outfitName) else nil
+	if outfit ~= nil then
+		table.insert(items, outfit)
+	end
+	local palettes: { string } = {}
+	if skin.paletteTextureId ~= nil then
+		table.insert(palettes, skin.paletteTextureId)
+	end
+	local pieces: { [string]: string } = skin.piecePalettes or {}
+	for _, id in pieces do
+		table.insert(palettes, id)
+	end
+	local styles: { EmployeeRegistry.StyleDef } = skin.styles or {}
+	for _, style in styles do
+		if style.paletteTextureId ~= nil then
+			table.insert(palettes, style.paletteTextureId)
+		end
+	end
+	for _, id in UIPreloadRules.imageIds({ palettes }) do
+		table.insert(items, id)
+	end
+	return items
 end
 
 -- The load bar's fill: the share of the `total` essential batches done (1 when there are none).

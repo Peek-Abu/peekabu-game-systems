@@ -10,7 +10,7 @@
 	loading bar: a real progress bar that follows this client's readiness (`progress`) and never goes back, easing to
 	full with DOORS OPEN! once this client is ready, then the cover fades. With cover "welcome" (a first join to the hub,
 	while the art loads) it carries the welcome card on the same canvas: the game's name and a line on the cream card,
-	today's Pippa waving beside it (a ToonViewport of her model, so the card never shows outdated art), a tip on the dark goo plate and the same loading bar (it follows the preload, then ALL
+	Pippa in her Lavender Specs skin waving beside it (a ToonViewport of her live model; ShiftConstants.WELCOME_SKIN), a tip on the dark goo plate and the same loading bar (it follows the preload, then ALL
 	SET!). A fading-out cover keeps its last lines. Presentational: the words are ShiftTransitViewModel.slip and
 	ShiftTransitViewModel.welcome.
 
@@ -276,9 +276,10 @@ local function greeting(view: ShiftTransitViewModel.WelcomeView, progress: numbe
 			goo = { kind = "pool", from = 160, to = 700, scale = 0.45 },
 			children = tipFace,
 		}),
-		-- Today's Pippa from her own model, waving (her profile pose; owner, 2026-11-13: not the old lavender render).
+		-- Pippa in Lavender Specs (ShiftConstants.WELCOME_SKIN), from her live model, waving (her profile pose).
 		pippa = e(ToonViewport, {
-			employee = "Pippa",
+			employee = ShiftConstants.WELCOME_EMPLOYEE,
+			skin = ShiftConstants.WELCOME_SKIN,
 			context = "profile",
 			framing = "full",
 			position = UDim2.fromOffset(900, 10),

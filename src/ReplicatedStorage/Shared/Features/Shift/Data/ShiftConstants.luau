@@ -149,6 +149,10 @@ return table.freeze({
 	-- long (longer than UIPreloadRules.ESSENTIAL_TIMEOUT, so the preload's own timeout lifts it first), then ALL SET!
 	-- for TRANSIT_ARRIVED_SECONDS before it fades.
 	TRANSIT_WELCOME_SECONDS = 15,
+	-- Who waves on the welcome card, drawn live from the model (owner, 2026-11-13: Pippa in Lavender Specs, the look
+	-- the old card render had). UIPreloadSystem loads this look first, so the card never draws it half loaded.
+	WELCOME_EMPLOYEE = "Pippa",
+	WELCOME_SKIN = "OwnerSpecial",
 	-- A respawn (after a catch) blinks black this long, then fades out: no load screen.
 	TRANSIT_BLINK_SECONDS = 0.25,
 	TRANSIT_WAIT_TEXT = "Waiting for the rest of the crew.",

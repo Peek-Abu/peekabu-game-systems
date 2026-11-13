@@ -113,6 +113,44 @@ return function()
 		end)
 	end)
 
+	describe("lookArt", function()
+		it("lists the template, the skin's palettes, its accessories and its outfit", function()
+			local root = art()
+			local glasses = Instance.new("Accessory")
+			glasses.Name = "Glasses"
+			glasses.Parent = root.Accessories
+			local coat = Instance.new("Model")
+			coat.Name = "Coat"
+			coat.Parent = root.Outfits
+			local skin = {
+				name = "Lavender",
+				paletteTextureId = "rbxassetid://5",
+				piecePalettes = { Hoodie = "rbxassetid://6" },
+				accessories = { "Glasses", "Missing" },
+				outfit = "Coat",
+				styles = { { folder = "A", paletteTextureId = "rbxassetid://7", name = "A", swatch = {} } },
+			}
+			local items = UIPreloadRules.lookArt(root, "Pippa", skin)
+			expect(items[1]).to.equal(root.Characters.Pippa)
+			expect(table.find(items, glasses)).to.be.ok()
+			expect(table.find(items, coat)).to.be.ok()
+			expect(table.find(items, "rbxassetid://5")).to.be.ok()
+			expect(table.find(items, "rbxassetid://6")).to.be.ok()
+			expect(table.find(items, "rbxassetid://7")).to.be.ok()
+			-- An accessory the art does not have is skipped.
+			expect(#items).to.equal(6)
+			root:Destroy()
+		end)
+
+		it("is just the template for a look with no skin, and empty with no art", function()
+			local root = art()
+			local items = UIPreloadRules.lookArt(root, "Pippa", nil)
+			expect(#items).to.equal(1)
+			expect(#UIPreloadRules.lookArt(nil, "Pippa", nil)).to.equal(0)
+			root:Destroy()
+		end)
+	end)
+
 	describe("progress", function()
 		it("is the share of essential batches done, clamped", function()
 			expect(UIPreloadRules.progress(0, 4)).to.equal(0)
