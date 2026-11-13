@@ -47,8 +47,50 @@ SpecRoots.assertAllModulesSpecced(testLocations)
 local ItemContentRegistry = require(ReplicatedStorage.Shared.Features.Item.Data.ItemContentRegistry)
 ItemContentRegistry.init()
 
--- Run tests
-local results = TestEZ.TestBootstrap:run(testLocations, TestEZ.Reporters.TextReporter)
+-- Run tests: one TestEZ plan per spec module, with a yield between modules. The whole suite as a single plan runs on
+-- one thread, so a stretch of specs that never yield adds up past Play's script timeout (10 s on the Play server,
+-- whatever the Studio setting says; found 2026-11-13: no spec blocks more than 2 s, yet the run died 10.0 s after
+-- its last log line). A module's own tree is printed only when it fails; the totals are the sum of every plan.
+local specModules: { ModuleScript } = {}
+local function collect(root: Instance)
+	for _, child in root:GetChildren() do
+		if child:IsA("ModuleScript") and string.match(child.Name, "%.spec$") ~= nil then
+			table.insert(specModules, child)
+		end
+		collect(child)
+	end
+end
+for _, location in testLocations do
+	collect(location)
+end
+
+local results = { successCount = 0, failureCount = 0, skippedCount = 0 }
+local quiet = {
+	report = function(_planResults) end,
+}
+local failedModules: { string } = {}
+for _, module in specModules do
+	local ok, moduleResults = pcall(TestEZ.TestBootstrap.run, TestEZ.TestBootstrap, { module }, quiet)
+	if not ok then
+		-- A spec that fails to load (or a plan that errors) is a failure, never a silent skip.
+		results.failureCount += 1
+		table.insert(failedModules, module:GetFullName())
+		warn(`--- {module:GetFullName()} failed to run: {moduleResults}`)
+	else
+		results.successCount += moduleResults.successCount
+		results.failureCount += moduleResults.failureCount
+		results.skippedCount += moduleResults.skippedCount
+		if moduleResults.failureCount > 0 then
+			table.insert(failedModules, module:GetFullName())
+			print(`\n--- {module:GetFullName()} ---`)
+			TestEZ.Reporters.TextReporter.report(moduleResults)
+		end
+	end
+	task.wait()
+end
+if #failedModules > 0 then
+	print(`\nFailing spec modules ({#failedModules}):\n  ` .. table.concat(failedModules, "\n  "))
+end
 
 print("\n" .. string.rep("=", 60))
 if results.failureCount == 0 then
