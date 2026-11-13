@@ -36,6 +36,8 @@ local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Dat
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
+local VacuumMountFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMountFormulas)
+local VacuumMountSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMountSystem)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local Constants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
@@ -147,6 +149,13 @@ end
 
 local function scaled(frame: CFrame, scale: number): CFrame
 	return CFrame.new(frame.Position * scale) * frame.Rotation
+end
+
+-- Half the harness pad's width and height (the footprint the back is measured under), at the pack's size.
+local function padHalf(pack: Model): Vector2
+	local pad = partOf(pack, "BackPad")
+	local size = if pad ~= nil then pad.Size else Vector3.new(0.4, 0.56, 0.08) * pack:GetScale()
+	return Vector2.new(size.X / 2, size.Y / 2)
 end
 
 -- The right hip joint in `torso`'s space at the rig's rest pose (the Waist joint's C0 / C1, not an animated frame),
@@ -373,16 +382,26 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	local art = VacuumKitUtils.kit(worn)
 	local model = Instance.new("Model")
 	model.Name = VacuumConstants.BACKPACK_NAME
-	local mount = torso.CFrame * scaled(fit.mount, scale)
 	local pack = art.pack
 	pack.Name = "Pack"
 	pack:ScaleTo(size)
-	pack:PivotTo(mount)
+	pack:SetAttribute(VacuumConstants.MOUNT.scaleAttribute, size)
+	-- The pack meets the back by two Attachments (VacuumMountSystem): its plate on the back attachment, which sits
+	-- on the body's own surface under the pad at the fit's height. `mount` is that meeting point; pack-space pieces
+	-- (holster, outlet) are placed from the pack's pivot.
+	local fitMount = scaled(fit.mount, scale)
+	local plate = VacuumMountSystem.plateFrame(pack)
+	local back = VacuumMountSystem.seat(character, torso, fitMount, padHalf(pack), { model })
+	local mount = torso.CFrame * back.CFrame
+	local packPivot = VacuumMountFormulas.pivotFor(mount, plate)
+	pack:PivotTo(packPivot)
 	pack.Parent = model
 	local straps = art.straps
 	if straps ~= nil then
 		straps:ScaleTo(scale)
 		stretch(straps, fit.strapStretch)
+		straps:SetAttribute(VacuumConstants.MOUNT.scaleAttribute, scale)
+		straps:SetAttribute(VacuumConstants.MOUNT.stretchAttribute, fit.strapStretch)
 		straps:PivotTo(torso.CFrame * scaled(fit.strapOffset, scale))
 		straps.Parent = model
 	end
@@ -392,7 +411,7 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	stowed.Name = "StowedWand"
 	local parts, dims, lipOffset = wandAt(art, size)
 	-- The grip's lower end sits in the holster clip.
-	local holster = mount * scaled(Constants.holster, size) * CFrame.new(0, dims.gripHalf, 0)
+	local holster = packPivot * scaled(Constants.holster, size) * CFrame.new(0, dims.gripHalf, 0)
 	local stowHold = holdFor(character, dims, size)
 	local heldTube = if stowHold ~= nil then stowHold.tube else Constants.DEFAULT_TUBE * size
 	local stow = Constants.stow
@@ -417,7 +436,7 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	local outletPart = partOf(pack, "HoseOutlet") or torso
 	local outlet = Instance.new("Attachment")
 	outlet.Name = "HoseMount"
-	outlet.CFrame = outletPart.CFrame:ToObjectSpace(mount * scaled(Constants.outlet, size))
+	outlet.CFrame = outletPart.CFrame:ToObjectSpace(packPivot * scaled(Constants.outlet, size))
 	outlet.Parent = outletPart
 	local beam = hose(worn.hoseTexture, size)
 	beam.Attachment0 = outlet
@@ -458,6 +477,35 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	model:SetAttribute("VacuumSkin", worn.name)
 	model.Parent = character
 	local destroyed = false
+	-- What the body wears over its back can change after the pack goes on (the skin and uniform are put on as the
+	-- character spawns, in no set order with this; a later outfit): the back is measured again, once per frame at
+	-- most, and the pack's joint moved onto it (every client bobs about the joint's REST frame).
+	local refitQueued = false
+	local function refit()
+		refitQueued = false
+		if destroyed or model.Parent ~= character or torso.Parent ~= character then
+			return
+		end
+		local seated = VacuumMountSystem.seat(character, torso, fitMount, padHalf(pack), { model })
+		if joint:GetAttribute(VacuumMotionConstants.REST_ATTRIBUTE) ~= seated.CFrame then
+			joint.C0 = seated.CFrame
+			joint:SetAttribute(VacuumMotionConstants.REST_ATTRIBUTE, seated.CFrame)
+		end
+	end
+	local function bodyChanged(descendant: Instance)
+		if refitQueued or not descendant:IsA("BasePart") or descendant:IsDescendantOf(model) then
+			return
+		end
+		if descendant:FindFirstAncestorOfClass("Tool") ~= nil then
+			return
+		end
+		refitQueued = true
+		task.defer(refit)
+	end
+	local watches = {
+		character.DescendantAdded:Connect(bodyChanged),
+		character.DescendantRemoving:Connect(bodyChanged),
+	}
 	return {
 		model = model,
 		skin = worn,
@@ -477,6 +525,9 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 		end,
 		destroy = function()
 			destroyed = true
+			for _, watch in watches do
+				watch:Disconnect()
+			end
 			stowed:Destroy()
 			model:Destroy()
 		end,

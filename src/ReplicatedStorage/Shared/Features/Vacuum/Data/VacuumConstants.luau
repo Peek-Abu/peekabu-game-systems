@@ -136,6 +136,24 @@ return table.freeze({
 	-- by each client to the crew's contract progress, Gloom removed of the contract, its Weld moved so its bottom
 	-- stays put), the lamp that lights once the contract is met, and the wand's floor head (where suction streams to).
 	BACKPACK_NAME = "VacuumBackpack",
+	-- Where the pack meets the back (VacuumMountSystem, VacuumMountFormulas): the Attachment on the wearer's
+	-- UpperTorso (on the surface of whatever the body wears there) and the one on the pack (the middle of its
+	-- harness pad's front face; a skin may author it, else it is made from its BackPad). The back is found by
+	-- `cols` x `rows` rays over the pad's footprint; the plate sits `clearance` studs off the outermost surface they
+	-- hit, at most `maxDepth` torso depths behind the torso's centre (a stray hit on a coat's flare, say).
+	MOUNT = table.freeze({
+		backName = "VacuumBackAttachment",
+		plateName = "VacuumMountPlate",
+		-- On the worn `Pack` and `Straps` Models: the scale the server wore them at (and the straps' stretch), so a
+		-- client preview copying another skin over them fits it the same (a Model's ScaleTo scale is not something
+		-- a client copy can rely on reading back).
+		scaleAttribute = "VacuumFitScale",
+		stretchAttribute = "VacuumFitStretch",
+		cols = 3,
+		rows = 4,
+		clearance = 0.01,
+		maxDepth = 1,
+	}),
 	-- On a player's character: the VacuumSkinRegistry skin their outfit wants (Employee writes it from the Cosmetic
 	-- loadout, Vacuum wears it and swaps the pack when it changes; nil = Standard Issue).
 	SKIN_ATTRIBUTE = "VacuumSkinWanted",

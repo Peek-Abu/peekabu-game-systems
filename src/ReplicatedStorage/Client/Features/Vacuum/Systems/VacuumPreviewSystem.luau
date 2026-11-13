@@ -5,7 +5,9 @@
 	sizes), so a preview never re-fits anything: it copies the art over the pieces already there.
 
 	- `swap(character, skin, source)`: on a CLONE of a character that wears a pack (VacuumConstants.BACKPACK_NAME),
-	  puts `skin`'s art on it: the canister and straps at the same pivot and scale, each stowed wand piece at the same
+	  puts `skin`'s art on it: the canister at the scale it was worn at with its mount plate where the old one met the
+	  back (VacuumMountSystem), the straps fitted as the server fitted them (both read from the attributes the server
+	  records, VacuumConstants.MOUNT), each stowed wand piece at the same
 	  place and size (the tube stays telescoped), and the hose's texture. New pieces are welded to what they replace
 	  was welded to (the pack's anchor, or the torso for the straps), so a live preview carries them as it animates.
 	  False when there is no pack, no approved template for the skin, or it already wears that skin.
@@ -20,8 +22,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
+local VacuumMountFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMountFormulas)
+local VacuumMountSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMountSystem)
 
 type SkinDef = VacuumSkinRegistry.SkinDef
+
+local MOUNT = VacuumConstants.MOUNT
 
 -- Where the approved templates live (the same folder VacuumVisualConstants.TEMPLATE_FOLDER names on the server).
 local TEMPLATE_FOLDER = { "Assets", "CleanupCrew" }
@@ -88,18 +94,36 @@ local function weldTarget(old: BasePart, scope: Instance): BasePart?
 	return nil
 end
 
--- Replaces the model `old` with a copy of `from`, at the same pivot and scale, welded to `to`.
-local function replaceModel(old: Model, from: Model, to: BasePart?)
-	local copy = from:Clone()
+-- The scale the server wore `model` at (VacuumConstants.MOUNT.scaleAttribute), else its own Model scale.
+local function scaleOf(model: Model): number
+	local recorded = model:GetAttribute(MOUNT.scaleAttribute)
+	return if type(recorded) == "number" then recorded else model:GetScale()
+end
+
+-- Stretches a model's parts about its pivot (x across, y up, z through), as the server stretched the straps it wore.
+local function stretch(model: Model, by: Vector3)
+	if by == Vector3.one then
+		return
+	end
+	local pivot = model:GetPivot()
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			local rel = pivot:ToObjectSpace(part.CFrame)
+			part.Size *= by
+			part.CFrame = pivot * CFrame.new(rel.Position * by) * rel.Rotation
+		end
+	end
+end
+
+-- Puts `copy` where `old` was, welded to `to`, and removes `old`. Attachments something else uses (the hose's mount
+-- at the outlet) move to `to`, where they were in the world.
+local function takeOver(old: Model, copy: Model, to: BasePart?)
 	copy.Name = old.Name
-	copy:ScaleTo(old:GetScale())
-	copy:PivotTo(old:GetPivot())
 	weldAll(copy, to)
 	copy.Parent = old.Parent
-	-- Attachments something else uses (the hose's mount at the outlet) move to `to`, where they were in the world.
 	if to ~= nil then
 		for _, descendant in old:GetDescendants() do
-			if descendant:IsA("Attachment") then
+			if descendant:IsA("Attachment") and descendant.Name ~= MOUNT.plateName then
 				local world = descendant.WorldCFrame
 				descendant.Parent = to
 				descendant.WorldCFrame = world
@@ -107,6 +131,35 @@ local function replaceModel(old: Model, from: Model, to: BasePart?)
 		end
 	end
 	old:Destroy()
+end
+
+-- Replaces the worn pack `old` with a copy of the skin's `from`, at the scale it was worn at, its mount plate
+-- exactly where the old one met the back (VacuumMountSystem: any skin's plate on the wearer's back attachment). The
+-- gauge shows what the old one showed (empty in a fresh pack), not the template's full dust insert.
+local function replacePack(old: Model, from: Model, to: BasePart?)
+	local copy = from:Clone()
+	local scale = scaleOf(old)
+	copy:ScaleTo(scale)
+	copy:SetAttribute(MOUNT.scaleAttribute, scale)
+	local oldPlate = VacuumMountSystem.plateOf(old)
+	local meet = if oldPlate ~= nil then oldPlate.WorldCFrame else old:GetPivot()
+	copy:PivotTo(VacuumMountFormulas.pivotFor(meet, VacuumMountSystem.plateFrame(copy)))
+	local oldFill, newFill =
+		basePart(old, VacuumConstants.GAUGE_FILL_NAME), basePart(copy, VacuumConstants.GAUGE_FILL_NAME)
+	if oldFill ~= nil and newFill ~= nil then
+		newFill.Transparency = oldFill.Transparency
+	end
+	takeOver(old, copy, to)
+end
+
+-- Replaces the worn straps `old` with a copy of the skin's `from`, scaled and stretched as the server fitted them.
+local function replaceStraps(old: Model, from: Model, to: BasePart?)
+	local copy = from:Clone()
+	copy:ScaleTo(scaleOf(old))
+	local by = old:GetAttribute(MOUNT.stretchAttribute)
+	stretch(copy, if typeof(by) == "Vector3" then by else Vector3.one)
+	copy:PivotTo(old:GetPivot())
+	takeOver(old, copy, to)
 end
 
 function VacuumPreviewSystem.swap(character: Model, skin: SkinDef, source: Instance): boolean
@@ -122,11 +175,11 @@ function VacuumPreviewSystem.swap(character: Model, skin: SkinDef, source: Insta
 	local torso = basePart(character, "UpperTorso")
 	local pack, newPack = modelChild(backpack, "Pack"), modelChild(template, "Backpack")
 	if pack ~= nil and newPack ~= nil then
-		replaceModel(pack, newPack, anchor)
+		replacePack(pack, newPack, anchor)
 	end
 	local straps, newStraps = modelChild(backpack, "Straps"), modelChild(template, "Straps")
 	if straps ~= nil and newStraps ~= nil then
-		replaceModel(straps, newStraps, torso)
+		replaceStraps(straps, newStraps, torso)
 	end
 	local stowed, wand = modelChild(backpack, "StowedWand"), modelChild(template, "Wand")
 	if stowed ~= nil and wand ~= nil then

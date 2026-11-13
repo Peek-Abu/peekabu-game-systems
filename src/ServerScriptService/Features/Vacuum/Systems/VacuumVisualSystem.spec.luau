@@ -245,6 +245,92 @@ return function()
 			holder:Destroy()
 		end)
 
+		-- The owner's report (2026-11-12): some employees showed a gap between their back and the vacuum. The pad was
+		-- put on the back of the torso's bounding box; now the pack's plate meets a back attachment on the body's own
+		-- surface (VacuumMountSystem), whatever it wears there.
+		describe("on the body's own back", function()
+			local MOUNT = VacuumConstants.MOUNT
+
+			local function placed()
+				local holder = makeHolder()
+				holder:PivotTo(CFrame.new(7000, 700, 7000))
+				holder.Parent = workspace
+				return holder
+			end
+
+			local function padFront(model, torso)
+				local pad = find(model, "BackPad")
+				return torso.CFrame:PointToObjectSpace((pad.CFrame * CFrame.new(0, 0, -pad.Size.Z / 2)).Position)
+			end
+
+			it("seats the pad on the torso's back with nothing between, at the fit's height", function()
+				local holder = placed()
+				local torso = holder.UpperTorso
+				local backpack = Visual.wear(holder)
+				local back = torso:FindFirstChild(MOUNT.backName)
+				expect(back).to.be.ok()
+				local fit = Visual.fitOf(holder)
+				expect(back.Position.Y).to.be.near(fit.mount.Position.Y, 1e-3)
+				expect(back.Position.Z).to.be.near(0.4 + MOUNT.clearance, 1e-3)
+				local front = padFront(backpack.model, torso)
+				expect(front.Z).to.be.near(0.4 + MOUNT.clearance, 1e-3)
+				backpack.destroy()
+				holder:Destroy()
+			end)
+
+			it("seats it on what the body wears over its back (a hoodie), never inside it", function()
+				local holder = placed()
+				local torso = holder.UpperTorso
+				local hoodie =
+					addPart(holder, "Hoodie", torso.CFrame * CFrame.new(0, 0, 0.15), Vector3.new(1.1, 1.2, 1.1))
+				hoodie.CanQuery = false
+				local backpack = Visual.wear(holder)
+				expect(padFront(backpack.model, torso).Z).to.be.near(0.7 + MOUNT.clearance, 1e-3)
+				expect(hoodie.CanQuery).to.equal(false)
+				backpack.destroy()
+				holder:Destroy()
+			end)
+
+			it("moves the pack onto the back again when the body's outfit changes after it went on", function()
+				local holder = placed()
+				local torso = holder.UpperTorso
+				local backpack = Visual.wear(holder)
+				local joint = backpack.model.PackAnchor:FindFirstChild(MotionConstants.PACK_JOINT_NAME)
+				addPart(holder, "Coat", torso.CFrame * CFrame.new(0, 0, 0.2), Vector3.new(1.1, 1.2, 1.1))
+				task.wait()
+				task.wait()
+				expect(joint.C0.Position.Z).to.be.near(0.75 + MOUNT.clearance, 1e-3)
+				expect(joint:GetAttribute(MotionConstants.REST_ATTRIBUTE)).to.equal(joint.C0)
+				backpack.destroy()
+				holder:Destroy()
+			end)
+
+			it("fits both skins' pads alike (every skin's plate meets the same back)", function()
+				for _, name in { "StandardIssue", "BrassBellows" } do
+					local holder = placed()
+					local torso = holder.UpperTorso
+					local backpack = Visual.wear(holder, VacuumSkinRegistry.get(name))
+					expect(padFront(backpack.model, torso).Z).to.be.near(0.4 + MOUNT.clearance, 1e-3)
+					backpack.destroy()
+					holder:Destroy()
+				end
+			end)
+
+			it("records the scale it wore the pack and straps at, for client previews", function()
+				local holder = placed()
+				local backpack = Visual.wear(holder)
+				local pack = backpack.model.Pack
+				expect(pack:GetAttribute(MOUNT.scaleAttribute)).to.be.near(VisualConstants.GENERIC_SIZE, 1e-6)
+				local straps = backpack.model:FindFirstChild("Straps")
+				if straps ~= nil then
+					expect(straps:GetAttribute(MOUNT.scaleAttribute)).to.equal(1)
+					expect(typeof(straps:GetAttribute(MOUNT.stretchAttribute))).to.equal("Vector3")
+				end
+				backpack.destroy()
+				holder:Destroy()
+			end)
+		end)
+
 		it("unclips the stowed wand and runs the hose to the held one, and back", function()
 			local holder = makeHolder()
 			local backpack = Visual.wear(holder)

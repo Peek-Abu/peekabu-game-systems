@@ -282,8 +282,16 @@ local function bob(holder: Holder, dt: number)
 		holder.packJoint, holder.packRest = found, rest
 		joint = found
 	end
+	if joint == nil then
+		return
+	end
+	-- The server moves the rest when it seats the pack again on a changed back (VacuumVisualSystem's refit).
+	local current = joint:GetAttribute(Constants.REST_ATTRIBUTE)
+	if typeof(current) == "CFrame" then
+		holder.packRest = current
+	end
 	local rest = holder.packRest
-	if joint == nil or rest == nil then
+	if rest == nil then
 		return
 	end
 	local fill = VacuumFeedbackSystem.gaugeShare()
