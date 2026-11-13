@@ -67,7 +67,8 @@ export type ToonIcon =
 	| "pippaWorried"
 	| "radio"
 	| "settings"
-	| "shopGift"
+	| "shop"
+	| "stickers"
 	| "spray"
 	| "stamina"
 	| "statQuiet"
@@ -108,12 +109,11 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	abilityLetsGo = "rbxassetid://110925040898866",
 	abilityPottedPlant = "rbxassetid://120058837938191",
 	abilitySpotIt = "rbxassetid://72513443568229",
-	-- Gleam bundle renders, smallest to biggest, made from the Gleam gem itself (v2, 2026-10-24), and the Shop's gift.
+	-- Gleam bundle renders, smallest to biggest, made from the Gleam gem itself (v2, 2026-10-24).
 	gleamPile = "rbxassetid://112951566480973",
 	gleamBucket = "rbxassetid://120954864254019",
 	gleamCrate = "rbxassetid://71294352475481",
 	gleamTruck = "rbxassetid://86130539333417",
-	shopGift = "rbxassetid://116419935164686",
 	-- The hub's station renders (2026-11-12): the shift bell and the radio from their models, the coffee mug from the
 	-- break room's (decals 127753490073652, 135622491578671, 132800978467871).
 	bell = "rbxassetid://85494966459975",
@@ -127,6 +127,11 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	-- the Shop's Featured spotlight (GPT renders, ink outline; Icey Labs decals 123972910876460 / 86065362565121).
 	daily = "rbxassetid://133319516052590",
 	featured = "rbxassetid://114915594745213",
+	-- Round 2 (glossy family, softer shine; owner picks 2026-11-13): the Shop's stall and the sticker sheet for sticker
+	-- packs, stickers and the chat wheel (Icey Labs decals 106048651825814 / 104162197575790). They replace the shared
+	-- gift box.
+	shop = "rbxassetid://78344221274424",
+	stickers = "rbxassetid://114382938678176",
 	credits = "rbxassetid://120886772987647", -- the Credits ticket (2026-10-21, decal 72265330733611)
 	gleam = "rbxassetid://138856527532184", -- the premium Gleam crystal (2026-10-21, decal 98003345456608)
 	globe = "rbxassetid://105862507048588",

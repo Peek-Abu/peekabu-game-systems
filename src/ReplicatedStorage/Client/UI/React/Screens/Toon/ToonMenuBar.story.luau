@@ -50,7 +50,7 @@ return UILabs.CreateReactStory({
 			{
 				bar = e(ToonMenuBar, {
 					title = "SHOP",
-					icon = "shopGift",
+					icon = "shop",
 					hue = "coral",
 					tabs = {
 						{ id = "featured", text = "Featured" },

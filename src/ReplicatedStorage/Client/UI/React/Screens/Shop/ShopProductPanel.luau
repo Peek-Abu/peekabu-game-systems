@@ -72,7 +72,7 @@ local function insideRow(
 	local art: React.ReactNode = if entry.kind == "Sticker pack"
 		then e(
 			ToonIcon,
-			{ icon = "shopGift", position = UDim2.fromScale(0.08, 0.08), size = UDim2.fromScale(0.84, 0.84) }
+			{ icon = "stickers", position = UDim2.fromScale(0.08, 0.08), size = UDim2.fromScale(0.84, 0.84) }
 		)
 		elseif entry.kind == "Vacuum" then e(ToonViewport, {
 			vacuum = string.match(entry.id, "^[^%.]+%.(.+)$"),

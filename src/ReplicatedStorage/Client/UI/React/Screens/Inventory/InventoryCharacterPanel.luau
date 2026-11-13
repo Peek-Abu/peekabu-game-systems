@@ -388,7 +388,7 @@ local function bundledTile(
 		})
 	elseif item.kind == "stickerPack" or item.kind == "sticker" then
 		art = e(ToonIcon, {
-			icon = "shopGift",
+			icon = "stickers",
 			position = UDim2.fromScale(0.07, 0.07),
 			size = UDim2.fromScale(0.86, 0.86),
 		})

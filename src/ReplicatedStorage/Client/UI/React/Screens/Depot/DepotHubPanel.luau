@@ -297,7 +297,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			button = e(ToonButton, {
 				variant = "danger",
 				layout = "tile",
-				icon = "shopGift",
+				icon = "shop",
 				text = "SHOP",
 				textSize = if phone then 13 else 24,
 				size = UDim2.fromScale(1, 1),

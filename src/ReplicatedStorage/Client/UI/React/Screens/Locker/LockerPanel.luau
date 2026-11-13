@@ -54,7 +54,7 @@ export type LockerPanelProps = {
 local function itemArt(item: VM.InsideItem): React.ReactNode
 	if item.kind == "stickerPack" or item.kind == "sticker" then
 		return e(ToonIcon, {
-			icon = "shopGift",
+			icon = "stickers",
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 0.5),
 			size = UDim2.fromScale(0.7, 0.7),

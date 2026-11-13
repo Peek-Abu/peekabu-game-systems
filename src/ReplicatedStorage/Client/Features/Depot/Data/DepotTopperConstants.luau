@@ -24,7 +24,7 @@ local function station(word: string, hue: UIToonConstants.Hue, icon: UIAssets.To
 end
 
 local STATIONS: { [string]: Station } = {
-	shop = station("SHOP", "mint", "shopGift"),
+	shop = station("SHOP", "mint", "shop"),
 	clock = station("CLOCK IN", "grape", "clock"),
 	bell = station("RING", "coral", "bell"),
 	radio = station("MUSIC", "sky", "radio"),

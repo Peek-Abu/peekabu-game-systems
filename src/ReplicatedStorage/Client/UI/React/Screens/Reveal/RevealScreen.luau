@@ -416,7 +416,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			local stage: Nodes = {
 				art = if extra.kind == "Sticker pack"
 					then e(ToonIcon, {
-						icon = "shopGift",
+						icon = "stickers",
 						position = UDim2.fromScale(0.08, 0.08),
 						size = UDim2.fromScale(0.84, 0.84),
 					})

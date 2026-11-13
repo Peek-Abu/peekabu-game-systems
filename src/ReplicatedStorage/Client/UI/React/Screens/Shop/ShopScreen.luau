@@ -101,11 +101,11 @@ local function group(children: Nodes): React.ReactNode
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children)
 end
 
--- The item on a card: in 3D (a skin, an employee, an emote or idle on its employee), or the gift for a sticker pack.
+-- The item on a card: in 3D (a skin, an employee, an emote or idle on its employee), or the sticker sheet for a sticker pack.
 local function art(card: VM.OfferCard, live: boolean?): React.ReactNode
 	if card.kind == "stickerPack" or card.kind == "sticker" then
 		return e(ToonIcon, {
-			icon = "shopGift",
+			icon = "stickers",
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 0.5),
 			size = UDim2.fromScale(0.7, 0.7),
@@ -515,7 +515,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	end
 	local bar = e(ToonMenuBar, {
 		title = "SHOP",
-		icon = "shopGift",
+		icon = "shop",
 		-- Each screen has its own colour (owner pick 2026-11-13): the Shop is mint.
 		hue = "mint",
 		-- A product page has its back button instead of the tabs (the bar has no room for both).

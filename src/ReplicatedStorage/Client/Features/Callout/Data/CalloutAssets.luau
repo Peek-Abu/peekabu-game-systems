@@ -31,9 +31,9 @@ local CalloutAssets = {
 	PING_SOUND = PING_SOUND,
 }
 
--- The sticker's image: its uploaded art, else the shop gift.
+-- The sticker's image: its uploaded art, else the sticker sheet.
 function CalloutAssets.stickerImage(id: string): string
-	local fallback: UIAssets.ToonIcon = "shopGift"
+	local fallback: UIAssets.ToonIcon = "stickers"
 	return UIAssets.stickers[id] or UIAssets.toonIcons[fallback]
 end
 

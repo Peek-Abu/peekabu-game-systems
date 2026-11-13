@@ -43,7 +43,7 @@ local function ChatWheelButtons(props: ChatWheelButtonsProps): React.ReactNode
 		}),
 		chat = e(ToonButton, {
 			variant = "sky",
-			icon = "shopGift",
+			icon = "stickers",
 			radius = SIZE // 2,
 			position = UDim2.fromOffset(0, SIZE + GAP),
 			size = UDim2.fromOffset(SIZE, SIZE),

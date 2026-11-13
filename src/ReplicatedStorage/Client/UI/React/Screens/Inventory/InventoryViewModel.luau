@@ -635,7 +635,7 @@ end
 function VM.tabs(): { Tab }
 	return {
 		{ id = "crew", text = "Crew", soon = false, icon = "pippaHappy" },
-		{ id = "wheel", text = "Chat wheel", soon = false, icon = "shopGift" },
+		{ id = "wheel", text = "Chat wheel", soon = false, icon = "stickers" },
 	}
 end
 
