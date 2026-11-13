@@ -193,6 +193,12 @@ local OccupantServiceClient: OccupantServiceClient = {
 		)
 		table.insert(
 			stoppers,
+			OccupantEvents.packets.Strike.listen(function(_hit: boolean)
+				OccupantScareSystem.strike()
+			end)
+		)
+		table.insert(
+			stoppers,
 			OccupantEvents.packets.CatchReport.listen(function(data: OccupantTypes.CatchReport)
 				-- The catching kind's name (the running rig's; the Manager without one).
 				OccupantCatchStore.setReport(data, OccupantKindRegistry.wordsOf(runningKind()).caughtBy)

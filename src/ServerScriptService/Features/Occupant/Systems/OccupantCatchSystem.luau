@@ -28,6 +28,11 @@
 	skipped once Health is 0) cannot undo any part of the catch; the knockdown's client holds its PlatformStand
 	against that restore.
 
+	A kind whose catch style is "strike" (OccupantKindRegistry.catchStyleOf: Bramble, owner 11-13 "just do a sound and
+	take a life") skips all of that: the caught player hears its catch sound (OccupantEvents.Strike) and Shift spends
+	one life straight away, with no freeze, camera, lights out, throw or knockdown. The last life still puts them out
+	for the shift (killed where they stand, no launch, with the incident report), and `hooks.onCaught` still toasts.
+
 	Called from the NPC think (onAttack), so `begin` itself never yields: the wait is a task.delay.
 
 	Spec-exempt shell (Instances, ByteNet, Death); the decisions are the specced OccupantCatchRules.
@@ -132,6 +137,29 @@ local function reportFor(player: Player, position: Vector3): OccupantTypes.Catch
 	}
 end
 
+-- A strike (catchStyleOf "strike"): the catch sound and one life, then the same out/hit bookkeeping as a sequence.
+-- Spawned by `begin` so the think never yields; `catching` covers it until it is done.
+local function strike(player: Player, victim: Humanoid, root: BasePart, hooks: Hooks)
+	local userId = player.UserId
+	if not hooks.stillOn() or victim.Parent == nil or victim.Health <= 0 then
+		catching[userId] = nil
+		return
+	end
+	local report = reportFor(player, root.Position)
+	OccupantEvents.packets.Strike.sendTo(true, player)
+	local knockedOut = hooks.spendLife(player)
+	local after = OccupantCatchUtils.afterCatch(knockedOut)
+	if after.kill then
+		DeathServiceServer:kill(victim, "caught")
+		OccupantEvents.packets.CatchReport.sendTo(report, player)
+	end
+	if after.publishBack ~= nil then
+		StateSyncPublicPlayerStore.set(userId, { [OccupantConstants.PUBLIC_CAUGHT_UNTIL] = after.publishBack })
+	end
+	catching[userId] = nil
+	hooks.onCaught(player, knockedOut)
+end
+
 local OccupantCatchSystem = {}
 
 function OccupantCatchSystem.isCatching(userId: number): boolean
@@ -155,6 +183,11 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 	local victim: Humanoid = humanoid
 	local userId = player.UserId
 	catching[userId] = true
+
+	if OccupantKindRegistry.catchStyleOf(OccupantKindRegistry.kindOf(rig.model)) == "strike" then
+		task.spawn(strike, player, victim, root, hooks)
+		return true
+	end
 
 	-- Scheduled first: whatever throws below, the player is still released.
 	task.delay(OccupantConstants.SNAP_SECONDS, function()

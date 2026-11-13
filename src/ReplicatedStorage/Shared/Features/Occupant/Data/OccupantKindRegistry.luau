@@ -9,7 +9,7 @@
 
 	- `harlow`: today's manager, unchanged (his template, faces and speeds; every block; no twist).
 	- `bramble`: the School's owl mascot. No painted face swap (its buttons and stitched smile are the model), never
-	  sits at desks, chases at 21 (a sprint at 23 outruns it) and has the freeze twist: it cannot move while a crew
+	  sits at desks, chases at 27 (past a sprint at 23: watching it is the only way to stop it), catches with a strike (its sound and one life) and has the freeze twist: it cannot move while a crew
 	  member watches it, its head turns to the kid it is after and swaps target after HEAD_SWAP_SECONDS of non-stop
 	  watching, and it leaves a feather trail where it moved unwatched.
 
@@ -25,6 +25,10 @@ local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Dat
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 
 export type KindId = "harlow" | "bramble"
+
+-- How a kind catches: "sequence" (Harlow's: the freeze, the camera on his face, lights out, the throw) or "strike"
+-- (Bramble's, owner 11-13: the catch sound and one life, nothing else).
+export type CatchStyle = "sequence" | "strike"
 
 -- The behaviour blocks a kind may switch off (the shared ones, patrol, hear, chase, search and catch, always run):
 -- work breaks, sit-ins and ambushes at desks, and stares at hiding spots (the brain reads them as Senses.blocks).
@@ -95,6 +99,7 @@ export type Kind = {
 	words: Words,
 	voice: Voice?,
 	sounds: Sounds,
+	catchStyle: CatchStyle,
 }
 
 local HARLOW: Kind = {
@@ -127,14 +132,16 @@ local HARLOW: Kind = {
 		unfreeze = nil,
 		footsteps = "harlow",
 	},
+	catchStyle = "sequence",
 }
 
 local BRAMBLE: Kind = {
 	id = "bramble",
 	templatePath = { "Assets", "CleanupCrew", "Characters", "Bramble" },
 	faces = false,
-	patrolSpeed = 10,
-	chaseSpeed = 21,
+	-- Owner 11-13: "much faster": past a sprint (23), so the crew must watch it, not outrun it.
+	patrolSpeed = 16,
+	chaseSpeed = 27,
 	blocks = { desks = false, stares = true },
 	freeze = {
 		headTurn = true,
@@ -162,6 +169,8 @@ local BRAMBLE: Kind = {
 		unfreeze = "brambleUnfreeze",
 		footsteps = nil,
 	},
+	-- Owner 11-13: "just do a sound and take a life": no freeze, camera, lights out or knockdown.
+	catchStyle = "strike",
 }
 
 local IDS: { KindId } = { "bramble", "harlow" }
@@ -236,6 +245,14 @@ end
 --[=[
 	Whether kind `id` has the freeze twist (false for an unknown id).
 ]=]
+--[=[
+	How kind `id` catches (CatchStyle); Harlow's "sequence" for an unknown id.
+]=]
+function OccupantKindRegistry.catchStyleOf(id: string): CatchStyle
+	local kind = OccupantKindRegistry.get(id)
+	return if kind ~= nil then kind.catchStyle else HARLOW.catchStyle
+end
+
 function OccupantKindRegistry.freezes(id: string): boolean
 	local kind = OccupantKindRegistry.get(id)
 	return kind ~= nil and kind.freeze ~= nil

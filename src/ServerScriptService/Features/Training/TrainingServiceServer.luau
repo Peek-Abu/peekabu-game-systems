@@ -64,7 +64,7 @@ local trainingSlice = PlayerDataSliceSystem.registerAccount("training", Training
 end, TrainingRules.validate)
 
 local log = Logger.new("TrainingServiceServer")
-local counters = { runs = 0, finished = 0, rewarded = 0, tours = 0, refused = 0 }
+local counters = { runs = 0, finished = 0, rewarded = 0, tours = 0, refused = 0, skipped = 0 }
 
 -- The code-built depot's Training pad: by its left wall, in front of the first truck (local to the depot's origin).
 local DEFAULT_PAD = { x = 5.5, z = 30, size = Vector3.new(7, 0.4, 7) }
@@ -123,6 +123,24 @@ local function tourIfDue(player: Player)
 	end
 end
 
+-- The hub card's SKIP TRAINING (owner 11-13): a player who is still new counts as trained, with no reward
+-- (TrainingRules.skip). Anything else (already trained, save not loaded) is ignored.
+local function skip(player: Player)
+	local state: PlayerDataTypes.Training? = trainingSlice.get(player.UserId)
+	if state == nil or state.finished then
+		return
+	end
+	local skipped = false
+	trainingSlice.mutate(player.UserId, function(slice)
+		skipped = TrainingRules.skip(slice)
+		return skipped
+	end)
+	if skipped then
+		counters.skipped += 1
+		toast(player, TrainingConstants.TEXT.skipped)
+	end
+end
+
 -- Records the finished run; the first time, with the Gleam, in one transaction. Returns the Gleam paid. Yields.
 local function record(player: Player): number
 	local userId = player.UserId
@@ -131,7 +149,8 @@ local function record(player: Player): number
 		return 0
 	end
 	counters.finished += 1
-	if state.finished then
+	-- Only a first real run pays (a skipped slice is finished with no run: TrainingRules.finish).
+	if state.runs > 0 then
 		trainingSlice.mutate(userId, function(slice)
 			TrainingRules.finish(slice)
 			return true
@@ -295,6 +314,11 @@ local TrainingServiceServer: TrainingServiceServer = {
 					tourIfDue(player)
 				end
 			end)
+			local skipping = TrainingEvents.packets.Skip.listen(function(_value: boolean, player: Player?)
+				if player ~= nil then
+					skip(player)
+				end
+			end)
 			local returned = QueueServiceServer.returned:Connect(function(player: Player, payload)
 				tourIfDue(player)
 				-- PLAY AGAIN on the finish screen: point them at the Training pad (display only).
@@ -305,6 +329,7 @@ local TrainingServiceServer: TrainingServiceServer = {
 			table.insert(stoppers, function()
 				loaded:Disconnect()
 				returned:Disconnect()
+				skipping()
 			end)
 		end
 		if QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT) then

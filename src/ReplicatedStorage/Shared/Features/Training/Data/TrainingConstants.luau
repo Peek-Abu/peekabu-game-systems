@@ -327,6 +327,9 @@ local TrainingConstants = {
 		tourTrucks = "Hop on a truck with your crew. Go!",
 		again = "Step on the TRAINING pad to play again!",
 		againButton = "PLAY TRAINING AGAIN",
+		-- Owner 11-13: training is skippable (the hub card's button, and the note after it).
+		skipButton = "SKIP TRAINING",
+		skipped = "Skipped! You can play training any time.",
 		tourVacuum = "This is your vacuum. Pick it. Then hold to suck up Gloom.",
 		tourPower = "This is your power. Tap it now. Try it!",
 		tourGloom = "Now hold to suck up all the purple Gloom!",

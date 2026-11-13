@@ -18,6 +18,7 @@ local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Dat
 local TrainingCoach = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingCoach)
 local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonButton = require(Toon.ToonButton)
 local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
@@ -43,6 +44,12 @@ export type TrainingSpotlightProps = {
 	pinned: boolean?,
 	-- Who says the line (TrainingCoach.coach); nil = Pippa.
 	coach: string?,
+	-- false: no shade around the hole (nothing dimmed, no click caught); nil = shaded.
+	dim: boolean?,
+	-- The card at COMPACT_SCALE (the hub's hint, owner 11-13); nil = full size.
+	compact: boolean?,
+	-- A small button just above the card's right end (the hub's SKIP TRAINING); nil = none.
+	action: { text: string, onPress: () -> () }?,
 }
 
 local GOLD = TrainingConstants.GUIDE.calm
@@ -55,6 +62,11 @@ local COACH_DESKTOP = Vector2.new(706, 230)
 local COACH_PHONE = Vector2.new(342, 110)
 -- A pinned coach card's distance from the screen's bottom and from the button column (desktop px, scaled).
 local PINNED_MARGIN = 24
+-- A compact card's size against the full one (owner 11-13: the hub's card was too big over the lobby).
+local COMPACT_SCALE = 0.65
+-- The action button's size and its gap above the card (desktop px, scaled).
+local ACTION_SIZE = Vector2.new(300, 64)
+local ACTION_GAP = 10
 
 -- The gold arrow image, its tip at `at`, rotated `rotation` degrees (0 = pointing down).
 local function arrowAt(at: Vector2, rotation: number, bob: number): React.ReactNode
@@ -77,6 +89,9 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 	-- The Coach layer is in screen px: the coach is drawn at the HUD's scale for this screen (desktop sizes are for
 	-- 1920x1080), never bigger than designed.
 	local scale = if phone then 1 else math.clamp(math.min(props.screen.X / 1920, props.screen.Y / 1080), 0.5, 1)
+	if props.compact == true and not phone then
+		scale *= COMPACT_SCALE
+	end
 	local size = (if phone then COACH_PHONE else COACH_DESKTOP) * scale
 	local left = (props.leftInset or 0) + 8
 	local x = math.clamp(props.linePosition.X - size.X * 0.3, left, math.max(left, props.screen.X - size.X - 8))
@@ -86,7 +101,7 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 			TrainingSpotlightUtils.pinnedCoach(props.screen, size, props.leftInset or 0, PINNED_MARGIN * scale, phone)
 		x, bottom = at.X, at.Y
 	end
-	return e(TrainingCoach, {
+	local card = e(TrainingCoach, {
 		line = { text = props.line, pose = "point" },
 		phone = phone,
 		position = UDim2.fromOffset(x, bottom),
@@ -95,12 +110,39 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 		onArea = props.onArea,
 		coach = props.coach,
 	})
+	local action = props.action
+	if action == nil then
+		return card
+	end
+	-- The button keeps its full size on a compact card (it must stay easy to press).
+	local buttonScale = if phone then 0.8 else math.max(scale, 0.6)
+	local buttonSize = ACTION_SIZE * buttonScale
+	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
+		card = card,
+		action = e(ToonButton, {
+			variant = "secondary",
+			small = true,
+			text = action.text,
+			textSize = math.floor(28 * buttonScale),
+			size = UDim2.fromOffset(buttonSize.X, buttonSize.Y),
+			-- Above the card; on a phone the card sits at the top of the screen, so the button goes under it.
+			anchor = if phone then Vector2.new(1, 0) else Vector2.new(1, 1),
+			position = if phone
+				then UDim2.fromOffset(x + size.X, bottom + ACTION_GAP * buttonScale)
+				else UDim2.fromOffset(x + size.X, bottom - size.Y - ACTION_GAP * buttonScale),
+			onActivated = action.onPress,
+			zIndex = 23,
+		}),
+	})
 end
 local function TrainingSpotlight(props: TrainingSpotlightProps): React.ReactNode
 	local children: { [string]: React.ReactNode } = { line = e(Coach, props) }
 	local hole = props.hole
 	if hole ~= nil then
-		for index, shade in TrainingSpotlightUtils.shades(hole, props.screen) do
+		local shades: { TrainingSpotlightUtils.Rect } = if props.dim == false
+			then {}
+			else TrainingSpotlightUtils.shades(hole, props.screen)
+		for index, shade in shades do
 			children[`shade{index}`] = e("TextButton", {
 				Position = UDim2.fromOffset(shade.position.X, shade.position.Y),
 				Size = UDim2.fromOffset(shade.size.X, shade.size.Y),

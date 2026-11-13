@@ -21,8 +21,8 @@ function TrainingRules.fresh(): PlayerDataTypes.Training
 end
 
 --[=[
-	The data layer's validator: `finished` and `toured` are booleans, `runs` a whole number >= 0, a finished slice
-	has at least one run, and only a finished slice is toured.
+	The data layer's validator: `finished` and `toured` are booleans, `runs` a whole number >= 0, and only a finished
+	slice is toured. A finished slice with no run was skipped (`skip`).
 ]=]
 function TrainingRules.validate(value: PlayerDataTypes.Training?): (boolean, string?)
 	if value == nil or type(value) ~= "table" then
@@ -34,9 +34,6 @@ function TrainingRules.validate(value: PlayerDataTypes.Training?): (boolean, str
 	local runs = value.runs
 	if type(runs) ~= "number" or runs < 0 or runs % 1 ~= 0 then
 		return false, "training.runs must be a whole number >= 0"
-	end
-	if value.finished and runs < 1 then
-		return false, "a finished training needs a run"
 	end
 	if value.toured and not value.finished then
 		return false, "the tour comes after training"
@@ -84,7 +81,8 @@ end
 	Records a finished run in place. True when this is the first finish (the reward is due).
 ]=]
 function TrainingRules.finish(value: PlayerDataTypes.Training): boolean
-	local first = not value.finished
+	-- The first finished RUN pays, so a player who skipped training still earns it by playing it later.
+	local first = value.runs == 0
 	value.finished = true
 	value.runs += 1
 	return first
@@ -97,6 +95,20 @@ function TrainingRules.tour(value: PlayerDataTypes.Training): boolean
 	if not value.finished or value.toured then
 		return false
 	end
+	value.toured = true
+	return true
+end
+
+--[=[
+	Skips training, in place (owner 11-13: the hub's SKIP button): the player counts as trained, with no run behind it
+	(so no reward until they finish a real run) and no after-training tour (it praises the reward). True when it was
+	skipped now; false for a player who already finished or skipped.
+]=]
+function TrainingRules.skip(value: PlayerDataTypes.Training): boolean
+	if value.finished then
+		return false
+	end
+	value.finished = true
 	value.toured = true
 	return true
 end

@@ -57,6 +57,13 @@ export type Step = {
 	-- Pippa's card stays put at the bottom left instead of following the arrow (owner 11-11: words that swing around
 	-- with the camera are disorienting).
 	pinned: boolean?,
+	-- Gui steps: false = the ring and arrow only, nothing dimmed and no click caught (a real shift's hotbar tour, owner
+	-- 11-13: it must not cover or block play); nil = dimmed.
+	dim: boolean?,
+	-- The card drawn smaller (owner 11-13: the hub's card covered the lobby); nil = full size.
+	compact: boolean?,
+	-- A button beside the card (the hub's SKIP TRAINING); pressing it hides this step.
+	action: { text: string, onPress: () -> () }?,
 	-- Who says the line (an EmployeeRegistry key); nil = Pippa, the guide.
 	coach: string?,
 }
@@ -231,6 +238,14 @@ local function draw(step: Step, now: number)
 		onArea = tourArea,
 		pinned = step.pinned,
 		coach = step.coach,
+		compact = step.compact,
+		dim = step.dim,
+		action = if step.action ~= nil
+			then {
+				text = step.action.text,
+				onPress = step.action.onPress,
+			}
+			else nil,
 	}
 	if step.kind == "do" then
 		props.linePosition = Vector2.new(math.max((screen.X - LINE_SIZE.X) / 2, 0), screen.Y * DO_LINE_Y)

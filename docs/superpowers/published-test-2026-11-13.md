@@ -74,6 +74,9 @@ Tick each one. If something breaks, write down what you did just before it went 
    - each of you gets the reward;
    - each of you comes back to the lobby;
    - the lobby no longer points you at the Training pad.
+   Also try **SKIP TRAINING**. It's the small button above Prickles' card in the lobby. After you press it,
+   Prickles and the gold trail go away, and you get no training reward until you play training for real.
+   Use `trainingreset` to be new again.
 2. **Office shift with two people.** Both of you get on the same truck to the Office. Play the shift to
    the end and come back.
 3. **School shift with two people.** Do the same thing with the School.

@@ -8,7 +8,9 @@
 	- A player who still needs training gets Pippa's hint and an arrow to the nearest Training pad (a world spotlight
 	  step) whenever they are off the pad (TrainingRules.hubTrail): stepping on hides it, stepping off brings it back.
 	  Every hub step is `pinned`: Pippa's card stays at the bottom left of the screen, never swinging around with the
-	  camera (owner 11-11); the arrow on the screen's edge and the gold trail on the floor do the pointing.
+	  camera (owner 11-11); the arrow on the screen's edge and the gold trail on the floor do the pointing. Owner
+	  11-13: the new-player card is compact, carries a SKIP TRAINING button (the server marks training done, no
+	  reward: TrainingRules.skip), and stands aside, trail included, while the player is on a real truck's pad.
 	- "Play training again" from the Guide (`again`): an arrow to the Training pad.
 	- The gold chevron trail on the floor from the player to the nearest Training pad (TrainingTrailSystem's hub
 	  goal): while this player still needs training, and after "Play training again" for AGAIN_TRAIL_SECONDS; never
@@ -28,6 +30,7 @@ local RunService = game:GetService("RunService")
 
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 local TrainingCoachSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingCoachSystem)
 local TrainingSignSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSignSystem)
@@ -96,6 +99,21 @@ local function onTraining(): boolean
 		or standingOn(TrainingConstants.TRUCK_TAG, isTrainingPad)
 end
 
+-- On a real truck's queue pad (owner 11-13: Prickles' card covered the truck's own countdown): the hub's hint,
+-- arrow and trail stand aside while they ride.
+local function onTruck(): boolean
+	return standingOn(QueueConstants.TAG, function(part: BasePart)
+		return not isTrainingQueue(part)
+	end)
+end
+
+-- The hub card's SKIP TRAINING: hidden at once; the server checks and marks training done (TrainingEvents.Skip), and
+-- the synced save then takes the coach, the trail and the card away for good.
+local function skipTraining()
+	TrainingSpotlightSystem.clear()
+	TrainingEvents.packets.Skip.send(true)
+end
+
 -- The top of the Training pad nearest the player.
 local function nearestPadTop(): Vector3?
 	local character = Players.LocalPlayer.Character
@@ -127,7 +145,7 @@ local function sign(pad: BasePart)
 end
 
 local function pointToTraining()
-	if not isNew or onRun or next(pads) == nil or TrainingSpotlightSystem.active() then
+	if not isNew or onRun or next(pads) == nil or TrainingSpotlightSystem.active() or onTruck() then
 		return
 	end
 	TrainingSpotlightSystem.point({
@@ -141,8 +159,11 @@ local function pointToTraining()
 			accept = isTrainingPad,
 			edgeOnly = true,
 			pinned = true,
+			-- Owner 11-13: smaller, skippable, and gone while on a truck.
+			compact = true,
+			action = { text = TrainingConstants.TEXT.skipButton, onPress = skipTraining },
 			done = function()
-				return not isNew or onRun or onTraining()
+				return not isNew or onRun or onTraining() or onTruck()
 			end,
 		},
 	})
@@ -159,7 +180,8 @@ local function trailTick(deltaTime: number)
 		-- Reached: "Play training again" is answered, so stepping off does not bring the trail back.
 		againUntil = nil
 	end
-	local show = next(pads) ~= nil and TrainingRules.hubTrail(isNew, againUntil, os.clock(), onPad, onRun)
+	-- On a truck counts as on a pad for the trail: it stands aside while they ride (Play training again's clock runs on).
+	local show = next(pads) ~= nil and TrainingRules.hubTrail(isNew, againUntil, os.clock(), onPad or onTruck(), onRun)
 	TrainingTrailSystem.setHub(if show then nearestPadTop() else nil)
 	-- The hint comes back whenever a new player is off the pad (it ends while they stand on it).
 	if show and isNew then

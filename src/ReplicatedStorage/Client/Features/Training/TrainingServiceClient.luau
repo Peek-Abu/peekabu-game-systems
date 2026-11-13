@@ -131,6 +131,8 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 	local sprinted = 0
 	local lastCheck: number? = nil
 	local startReady = AbilityStore.readyAt()
+	-- A real shift (owner 11-13): the tour must not cover or block play, and a monster may be out. Every step is the
+	-- small card with nothing dimmed, and each ends on its own after HOTBAR_SECONDS.
 	local steps: { TrainingSpotlightSystem.Step } = {
 		{
 			kind = "gui",
@@ -138,6 +140,8 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 			line = TrainingConstants.TEXT.tourVacuum,
 			seconds = TrainingConstants.HOTBAR_SECONDS,
 			done = vacuumOut,
+			dim = false,
+			compact = true,
 		},
 	}
 	local runLine = runLineNow()
@@ -145,7 +149,8 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 		kind = "do",
 		tag = "",
 		line = runLine,
-		mustDo = true,
+		seconds = TrainingConstants.HOTBAR_SECONDS,
+		compact = true,
 		done = function()
 			local now = os.clock()
 			local last = lastCheck
@@ -161,7 +166,9 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 			kind = "gui",
 			tag = TrainingConstants.SPOTLIGHT_TAGS.power,
 			line = TrainingConstants.TEXT.tourPower,
-			mustDo = true,
+			seconds = TrainingConstants.HOTBAR_SECONDS,
+			dim = false,
+			compact = true,
 			done = function()
 				return TrainingGuideRules.powerUsed(
 					startReady,

@@ -52,6 +52,11 @@ local OccupantEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				}),
 				reliabilityType = "reliable",
 			}),
+			-- To the player a strike-style kind caught (Bramble): play its catch sound. No camera, lights or hold.
+			Strike = ByteNet.definePacket({
+				value = ByteNet.bool,
+				reliabilityType = "reliable",
+			}),
 			-- To a caught player whose new character spawned: back on the clock (the Rehired card).
 			Rehired = ByteNet.definePacket({
 				value = ByteNet.bool,

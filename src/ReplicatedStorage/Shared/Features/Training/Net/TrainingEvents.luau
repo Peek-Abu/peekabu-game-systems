@@ -52,6 +52,11 @@ local TrainingEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.bool,
 				reliabilityType = "reliable",
 			}),
+			-- Client -> server: the hub card's SKIP TRAINING (the server checks the player is still new).
+			Skip = ByteNet.definePacket({
+				value = ByteNet.bool,
+				reliabilityType = "reliable",
+			}),
 			-- Client -> server: the finish screen's PLAY AGAIN (run training again on this server).
 			Again = ByteNet.definePacket({
 				value = ByteNet.bool,

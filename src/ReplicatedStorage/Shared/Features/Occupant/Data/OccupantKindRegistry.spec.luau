@@ -62,9 +62,16 @@ return function()
 			expect(bramble.faces).to.equal(false)
 		end)
 
-		it("chases at 21, a sprint (23) still outruns it", function()
-			expect(bramble.chaseSpeed).to.equal(21)
-			expect(bramble.patrolSpeed).to.equal(10)
+		it(
+			"is much faster (owner 11-13): patrols at 16 and chases at 27, past a sprint (23), so only watching it stops it",
+			function()
+				expect(bramble.patrolSpeed).to.equal(16)
+				expect(bramble.chaseSpeed).to.equal(27)
+			end
+		)
+
+		it("catches with a strike (its sound and one life, owner 11-13), not Harlow's catch sequence", function()
+			expect(OccupantKindRegistry.catchStyleOf("bramble")).to.equal("strike")
 		end)
 
 		it("never sits at desks but still stares at a spot it saw someone go into", function()
@@ -77,6 +84,13 @@ return function()
 			expect(bramble.freeze.headSwapSeconds).to.equal(OccupantConstants.HEAD_SWAP_SECONDS)
 			expect(bramble.freeze.headTurn).to.equal(true)
 			expect(bramble.freeze.trail).to.equal(true)
+		end)
+	end)
+
+	describe("catchStyleOf", function()
+		it("is the full catch sequence for Harlow and for an unknown kind", function()
+			expect(OccupantKindRegistry.catchStyleOf("harlow")).to.equal("sequence")
+			expect(OccupantKindRegistry.catchStyleOf("nope")).to.equal("sequence")
 		end)
 	end)
 

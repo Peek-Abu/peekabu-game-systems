@@ -112,6 +112,14 @@ end
 local OccupantScareSystem = {}
 
 --[=[
+	A strike-style kind caught this player (Bramble): only its catch sound, no grin, stamp or lights.
+]=]
+function OccupantScareSystem.strike()
+	counters.scares += 1
+	play(sounds().catchSting)
+end
+
+--[=[
 	The caught player's scare beat: the sting, the grin over his face for SNAP_SECONDS, and FIRED on the throw.
 ]=]
 function OccupantScareSystem.snap()

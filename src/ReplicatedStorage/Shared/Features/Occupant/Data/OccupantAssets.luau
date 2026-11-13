@@ -226,8 +226,9 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		assetId = "rbxassetid://77118119360513",
 		group = "SFX",
 		bus = "Threat",
-		volume = 0.8,
-		rollOffMaxDistance = 60,
+		-- Owner 11-13: "much quieter": a soft puff heard only close by (was 0.8 out to 60 studs).
+		volume = 0.35,
+		rollOffMaxDistance = 30,
 	},
 }
 
