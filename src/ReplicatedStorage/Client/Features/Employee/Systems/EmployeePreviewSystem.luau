@@ -5,7 +5,10 @@
 	dressed by the same EmployeeSkinSystem the server dresses real characters with, so a preview never drifts.
 
 	- `static(employee, skin, source, pose?, style?)`: posed once and frozen (EmployeePortraitSystem.build): every part
-	  anchored, no Animator, no scripts. The engine renders it once: cards and grids.
+	  anchored, no Animator, no scripts. The engine renders it once: cards and grids. Each look (employee, skin, style,
+	  pose, the badge's rank, per source) is built once and kept: later calls get a Clone of it, so reopening the
+	  Shop or the Inventory, or a card rebuilt after an equip or a purchase, never dresses and poses it again (that
+	  ran the skin fitting, the lanyard and the pose for every card in one frame). `reset` empties the cache.
 	- `live(employee, skin, source, style?)`: the dressed model with its root held and the body free, an Animator, no
 	  scripts: put it in a WorldModel and `playIdle` it. At most LIVE_CAP exist at once (the hero and one hovered
 	  card); `live` returns nil past the cap. `release` destroys one and frees its slot at once (destroying it alone
@@ -66,6 +69,11 @@ local EmployeePreviewSystem = {
 
 local live: { [Model]: RBXScriptConnection } = {}
 local liveCount = 0
+-- Built static looks per source (weak: a source destroyed takes its builds with it), by `staticKey`; at most
+-- STATIC_CACHE_CAP per source (past it the source's cache starts over).
+local STATIC_CACHE_CAP = 64
+local staticCache: { [Instance]: { [string]: Model } } = setmetatable({}, { __mode = "k" })
+local staticCount: { [Instance]: number } = setmetatable({}, { __mode = "k" })
 
 local function resolve(root: Instance, path: { string }): Instance?
 	local current: Instance? = root
@@ -110,6 +118,12 @@ local function dressed(employee: string, skin: string?, source: Instance, style:
 	return model
 end
 
+-- A static look's cache key: everything its build depends on.
+local function staticKey(employee: string, skin: string?, pose: EmployeePoseRegistry.PoseDef?, style: number?): string
+	local poseName = if pose ~= nil then pose.name else ""
+	return `{employee}|{skin or ""}|{style or 1}|{poseName}|{EmployeeLanyardSystem.previewRank()}`
+end
+
 function EmployeePreviewSystem.static(
 	employee: string,
 	skin: string?,
@@ -117,13 +131,36 @@ function EmployeePreviewSystem.static(
 	pose: EmployeePoseRegistry.PoseDef?,
 	style: number?
 ): Model?
+	local key = staticKey(employee, skin, pose, style)
+	local builds = staticCache[source]
+	local cached = if builds ~= nil then builds[key] else nil
+	if cached ~= nil then
+		return cached:Clone()
+	end
 	local model = dressed(employee, skin, source, style)
 	if model == nil then
 		return nil
 	end
 	local copy = EmployeePortraitSystem.build(model, pose)
 	model:Destroy()
-	return copy
+	if copy == nil then
+		return nil
+	end
+	if builds == nil or (staticCount[source] or 0) >= STATIC_CACHE_CAP then
+		if builds ~= nil then
+			for _, old in builds do
+				old:Destroy()
+			end
+		end
+		builds = {}
+		staticCache[source] = builds
+		staticCount[source] = 0
+	end
+	if builds ~= nil then
+		builds[key] = copy
+		staticCount[source] = (staticCount[source] or 0) + 1
+	end
+	return copy:Clone()
 end
 
 -- Gives back `model`'s live slot (once).
@@ -541,6 +578,13 @@ function EmployeePreviewSystem.reset()
 	end
 	table.clear(live)
 	liveCount = 0
+	for source, builds in staticCache do
+		for _, model in builds do
+			model:Destroy()
+		end
+		staticCache[source] = nil
+		staticCount[source] = nil
+	end
 end
 
 return EmployeePreviewSystem

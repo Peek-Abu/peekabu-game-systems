@@ -507,6 +507,21 @@ local function resolveRank(player: Player?, character: Model): number
 	return 1
 end
 
+--[=[
+	The rank a preview's badge shows (attachPreview): your own published rank, 1..7 (1 before it syncs). A cache of
+	built previews keys on it, so a rank-up rebuilds them.
+]=]
+function EmployeeLanyardSystem.previewRank(): number
+	local localPlayer = Players.LocalPlayer
+	if localPlayer ~= nil then
+		local rank = RankViewModel.rankOf(StateSyncClientStore.publicPlayers(), localPlayer.UserId)
+		if rank ~= nil then
+			return math.clamp(RankFormulas.progress(rank.xp).level.level, 1, 7)
+		end
+	end
+	return 1
+end
+
 local function stripLegacyPiece(descendant: Instance)
 	local parent = descendant.Parent
 	if
