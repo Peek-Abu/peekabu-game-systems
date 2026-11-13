@@ -252,8 +252,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		price = 400,
 		lore = "A slow sip of cocoa, then a happy sigh. Ahh.",
 	},
-	-- PJ Cappy's idle as its own item (owner, 2026-11-13): the pillow he naps on is the PJ outfit's, so it fits that skin
-	-- only until the pillow is a prop every skin can show.
+	-- PJ Cappy's idle as its own item (owner, 2026-11-13): the pillow is also an emote prop template (EmoteProps.Pillow,
+	-- checked in the Lobby place 2026-11-13), so it fits every Cappy skin.
 	{
 		id = "Cappy.PJIdle",
 		kind = "idle",
@@ -262,7 +262,6 @@ local ITEMS: { CosmeticTypes.Item } = {
 		rarity = "epic",
 		source = "gleam",
 		price = 400,
-		fits = { "Cappy.PJ" },
 		lore = "Cappy hugs his pillow and naps standing up.",
 	},
 

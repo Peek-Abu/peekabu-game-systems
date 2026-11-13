@@ -76,3 +76,17 @@ sit in, and by the item's name line.
   alone.
 - Not run yet: TestEZ and a play check (wear the Sheriff Idle on Classic Prickles, then a locked pair, then a migrated
   save).
+
+## Lobby play-check (2026-11-13, on 681292cd)
+Done in Studio Play with a real character. Purchases and grants went through the server services, not UI clicks.
+Every check passed:
+- **Bundle buy:** paid 1,500 and got all 4 items.
+- **Skin alone:** got only the skin.
+- **`cosmeticbundlegrant`:** granted all 4 items.
+- **Vacuum skins row:** shows on the Skins tab.
+- **Sheriff Idle on Classic Prickles:** the right clip plays in the world, with the hose coil prop.
+- **Locked pair:** "Bubble Buddy only" on the card and "Wear Bubble Buddy first" on the button.
+- **Migration:** a v4 save that owns PJ Cappy reaches v5 and owns PJ Idle; its look doesn't change.
+
+Not checked in a shift. EmoteProps has a `Pillow` template, so PJ Idle now fits every Cappy skin (its `fits` line
+is dropped). There is no `DuckRing` template, so Bubble Buddy Idle stays locked to its skin.
