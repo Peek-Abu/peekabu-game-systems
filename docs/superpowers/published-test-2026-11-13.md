@@ -43,6 +43,7 @@ right:
 |---|---|---|
 | Enable Studio Access to API Services | Studio: File → Game Settings → Security | **OFF** (not needed) |
 | Allow Third Party Teleports | Studio: File → Game Settings → Security | **OFF** is fine. Both places are in the same game, so the trucks work without it. |
+| Allow Mesh / Image APIs | Studio: File → Game Settings → Security | Leave it as it is. It's off now, so the rank lanyard strap is drawn from small parts. That's what you've always seen in Studio. Turning it on draws the strap as one smooth piece; nothing breaks either way. |
 | Content questionnaire (Maturity & Compliance) | Creator Dashboard → Odd Hours → Audience | **Done.** Roblox limits who can play a game that has no content rating, so fill it in if it's missing. |
 | Who can play | Creator Dashboard → Odd Hours → Audience / Access | See step 4 |
 
