@@ -160,7 +160,9 @@ return function()
 			model:Destroy()
 		end)
 
-		it("leans with a back that slopes out toward the top (a hood), clear of it", function()
+		-- The hood slopes past MOUNT.maxTilt (12 since 2026-11-13: Cappy's pack lay along his hood at 25): the plate leans
+		-- only as far as the cap, and still stands clear of every hit.
+		it("leans with a back that slopes out toward the top (a hood), at most maxTilt, clear of it", function()
 			local model, torso = makeBody()
 			-- A slab whose back face leans back ~20 degrees (top further out).
 			addPart(
@@ -172,7 +174,7 @@ return function()
 			local mount = CFrame.new(0, 0.2, 0.5)
 			local half = Vector2.new(0.2, 0.28)
 			local back = VacuumMountSystem.seat(model, torso, mount, half, {})
-			expect(back.CFrame.UpVector.Z > math.sin(math.rad(15))).to.equal(true)
+			expect(math.abs(math.asin(back.CFrame.UpVector.Z) - MOUNT.maxTilt) < math.rad(0.5)).to.equal(true)
 			-- No hit stands out in front of the plate's plane.
 			for _, hit in VacuumMountSystem.measure(model, torso, mount, half, {}) do
 				local rel = back.CFrame:PointToObjectSpace(hit)
