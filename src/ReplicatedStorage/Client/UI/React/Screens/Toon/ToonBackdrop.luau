@@ -8,6 +8,9 @@
 	While the 3D preview stage is up (EmployeeStageSystem.wall), everything but the children is drawn on the stage's
 	backdrop wall too (opaque, no blur), and once the stage is live (EmployeeStageSystem.live: its camera is held) only
 	there: the stage shows in the screen's middle with the same backdrop round it, and never the world in between.
+	A screen can dress it further (the shop by the open item's rarity, ShopRarityLookViewModel): `counterRays` turn the
+	other way over the rays, `word` writes a word huge and faint behind the hero, `edge` tints the edge vignette, and
+	`goo` pours Gloom goo along the top edge (ToonGoo).
 	Presentational (exempt; story in ToonBackdrop.story).
 
 	@class ToonBackdrop
@@ -20,6 +23,7 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local EmployeeStageSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeStageSystem)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local ToonGoo = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonGoo)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 local useToonPlay = require(ReplicatedStorage.Client.UI.React.Screens.Toon.useToonPlay)
 
@@ -33,6 +37,15 @@ export type Rays = {
 	transparency: number?,
 }
 
+-- A word written huge and faint behind the hero (the shop's rarity name).
+export type Word = {
+	text: string,
+	color: Color3,
+	transparency: number,
+	position: UDim2,
+	size: UDim2,
+}
+
 export type ToonBackdropProps = {
 	top: Color3,
 	bottom: Color3,
@@ -40,6 +53,13 @@ export type ToonBackdropProps = {
 	see: number?,
 	stripes: boolean?,
 	rays: Rays?,
+	-- A second ray layer turning the other way.
+	counterRays: Rays?,
+	word: Word?,
+	-- The edge vignette's colour (default ink), drawn stronger when set.
+	edge: Color3?,
+	-- Gloom goo along the top edge.
+	goo: boolean?,
 	blur: boolean?,
 	zIndex: number?,
 	children: { [string]: React.ReactNode }?,
@@ -50,12 +70,16 @@ local BLUR_SIZE = 14
 local STRIPE_TILE = 180
 local STRIPE_SECONDS = 9
 local RAYS_SECONDS = 48
+-- The top-edge goo's size (1 = the kit's 128 px tiles).
+local GOO_SCALE = 1.3
 
 local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 	local wall = ReactCharm.useAtom(EmployeeStageSystem.wall)
 	local staged = ReactCharm.useAtom(EmployeeStageSystem.live) and wall ~= nil
 	-- On the stage's wall the world behind is the stage itself: no blur, and nothing see-through.
 	local blur = props.blur == true and not staged
+	-- The backdrop's width in pixels, for the goo run along its top edge.
+	local width, setWidth = React.useState(0)
 	-- Two looping 0 -> 1 clocks (Reduced Motion holds them still).
 	local drift = useToonPlay(STRIPE_SECONDS, 0, nil, true)
 	local turn = useToonPlay(RAYS_SECONDS, 0, nil, true)
@@ -112,9 +136,8 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 			ZIndex = 2,
 		})
 	end
-	local rays = props.rays
-	if rays ~= nil then
-		nodes.rays = e("ImageLabel", {
+	local function rayLayer(rays: Rays, direction: number): React.ReactNode
+		return e("ImageLabel", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = rays.position,
 			Size = UDim2.fromScale(rays.size, rays.size),
@@ -124,28 +147,62 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 			ImageColor3 = rays.color,
 			ImageTransparency = rays.transparency or 0.45,
 			Rotation = turn:map(function(alpha: number): number
-				return alpha * 360
+				return direction * alpha * 360
 			end),
 			ZIndex = 3,
 		})
 	end
+	local rays = props.rays
+	if rays ~= nil then
+		nodes.rays = rayLayer(rays, 1)
+	end
+	local counterRays = props.counterRays
+	if counterRays ~= nil then
+		nodes.counterRays = rayLayer(counterRays, -1)
+	end
+	local word = props.word
+	if word ~= nil then
+		nodes.word = e("TextLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = word.position,
+			Size = word.size,
+			BackgroundTransparency = 1,
+			Text = word.text,
+			FontFace = UIToonConstants.FONT.display,
+			TextScaled = true,
+			TextColor3 = word.color,
+			TextTransparency = word.transparency,
+			ZIndex = 4,
+		})
+	end
+	local edge = props.edge
 	-- The vignette: the edges darken in ink, top/bottom and left/right.
+	local edgeAt = if edge ~= nil then 0.3 else 0.55
 	for _, side in { { name = "vignetteY", rotation = 90 }, { name = "vignetteX", rotation = 0 } } do
 		nodes[side.name] = e("Frame", {
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = UIToonConstants.COLOR.ink,
+			BackgroundColor3 = edge or UIToonConstants.COLOR.ink,
 			BorderSizePixel = 0,
-			ZIndex = 4,
+			ZIndex = 5,
 		}, {
 			gradient = e("UIGradient", {
 				Rotation = side.rotation,
 				Transparency = NumberSequence.new({
-					NumberSequenceKeypoint.new(0, 0.55),
+					NumberSequenceKeypoint.new(0, edgeAt),
 					NumberSequenceKeypoint.new(0.18, 1),
 					NumberSequenceKeypoint.new(0.82, 1),
-					NumberSequenceKeypoint.new(1, 0.5),
+					NumberSequenceKeypoint.new(1, edgeAt - 0.05),
 				}),
 			}),
+		})
+	end
+	if props.goo == true and width > 0 then
+		nodes.goo = e(ToonGoo, {
+			kind = "cap",
+			width = width,
+			radius = 0,
+			scale = GOO_SCALE,
+			zIndex = 6,
 		})
 	end
 	if wall ~= nil then
@@ -161,7 +218,7 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 		nodes.content = e("Frame", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
-			ZIndex = 5,
+			ZIndex = 7,
 		}, props.children)
 	end
 	return e("Frame", {
@@ -170,6 +227,14 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 		Active = true,
 		ClipsDescendants = true,
 		ZIndex = props.zIndex,
+		[React.Change.AbsoluteSize] = function(frame: Frame)
+			setWidth(math.floor(frame.AbsoluteSize.X))
+		end,
+		ref = function(frame: Frame?)
+			if frame ~= nil then
+				setWidth(math.floor(frame.AbsoluteSize.X))
+			end
+		end,
 	}, nodes)
 end
 

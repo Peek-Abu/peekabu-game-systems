@@ -48,6 +48,7 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
+local ShopRarityLookViewModel = require(script.Parent.ShopRarityLookViewModel)
 local ToonBurst = require(Toon.ToonBurst)
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
@@ -78,6 +79,8 @@ local COLOR = UIToonConstants.COLOR
 local DEPTH = UIToonConstants.DEPTH
 -- Space inside the picks list for the flags that stick out over its cards.
 local PICK_PAD = 14
+-- Where the open item's model stands across the screen (its rays and its rarity word centre on it).
+local HERO_X = 0.72
 
 type Nodes = { [string]: React.ReactNode }
 
@@ -1026,19 +1029,36 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			},
 		}),
 	}
+	-- An open item's page takes its rarity's look (ShopRarityLookViewModel); the lists keep the shop's own colours.
+	local look = if offer ~= nil then ShopRarityLookViewModel.look(VM.card(offer, owns, balances).rarity) else nil
+	local function raysOf(layer: ShopRarityLookViewModel.RayLayer?): ToonBackdrop.Rays?
+		return if layer ~= nil
+			then {
+				position = UDim2.fromScale(HERO_X, 0.5),
+				size = 0.7,
+				color = layer.color,
+				transparency = layer.transparency,
+			}
+			else nil
+	end
 	return e(ToonBackdrop, {
-		top = UIToonConstants.shade("coral").base,
-		bottom = UIToonConstants.shade("grape").lo,
+		top = if look ~= nil then look.top else UIToonConstants.shade("coral").base,
+		bottom = if look ~= nil then look.bottom else UIToonConstants.shade("grape").lo,
 		see = 0.2,
 		blur = preview == nil,
-		rays = if offer ~= nil
+		rays = if look ~= nil then raysOf(look.rays) else nil,
+		counterRays = if look ~= nil then raysOf(look.counterRays) else nil,
+		word = if look ~= nil
 			then {
-				position = UDim2.fromScale(0.72, 0.5),
-				size = 0.7,
-				color = UIToonConstants.rarity(VM.card(offer, owns, balances).rarity).hi,
-				transparency = 0.4,
+				text = look.word,
+				color = look.wordColor,
+				transparency = look.wordTransparency,
+				position = UDim2.fromScale(HERO_X, 0.34),
+				size = UDim2.fromScale(0.5, 0.2),
 			}
 			else nil,
+		edge = if look ~= nil then look.edge else nil,
+		goo = look ~= nil and look.goo,
 		children = screen,
 	})
 end
