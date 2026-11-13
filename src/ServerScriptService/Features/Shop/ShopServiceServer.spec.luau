@@ -342,12 +342,13 @@ return function()
 
 			it("hires from zero Credits with Gleam alone (the starting-employee pick too)", function()
 				local plan = ShopTopUpRules.plan("credits", 5000, 0)
-				seed(1, plan.gleam, 0)
-				local player = { UserId = 1, Name = "GleamHirer" }
+				-- Its own player: the request is rate-limited per player, and earlier specs sent user 1's.
+				seed(7, plan.gleam, 0)
+				local player = { UserId = 7, Name = "GleamHirer" }
 				ShopService._onBuyRequest({ offer = "Prickles", gleam = plan.gleam }, player)
-				expect(CosmeticService:owns(1, "Prickles")).to.equal(true)
-				expect(MarketplaceService:getPremium(1)).to.equal(0)
-				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(0)
+				expect(CosmeticService:owns(7, "Prickles")).to.equal(true)
+				expect(MarketplaceService:getPremium(7)).to.equal(0)
+				expect(CurrencyService:getCurrencyAmount(7, "credits")).to.equal(0)
 			end)
 
 			it("refuses when the rest costs more Gleam than the player said yes to", function()
@@ -386,11 +387,11 @@ return function()
 			end)
 
 			it("never tops up a Gleam item", function()
-				seed(1, 1400, 99999)
+				seed(1, 1100, 99999)
 				local ok, reason = ShopService:buy(1, "Pippa.BubbleBuddy", 100)
 				expect(ok).to.equal(false)
 				expect(reason).to.equal("short")
-				expect(MarketplaceService:getPremium(1)).to.equal(1400)
+				expect(MarketplaceService:getPremium(1)).to.equal(1100)
 			end)
 
 			it("gives other purchases the same payment (payOps)", function()

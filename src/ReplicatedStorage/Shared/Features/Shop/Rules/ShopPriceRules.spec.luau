@@ -192,7 +192,13 @@ return function()
 		end
 	end)
 
-	it("prices from the registered offer, so pricing twice changes nothing", function()
+	it("prices a fixture offer from its own items", function()
+		local plain = table.clone(ShopRegistry.get("Cappy.PJ"))
+		plain.items = { "Cappy.GloomTouched" }
+		expect(ShopPriceRules.forPlayer(plain, owner()).items[1]).to.equal("Cappy.GloomTouched")
+	end)
+
+	it("prices from the source offer, so pricing twice changes nothing", function()
 		for _, offer in ShopRegistry.all() do
 			if #offer.items > 1 then
 				local once = ShopPriceRules.forPlayer(offer, owner({ offer.items[1] }))

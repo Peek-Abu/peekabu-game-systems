@@ -216,7 +216,8 @@ return function()
 			end
 			expect(all[#all].state).to.equal("owned")
 			for _, card in VM.skins(owner(), rich, "Cappy") do
-				local item = CosmeticRegistry.get(card.id)
+				-- A bundle's card is checked by its hero item.
+				local item = CosmeticRegistry.get(ShopRegistry.get(card.id).items[1])
 				expect(item.employee == nil or item.employee == "Cappy").to.equal(true)
 			end
 		end)

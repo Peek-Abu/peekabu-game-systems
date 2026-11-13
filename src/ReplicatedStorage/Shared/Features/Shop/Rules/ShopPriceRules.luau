@@ -36,6 +36,11 @@ export type Now = { price: number, ends: number? }
 
 local ShopPriceRules = {}
 
+-- Each priced copy's source offer, so pricing a priced copy again starts from the same offer (weak keys: a copy
+-- nobody holds is forgotten).
+local sources: { [Offer]: Offer } = {}
+setmetatable(sources, { __mode = "k" })
+
 local function stepUp(value: number): number
 	local step = ShopConstants.PRICE_STEP
 	return math.ceil(value / step) * step
@@ -93,14 +98,15 @@ local function regularOf(id: string): number
 end
 
 -- `offer` priced for a player who owns what `owns` says, at `now`: a copy with `price` (what they pay), `was` (a
--- real, higher price to cross out, or nil) and `saleEnds` (when a sale price ends). Always from the registered offer
--- when there is one, so pricing twice is the same as once.
+-- real, higher price to cross out, or nil) and `saleEnds` (when a sale price ends). A priced copy is priced again from
+-- its source offer, so pricing twice is the same as once.
 function ShopPriceRules.forPlayer(offer: Offer, owns: (id: string) -> boolean, now: number?): Offer
-	local base = ShopRegistry.get(offer.id) or offer
+	local base = sources[offer] or offer
 	local daily = if now ~= nil then ShopPriceRules.daily(now) else nil
 	local priced = table.clone(base)
 	priced.was = nil
 	priced.saleEnds = nil
+	sources[priced] = base
 	if #base.items < 2 then
 		local current = itemNow(base.id, base.price, now, daily)
 		priced.price = current.price
