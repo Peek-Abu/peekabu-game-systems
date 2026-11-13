@@ -95,8 +95,9 @@ local WALL_BACKED_PROPS = {
 -- A piece this close to a wall (its footprint's gap to the wall line, less half a wall) stands against it.
 local AGAINST = 1.2
 
--- The wall a marker stands nearest to (its footprint's gap to each wall line, less half a wall), and that gap.
-local function nearestWall(kit, marker)
+-- The walls a marker stands against (its footprint within AGAINST of the wall line, less half a wall), as a set, and
+-- the gap to the nearest of them.
+local function wallsAgainst(kit, marker)
 	local size = OfficeLayoutUtils.markerSize(marker)
 	local angle = marker.rotation or 0
 	local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
@@ -108,13 +109,14 @@ local function nearestWall(kit, marker)
 		minZ = marker.z - hz - half,
 		maxZ = kit.depth - half - (marker.z + hz),
 	}
-	local edge, gap = nil, math.huge
+	local against, nearest = {}, math.huge
 	for name, value in gaps do
-		if value < gap then
-			edge, gap = name, value
+		if value <= AGAINST then
+			against[name] = true
 		end
+		nearest = math.min(nearest, value)
 	end
-	return edge, gap
+	return against, nearest
 end
 
 -- The wall a marker's back points at (its front is local -Z turned by its rotation).
@@ -128,21 +130,27 @@ local function backWall(marker)
 end
 
 return function()
-	it("stands every wall piece against a wall with its back to that wall, never side-on or facing it", function()
-		for _, kit in SchoolKitRegistry.KITS do
-			for _, marker in kit.markers do
-				local backed = WALL_BACKED_KINDS[marker.kind] == true
-					or (marker.kind == "prop" and marker.art ~= nil and WALL_BACKED_PROPS[marker.art] == true)
-				if backed then
-					local edge, gap = nearestWall(kit, marker)
-					if gap <= AGAINST then
-						local label = `{kit.id} {marker.kind}/{marker.art} at ({marker.x}, {marker.z})`
-						expect(`{label} back to {backWall(marker)}`).to.equal(`{label} back to {edge}`)
+	it(
+		"stands every wall piece against a wall with its back to a wall it stands against, never side-on or facing out",
+		function()
+			for _, kit in SchoolKitRegistry.KITS do
+				for _, marker in kit.markers do
+					local backed = WALL_BACKED_KINDS[marker.kind] == true
+						or (marker.kind == "prop" and marker.art ~= nil and WALL_BACKED_PROPS[marker.art] == true)
+					if backed then
+						local against, gap = wallsAgainst(kit, marker)
+						if gap <= AGAINST then
+							-- Against a wall (two in a corner): its back must be to one of them.
+							local label = `{kit.id} {marker.kind}/{marker.art} at ({marker.x}, {marker.z})`
+							expect(`{label} back to a wall it stands against {against[backWall(marker)] == true}`).to.equal(
+								`{label} back to a wall it stands against true`
+							)
+						end
 					end
 				end
 			end
 		end
-	end)
+	)
 
 	it("every kit passes OfficeKitRules", function()
 		for _, kit in SchoolKitRegistry.KITS do
