@@ -130,6 +130,36 @@ return function()
 			end
 		)
 
+		-- Found in Play (2026-11-13): the worn pack's Model pivot is a stored world frame that stays where the pack was
+		-- worn while its welded parts move with the body (1.7 studs above the pad once Pippa dropped from her spawn),
+		-- and the swap put the new skin there: up behind her head.
+		it("places the new pack and straps by where their pieces really are, never by a stale Model pivot", function()
+			local src = source({ [brass.template] = BRASS })
+			local template = src.Assets.CleanupCrew[brass.template]
+			local templatePad = part(template.Backpack, "BackPad", BRASS)
+			templatePad.Size = Vector3.new(0.4, 0.56, 0.08)
+			templatePad.CFrame = CFrame.new(0, 0, 0.035)
+			template.Backpack.PrimaryPart = nil
+			template.Backpack.WorldPivot = CFrame.identity
+			template.Straps.PrimaryPart = nil
+			template.Straps.WorldPivot = CFrame.new(0, 0.3, 0)
+			local character, backpack = worn(GREY)
+			local pack, straps = backpack.Pack, backpack.Straps
+			pack.PrimaryPart = nil
+			straps.PrimaryPart = nil
+			local oldPad = part(pack, "BackPad", GREY)
+			oldPad.Size = Vector3.new(0.4, 0.56, 0.08)
+			oldPad.CFrame = CFrame.new(5, 2, 7.035)
+			straps.Strap.CFrame = CFrame.new(5, 1.7, 7)
+			-- Both pivots left 1.7 studs up, where they were worn.
+			pack.WorldPivot = CFrame.new(5, 3.7, 7)
+			straps.WorldPivot = CFrame.new(5, 3.7, 7)
+			VacuumPreviewSystem.swap(character, brass, src)
+			local newPad = backpack.Pack.BackPad
+			expect((newPad.Position - oldPad.Position).Magnitude < 1e-3).to.equal(true)
+			expect((backpack.Straps.Strap.Position - Vector3.new(5, 1.7, 7)).Magnitude < 1e-3).to.equal(true)
+		end)
+
 		it("fits the new straps at the recorded scale and stretch", function()
 			local src = source({ [brass.template] = BRASS })
 			local templateStrap = src.Assets.CleanupCrew[brass.template].Straps.Strap

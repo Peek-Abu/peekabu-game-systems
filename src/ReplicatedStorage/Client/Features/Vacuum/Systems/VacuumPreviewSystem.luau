@@ -134,7 +134,8 @@ local function takeOver(old: Model, copy: Model, to: BasePart?)
 end
 
 -- Replaces the worn pack `old` with a copy of the skin's `from`, at the scale it was worn at, its mount plate
--- exactly where the old one met the back (VacuumMountSystem: any skin's plate on the wearer's back attachment). The
+-- exactly where the old one met the back (the old plate rides its pad; the old Model's pivot is a stale world frame
+-- once the body has moved, which floated a swapped skin up behind the head: the owner's Brass Bellows report) (VacuumMountSystem: any skin's plate on the wearer's back attachment). The
 -- gauge shows what the old one showed (empty in a fresh pack), not the template's full dust insert.
 local function replacePack(old: Model, from: Model, to: BasePart?)
 	local copy = from:Clone()
@@ -158,7 +159,21 @@ local function replaceStraps(old: Model, from: Model, to: BasePart?)
 	copy:ScaleTo(scaleOf(old))
 	local by = old:GetAttribute(MOUNT.stretchAttribute)
 	stretch(copy, if typeof(by) == "Vector3" then by else Vector3.one)
-	copy:PivotTo(old:GetPivot())
+	-- Placed by a piece both have (every skin shares the strap pieces): a worn Model's pivot is a stored world frame
+	-- that stays where it was worn while its welded parts move with the body (1.7 studs above the pack once a
+	-- character has dropped from its spawn), so the old pivot is never trusted.
+	local placed = false
+	for _, piece in copy:GetDescendants() do
+		local match = if piece:IsA("BasePart") then basePart(old, piece.Name) else nil
+		if piece:IsA("BasePart") and match ~= nil then
+			copy:PivotTo(match.CFrame * piece.CFrame:Inverse() * copy:GetPivot())
+			placed = true
+			break
+		end
+	end
+	if not placed then
+		copy:PivotTo(old:GetPivot())
+	end
 	takeOver(old, copy, to)
 end
 
