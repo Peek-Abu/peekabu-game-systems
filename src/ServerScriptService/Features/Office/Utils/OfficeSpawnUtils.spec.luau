@@ -11,6 +11,8 @@ local OfficeLootUtils = require(ServerScriptService.Features.Office.Utils.Office
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local SchoolLayoutGenerationUtils = require(ServerScriptService.Features.School.Utils.SchoolLayoutGenerationUtils)
 
 local LAYOUT = OfficeLayoutConstants.LAYOUT
 -- The biggest crew's contract (Gloom): every roll on a generated office (what a shift plays) must be able to meet it.
@@ -647,5 +649,38 @@ return function()
 			expect(#OfficeSpawnUtils.freeSpots(layout, plan)).to.equal(0)
 			expect(#OfficeSpawnUtils.rollOvertime(layout, plan, Random.new(1))).to.equal(0)
 		end)
+	end)
+	-- A pile's art overhangs its gameplay block (VacuumConstants artSize, spawned unrotated): in a tight room two piles
+	-- on near markers would show their art through each other. No two piles' art footprints may overlap, top-ups included.
+	it("never stands two piles so close that their art overlaps, in generated Offices and Schools", function()
+		local byId = {}
+		local function check(map, generate)
+			for seed = 1, 25 do
+				if seed % 5 == 0 then
+					task.wait()
+				end
+				local layout = generate(LAYOUT, seed)
+				table.clear(byId)
+				for _, marker in layout.markers do
+					byId[marker.id] = marker
+				end
+				local plan = OfficeSpawnUtils.roll(layout, options("B", QUOTA), Random.new(seed))
+				for i, a in plan.piles do
+					for j = i + 1, #plan.piles do
+						local b = plan.piles[j]
+						local ma, mb = byId[a.marker], byId[b.marker]
+						local sa = VacuumConstants.PILE_KINDS[a.kind].artSize
+						local sb = VacuumConstants.PILE_KINDS[b.kind].artSize
+						local overlapX = math.abs(ma.x - mb.x) < (sa.X + sb.X) / 2 - 1e-3
+						local overlapZ = math.abs(ma.z - mb.z) < (sa.Z + sb.Z) / 2 - 1e-3
+						if overlapX and overlapZ then
+							error(`{map} seed {seed}: piles on {a.marker} and {b.marker} overlap`)
+						end
+					end
+				end
+			end
+		end
+		check("office", OfficeLayoutGenerationUtils.generate)
+		check("school", SchoolLayoutGenerationUtils.generate)
 	end)
 end

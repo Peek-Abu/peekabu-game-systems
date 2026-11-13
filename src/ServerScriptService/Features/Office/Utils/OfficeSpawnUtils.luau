@@ -43,6 +43,26 @@ local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 type Marker = OfficeTypes.Marker
 type ItemDef = CargoTypes.ItemDef
 
+-- The biggest pile art footprint (artSize X and Z over every kind): piles spawn unrotated, so two piles' art boxes
+-- overlap unless their markers are this far apart along X or along Z, whatever kinds they roll.
+local PILE_REACH = (function(): Vector2
+	local x, z = 0, 0
+	for _, style in VacuumConstants.PILE_KINDS do
+		x, z = math.max(x, style.artSize.X), math.max(z, style.artSize.Z)
+	end
+	return Vector2.new(x, z)
+end)()
+
+-- Whether a pile on `marker` would show its art through a pile on any of `taken`.
+local function crowds(marker: Marker, taken: { Marker }): boolean
+	for _, other in taken do
+		if math.abs(marker.x - other.x) < PILE_REACH.X and math.abs(marker.z - other.z) < PILE_REACH.Y then
+			return true
+		end
+	end
+	return false
+end
+
 local function shuffled<T>(list: { T }, rng: Random): { T }
 	local copy = table.clone(list)
 	for index = #copy, 2, -1 do
@@ -204,13 +224,21 @@ local function pileOrder(
 			end
 		end
 	end
+	-- A marker whose pile art would overlap one already taken (piles first, then the spares a top-up may take, in its
+	-- order) is never used: in a tight room the room holds fewer piles instead.
 	local used: { Marker } = {}
 	local spare: { Marker } = {}
 	for _, room in dirty do
 		local markers = shuffled(byRoom[room], rng)
 		local count = math.min(rng:NextInteger(options.pilesPerRoom.min, options.pilesPerRoom.max), #markers)
-		for index, marker in markers do
-			table.insert(if index <= count then used else spare, marker)
+		local taken = 0
+		for _, marker in markers do
+			if taken < count and not crowds(marker, used) then
+				table.insert(used, marker)
+				taken += 1
+			else
+				table.insert(spare, marker)
+			end
 		end
 	end
 	for _, room in order do
@@ -222,7 +250,9 @@ local function pileOrder(
 	end
 	local count = #used
 	for _, marker in spare do
-		table.insert(used, marker)
+		if not crowds(marker, used) then
+			table.insert(used, marker)
+		end
 	end
 	return used, count
 end
