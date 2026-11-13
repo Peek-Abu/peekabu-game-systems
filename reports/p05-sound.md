@@ -47,6 +47,27 @@ Launch List row `p1-sound-pass`. Status: **round 1 is waiting on the owner's pic
    - hub shift bell = **A**;
    - teammate ping = **none**: needs a new round.
 
+6. **Owner's new direction (11-13, via the coordinator):** "forget music for outside or in shift - quiet / ambiance is
+   better", and "prioritize events / things that dont have a DEDICATED SOUND! I.E: more UI stuff... dialogue /
+   tutorial pop ups". The yard and calm-shift music are dropped. Yard A becomes a hub radio track (the owner's note
+   on it).
+7. **UI inventory:** done with a read-only sweep of the code. No panel, scene, coach card, welcome card, reveal,
+   wheel or tab plays any sound. Several raw buttons are fully silent: the hotbar slot tap, mobile action buttons,
+   sliders, card tiles and wheel backdrops. So are about 12 unstyled toast calls (refusals, invites, queue/transit,
+   work orders). Hiding is a tap prompt with no sound at all. The holds are `cargo-search`, `shift-overtime` and
+   `shift-clockout`.
+8. **Listening page, round 3 (UI):** https://claude.ai/artifact/3DvELeJDK7skwfBhT5sfuR. It has 21 cards and 35
+   options, and picks save as `p05r3-01` to `p05r3-21`. All are on the CPU, built from the approved round-2 UI
+   masters, today's desk foley stems and CC0 instruments, and every one passes the gates.
+   - **Cards:** coach card pop, tutorial next step, training finished, panel open, panel close, tab switch, notice
+     toast, refused toast, work-order tick, work-order done, equip, claim gift, reveal drumroll, ARRIVED stamp,
+     wheel open, slider tick and card tap.
+   - **Hold wind-ups:** search and overtime each get their own.
+   - **Also on it:** a new teammate ping (C) and the hub ambience bed B. Hub ambience A failed the movement gate
+     and was left out.
+9. **Round 2 additions:** card 15, shop buy as a rarity ladder, made from the owner's shop-buy note (A's register +
+   coins, with the locker's value layers by rarity).
+
 ## Open questions
 - **SFX generator:** settled by the coordinator. Use local SA3 + CC0, with no ElevenLabs: the owner prefers free tools.
   The ElevenLabs key (the key ID was saved instead of the `sk_` key) has been passed to the owner. The GPU was used in
