@@ -133,7 +133,33 @@ Measured in the Lobby (Studio Play, client frame times from RenderStepped; swaps
 The work is a separate task (proposed: "Cut character triangles with optimize_mesh"): finish the tool's OM1-OM5
 gates on the shipped builds, render the comparison, and upload to Icey Labs only after your yes.
 
-## 4. Truck redo (`p1-truck-lore`): concepts, waiting on the owner
+## 4. Truck redo (`p1-truck-lore`): look A built, waiting on the owner's look check
+
+Owner, 2026-11-13: "yes build look A and take Morrow and Morrow off the truck! Sure to Q5! I think maybe keep off Q6".
+
+- Built (`42066a98`): `design/production-art/truck-lore/build_truck_v4.py`, a copy of v3's builder reshaped to look A.
+  - Bubble cab: a rounded side profile with a fat bevel, a split windscreen, big round headlights in cream bezels, a
+    bar grille and a fat bumper bar.
+  - Mint beacon on the cab roof (it carries `Socket_Roof`). The Luton is gone.
+  - Loaf box: a thick roof cap rounded over the long and end edges, flush with the walls.
+  - A wavy grape swoosh (`BoxBand`, no line on it), five glowing portholes per side, chunkier fenders.
+  - Same bed, walls, ramp, arch and interior; 44,084 triangles in 39 pieces. `Truck_v4.json` beside the builder.
+- Texture pass: a new `vehicle_paint` class in the texture-pipeline's `style.json` (backup `style.json.bak-2026-11-13`).
+  It produces `truck_paint_color/normal/rough`: a near-white satin with a fine orange-peel bump from the PaintedPlaster017
+  scan, lum_std 0.012 (PASS). Every piece has box-projected UVs at 4 studs per tile, so a slot's colour is a
+  SurfaceAppearance tint and skins still need no upload.
+- Lore find: `make_lore_sign.py` draws `lore_sign.png`, the old "MORROW & MORROW / CLEARANCE" lettering and an "M&M"
+  seal ring, faint brown-grey under cream roller strokes. It goes on `BoxShell`'s Right face, low near the back, at the
+  JSON's `loreSign` rectangle. It reads as a patchy panel from the yard and as the name up close.
+- Q4: the shipped truck already had no Morrow & Morrow (the v3 livery line was the only text, and the time clock has
+  none), so nothing to remove.
+- Next, after T1 = yes:
+  - upload to Icey Labs: the FBX, the three paint maps and the sign image;
+  - code (`DepotTruckVisualConstants` / `DepotTruckVisualSystem`): drop the `TruckLuton` camera wall and the livery
+    line, and add the sign. Held until the art swaps, since the v3 art still has the Luton;
+  - Studio: swap `Assets.CleanupCrew.Truck` in both places (SurfaceAppearance per piece, colour from the slot).
+
+Earlier step (concepts):
 
 - Three looks, all at today's footprint (16 x 24 bed, 10 high, open back and ramp), no company name on any:
   A Night Bakery Van, B Gleam Machine, C Hand-Me-Down Hauler (with a faint painted-over sign as a lore spot).
