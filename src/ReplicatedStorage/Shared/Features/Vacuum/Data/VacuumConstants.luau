@@ -140,7 +140,7 @@ return table.freeze({
 	-- UpperTorso (on the surface of whatever the body wears there) and the one on the pack (the middle of its
 	-- harness pad's front face; a skin may author it, else it is made from its BackPad). The back is found by
 	-- `cols` x `rows` rays over the pad's footprint; the plate sits `clearance` studs off the outermost surface they
-	-- hit, at most `maxDepth` torso depths behind the torso's centre (a stray hit on a coat's flare, say).
+	-- hit (leaning with the back, at most `maxTilt`), at most `maxDepth` torso depths behind the torso's centre (a stray hit on a coat's flare, say).
 	MOUNT = table.freeze({
 		backName = "VacuumBackAttachment",
 		plateName = "VacuumMountPlate",
@@ -153,6 +153,8 @@ return table.freeze({
 		rows = 4,
 		clearance = 0.01,
 		maxDepth = 1,
+		-- The plate leans with the back's slope (a hood behind the shoulders) at most this far from upright.
+		maxTilt = math.rad(25),
 	}),
 	-- On a player's character: the VacuumSkinRegistry skin their outfit wants (Employee writes it from the Cosmetic
 	-- loadout, Vacuum wears it and swaps the pack when it changes; nil = Standard Issue).

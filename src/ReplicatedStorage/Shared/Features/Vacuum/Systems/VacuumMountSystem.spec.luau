@@ -102,8 +102,8 @@ return function()
 			local model, torso = makeBody()
 			local depths = depthsOf(model, torso)
 			expect(#depths > 0).to.equal(true)
-			for _, depth in depths do
-				expect(near(depth, 0.4)).to.equal(true)
+			for _, hit in depths do
+				expect(near(hit.Z, 0.4)).to.equal(true)
 			end
 			model:Destroy()
 		end)
@@ -112,8 +112,8 @@ return function()
 			local model, torso = makeBody()
 			local hoodie = addPart(model, "Hoodie", ORIGIN * CFrame.new(0, 0, 0.1), Vector3.new(1.1, 2, 1), false)
 			local depths = depthsOf(model, torso)
-			for _, depth in depths do
-				expect(near(depth, 0.6)).to.equal(true)
+			for _, hit in depths do
+				expect(near(hit.Z, 0.6)).to.equal(true)
 			end
 			expect(hoodie.CanQuery).to.equal(false)
 			model:Destroy()
@@ -123,8 +123,8 @@ return function()
 			local model, torso = makeBody()
 			local pack = addPart(model, "Canister", ORIGIN * CFrame.new(0, 0, 0.8), Vector3.new(0.6, 0.8, 0.6))
 			local depths = depthsOf(model, torso, { pack })
-			for _, depth in depths do
-				expect(near(depth, 0.4)).to.equal(true)
+			for _, hit in depths do
+				expect(near(hit.Z, 0.4)).to.equal(true)
 			end
 			model:Destroy()
 		end)
@@ -137,8 +137,8 @@ return function()
 			weld.Part1 = model.Head
 			weld.Parent = hair
 			local depths = depthsOf(model, torso)
-			for _, depth in depths do
-				expect(near(depth, 0.4)).to.equal(true)
+			for _, hit in depths do
+				expect(near(hit.Z, 0.4)).to.equal(true)
 			end
 			model:Destroy()
 		end)
@@ -157,6 +157,27 @@ return function()
 			local again = VacuumMountSystem.seat(model, torso, CFrame.new(0, 0.2, 0.9), Vector2.new(0.2, 0.28), {})
 			expect(again).to.equal(back)
 			expect(near(back.Position.Z, 0.65 + MOUNT.clearance)).to.equal(true)
+			model:Destroy()
+		end)
+
+		it("leans with a back that slopes out toward the top (a hood), clear of it", function()
+			local model, torso = makeBody()
+			-- A slab whose back face leans back ~20 degrees (top further out).
+			addPart(
+				model,
+				"Hoodie",
+				ORIGIN * CFrame.new(0, 0.2, 0.3) * CFrame.Angles(math.rad(20), 0, 0),
+				Vector3.new(1.1, 2, 0.6)
+			)
+			local mount = CFrame.new(0, 0.2, 0.5)
+			local half = Vector2.new(0.2, 0.28)
+			local back = VacuumMountSystem.seat(model, torso, mount, half, {})
+			expect(back.CFrame.UpVector.Z > math.sin(math.rad(15))).to.equal(true)
+			-- No hit stands out in front of the plate's plane.
+			for _, hit in VacuumMountSystem.measure(model, torso, mount, half, {}) do
+				local rel = back.CFrame:PointToObjectSpace(hit)
+				expect(rel.Z <= 1e-3).to.equal(true)
+			end
 			model:Destroy()
 		end)
 

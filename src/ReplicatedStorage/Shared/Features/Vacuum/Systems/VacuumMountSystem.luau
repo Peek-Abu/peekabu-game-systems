@@ -8,8 +8,9 @@
 	  Model:ScaleTo. `plateFrame(pack)` is where it is in the pack's pivot space.
 	- `seat(character, torso, mount, half, skip)`: the wearer's back attachment (MOUNT.backName on the UpperTorso),
 	  at `mount`'s height and side, on the surface of whatever the body wears over its back under the pad: the
-	  torso, a hoodie, a coat (`measure`). Seated again it moves (a new outfit).
-	- `measure`: rays from behind over the pad's footprint, in torso space, against the body: every part of the
+	  torso, a hoodie, a coat (`measure`), leaning with the back's slope (VacuumMountFormulas.backPlane). Seated
+	  again it moves (a new outfit).
+	- `measure`: the points (torso space) where rays from behind over the pad's footprint, in torso space, against the body: every part of the
 	  character but its root, head, limbs, what is worn on its head and `skip` (the pack itself, a Tool). Worn pieces
 	  turn queries off (EmployeeGearSystem, EmployeeOutfitSystem), so each is let be hit for the measurement only and
 	  turned back within the same call (nothing yields between: no frame ever sees the change).
@@ -107,7 +108,7 @@ function VacuumMountSystem.measure(
 	mount: CFrame,
 	half: Vector2,
 	skip: { Instance }
-): { number }
+): { Vector3 }
 	local onHead = headPieces(character, character:FindFirstChild("Head"))
 	-- The neck joins the head to the torso: the torso is still the back.
 	onHead[torso] = nil
@@ -134,7 +135,7 @@ function VacuumMountSystem.measure(
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = body
 	local from = torso.Size.Z * 2
-	local depths: { number } = {}
+	local hits: { Vector3 } = {}
 	for _, part in wasOff do
 		part.CanQuery = true
 	end
@@ -143,13 +144,13 @@ function VacuumMountSystem.measure(
 		local direction = torso.CFrame:VectorToWorldSpace(Vector3.new(0, 0, -from * 2))
 		local hit = Workspace:Raycast(start, direction, params)
 		if hit ~= nil then
-			table.insert(depths, torso.CFrame:PointToObjectSpace(hit.Position).Z)
+			table.insert(hits, torso.CFrame:PointToObjectSpace(hit.Position))
 		end
 	end
 	for _, part in wasOff do
 		part.CanQuery = false
 	end
-	return depths
+	return hits
 end
 
 function VacuumMountSystem.seat(
@@ -159,10 +160,10 @@ function VacuumMountSystem.seat(
 	half: Vector2,
 	skip: { Instance }
 ): Attachment
-	local depths = VacuumMountSystem.measure(character, torso, mount, half, skip)
-	local maxDepth = torso.Size.Z * MOUNT.maxDepth
-	local depth = if #depths > 0
-		then VacuumMountFormulas.backDepth(depths, mount.Z, 0, maxDepth) + MOUNT.clearance
+	local hits = VacuumMountSystem.measure(character, torso, mount, half, skip)
+	local depth, tilt = VacuumMountFormulas.backPlane(hits, mount.Y, MOUNT.maxTilt)
+	local seated = if depth ~= nil
+		then math.clamp(depth, 0, torso.Size.Z * MOUNT.maxDepth) + MOUNT.clearance
 		else mount.Z
 	local back = torso:FindFirstChild(MOUNT.backName)
 	local attachment: Attachment
@@ -173,7 +174,7 @@ function VacuumMountSystem.seat(
 		attachment.Name = MOUNT.backName
 		attachment.Parent = torso
 	end
-	attachment.CFrame = VacuumMountFormulas.backFrame(mount, depth)
+	attachment.CFrame = VacuumMountFormulas.backFrame(mount, seated, if depth ~= nil then tilt else 0)
 	return attachment
 end
 

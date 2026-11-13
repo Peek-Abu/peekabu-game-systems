@@ -46,10 +46,43 @@ function VacuumMountFormulas.backDepth(hits: { number }, fallback: number, minDe
 end
 
 --[=[
-	The back attachment's frame in torso space: the mount's height, side and turn, at `depth`.
+	The plane a flat plate lies on against `points` (torso-space hits on the back): its lean back from upright (the
+	back's slope fitted through the hits, at most `maxTilt`) and its depth at height `centreY`, as far in as it goes
+	with no hit in front of it. Nil with no hits. A back that slopes out toward a hood (Cappy's hoodie) gets a plate
+	that lies along it instead of sinking into the hood or standing off below it.
 ]=]
-function VacuumMountFormulas.backFrame(mount: CFrame, depth: number): CFrame
-	return CFrame.new(mount.X, mount.Y, depth) * mount.Rotation
+function VacuumMountFormulas.backPlane(points: { Vector3 }, centreY: number, maxTilt: number): (number?, number)
+	local count = #points
+	if count == 0 then
+		return nil, 0
+	end
+	local meanY, meanZ = 0, 0
+	for _, p in points do
+		meanY += p.Y
+		meanZ += p.Z
+	end
+	meanY /= count
+	meanZ /= count
+	local syy, syz = 0, 0
+	for _, p in points do
+		syy += (p.Y - meanY) ^ 2
+		syz += (p.Y - meanY) * (p.Z - meanZ)
+	end
+	local limit = math.tan(maxTilt)
+	local slope = if syy > 1e-9 then math.clamp(syz / syy, -limit, limit) else 0
+	local depth = -math.huge
+	for _, p in points do
+		depth = math.max(depth, p.Z - slope * (p.Y - centreY))
+	end
+	return depth, math.atan(slope)
+end
+
+--[=[
+	The back attachment's frame in torso space: the mount's height, side and turn, at `depth`, leaning back by
+	`tilt` (radians; its up axis toward +Z) to lie along the back.
+]=]
+function VacuumMountFormulas.backFrame(mount: CFrame, depth: number, tilt: number?): CFrame
+	return CFrame.new(mount.X, mount.Y, depth) * mount.Rotation * CFrame.Angles(tilt or 0, 0, 0)
 end
 
 --[=[

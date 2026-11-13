@@ -48,7 +48,70 @@ return function()
 		end)
 	end)
 
+	-- Found in Play (2026-11-13): Cappy's hoodie back slopes from 0.41 deep at the pad's bottom to 0.64 at the hood; an
+	-- upright pad either sinks into the hood or stands off at the bottom. The plate leans with the back.
+	describe("backPlane", function()
+		it("is upright on a flat back, at its surface", function()
+			local depth, tilt = VacuumMountFormulas.backPlane({
+				Vector3.new(0, -0.2, 0.4),
+				Vector3.new(0, 0, 0.4),
+				Vector3.new(0, 0.2, 0.4),
+			}, 0, math.rad(20))
+			expect(near(depth, 0.4)).to.equal(true)
+			expect(near(tilt, 0)).to.equal(true)
+		end)
+
+		it("leans with a sloped back (top further out), touching it along the slope", function()
+			-- z = 0.5 + 0.4 y
+			local depth, tilt = VacuumMountFormulas.backPlane({
+				Vector3.new(0, -0.2, 0.42),
+				Vector3.new(0, 0, 0.5),
+				Vector3.new(0, 0.2, 0.58),
+			}, 0, math.rad(30))
+			expect(near(depth, 0.5)).to.equal(true)
+			expect(near(tilt, math.atan(0.4))).to.equal(true)
+		end)
+
+		it("never lets the plate into any hit: the outermost point sets the offset along the lean", function()
+			local depth, tilt = VacuumMountFormulas.backPlane({
+				Vector3.new(0, -0.2, 0.4),
+				Vector3.new(0, 0, 0.45),
+				Vector3.new(0, 0.2, 0.4),
+			}, 0, math.rad(20))
+			expect(near(tilt, 0)).to.equal(true)
+			expect(near(depth, 0.45)).to.equal(true)
+		end)
+
+		it("caps the lean, still clear of every hit", function()
+			local points = { Vector3.new(0, -0.2, 0.2), Vector3.new(0, 0.2, 0.6) }
+			local depth, tilt = VacuumMountFormulas.backPlane(points, 0, math.rad(10))
+			expect(near(tilt, math.rad(10))).to.equal(true)
+			local slope = math.tan(tilt)
+			for _, p in points do
+				expect(depth + slope * p.Y >= p.Z - 1e-6).to.equal(true)
+			end
+		end)
+
+		it("is measured about the mount's height", function()
+			local depth = VacuumMountFormulas.backPlane({
+				Vector3.new(0, 0.8, 0.5),
+				Vector3.new(0, 1.2, 0.7),
+			}, 1, math.rad(40))
+			expect(near(depth, 0.6)).to.equal(true)
+		end)
+
+		it("is nil with no hits", function()
+			expect(VacuumMountFormulas.backPlane({}, 0, 0.3)).to.equal(nil)
+		end)
+	end)
+
 	describe("backFrame", function()
+		it("leans the frame back by `tilt` (its up axis toward +Z)", function()
+			local back = VacuumMountFormulas.backFrame(CFrame.new(0, 0.2, 0.6), 0.4, math.rad(20))
+			expect(near(back.UpVector.Z, math.sin(math.rad(20)))).to.equal(true)
+			expect(near(back.UpVector.Y, math.cos(math.rad(20)))).to.equal(true)
+		end)
+
 		it("keeps the mount's height, side and turn and moves it onto the back's surface", function()
 			local mount = CFrame.new(0.05, 0.2, 0.64) * CFrame.Angles(0.1, 0, 0)
 			local back = VacuumMountFormulas.backFrame(mount, 0.4)
