@@ -90,6 +90,10 @@ return function()
 			expect(EmployeeConstants.FOOTSTEP_SET_ATTRIBUTE).to.equal(FootstepConstants.SET_ATTRIBUTE)
 			expect(EmployeeConstants.SWAP_ATTRIBUTE).to.be.a("string")
 			expect(EmployeeConstants.LOADOUT_WAIT > 0).to.equal(true)
+			-- The hub's warm-up swap lands behind the welcome card (measured 2026-11-13: it takes the one-time ~0.6 s
+			-- first-swap freeze), so it must come well inside the card's longest stay.
+			expect(EmployeeConstants.WARM_SWAP_DELAY > 0).to.equal(true)
+			expect(EmployeeConstants.WARM_SWAP_DELAY < 5).to.equal(true)
 		end)
 	end)
 end

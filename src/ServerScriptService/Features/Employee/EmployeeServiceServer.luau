@@ -30,6 +30,7 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
@@ -68,6 +69,11 @@ local connections: { RBXScriptConnection } = {}
 -- loadout change needs a new character.
 local worn: { [number]: EmployeeSkinRules.Worn } = {}
 local swapped = 0
+-- The hub (where the welcome card shows and employees are swapped), and the players whose first character there has
+-- been rebuilt once already (EmployeeConstants.WARM_SWAP_DELAY).
+local isHub = game.PlaceId == DepotConstants.HUB_PLACE_ID
+local warmed: { [number]: true } = {}
+local warmSwaps = 0
 local cosmeticConnection: SignalTyped.Connection? = nil
 -- Each player's CharacterAdded watch, disconnected when they leave (one per join otherwise piles up).
 local spawnWatches: { [Player]: RBXScriptConnection } = {}
@@ -238,6 +244,30 @@ local function buildFor(player: Player): Model?
 	return nil
 end
 
+-- The hub's one hidden swap (EmployeeConstants.WARM_SWAP_DELAY): the same employee rebuilt where it stands, with no
+-- goo puff, while the welcome card still covers the screen.
+local function warmSwap(player: Player)
+	local character = player.Character
+	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+	if
+		player.Parent == nil
+		or character == nil
+		or character.Parent == nil
+		or humanoid == nil
+		or humanoid.Health <= 0
+		or character:GetAttribute(DeathConstants.KNOCKDOWN_ATTRIBUTE) ~= nil
+	then
+		return
+	end
+	local model = buildFor(player)
+	if model == nil then
+		return
+	end
+	markVacuum(player.UserId, model)
+	warmSwaps += 1
+	EmployeeCharacterSystem.assign(player, model, character:GetPivot(), true)
+end
+
 --[=[
 	Death's character loader: every join and respawn. Waits (up to LOADOUT_WAIT) for the saved loadout so the first
 	spawn is already the right employee, then builds and assigns it at Death's spawn point. Falls back to the engine
@@ -258,6 +288,10 @@ local function spawnFor(player: Player)
 	end
 	markVacuum(player.UserId, model)
 	EmployeeCharacterSystem.assign(player, model, nil, false)
+	if isHub and not warmed[player.UserId] then
+		warmed[player.UserId] = true
+		task.delay(EmployeeConstants.WARM_SWAP_DELAY, warmSwap, player)
+	end
 end
 
 -- Rebuilds the player's character where it stands when their loadout names another employee, skin or style than they wear.
@@ -399,6 +433,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 				expressions.forget(player.UserId)
 				skinOf[player.UserId] = nil
 				worn[player.UserId] = nil
+				warmed[player.UserId] = nil
 				statOverrides:forget(player.UserId)
 			end)
 		)
@@ -431,6 +466,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			installError = installError,
 			respawned = respawned,
 			swapped = swapped,
+			warmSwaps = warmSwaps,
 			worn = worn,
 			skinned = skinned,
 			uniformed = uniformed,
