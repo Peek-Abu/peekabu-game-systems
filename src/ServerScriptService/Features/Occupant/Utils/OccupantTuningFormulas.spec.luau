@@ -83,20 +83,21 @@ return function()
 			end
 		end)
 
-		it("starts Bramble at patrol 10 and chase 21 for a crew", function()
+		it("starts Bramble at patrol 16 and chase 27 for a crew (owner 11-13: much faster)", function()
 			local tuning = OccupantTuningFormulas.tuning(0, 3, false, bramble)
-			expect(tuning.walkSpeed).to.equal(10)
-			expect(tuning.runSpeed).to.equal(21)
+			expect(tuning.walkSpeed).to.equal(16)
+			expect(tuning.runSpeed).to.equal(27)
 			expect(tuning.hearing).to.equal(1)
 		end)
 
-		it("keeps Bramble slower than a sprint (23) at the top tier", function()
-			expect(OccupantTuningFormulas.tuning(2, 4, false, bramble).runSpeed < 23).to.equal(true)
+		it("makes Bramble faster than a sprint (23) from the start, so staring at him is the only counter", function()
+			expect(OccupantTuningFormulas.tuning(0, 3, false, bramble).runSpeed > 23).to.equal(true)
+			expect(OccupantKindRegistry.freezes("bramble")).to.equal(true)
 		end)
 
-		it("applies the training scale to Bramble's speeds too", function()
+		it("applies the training scale to Bramble's speeds too (training itself always runs Harlow)", function()
 			local training = OccupantTuningFormulas.tuning(0, 3, true, bramble)
-			expect(training.runSpeed).to.be.near(21 * ShiftConstants.TRAINING_SPEED, 1e-6)
+			expect(training.runSpeed).to.be.near(27 * ShiftConstants.TRAINING_SPEED, 1e-6)
 		end)
 	end)
 
