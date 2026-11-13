@@ -5,6 +5,25 @@ local ArtKitRegistry = require(ReplicatedStorage.Shared.Features.Art.Data.ArtKit
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Visuals = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 local PileArt = require(script.Parent.VacuumPileArtSystem)
+local PileFormulas = require(script.Parent.Parent.Utils.VacuumPileFormulas)
+
+-- The lowest world Y of every part under `root` (each part's rotated box corners).
+local function lowestOf(root)
+	local lowest = math.huge
+	for _, part in root:GetDescendants() do
+		if part:IsA("BasePart") then
+			local half = part.Size / 2
+			for _, x in { -1, 1 } do
+				for _, y in { -1, 1 } do
+					for _, z in { -1, 1 } do
+						lowest = math.min(lowest, (part.CFrame * Vector3.new(x * half.X, y * half.Y, z * half.Z)).Y)
+					end
+				end
+			end
+		end
+	end
+	return lowest
+end
 
 return function()
 	local assets, art, pile
@@ -69,6 +88,56 @@ return function()
 			expect(math.abs(host.Position.Z - pile.Position.Z) < 1e-4).to.equal(true)
 		end
 	)
+
+	it("stands the art's base exactly on the floor, even when a uniform fit leaves it shorter than its box", function()
+		-- A squat template (wider than tall for its box): the uniform fit is limited across, so the art is shorter than
+		-- the host; it must still stand on the floor, not hang centred in the box.
+		local template = assets[ArtKitRegistry.DEFAULT_KIT].props[VacuumConstants.PILE_KINDS.paper.art]
+		template:SetAttribute("BaseSize", Vector3.new(8, 1, 8))
+		template:FindFirstChildWhichIsA("BasePart").Size = Vector3.new(8, 1, 8)
+		template:FindFirstChildWhichIsA("BasePart").CFrame = CFrame.new(0, 0.5, 0)
+		pile.CFrame = PileFormulas.standing(CFrame.new(3, 4, -2) * CFrame.Angles(0, 0.7, 0), pile.Size)
+		local visual = PileArt.dress(pile, "paper", art)
+		expect(visual ~= nil).to.equal(true)
+		expect(lowestOf(visual)).to.be.near(4, 1e-3)
+	end)
+
+	it("keeps the art on the floor at every step as the pile is vacuumed down to nothing", function()
+		local floor = CFrame.new(-6, 2.5, 9) * CFrame.Angles(0, -0.3, 0)
+		local base = pile.Size
+		pile.CFrame = PileFormulas.standing(floor, base)
+		PileArt.dress(pile, "paper", art)
+		local refits = 0
+		for step = 1, 40 do
+			local progress = step / 40
+			local frame, size = PileFormulas.shrunk(pile.CFrame, pile.Size, base, progress)
+			pile.Size = size
+			pile.CFrame = frame
+			if PileArt.rescale(pile, "paper", PileFormulas.scaleAt(progress), art) then
+				refits += 1
+			end
+			expect(pile.Position.Y - pile.Size.Y / 2).to.be.near(2.5, 1e-4)
+			local host = pile:FindFirstChild(PileArt.HOST_NAME)
+			expect(host.Position.Y - host.Size.Y / 2).to.be.near(2.5, 1e-4)
+			expect(lowestOf(host:FindFirstChild("ArtVisual"))).to.be.near(2.5, 1e-3)
+		end
+		expect(refits > 5).to.equal(true)
+	end)
+
+	it("has every pile template in this place's kit pivoted at its base (the art stands on its pivot)", function()
+		local live = ReplicatedStorage:FindFirstChild("Assets")
+		local crew = live and live:FindFirstChild("CleanupCrew")
+		local kits = crew and crew:FindFirstChild("ArtKits")
+		local kit = kits and kits:FindFirstChild(ArtKitRegistry.DEFAULT_KIT)
+		local props = kit and kit:FindFirstChild("props")
+		for kind, style in VacuumConstants.PILE_KINDS do
+			local template = props and props:FindFirstChild(style.art)
+			if template ~= nil and template:IsA("Model") then
+				local below = lowestOf(template) - template:GetPivot().Position.Y
+				expect(`{kind} {math.abs(below) < 0.02}`).to.equal(`{kind} true`)
+			end
+		end
+	end)
 
 	it("never sizes a pile's art box smaller than its gameplay block", function()
 		for kind, style in VacuumConstants.PILE_KINDS do

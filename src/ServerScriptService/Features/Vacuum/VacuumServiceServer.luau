@@ -54,6 +54,7 @@ local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.V
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumAimSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumAimSystem)
 local VacuumPileArtSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumPileArtSystem)
+local VacuumPileFormulas = require(ServerScriptService.Features.Vacuum.Utils.VacuumPileFormulas)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
@@ -167,7 +168,7 @@ local function inReach(player: Player, pile: Instance): boolean
 	)
 end
 
--- Scales a pile down with its progress, keeping it on the floor.
+-- Scales a pile down with its progress toward its base (VacuumPileFormulas.shrunk): it stays on the floor.
 local function shrink(pile: BasePart)
 	local base = pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)
 	if typeof(base) ~= "Vector3" then
@@ -175,13 +176,12 @@ local function shrink(pile: BasePart)
 	end
 	local progress = pile:GetAttribute(InteractionConstants.CHANNEL_PROGRESS_ATTRIBUTE)
 	local fraction = if type(progress) == "number" then progress else 0
-	local scale = 1 - (1 - VacuumConstants.MIN_SCALE) * fraction
-	local bottom = pile.Position.Y - pile.Size.Y / 2
-	pile.Size = base * scale
-	pile.Position = Vector3.new(pile.Position.X, bottom + pile.Size.Y / 2, pile.Position.Z)
+	local frame, size = VacuumPileFormulas.shrunk(pile.CFrame, pile.Size, base, fraction)
+	pile.Size = size
+	pile.CFrame = frame
 	local kind = pile:GetAttribute(VacuumConstants.PILE_KIND_ATTRIBUTE)
 	if type(kind) == "string" then
-		VacuumPileArtSystem.rescale(pile, kind, scale)
+		VacuumPileArtSystem.rescale(pile, kind, VacuumPileFormulas.scaleAt(fraction))
 	end
 end
 
@@ -404,7 +404,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 		pile.CanTouch = false
 		-- Floor raycasts (item placement) must pass through piles; the client aim uses distance + dot, not rays.
 		pile.CanQuery = false
-		pile.CFrame = floor * CFrame.new(0, style.size.Y / 2, 0)
+		pile.CFrame = VacuumPileFormulas.standing(floor, style.size)
 		pile:SetAttribute(VacuumConstants.PILE_KIND_ATTRIBUTE, kind)
 		pile:SetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE, style.size)
 		pile:SetAttribute(InteractionConstants.CHANNEL_KIND_ATTRIBUTE, VacuumConstants.CHANNEL_KIND)
