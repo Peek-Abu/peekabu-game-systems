@@ -202,6 +202,20 @@ local function generateLayout(seed: number, map: ShiftTypes.MapId): (OfficeTypes
 	error(`{map} generation failed from seed {seed} to {seed + GENERATE_RETRIES}: {lastError}`, 0)
 end
 
+-- Destroys `instance` a piece at a time (each folder's children, then the folder), stepping the build's pace between
+-- pieces: destroying a whole office in one call removes thousands of parts in one unyielding step.
+local function teardown(instance: Instance)
+	for _, child in instance:GetChildren() do
+		if child:IsA("Folder") then
+			teardown(child)
+		else
+			child:Destroy()
+		end
+		OfficeBuildPaceTracker.step()
+	end
+	instance:Destroy()
+end
+
 local function rebuild(requested: number, map: ShiftTypes.MapId)
 	local layout, seed = generateLayout(requested, map)
 	OfficeBuildPaceTracker.step()
@@ -236,8 +250,7 @@ local function rebuild(requested: number, map: ShiftTypes.MapId)
 		-- Gone before the (yielding) build starts: nothing reads a destroyed office while the new one goes up.
 		built = nil
 		old.doors.destroy()
-		old.model:Destroy()
-		OfficeBuildPaceTracker.step()
+		teardown(old.model)
 	end
 	-- Guard: any other office model in Workspace (one a past cleanup missed) goes too, with a warning as evidence.
 	OfficeBuildSystem.clearStrays()

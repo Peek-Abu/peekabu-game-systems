@@ -127,6 +127,9 @@ function OfficeBuildSystem.build(
 	local model = Instance.new("Model")
 	model.Name = OfficeConstants.MODEL_NAME
 	model:SetAttribute("ArtKitId", layout.artKit or OfficeConstants.ART_KIT_ID)
+	-- In Workspace from the start, so each piece joins it as it is built (the build yields between pieces):
+	-- parenting the finished model would insert thousands of parts in one unyielding step.
+	model.Parent = Workspace
 	local floorThickness = OfficeConstants.FLOOR_THICKNESS
 
 	for _, room in layout.rooms do
@@ -333,7 +336,6 @@ function OfficeBuildSystem.build(
 	local doors = OfficeDoorSystem.build(layout, origin, model, art)
 	local outside = OfficeGroundsSystem.build(layout, origin, model, art, map)
 
-	model.Parent = Workspace
 	return {
 		model = model,
 		bed = bed,
