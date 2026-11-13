@@ -1,6 +1,7 @@
 --!strict
 --[=[
-	ToonCooldown: an ability's cooldown on a cream chip: the stopwatch render breaking the chip's top-left corner, the
+	ToonCooldown: an ability's cooldown on a cream chip: the stopwatch render overlapping the chip's left end (never
+	above or below it, so a chip in a scrolling list is never clipped), the
 	number big in the gold numbers' style and its unit word ("sec", "min") small in Fredoka under it, so the unit never
 	reads as a digit (owner, 2026-11-12: "8s" looked plain and its "s" like a 5). The words come from
 	ToonStyleViewModel.cooldown. Used wherever an ability card shows its cooldown (the starting-employee pick, the
@@ -41,7 +42,8 @@ local function ToonCooldown(props: ToonCooldownProps): React.ReactNode
 	local unitSize = math.max(MIN_TEXT, math.floor(height * 0.24))
 	local valueSize = math.max(MIN_TEXT + 4, math.floor(height * 0.5))
 	local stopwatch = math.floor(height * 0.62)
-	-- The number and its word stand as one block, centred under the stopwatch's corner.
+	-- The number and its word stand as one block right of the stopwatch.
+	local left = math.floor(stopwatch * 0.42)
 	local blockHeight = valueSize + unitSize + 2
 	local top = math.floor((height - UIToonConstants.DEPTH.drop - blockHeight) / 2) + 1
 	local face: { [string]: React.ReactNode } = {
@@ -49,8 +51,8 @@ local function ToonCooldown(props: ToonCooldownProps): React.ReactNode
 			text = parts.value,
 			textSize = valueSize,
 			meaning = "gold",
-			position = UDim2.fromOffset(4, top),
-			size = UDim2.new(1, -8, 0, valueSize + 2),
+			position = UDim2.fromOffset(left, top),
+			size = UDim2.new(1, -left - 6, 0, valueSize + 2),
 			align = "center",
 			fit = true,
 		}),
@@ -59,8 +61,8 @@ local function ToonCooldown(props: ToonCooldownProps): React.ReactNode
 			font = "body",
 			color = UIToonConstants.COLOR.ink,
 			textSize = unitSize,
-			position = UDim2.fromOffset(4, top + valueSize + 2),
-			size = UDim2.new(1, -8, 0, unitSize + 2),
+			position = UDim2.fromOffset(left, top + valueSize + 2),
+			size = UDim2.new(1, -left - 6, 0, unitSize + 2),
 			align = "center",
 			fit = true,
 		}),
@@ -83,7 +85,7 @@ local function ToonCooldown(props: ToonCooldownProps): React.ReactNode
 		stopwatch = e(ToonIcon, {
 			icon = "stopwatch",
 			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromOffset(math.floor(stopwatch * 0.18), math.floor(stopwatch * 0.12)),
+			position = UDim2.new(0, math.floor(stopwatch * 0.06), 0.5, -math.floor(UIToonConstants.DEPTH.drop / 2)),
 			size = UDim2.fromOffset(stopwatch, stopwatch),
 			rotation = -14,
 			drop = 3,

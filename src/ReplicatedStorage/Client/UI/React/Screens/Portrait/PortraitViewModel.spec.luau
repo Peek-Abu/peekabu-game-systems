@@ -104,4 +104,26 @@ return function()
 			expect(PortraitViewModel.missing(false, 600)).to.equal("error")
 		end)
 	end)
+	describe("grow (a live figure that moves past its fitted box)", function()
+		it("keeps the fitted box while the figure stays inside it, within the slack", function()
+			local seen = { min = Vector3.new(-0.95, 0.02, -0.5), max = Vector3.new(1.04, 5, 0.4) }
+			expect(PortraitViewModel.grow(bounds, seen)).to.equal(nil)
+		end)
+
+		it("takes in a raised arm or a hop, never shrinking", function()
+			local seen = { min = Vector3.new(-0.5, 0.5, -0.2), max = Vector3.new(1.6, 5.8, 0.3) }
+			local grown = PortraitViewModel.grow(bounds, seen)
+			expect(grown).to.be.ok()
+			expect(grown.min).to.equal(bounds.min)
+			expect(grown.max).to.equal(Vector3.new(1.6, 5.8, 0.5))
+		end)
+
+		it("re-fits the camera so the grown figure is wholly in view", function()
+			local seen = { min = Vector3.new(-1.8, -0.2, -0.5), max = Vector3.new(1, 6, 0.9) }
+			local grown = PortraitViewModel.grow(bounds, seen)
+			for _, aspect in { 0.6, 1, 1.8 } do
+				expect(inView(PortraitViewModel.camera(grown, "full", aspect), grown, aspect)).to.equal(true)
+			end
+		end)
+	end)
 end

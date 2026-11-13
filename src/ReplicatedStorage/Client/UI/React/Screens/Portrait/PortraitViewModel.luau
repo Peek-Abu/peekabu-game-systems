@@ -4,6 +4,10 @@
 	- `parts` / `camera`: the framing presets (head, bust, upper body with the ears, full figure): which parts to frame, and the camera that
 	  fits exactly those parts' box in a frame of the given aspect, seen a little from the right and above (a
 	  three-quarter view reads rounder than straight on), with a margin per preset.
+	- `grow`: a live (animated) full figure is fitted at its rest pose; its reveal or idle can lift an arm, an ear or a
+	  hop out of that box, which the camera would cut. `grow` is the box that also takes in what the figure reaches now
+	  (never smaller), or nil while it stays inside; ToonViewport re-fits the camera to it (owner, 2026-11-12: a hire
+	  is never cut off).
 	- `lighting`: the viewport's one directional light and ambient for the V1 Gloom & Gleam kit: a warm key from the
 	  front, above and the camera's left over lilac shadows (the kit grades shadows violet), lifted more on a dark
 	  plate so the character never sinks into it.
@@ -102,6 +106,23 @@ function PortraitViewModel.camera(
 		end
 	end
 	return { cframe = CFrame.lookAt(centre + away * distance, centre), fov = FOV }
+end
+
+-- How far (studs) a moving figure may poke past its fitted box before the camera widens: the frame's margin hides it,
+-- and the camera never twitches for a fidget.
+local GROW_SLACK = 0.05
+
+function PortraitViewModel.grow(
+	fitted: EmployeePoseFormulas.Bounds,
+	seen: EmployeePoseFormulas.Bounds
+): EmployeePoseFormulas.Bounds?
+	local low = fitted.min:Min(seen.min)
+	local high = fitted.max:Max(seen.max)
+	local out = (fitted.min - low):Max(high - fitted.max)
+	if math.max(out.X, out.Y, out.Z) <= GROW_SLACK then
+		return nil
+	end
+	return { min = low, max = high }
 end
 
 function PortraitViewModel.lighting(tone: Tone): Lighting

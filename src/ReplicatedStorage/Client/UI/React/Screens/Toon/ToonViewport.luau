@@ -15,6 +15,8 @@
 	  else the employee's hire reveal in the skin), then its idle; its faces follow the clip's Face markers
 	  (EmoteEffectSystem, faces only here). Closing cancels it: the props hide and the clip's listeners go.
 	The model is rebuilt only when the employee, skin, colour style, framing or live flag changes, and destroyed with the component.
+	A live full figure is re-measured while it moves and the camera eases out to take in anything that leaves the
+	fitted box (PortraitViewModel.grow), so a reveal or idle never cuts off an arm or ears.
 	`platform` stands the model on a round 3D platform in the given colours (built in the viewport, so it is lit and
 	turns with the model's world, never a flat shape behind it); the camera frames the two together.
 	`outfit` shows a whole player's look instead (EmployeePreviewSystem.outfit: your own character cloned, with the
@@ -30,6 +32,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
@@ -97,6 +100,10 @@ local previewFaces = EmoteEffectSystem.live(function(id: string, character: Mode
 end)
 -- How much taller than the model at rest an emote hero's frame is (Bubble Ride floats up inside her bubble).
 local EMOTE_HEADROOM = 0.35
+-- A live full figure is re-measured this often (seconds) while it moves, and the camera eases out at this rate (per
+-- second) when the figure reaches past its fitted box (PortraitViewModel.grow).
+local GROW_EVERY = 0.1
+local GROW_EASE = 8
 -- Seconds before a hero reacts to another click, so spam-clicking does not restart it every frame.
 local REACT_COOLDOWN = 1.5
 
@@ -358,6 +365,30 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			end
 		end
 		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+		-- A live full figure moves out of its rest-pose box (a reveal's raised arm or hop, an idle's ears): keep
+		-- measuring it and ease the camera out to take in all of it, never in (owner, 2026-11-12: never cut off).
+		local growing: RBXScriptConnection? = nil
+		if moving and props.framing == "full" and bounds ~= nil then
+			local live: Model = model
+			local target: CFrame? = nil
+			local since = 0
+			growing = RunService.Heartbeat:Connect(function(dt: number)
+				since += dt
+				local fitted = bounds
+				if since >= GROW_EVERY and fitted ~= nil then
+					since = 0
+					local seen = EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(live, nil))
+					local grown = if seen ~= nil then PortraitViewModel.grow(fitted, seen) else nil
+					if grown ~= nil then
+						bounds = grown
+						target = PortraitViewModel.camera(grown, props.framing, aspectOf(frame), props.turn).cframe
+					end
+				end
+				if target ~= nil then
+					camera.CFrame = camera.CFrame:Lerp(target, math.min(1, dt * GROW_EASE))
+				end
+			end)
+		end
 		return function()
 			hero.current = nil
 			local stop = stopReaction.current
@@ -366,6 +397,9 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 				stopReaction.current = nil
 			end
 			resized:Disconnect()
+			if growing ~= nil then
+				growing:Disconnect()
+			end
 			for _, cleanup in cleanups do
 				cleanup()
 			end
