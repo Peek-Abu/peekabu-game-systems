@@ -197,6 +197,16 @@ local function pileOrder(
 	end
 	local order = shuffled(rooms, rng)
 	local near = neighbours(layout)
+	-- How many piles a room can hold with no two piles' art overlapping (its markers taken greedily).
+	local function fits(room: string): number
+		local held: { Marker } = {}
+		for _, marker in byRoom[room] do
+			if not crowds(marker, held) then
+				table.insert(held, marker)
+			end
+		end
+		return #held
+	end
 	local wanted = rng:NextInteger(options.dirtyRooms.min, options.dirtyRooms.max)
 	local dirty: { string } = {}
 	local chosen: { [string]: boolean } = {}
@@ -206,7 +216,7 @@ local function pileOrder(
 				break
 			end
 			if not chosen[room] then
-				local roomy = #byRoom[room] >= options.pilesPerRoom.min
+				local roomy = fits(room) >= options.pilesPerRoom.min
 				local apart = true
 				local around = near[room]
 				if around ~= nil then
@@ -224,42 +234,45 @@ local function pileOrder(
 			end
 		end
 	end
-	-- A marker whose pile art would overlap one already taken is never used. A pile its room cannot fit moves to the
-	-- next free marker that fits (the dirty rooms' leftovers first, then the clean rooms', so the dust stays clustered):
-	-- the shift keeps every pile it rolled, and its Gloom. The spares after them (a top-up's) never crowd either.
+	-- A marker whose pile art would overlap one already taken is never used (dirty rooms are the ones roomy enough to
+	-- hold their piles apart). A pile its room still cannot fit moves to another dirty room's free marker that fits,
+	-- never past PILES_PER_ROOM.max there, so the dust stays in the dirty rooms and the shift keeps its Gloom. The
+	-- spares after them (a top-up's: the dirty rooms' leftovers first, then the clean rooms') never crowd either.
 	local used: { Marker } = {}
 	local spare: { Marker } = {}
+	local held: { [string]: number } = {}
 	local rolled = 0
 	for _, room in dirty do
 		local markers = shuffled(byRoom[room], rng)
 		local count = math.min(rng:NextInteger(options.pilesPerRoom.min, options.pilesPerRoom.max), #markers)
 		rolled += count
-		local taken = 0
+		held[room] = 0
 		for _, marker in markers do
-			if taken < count and not crowds(marker, used) then
+			if held[room] < count and not crowds(marker, used) then
 				table.insert(used, marker)
-				taken += 1
+				held[room] += 1
 			else
-				table.insert(spare, marker)
-			end
-		end
-	end
-	for _, room in order do
-		if not chosen[room] then
-			for _, marker in byRoom[room] do
 				table.insert(spare, marker)
 			end
 		end
 	end
 	local rest: { Marker } = {}
 	for _, marker in spare do
-		if #used < rolled and not crowds(marker, used) then
+		if #used < rolled and held[marker.room] < options.pilesPerRoom.max and not crowds(marker, used) then
 			table.insert(used, marker)
+			held[marker.room] += 1
 		else
 			table.insert(rest, marker)
 		end
 	end
 	local count = #used
+	for _, room in order do
+		if not chosen[room] then
+			for _, marker in byRoom[room] do
+				table.insert(rest, marker)
+			end
+		end
+	end
 	for _, marker in rest do
 		if not crowds(marker, used) then
 			table.insert(used, marker)
