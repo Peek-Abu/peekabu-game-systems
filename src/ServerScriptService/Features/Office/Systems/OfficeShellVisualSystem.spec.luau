@@ -212,7 +212,11 @@ return function()
 							for _, sign in { -1, 1 } do
 								local a = trim.Position[axis] + sign * trim.Size[axis] / 2
 								local b = casing.Position[axis] + sign * casing.Size[axis] / 2
-								if math.abs(a - b) < 1e-3 then
+								-- A bottom face on the floor (y = 0) faces down into it and is never seen, so sharing that
+								-- plane is no z-fight: a pilaster's floor-level band collars (wainscot, skirt) overlap its
+								-- footprint and both stand on the floor. Every visible face plane still counts.
+								local onFloor = axis == "Y" and sign == -1 and math.abs(a) < 1e-3
+								if not onFloor and math.abs(a - b) < 1e-3 then
 									local area = true
 									for other, name in axes do
 										if other ~= index then
