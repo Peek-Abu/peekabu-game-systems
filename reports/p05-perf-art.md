@@ -31,7 +31,7 @@ lean and the largest gap between the plate and the back at that cap:
 - Not yet checked on a real character in play: Shift's Rojo was not connected, so the comparison was re-seated by
   hand in a Play copy.
 
-## 2. First employee swap freeze (`p1-first-swap`): fixed, shipped code not yet play-checked
+## 2. First employee swap freeze (`p1-first-swap`): fixed and checked in a real Lobby Play
 
 Commit `3af5823d`: in the hub (`DepotConstants.HUB_PLACE_ID`), each player's first character is rebuilt once in place
 `EmployeeConstants.WARM_SWAP_DELAY` (0.5 s) after it spawns: the same employee, with no goo puff, while the welcome
@@ -50,9 +50,9 @@ Measured in the Lobby (Studio Play, client frame times from RenderStepped; swaps
   character replacement (P0's profiles showed our Lua is not it).
 - The Shift place showed no freeze at all (71-100 ms on every swap). Its place code was older (Rojo not connected), and
   swaps can't happen there anyway (Cosmetic is locked outside the lobby phase), so the warm swap is hub-only.
-- Not yet checked: the shipped code in a real Lobby Play. Rojo was not syncing the Lobby, so the place still ran the
-  old code; the test above did the same rebuild from a temp script. Re-check: fresh Lobby Play, swap employees in the
-  depot; the first swap should stay near 0.1 s.
+- Checked with the shipped code (Lobby, Rojo synced, fresh Play): `warmSwaps = 1` (it ran during the welcome card),
+  then the first real swap Pippa -> Cappy peaked at **125 ms**, Prickles 167 ms, Pippa 172 ms. Frames were a little
+  heavier in that run than earlier (other sessions were using the machine), but the 0.6 s freeze is gone.
 - Risk to watch: a client whose welcome card lifts in under ~1 s (everything cached) could see the rebuild. It is the
   same employee in the same spot, so at most a one-frame flicker.
 
@@ -129,6 +129,17 @@ Measured in the Lobby (Studio Play, client frame times from RenderStepped; swaps
 - **D1.** Decimate the three employees' bodies (heads, FacePlates, then hair/shorts), shown to you side by side
   before any upload? (yes / no)
 - **D2.** Remove `LockerStage_Ref` from the Lobby's Workspace if the ReplicatedStorage copy is there? (yes / no)
+
+Owner, 2026-11-13: "yes to both d1 and d2 if locker stage is truly not needed!"
+
+D2 done in the Lobby (Edit, one undo step; the owner saves the place). Proof it was unused:
+- In code it is only `LockerCutsceneSystem`'s fallback when `Assets.CleanupCrew.LockerStage` is missing. That template
+  is in the place, the same model (7 children, 298 parts), and the cutscene destroyed the Workspace copy on first use
+  anyway.
+- Nothing in the place points at it (no ObjectValue, joint or constraint).
+- With it deleted, the Locker cutscene started in a Lobby Play, built its stage from the template (438 parts), moved
+  the camera, and cleaned up on stop.
+- The Lobby drops 222k triangles once saved.
 
 The work is a separate task (proposed: "Cut character triangles with optimize_mesh"): finish the tool's OM1-OM5
 gates on the shipped builds, render the comparison, and upload to Icey Labs only after your yes.
