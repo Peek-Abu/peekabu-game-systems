@@ -14,6 +14,12 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 -- category; a sticker is owned through its pack.
 export type Kind = "employee" | "skin" | "idle" | "emote" | "stickerPack" | "sticker" | "vacuum"
 
+--[=[
+	A real sale on an item or a bundle: the price it sells at between `starts` and `ends` (UTC unix seconds; nil = open
+	on that side). The Shop's price rules (ShopPriceRules) read it; never an invented "was" price.
+]=]
+export type Sale = { price: number, starts: number?, ends: number? }
+
 export type Rarity = "default" | "uncommon" | "rare" | "epic" | "legendary" | "odd"
 
 -- Where it comes from. `default` items are free and never stored: every player owns them.
@@ -38,6 +44,8 @@ export type Item = {
 	employee: string?,
 	-- In the source's currency (Credits for `credits`, Gleam for `gleam`); nil when it can't be bought.
 	price: number?,
+	-- A real sale on it (the regular price is `price`).
+	sale: Sale?,
 	-- How many colour styles a skin has (1 when nil).
 	styles: number?,
 	-- A short line or two about it, kid reading level, usually told about the employee (third person).
@@ -62,7 +70,10 @@ export type Bundle = {
 	-- The CosmeticRegistry ids it grants, in show order (the first is the hero). No stickers, no free defaults.
 	items: { string },
 	currency: "gleam" | "credits",
+	-- The bundle's price (hand-set, about 30% off its items' regular prices; the owner sets it).
 	price: number,
+	-- A real sale on the bundle.
+	sale: Sale?,
 	lore: string,
 }
 
