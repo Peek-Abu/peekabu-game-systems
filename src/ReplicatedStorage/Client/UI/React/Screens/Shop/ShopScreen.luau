@@ -546,7 +546,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				setConfirming(true)
 			end,
 			onGetMore = function()
-				local back = VM.returnTo(offer, balances, tab)
+				local back = VM.returnTo(offer, owns, balances, tab)
 				setTab("gleam")
 				if preview == nil then
 					ShopStore.close()

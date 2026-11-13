@@ -25,7 +25,8 @@ export type Offer = {
 	-- An event offer is only sold between these UTC times (unix seconds).
 	starts: number?,
 	ends: number?,
-	-- The price it really sold at before a sale; nil unless it did (never an invented "was" price).
+	-- A real, higher price to cross out: what a bundle's items cost alone (ShopPriceRules), or the price before a
+	-- sale. nil otherwise (never an invented "was" price).
 	was: number?,
 }
 

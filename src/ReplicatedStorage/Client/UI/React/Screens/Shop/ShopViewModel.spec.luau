@@ -311,7 +311,8 @@ return function()
 
 	describe("back to the item after buying Gleam", function()
 		it("remembers the item and the Gleam it needs, and is ready once the Gleam is there", function()
-			local back = VM.returnTo(ShopRegistry.get("Pippa.BubbleBuddy"), { gleam = 1200, credits = 0 }, "skins")
+			local back =
+				VM.returnTo(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), { gleam = 1200, credits = 0 }, "skins")
 			expect(back.offer).to.equal("Pippa.BubbleBuddy")
 			expect(back.tab).to.equal("skins")
 			expect(back.gleam).to.equal(1500)
@@ -319,7 +320,7 @@ return function()
 			expect(VM.returnReady(back, 1499)).to.equal(false)
 			expect(VM.returnReady(back, 1500)).to.equal(true)
 			-- A hire needs only the Gleam for the rest.
-			local hire = VM.returnTo(ShopRegistry.get("Prickles"), { gleam = 0, credits = 2200 }, "hires")
+			local hire = VM.returnTo(ShopRegistry.get("Prickles"), owner(), { gleam = 0, credits = 2200 }, "hires")
 			expect(hire.gleam).to.equal(math.ceil(300 / ShopConstants.TOP_UP.credits))
 		end)
 
@@ -335,7 +336,8 @@ return function()
 		end)
 
 		it("says how much more Gleam, for what", function()
-			local back = VM.returnTo(ShopRegistry.get("Pippa.BubbleBuddy"), { gleam = 1200, credits = 0 }, "skins")
+			local back =
+				VM.returnTo(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), { gleam = 1200, credits = 0 }, "skins")
 			expect(VM.returnNote(back, 1200)).to.equal("Get 300 more Gleam for Bubble Buddy!")
 			expect(VM.returnNote(back, 1500)).to.equal("You have enough for Bubble Buddy!")
 		end)

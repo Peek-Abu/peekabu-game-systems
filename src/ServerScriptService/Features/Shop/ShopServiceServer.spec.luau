@@ -233,6 +233,60 @@ return function()
 			expect(CosmeticService:owns(1, "Pippa.BubbleBuddy")).to.equal(true)
 		end)
 
+		describe("bundles you own part of", function()
+			local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
+			local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
+
+			it("charges only the missing part's share and grants what is missing", function()
+				local bundle
+				for _, offer in ShopRegistry.all() do
+					if #offer.items > 1 and offer.currency == "gleam" then
+						bundle = offer
+						break
+					end
+				end
+				expect(bundle).to.be.ok()
+				seed(1, 9999, 0)
+				local first = bundle.items[1]
+				expect(ShopService:buy(1, first)).to.equal(true)
+				local afterFirst = MarketplaceService:getPremium(1)
+				local priced = ShopPriceRules.forPlayer(bundle, function(id)
+					return id == first
+				end)
+				expect(priced.price < bundle.price).to.equal(true)
+				local ok, reason = ShopService:buy(1, bundle.id)
+				expect(reason).to.equal(nil)
+				expect(ok).to.equal(true)
+				expect(MarketplaceService:getPremium(1)).to.equal(afterFirst - priced.price)
+				for _, id in bundle.items do
+					expect(CosmeticService:owns(1, id)).to.equal(true)
+				end
+			end)
+
+			it("reveals only the items that are new", function()
+				local bundle
+				for _, offer in ShopRegistry.all() do
+					if #offer.items > 1 and offer.currency == "gleam" then
+						bundle = offer
+						break
+					end
+				end
+				seed(1, 9999, 0)
+				expect(ShopService:buy(1, bundle.items[1])).to.equal(true)
+				task.wait()
+				local events = {}
+				local listening = CosmeticService.granted:Connect(function(event)
+					table.insert(events, event)
+				end)
+				expect(ShopService:buy(1, bundle.id)).to.equal(true)
+				task.wait()
+				listening:Disconnect()
+				expect(#events).to.equal(1)
+				expect(#events[1].ids).to.equal(#bundle.items - 1)
+				expect(table.find(events[1].ids, bundle.items[1])).to.equal(nil)
+			end)
+		end)
+
 		describe("Gleam pays the rest", function()
 			local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopTopUpRules)
 

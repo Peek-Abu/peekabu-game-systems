@@ -28,6 +28,7 @@ local ShopConstants = require(Shop.Data.ShopConstants)
 local ShopEvents = require(Shop.Net.ShopEvents)
 local ShopRegistry = require(Shop.Data.ShopRegistry)
 local ShopRequestRules = require(Shop.Rules.ShopRequestRules)
+local ShopPriceRules = require(Shop.Rules.ShopPriceRules)
 local ShopRules = require(Shop.Rules.ShopRules)
 local ShopTopUpRules = require(Shop.Rules.ShopTopUpRules)
 local ShopTypes = require(Shop.Data.ShopTypes)
@@ -158,8 +159,8 @@ end
 
 local function buyImpl(userId: number, offerId: string, agreedGleam: number): (boolean, string?)
 	Guard.userId(userId)
-	local offer = ShopRegistry.get(offerId)
-	if offer == nil then
+	local listed = ShopRegistry.get(offerId)
+	if listed == nil then
 		return false, "unknown offer"
 	end
 	if CosmeticServiceServer:isLocked() then
@@ -168,14 +169,16 @@ local function buyImpl(userId: number, offerId: string, agreedGleam: number): (b
 	if CosmeticServiceServer:getLoadout(userId) == nil then
 		return false, "no profile loaded"
 	end
+	local function owns(id: string): boolean
+		return CosmeticServiceServer:owns(userId, id)
+	end
+	-- What this player pays (a bundle they own part of costs less, ShopPriceRules); never a price from the client.
+	local offer = ShopPriceRules.forPlayer(listed, owns)
 	local balance = if offer.currency == "gleam"
 		then MarketplaceServiceServer:getPremium(userId)
 		else CurrencyServiceServer:getCurrencyAmount(userId, "credits")
 	if balance == nil then
 		return false, "no profile loaded"
-	end
-	local function owns(id: string): boolean
-		return CosmeticServiceServer:owns(userId, id)
 	end
 	-- Short is not the end: Gleam may pay the rest (payOpsImpl).
 	local allowed, refusal = ShopRules.check(offer, owns, balance, os.time())
@@ -188,9 +191,14 @@ local function buyImpl(userId: number, offerId: string, agreedGleam: number): (b
 	if ops == nil then
 		return false, payRefusal
 	end
+	-- Only what the player doesn't own yet is granted and revealed (a bundle they own part of).
+	local fresh: { string } = {}
 	for _, id in offer.items do
-		for _, op in CosmeticServiceServer:grantOps(userId, id) do
-			table.insert(ops, op)
+		if not owns(id) then
+			table.insert(fresh, id)
+			for _, op in CosmeticServiceServer:grantOps(userId, id) do
+				table.insert(ops, op)
+			end
 		end
 	end
 	local committed, result = PlayerDataService:transaction(ops)
@@ -199,7 +207,7 @@ local function buyImpl(userId: number, offerId: string, agreedGleam: number): (b
 	end
 	local gleam = if plan ~= nil then plan.gleam else 0
 	log:audit(`userId={userId}`, "SHOP_BOUGHT", offer.id, offer.currency, price, `topUpGleam={gleam}`)
-	CosmeticServiceServer:announce(userId, offer.items, "shop")
+	CosmeticServiceServer:announce(userId, fresh, "shop")
 	return true, nil
 end
 

@@ -52,6 +52,8 @@ return table.freeze({
 	NEW_SECONDS = 3 * 86400,
 	LAST_DAY_SECONDS = 86400,
 	MAX_ID_LENGTH = 64,
+	-- A worked-out price (a bundle you own part of) is rounded up to a multiple of this.
+	PRICE_STEP = 10,
 	-- The most Gleam one buy request may agree to top up with (a hire from zero Credits is 250).
 	MAX_TOP_UP = 100000,
 	BUNDLES = table.freeze(BUNDLES),

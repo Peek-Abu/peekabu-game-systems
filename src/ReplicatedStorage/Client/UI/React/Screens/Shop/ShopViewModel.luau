@@ -21,6 +21,7 @@ local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rul
 local LockerConstants = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerConstants)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
+local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
 local ShopRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopRules)
 local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopTopUpRules)
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
@@ -58,6 +59,8 @@ export type OfferCard = {
 	rarity: CosmeticTypes.Rarity,
 	currency: ShopTypes.Currency,
 	price: string,
+	-- A real, higher price to cross out (a bundle's items alone); nil when there is none.
+	was: string?,
 	state: CardState,
 	-- Who to show in 3D (the item's employee, the employee itself, or Pippa for a shared item).
 	employee: string,
@@ -186,7 +189,8 @@ local function lineOf(item: CosmeticTypes.Item): string
 	return `{word} · {item.employee or "any employee"}`
 end
 
-function VM.card(offer: Offer, owns: Owns, balances: Balances): OfferCard
+function VM.card(listed: Offer, owns: Owns, balances: Balances): OfferCard
+	local offer = ShopPriceRules.forPlayer(listed, owns)
 	local item = main(offer)
 	local state: CardState = if ShopRules.owned(offer, owns)
 		then "owned"
@@ -210,6 +214,7 @@ function VM.card(offer: Offer, owns: Owns, balances: Balances): OfferCard
 		rarity = if bundle ~= nil then bundle.rarity elseif item ~= nil then item.rarity else "default",
 		currency = offer.currency,
 		price = ToonStyleViewModel.grouped(offer.price),
+		was = if offer.was ~= nil then ToonStyleViewModel.grouped(offer.was) else nil,
 		state = state,
 		employee = employee,
 		skinKey = if item ~= nil and item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
@@ -240,7 +245,8 @@ local function gleamNeeded(offer: Offer, balances: Balances): number
 	return if plan ~= nil then plan.gleam else 0
 end
 
-function VM.button(offer: Offer, owns: Owns, balances: Balances): Button
+function VM.button(listed: Offer, owns: Owns, balances: Balances): Button
+	local offer = ShopPriceRules.forPlayer(listed, owns)
 	local price = ToonStyleViewModel.grouped(offer.price)
 	if ShopRules.owned(offer, owns) then
 		return { text = "Owned", enabled = false, kind = "owned", currency = offer.currency, price = price }
@@ -293,7 +299,8 @@ end
 	that do this well: say exactly how much more, point at the smallest bundle that covers it, and land back on the
 	item with the Yes/No question already up, so finishing takes one tap.
 ]=]
-function VM.returnTo(offer: Offer, balances: Balances, tab: string): ShopStore.Return
+function VM.returnTo(listed: Offer, owns: Owns, balances: Balances, tab: string): ShopStore.Return
+	local offer = ShopPriceRules.forPlayer(listed, owns)
 	local item = main(offer)
 	return {
 		offer = offer.id,
@@ -346,7 +353,8 @@ function VM.bestBundle(missing: number): string?
 	return if picked ~= nil then picked.key else nil
 end
 
-function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
+function VM.product(listed: Offer, owns: Owns, balances: Balances): Product
+	local offer = ShopPriceRules.forPlayer(listed, owns)
 	local item = main(offer)
 	local card = VM.card(offer, owns, balances)
 	-- What it grants: the item, or every item of the bundle (the hero first, the rest with their own price alone).
