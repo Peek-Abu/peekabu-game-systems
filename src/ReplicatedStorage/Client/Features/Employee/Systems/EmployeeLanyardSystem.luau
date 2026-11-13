@@ -587,17 +587,41 @@ function EmployeeLanyardSystem.bind(player: Player?, character: Model): () -> ()
 		end
 	end
 
+	-- The rank and flip of the build in flight (attach yields on CreateMeshPartAsync), nil when none is.
+	local buildingRank: number? = nil
+	local buildingFlip = false
+
 	local function rebuild()
+		-- Any player's public data changing calls this. When it asks for what is already being built (or already
+		-- worn), the build in flight is left to finish instead of being thrown away and started again.
+		local wantedRank = resolveRank(player, character)
+		local wantedFlip = character:GetAttribute(EmployeeConstants.LANYARD_FLIP_ATTRIBUTE) == true
+		if buildingRank ~= nil then
+			if buildingRank == wantedRank and buildingFlip == wantedFlip then
+				return
+			end
+		elseif currentHandle ~= nil and currentRank == wantedRank and currentFlip == wantedFlip then
+			return
+		end
 		ticket += 1
 		local myTicket = ticket
+		buildingRank, buildingFlip = wantedRank, wantedFlip
 		task.spawn(function()
+			local function done()
+				if ticket == myTicket then
+					buildingRank = nil
+				end
+			end
 			local ut = character:WaitForChild("UpperTorso", 10)
 			if ut == nil or not ut:IsA("BasePart") or ticket ~= myTicket or not character:IsDescendantOf(workspace) then
+				done()
 				return
 			end
 			local rank = resolveRank(player, character)
 			local flipped = character:GetAttribute(EmployeeConstants.LANYARD_FLIP_ATTRIBUTE) == true
+			buildingRank, buildingFlip = rank, flipped
 			if currentHandle ~= nil and currentRank == rank and currentFlip == flipped then
+				done()
 				return
 			end
 			releaseCurrent()
@@ -614,6 +638,7 @@ function EmployeeLanyardSystem.bind(player: Player?, character: Model): () -> ()
 				flipped
 			)
 			if handle == nil then
+				done()
 				return
 			end
 			if ticket ~= myTicket or not character:IsDescendantOf(workspace) then
@@ -626,6 +651,7 @@ function EmployeeLanyardSystem.bind(player: Player?, character: Model): () -> ()
 			currentRank = rank
 			currentFlip = flipped
 			stopSway = sway(character, fit, rank, handle)
+			done()
 		end)
 	end
 
