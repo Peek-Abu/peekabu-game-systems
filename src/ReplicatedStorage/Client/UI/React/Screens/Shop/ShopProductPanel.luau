@@ -367,7 +367,7 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		panel = e(ToonSurface, {
 			hue = "cream",
-			pattern = "sparkle",
+			pattern = "rings",
 			radius = 28,
 			size = UDim2.new(0, width, 1, -DEPTH.drop),
 			children = face,

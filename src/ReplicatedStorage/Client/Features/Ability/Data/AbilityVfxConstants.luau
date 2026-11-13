@@ -4,7 +4,7 @@
 	plant looks). Functional on purpose: the real VFX polish is a later phase (game-vfx-design). Kid-safe: no red, no
 	flash, no light. Static data (validated by VfxBurstRegistry at load).
 
-	- abilityLetsGo (tier 2): Pippa's rally: a gold ring of stars bursting out at her feet.
+	- abilityLetsGo (tier 2): Pippa's rally: a gold ring of bubbles bursting out at her feet.
 	- abilityPlantPuff (tier 2): a puff of leaves and dust as Prickles becomes a plant, and again as he pops out.
 	- The spot: Cappy's treasure outlined in gold through walls, with a star over it (his client only).
 
@@ -46,7 +46,7 @@ local PRESETS: { [string]: Burst } = {
 				lightInfluence = 0.2,
 			},
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleamLight, P.gleam }),
 				size = seq({ { 0, 0 }, { 0.2, 0.9 }, { 1, 0 } }),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),

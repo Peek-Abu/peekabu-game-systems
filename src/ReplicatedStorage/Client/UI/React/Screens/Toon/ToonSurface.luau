@@ -23,7 +23,9 @@ local e = React.createElement
 local DEPTH = UIToonConstants.DEPTH
 local COLOR = UIToonConstants.COLOR
 
-export type Pattern = "sparkle" | "bubbles"
+-- `rings`: faint violet bubble rings on light (cream) bodies (owner pick 2026-11-13, replacing the 4-point sparkles);
+-- `bubbles`: white goo bubbles on dark (night, grape) bodies.
+export type Pattern = "rings" | "bubbles"
 
 export type ToonSurfaceProps = {
 	hue: UIToonConstants.Hue,
@@ -56,7 +58,7 @@ local REST: ToonStyleViewModel.Pose = ToonStyleViewModel.pose({
 local restBinding = React.createBinding(REST)
 
 local PATTERN: { [Pattern]: { image: string, tile: number, tint: Color3 } } = {
-	sparkle = { image = UIAssets.toon.patternSparkle, tile = 72, tint = UIToonConstants.shade("grape").base },
+	rings = { image = UIAssets.toon.patternBubbles, tile = 60, tint = UIToonConstants.shade("grape").base },
 	bubbles = { image = UIAssets.toon.patternBubbles, tile = 60, tint = COLOR.white },
 }
 

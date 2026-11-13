@@ -1,10 +1,11 @@
 --!strict
 --[=[
 	DepotTimecardStamp: today's punch landing on the Timecard (TimecardMomentStore.stamp, set by TimecardMomentSystem).
-	A coral rubber stamp drops onto today's day tile from big and see-through to its size and full ink in
+	A coral rubber stamp drops onto the punch slot it filled from big and see-through to its size and full ink in
 	TimecardMomentSystem.STAMP_LANDS (the stamp sound plays as it lands), tilted like a hand stamp, and the banner
-	under the tiles pops up with what the punch paid (gold for a reward, mint otherwise). Keyed by the punch, so each
-	punch mounts fresh and animates again. Drawn in the clipboard card's 620x390 face; reduced motion shows it still.
+	under the track pops up with what the punch paid (gold for a reward, mint otherwise). Keyed by the punch, so each
+	punch mounts fresh and animates again. Drawn on the clipboard's Timecard sheet (DepotClipboardViewModel's layout);
+	reduced motion shows it still.
 
 	@class DepotTimecardStamp
 ]=]
@@ -19,6 +20,7 @@ local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonFlag = require(Toon.ToonFlag)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
+local DepotClipboardViewModel = require(script.Parent.DepotClipboardViewModel)
 
 local e = React.createElement
 
@@ -28,17 +30,13 @@ export type Props = {
 }
 
 type SlamProps = {
-	tile: UDim2,
+	slot: Vector2,
 	banner: string,
 	reward: boolean,
 }
 
--- The card's day tiles (DepotTimecardPanel): 74x52 from x = 24, one every 83, at y = 180.
-local TILE = Vector2.new(74, 52)
-
-local function tile(day: number): UDim2
-	return UDim2.fromOffset(24 + (day - 1) * 83, 180)
-end
+-- The stamp covers a punch slot (DepotClipboardViewModel.SLOT), a little wider than tall.
+local TILE = Vector2.new(DepotClipboardViewModel.SLOT + 10, DepotClipboardViewModel.SLOT - 24)
 
 local function Slam(props: SlamProps): React.ReactNode
 	local target, setTarget = React.useState(0)
@@ -51,7 +49,7 @@ local function Slam(props: SlamProps): React.ReactNode
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 8 }, {
 		stamp = e("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = props.tile + UDim2.fromOffset(TILE.X / 2, TILE.Y / 2),
+			Position = UDim2.fromOffset(props.slot.X, props.slot.Y),
 			Size = UDim2.fromOffset(TILE.X + 14, TILE.Y + 6),
 			Rotation = -14,
 			BackgroundColor3 = UIToonConstants.COLOR.white,
@@ -88,7 +86,7 @@ local function Slam(props: SlamProps): React.ReactNode
 		}),
 		banner = e("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromOffset(310, 272),
+			Position = UDim2.fromOffset(DepotClipboardViewModel.BANNER.X, DepotClipboardViewModel.BANNER.Y),
 			Size = UDim2.fromOffset(470, 54),
 			BackgroundTransparency = 1,
 			ZIndex = 9,
@@ -113,7 +111,7 @@ end
 local function DepotTimecardStamp(props: Props): React.ReactNode
 	local children: { [string]: React.ReactNode } = {
 		[props.moment.id] = e(Slam, {
-			tile = tile(props.moment.day),
+			slot = DepotClipboardViewModel.slotCenter(math.max(1, props.moment.count)),
 			banner = props.banner,
 			reward = props.moment.reward ~= nil,
 		}),

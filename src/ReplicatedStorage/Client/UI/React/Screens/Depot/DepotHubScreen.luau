@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotHubScreen: the hub's GUIDE, VACUUMS (the company equipment page, the Inventory's Vacuums tab) and SETTINGS in the V1 kit: a cream modal
-	popping in with its grape header (the page's render breaking the corner, Gloom drips from the header's foot, the
+	popping in with its header in the page's colour (DepotHubViewModel.pageHue) (the page's render breaking the corner, Gloom drips from the header's foot, the
 	coral close) over a scrolling body. Guide and Locker are honest briefing pages, a card per section with its
 	render; Settings are the persisted, validated base settings (a ToonSlider per percentage setting, its value on a
 	pill; an ON/OFF button per switch such as Tips; RESTORE DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout in HUD design px, laid out against the virtual
@@ -295,7 +295,7 @@ local function DepotHubScreen(
 				surface = e(ToonSurface, {
 					hue = "cream",
 					radius = 18,
-					pattern = "sparkle",
+					pattern = "rings",
 					size = UDim2.new(1, 0, 1, -DEPTH.drop),
 					zIndex = 1,
 				}),
@@ -412,6 +412,7 @@ local function DepotHubScreen(
 					size = Vector2.new(width, height),
 					header = {
 						title = VM.pageTitle(props.page),
+						hue = VM.pageHue(props.page),
 						subtitle = subtitle,
 						icon = icon,
 						height = headerHeight,

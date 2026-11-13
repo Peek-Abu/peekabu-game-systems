@@ -78,7 +78,7 @@ local function ToonCooldown(props: ToonCooldownProps): React.ReactNode
 			hue = "cream",
 			radius = 999,
 			small = true,
-			pattern = "sparkle",
+			pattern = "rings",
 			size = UDim2.fromScale(1, 1),
 			children = face,
 		}),

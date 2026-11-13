@@ -6,7 +6,7 @@
 	  light: the goo starts at the band's foot, inside the panel, clear of its corners). `onClose` adds the coral X.
 	- `goo`: a goo run on the body itself (a `pool` on the floor of a locked or dangerous card, a `cap` along its top).
 	- `pop`: pops in (0.6 -> 1.08 -> 1) on mount; `wipe`: arrives goo-smeared and a squeegee wipes it clean.
-	Cream panels carry the faint sparkle pattern, dark ones the goo bubbles. Presentational (exempt; story in
+	Cream panels carry the faint violet bubble rings, dark ones the goo bubbles. Presentational (exempt; story in
 	ToonPanel.story).
 
 	@class ToonPanel
@@ -34,6 +34,8 @@ local MOTION = UIToonConstants.MOTION
 
 export type Header = {
 	title: string,
+	-- The band's colour (default grape): each screen has its own (DepotHubViewModel.pageHue).
+	hue: UIToonConstants.Hue?,
 	subtitle: string?,
 	icon: UIAssets.ToonIcon?,
 	-- Drawn in the icon's place instead (a live CharacterPortrait), given the icon's size in design px.
@@ -75,7 +77,7 @@ export type ToonPanelProps = {
 local function header(props: ToonPanelProps, spec: Header, radius: number): { [string]: React.ReactNode }
 	local height = spec.height or 120
 	local titleSize = spec.titleSize or 64
-	local shade = UIToonConstants.shade("grape")
+	local shade = UIToonConstants.shade(spec.hue or "grape")
 	local hasIcon = spec.icon ~= nil or spec.art ~= nil
 	-- The render breaking the corner scales with the band, and the title starts clear of it.
 	local iconSize = math.floor(height * 1.55)
@@ -248,7 +250,7 @@ local function ToonPanel(props: ToonPanelProps): React.ReactNode
 			hue = hue,
 			size = UDim2.fromScale(1, 1),
 			radius = radius,
-			pattern = if hue == "cream" then "sparkle" else "bubbles",
+			pattern = if hue == "cream" then "rings" else "bubbles",
 			gloss = props.gloss,
 			children = children,
 			overlay = overlay,

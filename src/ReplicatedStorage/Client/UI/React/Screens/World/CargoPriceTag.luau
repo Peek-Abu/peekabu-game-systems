@@ -99,7 +99,7 @@ local function CargoPriceTag(props: CargoPriceTagProps): React.ReactNode
 			hue = "cream",
 			small = true,
 			radius = 20,
-			pattern = "sparkle",
+			pattern = "rings",
 			position = UDim2.fromOffset(2, 6),
 			size = UDim2.fromOffset(BODY.X, BODY.Y - 4),
 			children = face,

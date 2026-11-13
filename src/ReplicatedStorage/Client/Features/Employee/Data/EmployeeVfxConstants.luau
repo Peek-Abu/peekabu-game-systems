@@ -3,7 +3,7 @@
 	EmployeeVfxConstants: the employee's world particles (VfxBurstRegistry bursts).
 
 	- employeeSwapGoo: changing employee or skin in the depot: a ring of glossy Gloom-purple goo puffs bursts out at
-	  the character's feet and settles, with a few Gleam stars popping up through it (the "goo poof" the new look
+	  the character's feet and settles, with a few Gleam bubbles popping up through it (the "goo poof" the new look
 	  steps out of). Kid-safe: no red, no light.
 
 	@class EmployeeVfxConstants
@@ -43,7 +43,7 @@ local PRESETS: { [string]: Burst } = {
 				lightInfluence = 0.5,
 			},
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleamLight, P.gleam }),
 				size = seq({ { 0, 0 }, { 0.25, 0.8 }, { 1, 0 } }),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),

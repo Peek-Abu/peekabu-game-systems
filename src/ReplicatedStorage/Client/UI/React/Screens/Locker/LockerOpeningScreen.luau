@@ -177,7 +177,7 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 			}, {
 				card = e(ToonSurface, {
 					hue = lockerHue,
-					pattern = "sparkle",
+					pattern = "rings",
 					radius = 30,
 					size = UDim2.fromScale(1, 1),
 					children = boxChildren,

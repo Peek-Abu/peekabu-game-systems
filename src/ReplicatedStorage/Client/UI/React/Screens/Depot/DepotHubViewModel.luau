@@ -58,6 +58,12 @@ function VM.pageTitle(page: Page): string
 	return if page == "guide" then "GUIDE" else "SETTINGS"
 end
 
+-- Each screen has its own header colour so menus are not all one purple (owner pick 2026-11-13: Shop mint, Inventory
+-- sky, Clipboard coral, Settings night, Guide gold). Purple stays for Gloom.
+function VM.pageHue(page: Page): "gold" | "night"
+	return if page == "guide" then "gold" else "night"
+end
+
 -- The Tonight card: tonight's building (the board's contract; the first contract until the board is found).
 function VM.tonight(id: string?): TonightView
 	local contract = DepotConstants.CONTRACTS[1]

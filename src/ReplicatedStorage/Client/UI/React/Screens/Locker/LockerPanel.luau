@@ -290,7 +290,7 @@ local function lockerCardView(
 	}, {
 		surface = e(ToonSurface, {
 			hue = hue,
-			pattern = "sparkle",
+			pattern = "rings",
 			radius = 24,
 			selected = selected,
 			small = phone,
@@ -482,7 +482,7 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 			}, grid)
 			else e(ToonSurface, {
 				hue = "cream",
-				pattern = "sparkle",
+				pattern = "rings",
 				radius = 22,
 				position = UDim2.fromOffset(rightX, headingSize + 16),
 				size = UDim2.fromOffset(rightWidth, content.height - headingSize - 24),
@@ -510,7 +510,7 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 			}, {
 				panel = e(ToonSurface, {
 					hue = "cream",
-					pattern = "sparkle",
+					pattern = "rings",
 					radius = 28,
 					anchor = Vector2.new(0.5, 0.5),
 					position = UDim2.fromScale(0.5, 0.5),

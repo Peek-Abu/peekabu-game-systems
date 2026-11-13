@@ -33,7 +33,7 @@ return UILabs.CreateReactStory({
 	local hues: { UIToonConstants.Hue } =
 		{ "grape", "gold", "mint", "coral", "cream", "night", "sky", "lilac", "steel" }
 	for index, hue: UIToonConstants.Hue in hues do
-		local pattern: ToonSurface.Pattern = if hue == "cream" then "sparkle" else "bubbles"
+		local pattern: ToonSurface.Pattern = if hue == "cream" then "rings" else "bubbles"
 		nodes[hue] = e(ToonSurface, {
 			hue = hue,
 			pattern = if controls.Pattern then pattern else nil,

@@ -3,13 +3,13 @@
 	CargoVfxConstants: the loot loop's polished particles (VfxBurstRegistry bursts, played by CargoLootFeedbackSystem
 	and CargoFeedbackSystem).
 
-	- cargoGlint: a buried pile's hint, two chunky sparkles that twinkle in and out (easy to miss on purpose).
-	- cargoReveal: an item popping out of a pile: a dust puff and gold sparkles; `amount` grows with its value tier.
+	- cargoGlint: a buried pile's hint, two gold bubbles that twinkle in and out (easy to miss on purpose).
+	- cargoReveal: an item popping out of a pile: a dust puff and gold bubbles; `amount` grows with its value tier.
 	- cargoAppraise: an appraisal: a few paper slips pop up off the item and flutter down, with a small paper puff.
 	- cargoJackpot: a jackpot appraisal: a short gold flash, gold sparks and coins that flip and fall, with one warm
 	  light; big but over in about a second.
 	- cargoBankRefine: a valuable landing in the truck bed: Gloom wisps rise and turn teal, then gold (refined into
-	  Gleam), then gold sparkles stream up out of the bed and a few coins pop.
+	  Gleam), then gold bubbles stream up out of the bed and a few coins pop.
 
 	@class CargoVfxConstants
 ]=]
@@ -42,7 +42,7 @@ local PRESETS: { [string]: Burst } = {
 		maxDistance = 40,
 		layers = {
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleamLight }),
 				size = twinkle(0.9),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
@@ -74,7 +74,7 @@ local PRESETS: { [string]: Burst } = {
 				lightInfluence = 0.5,
 			},
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleamLight, P.gleam }),
 				size = twinkle(0.7),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
@@ -129,7 +129,7 @@ local PRESETS: { [string]: Burst } = {
 		layers = {
 			{
 				-- The flash: gold, never white, gone in a fifth of a second.
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleam }),
 				size = seq({ { 0, 1 }, { 0.25, 4.5 }, { 1, 0 } }),
 				transparency = seq({ { 0, 0.1 }, { 1, 0.6 } }),
@@ -141,7 +141,7 @@ local PRESETS: { [string]: Burst } = {
 				zOffset = 1.5,
 			},
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleamLight, P.gleam, P.gleamDeep }),
 				size = seq({ { 0, 0.4 }, { 0.2, 0.85 }, { 1, 0 } }),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
@@ -193,8 +193,8 @@ local PRESETS: { [string]: Burst } = {
 				lightInfluence = 0.3,
 			},
 			{
-				-- The Gleam: sparkles stream up out of the bed.
-				texture = T.star,
+				-- The Gleam: bubbles stream up out of the bed.
+				texture = T.bubble,
 				color = gradient({ P.gleamLight, P.gleam }),
 				size = twinkle(0.75),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),

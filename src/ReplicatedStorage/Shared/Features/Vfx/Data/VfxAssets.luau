@@ -15,8 +15,12 @@ return table.freeze({
 		puff = "rbxassetid://139778349576683",
 		-- A curling tendril: Gloom wisps.
 		wisp = "rbxassetid://108650507314433",
-		-- A chunky four-point sparkle with a soft halo.
+		-- A chunky four-point sparkle with a soft halo. Only Cappy's Spot It locator uses it now (a marker, not a
+		-- reward): every reward and "earned" burst uses `bubble` (owner pick 2026-11-13: soap bubbles, not stars).
 		star = "rbxassetid://71271407323136",
+		-- A clear soap bubble, white on alpha: a fresnel body, a grey rim line and a highlight crescent, tinted per
+		-- emitter (characters/qa/vfx/textures/bubble/make_bubble_tex.py; Icey Labs, first used by Bubble Ride).
+		bubble = "rbxassetid://82581250934718",
 		-- A two-facet fragment: porcelain shards, grime flakes.
 		shard = "rbxassetid://109192738008496",
 		-- A cartoon crack burst.

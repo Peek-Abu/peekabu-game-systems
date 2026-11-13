@@ -5,7 +5,7 @@
 	- STREAM: soap bubbles pour from the wand loop while she blows, drift forward and rise.
 	- GIANT: a giant bubble grows from the wand round her whole body, floats with her (it rides LowerTorso, so the
 	  clip's lift carries it), wobbles softly, sheds a few small bubbles.
-	- emoteBubblePop: the giant bubble pops: a ring snaps out, droplet bubbles spray and fall, a few Gleam stars, and
+	- emoteBubblePop: the giant bubble pops: a ring snaps out, droplet bubbles spray and fall, a few gold Gleam bubbles, and
 	  one soft lilac light for 0.25 s (the tier 3 allowance).
 	- emoteBubbleLand: she lands in a little splash of bubbles.
 	Big Roundup (Sheriff Prickles), the same tier: dust (work family, ground-hugging browns) and one tumbleweed.
@@ -38,7 +38,7 @@ local PINK = Color3.fromRGB(240, 150, 214)
 
 local TEXTURES = table.freeze({
 	-- A clear bubble, white on alpha: fresnel body, a grey rim line, a highlight crescent (tinted per emitter).
-	bubbleSmall = "rbxassetid://82581250934718",
+	bubbleSmall = T.bubble,
 	-- The giant bubble's face: full colour, an iridescent grape -> pink -> deep gold rim and the highlight.
 	bubbleGiant = "rbxassetid://82524022477709",
 	-- A round tangle of dry twigs, full colour (dust browns) with an ink edge (characters/qa/vfx/textures/lasso).
@@ -76,7 +76,7 @@ local PRESETS: { [string]: Burst } = {
 				lightInfluence = 0,
 			},
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleamLight, P.gleam }),
 				size = seq({ { 0, 0 }, { 0.25, 0.7 }, { 1, 0 } }),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),

@@ -513,7 +513,8 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local bar = e(ToonMenuBar, {
 		title = "SHOP",
 		icon = "shopGift",
-		hue = "coral",
+		-- Each screen has its own colour (owner pick 2026-11-13): the Shop is mint.
+		hue = "mint",
 		-- A product page has its back button instead of the tabs (the bar has no room for both).
 		tabs = if offer ~= nil then {} else tabs,
 		current = if offer ~= nil then nil else tab,
@@ -627,7 +628,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			}, {
 				panel = e(ToonSurface, {
 					hue = "cream",
-					pattern = "sparkle",
+					pattern = "rings",
 					radius = 28,
 					anchor = Vector2.new(0.5, 0.5),
 					position = UDim2.fromScale(0.5, 0.5),
@@ -925,7 +926,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				glow = e(ToonSurface, {
 					hue = "gold",
 					radius = 32,
-					pattern = "sparkle",
+					pattern = "rings",
 					size = UDim2.new(1, 0, 1, -DEPTH.drop),
 					children = bannerFace,
 				}),

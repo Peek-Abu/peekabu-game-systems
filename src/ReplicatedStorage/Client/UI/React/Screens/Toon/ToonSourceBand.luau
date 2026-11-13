@@ -48,7 +48,7 @@ local HUE: { [Kind]: UIToonConstants.Hue } = {
 local ICON: { [Kind]: UIAssets.ToonIcon? } = {
 	credits = "credits",
 	gleam = "gleam",
-	locker = "lockNight",
+	locker = "locker",
 }
 
 local function ToonSourceBand(props: ToonSourceBandProps): React.ReactNode

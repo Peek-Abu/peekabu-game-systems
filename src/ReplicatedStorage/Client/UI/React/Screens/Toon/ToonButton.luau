@@ -244,7 +244,7 @@ local function ToonButton(props: ToonButtonProps): React.ReactNode
 			radius = props.radius,
 			pose = pose,
 			small = props.small,
-			pattern = if hue == "cream" then "sparkle" else nil,
+			pattern = if hue == "cream" then "rings" else nil,
 			children = face(props, disabled),
 			overlay = overlay,
 		}),

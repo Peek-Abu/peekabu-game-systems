@@ -5,7 +5,7 @@
 
 	- occupantCatchCrack: the throw: a cartoon lilac porcelain crack pops on the caught employee, porcelain shards scatter
 	  and fall, and a puff of dust.
-	- occupantRehired: back on the clock: a cream puff ring at their feet, Pippa-purple-to-gold sparkles rising and two
+	- occupantRehired: back on the clock: a cream puff ring at their feet, Pippa-purple-to-gold bubbles rising and two
 	  fluttering slips of rehire paperwork.
 
 	And the face lights' tuning (FACE_KEY, FACE_RIM; OccupantFaceLightSystem).
@@ -95,7 +95,7 @@ local PRESETS: { [string]: Burst } = {
 				lightInfluence = 0.4,
 			},
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.pippa, P.gleam }),
 				size = seq({ { 0, 0 }, { 0.25, 0.7 }, { 1, 0 } }),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),

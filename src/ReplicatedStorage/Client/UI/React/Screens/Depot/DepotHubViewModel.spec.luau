@@ -76,6 +76,11 @@ return function()
 			expect(VM.pageTitle("settings")).to.equal("SETTINGS")
 		end)
 
+		it("gives each page its own header colour (owner pick 2026-11-13: Guide gold, Settings night)", function()
+			expect(VM.pageHue("guide")).to.equal("gold")
+			expect(VM.pageHue("settings")).to.equal("night")
+		end)
+
 		it("names tonight's building from the board's contract", function()
 			local card = VM.tonight("harlow-finch-2")
 			expect(card.title).to.equal("HARLOW & FINCH")

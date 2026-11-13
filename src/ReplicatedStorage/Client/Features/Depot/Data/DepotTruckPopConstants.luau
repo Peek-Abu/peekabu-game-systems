@@ -5,7 +5,7 @@
 	from START_SCALE and a fade from the ghost to solid over POP_SECONDS); when the bay empties it fades back to the
 	ghost over LEAVE_SECONDS. DepotTruckPopFormulas does the maths, DepotTruckGhostSystem the drawing.
 
-	- PUFF: a ring of chunky dust clouds round the truck's wheels with a few Gleam stars. Kid-safe: no red, no light.
+	- PUFF: a ring of chunky dust clouds round the truck's wheels with a few Gleam bubbles. Kid-safe: no red, no light.
 
 	@class DepotTruckPopConstants
 ]=]
@@ -41,7 +41,7 @@ local PUFF: VfxTypes.Burst = {
 			lightInfluence = 0.6,
 		},
 		{
-			texture = T.star,
+			texture = T.bubble,
 			color = gradient({ P.gleamLight, P.gleam }),
 			size = seq({ { 0, 0 }, { 0.25, 1 }, { 1, 0 } }),
 			transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),

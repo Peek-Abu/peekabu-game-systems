@@ -157,7 +157,7 @@ local function DealBanner(props: DealBannerProps): React.ReactNode
 		glow = e(ToonSurface, {
 			hue = hue,
 			radius = 32,
-			pattern = "sparkle",
+			pattern = "rings",
 			size = UDim2.new(1, 0, 1, -DEPTH.drop),
 			children = face,
 		}),

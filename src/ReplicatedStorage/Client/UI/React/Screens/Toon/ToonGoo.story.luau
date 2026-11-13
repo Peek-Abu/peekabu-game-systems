@@ -37,7 +37,7 @@ return UILabs.CreateReactStory({
 		return e(ToonSurface, {
 			hue = hue,
 			radius = 26,
-			pattern = if hue == "cream" then "sparkle" else "bubbles",
+			pattern = if hue == "cream" then "rings" else "bubbles",
 			position = UDim2.fromOffset(x, y),
 			size = UDim2.fromOffset(w, 180),
 			children = if kind == "cap" then goo else nil,

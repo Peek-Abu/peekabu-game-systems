@@ -1,33 +1,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Panel = require(script.Parent.DepotTimecardPanel)
 local Rules = require(ReplicatedStorage.Shared.Features.Timecard.Rules.TimecardRules)
+local MONDAY = 1792972800
 return function()
 	describe("DepotTimecardPanel", function()
-		it("draws today's stamp over the Timecard face only while one shows", function()
-			local function face(stamp)
-				return Panel({
-					phone = false,
-					open = true,
-					status = Rules.status({ week = 1792972800, punched = { 1 }, weeks = 0 }, 1792972800),
-					progress = 0,
-					target = 2,
-					order = "Work 2 shifts",
-					claimed = false,
-					feedback = "",
-					stamp = stamp,
-					onToggle = function() end,
-					onPunch = function() end,
-				}).props.children.card.props.content.card.props.children
-			end
-			expect(face(nil).stamp).to.equal(nil)
-			local shown = face({ day = 1, count = 1, paycheque = false, id = "1792972800:1" }).stamp
-			expect(shown.props.banner).to.equal("DAY 1! 2 MORE FOR A GLOOM KEY")
-		end)
-		it("keeps the clock button accessible and disables today's recorded punch", function()
-			local tree = Panel({
+		local function base(overrides)
+			local props = {
 				phone = false,
 				open = true,
-				status = Rules.status({ week = 1792972800, punched = { 1 }, weeks = 0 }, 1792972800),
+				status = Rules.status({ week = MONDAY, punched = { 1 }, weeks = 0 }, MONDAY),
 				progress = 0,
 				target = 2,
 				order = "Work 2 shifts",
@@ -35,33 +16,60 @@ return function()
 				feedback = "",
 				onToggle = function() end,
 				onPunch = function() end,
-			})
-			expect(tree.props.children.toggle.props.text).to.equal("COMPANY CLIPBOARD")
-			expect(tree.props.children.workOrderToggle).to.equal(nil)
-			expect(tree.props.children.card.props.factor).to.equal(1)
-			expect(tree.props.children.card.props.content.header.props.hue).to.equal("grape")
-			expect(tree.props.children.card.props.content.card.props.pattern).to.equal("sparkle")
-			expect(tree.props.children.card.props.content.card.props.children.dayTile1.props.hue).to.equal("mint")
-			expect(tree.props.children.card.props.content.card.props.children.day1.props.wrapped).to.equal(true)
-			expect(tree.props.children.card.props.content.card.props.children.punch.props.disabled).to.equal(true)
-			expect(tree.props.children.card.props.content.card.props.children.day1.props.text).to.equal("MON\nPUNCHED")
+			}
+			for key, value in overrides or {} do
+				props[key] = value
+			end
+			return Panel(props)
+		end
+
+		it("draws today's stamp over the Timecard face only while one shows", function()
+			local function face(stamp)
+				return base({ stamp = stamp }).props.children.card.props.content.card.props.children
+			end
+			expect(face(nil).stamp).to.equal(nil)
+			local shown = face({ day = 1, count = 1, paycheque = false, id = "1792972800:1" }).stamp
+			expect(shown.props.banner).to.equal("DAY 1! 2 MORE FOR A GLOOM KEY")
 		end)
-		it("opens a separate daily order with progress, reset timer and automatic reward", function()
+
+		it("is a coral clipboard with a sky Timecard sheet and a punch track", function()
+			local tree = base()
+			expect(tree.props.children.toggle.props.text).to.equal("COMPANY CLIPBOARD")
+			expect(tree.props.children.card.props.factor).to.equal(1)
+			local content = tree.props.children.card.props.content
+			expect(content.board.props.hue).to.equal("coral")
+			expect(content.card.props.hue).to.equal("sky")
+			local face = content.card.props.children
+			expect(face.slot1).to.be.ok()
+			expect(face.slot5).to.be.ok()
+			expect(face.prize3).to.be.ok()
+			expect(face.prize5).to.be.ok()
+			expect(face.done.props.text).to.equal("1 of 5 done")
+			-- Today is already punched: the button says so and is off.
+			expect(face.punch.props.disabled).to.equal(true)
+			expect(face.punch.props.text).to.equal("PUNCHED TODAY")
+		end)
+
+		it("keeps only the big facts: no week code, no UTC, no filled-weeks line", function()
+			local face = base().props.children.card.props.content.card.props.children
+			for _, node in face do
+				local text = node.props and node.props.text
+				if type(text) == "string" then
+					expect(string.find(text, "UTC", 1, true)).to.equal(nil)
+					expect(string.find(text, "WEEK OF", 1, true)).to.equal(nil)
+					expect(string.find(text, "filled weeks", 1, true)).to.equal(nil)
+				end
+			end
+		end)
+
+		it("opens today's job on a mint sheet with progress, the reward and the time to the next job", function()
 			local opened, closed = false, false
-			local tree = Panel({
-				phone = false,
-				open = true,
+			local tree = base({
 				view = "workOrder",
 				now = 1793059199,
 				status = Rules.status({ week = 0, punched = {}, weeks = 0 }, 1793059199),
 				progress = 1,
-				target = 2,
-				order = "Work 2 shifts",
 				kind = "shifts",
-				claimed = false,
-				feedback = "",
-				onToggle = function() end,
-				onPunch = function() end,
 				onWorkOrder = function()
 					opened = true
 				end,
@@ -69,40 +77,37 @@ return function()
 					closed = true
 				end,
 			})
-			tree.props.children.card.props.content.tabs.props.children.daily.props.onActivated()
+			local content = tree.props.children.card.props.content
+			content.tabs.props.children.daily.props.onActivated()
 			expect(opened).to.equal(true)
-			local face = tree.props.children.card.props.content.card.props.children
-			expect(face.objective.props.text).to.equal("Work 2 shifts")
+			expect(content.card.props.hue).to.equal("mint")
+			local face = content.card.props.children
+			expect(face.objective.props.text).to.equal("WORK 2 SHIFTS")
 			expect(face.meter.props.fill).to.equal(0.5)
 			expect(face.meter.props.label).to.equal("1 / 2")
-			expect(face.reset.props.text).to.equal("NEW ORDER IN 00:00:01 • UTC")
-			expect(face.reward.props.text).to.equal("REWARD: 100 CREDITS")
+			expect(face.reset.props.children.text.props.text).to.equal("NEW JOB IN 1M")
+			expect(face.rewardPlate.props.children.reward.props.text).to.equal("+100")
 			expect(face.punch).to.equal(nil)
-			face.close.props.onActivated()
+			expect(face.paid).to.equal(nil)
+			content.close.props.onActivated()
 			expect(closed).to.equal(true)
 		end)
-		it("shows paid completion and keeps phone access within the header", function()
-			local tree = Panel({
+
+		it("marks a paid job and keeps the phone button within the header", function()
+			local tree = base({
 				phone = true,
-				open = true,
 				view = "workOrder",
 				now = 1793059200,
 				status = Rules.status({ week = 0, punched = {}, weeks = 0 }, 1793059200),
 				progress = 2,
-				target = 2,
-				order = "Work 2 shifts",
 				kind = "shifts",
 				claimed = true,
-				feedback = "",
-				onToggle = function() end,
-				onPunch = function() end,
 			})
 			local button = tree.props.children.toggle
 			expect(button.props.position.X.Offset + button.props.size.X.Offset <= 650).to.equal(true)
-			expect(tree.props.children.workOrderToggle).to.equal(nil)
 			local face = tree.props.children.card.props.content.card.props.children
-			expect(face.state.props.text).to.equal("COMPLETED • REWARD PAID")
-			expect(face.reset.props.text).to.equal("NEW ORDER IN 24:00:00 • UTC")
+			expect(face.paid.props.text).to.equal("PAID")
+			expect(face.reset.props.children.text.props.text).to.equal("NEW JOB IN 24H 0M")
 			expect(face.meter.props.fill).to.equal(1)
 		end)
 	end)

@@ -469,7 +469,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		}
 		nodes.also = e(ToonSurface, {
 			hue = "cream",
-			pattern = "sparkle",
+			pattern = "rings",
 			radius = 22,
 			anchor = Vector2.new(0, 1),
 			position = UDim2.new(0, margin, 1, -(if phone then 12 else 50)),

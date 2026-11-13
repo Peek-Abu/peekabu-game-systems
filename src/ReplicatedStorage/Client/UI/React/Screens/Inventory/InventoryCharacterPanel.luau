@@ -715,7 +715,7 @@ local function detail(
 	}
 	return e(ToonSurface, {
 		hue = "cream",
-		pattern = "sparkle",
+		pattern = "rings",
 		radius = 28,
 		size = UDim2.new(1, 0, 1, -DEPTH.drop),
 		children = panel,

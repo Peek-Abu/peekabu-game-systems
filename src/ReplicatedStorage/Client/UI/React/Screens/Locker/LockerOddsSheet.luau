@@ -165,7 +165,7 @@ local function LockerOddsSheet(props: LockerOddsSheetProps): React.ReactNode
 	}, {
 		panel = e(ToonSurface, {
 			hue = "cream",
-			pattern = "sparkle",
+			pattern = "rings",
 			radius = 28,
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 0.5),

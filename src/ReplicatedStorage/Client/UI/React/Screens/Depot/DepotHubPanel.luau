@@ -139,7 +139,7 @@ local function profileCard(props: DepotHubPanelProps): React.ReactNode
 		card = e(ToonSurface, {
 			hue = "cream",
 			radius = if phone then 18 else 26,
-			pattern = "sparkle",
+			pattern = "rings",
 			small = phone,
 			position = UDim2.fromOffset(cardX - (if phone then 128 else 22), cardY - (if phone then 0 else 56)),
 			size = UDim2.fromOffset(card.X, card.Y),

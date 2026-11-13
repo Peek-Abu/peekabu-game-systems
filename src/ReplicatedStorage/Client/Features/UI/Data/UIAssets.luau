@@ -221,15 +221,15 @@ UIAssets.stickers = table.freeze(STICKERS)
 
 -- The kit's drawn pieces (implemented/tools/make_toon_assets.py, all at 2x). The goo: `capTile` (256x112) and
 -- `poolTile` (256x80) are one whole tile each; `gooEnds` is the atlas of their ends (cap ends at y 0, 256x112 each;
--- pool ends at y 128, 256x80 each). `glow` is a 128 px white 9-slice (centre 48..80) tinted per use; `patternSparkle`
--- (144) and `patternBubbles` (120) are white tiles tinted per panel.
+-- pool ends at y 128, 256x80 each). `glow` is a 128 px white 9-slice (centre 48..80) tinted per use; `patternBubbles` (120)
+-- is a white tile tinted per panel (violet rings on cream, white bubbles on dark; the 4-point sparkle tile was dropped,
+-- owner pick 2026-11-13).
 UIAssets.toon = table.freeze({
 	capTile = "rbxassetid://114961170504517",
 	poolTile = "rbxassetid://106249912761815",
 	gooEnds = "rbxassetid://70785823038696",
 	glow = "rbxassetid://78717613960831",
 	rays = "rbxassetid://103836764476829",
-	patternSparkle = "rbxassetid://97732926490283",
 	patternBubbles = "rbxassetid://90150192373857",
 	sparkle = "rbxassetid://79532536364589",
 	-- Character step 4 (2026-10-24): white shapes tinted per use. `stripes` a 128 px 45-degree stripe tile;

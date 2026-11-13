@@ -73,7 +73,7 @@ return UILabs.CreateReactStory({
 	}, {
 		card = e(ToonSurface, {
 			hue = "cream",
-			pattern = "sparkle",
+			pattern = "rings",
 			radius = 26,
 			position = UDim2.fromOffset(60, 60),
 			size = UDim2.fromOffset(width + 80, 30 + #ROWS * 96 + 30),

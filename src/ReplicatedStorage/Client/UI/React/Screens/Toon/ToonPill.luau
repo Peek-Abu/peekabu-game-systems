@@ -74,7 +74,7 @@ local function ToonPill(props: ToonPillProps): React.ReactNode
 			size = UDim2.fromScale(1, 1),
 			radius = 999,
 			small = props.small ~= false,
-			pattern = if hue == "cream" then "sparkle" else nil,
+			pattern = if hue == "cream" then "rings" else nil,
 			children = face,
 		}),
 		icon = if hasIcon

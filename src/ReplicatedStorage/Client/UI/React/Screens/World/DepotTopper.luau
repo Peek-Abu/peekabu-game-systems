@@ -49,7 +49,7 @@ local function DepotTopper(props: DepotTopperProps): React.ReactNode
 		plate = e(ToonSurface, {
 			hue = station.hue,
 			radius = 26,
-			pattern = "sparkle",
+			pattern = "rings",
 			anchor = Vector2.new(0.5, 1),
 			position = UDim2.new(0.5, 0, 1, -INSET),
 			size = UDim2.fromOffset(CANVAS.X - 2 * INSET, BODY),

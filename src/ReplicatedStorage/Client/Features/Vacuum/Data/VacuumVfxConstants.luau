@@ -8,7 +8,7 @@
 	- vacuumGrimeSuction (funnel): grime flakes and a few wisps peeling off a valuable into the floor head.
 	- vacuumPuff: a little dust cough off the pile each PUFF_STEP of progress, so it visibly shrinks in puffs.
 	- vacuumPop: the pile clearing: a ground-hugging dust ring, one short pop ring, the last Gloom escaping and a few
-	  clean sparkles (24 particles at most).
+	  clean bubbles (24 particles at most).
 	- vacuumShine / vacuumShineSparkle: a valuable coming up spotless: a diagonal shine sweep across it; a twinkle and
 	  the last grime flakes at its centre.
 
@@ -167,8 +167,8 @@ local PRESETS: { [string]: Burst } = {
 				lightInfluence = 0.6,
 			},
 			{
-				-- Clean sparkles.
-				texture = T.star,
+				-- Clean bubbles.
+				texture = T.bubble,
 				color = gradient({ P.sparkle, P.gloomEdge }),
 				size = twinkle(0.75),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
@@ -206,7 +206,7 @@ local PRESETS: { [string]: Burst } = {
 	vacuumShineSparkle = {
 		layers = {
 			{
-				texture = T.star,
+				texture = T.bubble,
 				color = gradient({ P.gleamLight, P.sparkle }),
 				size = twinkle(0.8),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
