@@ -22,7 +22,8 @@ export type Place = {
 
 local PLACES: { office: Place, school: Place } = {
 	office = table.freeze({ price = 0, danger = 1 }),
-	school = table.freeze({ price = 1500, danger = 3 }),
+	-- Owner 2026-11-13: 2,500 Credits, DANGER 2 (rules sheet R1, D1).
+	school = table.freeze({ price = 2500, danger = 2 }),
 }
 
 local ORDER: { ShiftTypes.MapId } = { "office", "school" }

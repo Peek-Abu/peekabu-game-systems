@@ -262,7 +262,7 @@ return function()
 			expect(view.dangerLabel).to.equal("DANGER")
 			expect(view.dangerMax).to.equal(5)
 			expect(view.buildings[1].danger).to.equal(1)
-			expect(view.buildings[2].danger).to.equal(3)
+			expect(view.buildings[2].danger).to.equal(2)
 			expect(view.buildings[3].danger).to.equal(nil)
 		end)
 

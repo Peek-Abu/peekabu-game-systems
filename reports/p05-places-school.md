@@ -16,10 +16,10 @@ coordinator hands out Studio. Both rows stay "Ready to check" until the specs pa
   pick a place."
 - **The truck's two small OFFICE / SCHOOL buttons are gone.** One **PLACE** button replaces them. It shows the
   truck's pick, and anyone's tap opens the places menu.
-- **DANGER meter** on each place card (5 Gloom drops, filled to the level): Office 1, School 3.
+- **DANGER meter** on each place card (5 Gloom drops, filled to the level): Office 1, School 2.
 - **The detail follows the focused place**: client, quota chip (the School's contract is bigger), tip, and the
   monster card (Harlow, or Bramble with "Stops when you look at it").
-- **School is locked until bought for 1,500 Credits.** Buying takes two taps: BUY, then SURE?, which goes back to
+- **School is locked until bought for 2,500 Credits.** Buying takes two taps: BUY, then SURE?, which goes back to
   BUY after 4 s. If the player can't afford it, the button is greyed and says "Need more Credits".
   - Server: new account slice `places` (`DepotPlaceSystem`). One PlayerData transaction does both the
     `CurrencyServiceServer:currencyOp` spend (the same server spend path the Shop uses) and the unlock.
@@ -43,7 +43,7 @@ coordinator hands out Studio. Both rows stay "Ready to check" until the specs pa
 | Top-up piles (thin map) | up to 6 | up to 12 |
 | Valuables | 10–14 | 13–17 |
 | Valuable worth | x1 | x1.25 |
-| DANGER | 1 | 3 |
+| DANGER | 1 | 2 |
 | Monster | Harlow | Bramble (unchanged: chase 27, a hit takes a life) |
 
 Every Gloom pays 1 Credit, so the School also pays more. The arrival card, the truck card title and the board quota
@@ -77,9 +77,18 @@ Also edited:
   - A real play check: buy School with test Credits, host picks School on a truck, crew sees it, the run is the
     School with its bigger goal, and a non-owner host gets bounced to the Office.
 
-## Open questions for the owner (on the rules sheet)
-Price 1,500 · host-only unlock · two-tap buy · DANGER wording and levels · the School numbers above · the PLACE
-button · the PLACES title · the School photo. I built on the proposed answers. Each one is a constant to change.
+## Owner's answers (rules sheet, 2026-11-13)
+Yes to everything except:
+- **R1 (price): 2,500 Credits, not 1,500.** Applied. The owner also floated moving new employees to 5,000. That is
+  the catalog / store-flow sessions' price data, so I didn't touch it; I passed it to the coordinator.
+- **D1 (DANGER): School 2, not 3.** Applied. Office stays 1.
+- **S5 (Bramble unchanged): NO, with no note.** The owner wants Bramble changed but didn't say how. I need a
+  concrete yes/no follow-up before changing his speed or rules.
+- **K1 (School photo):** the owner asked whether it is posed like the Office shot or an AI image. It looks AI-made
+  (painterly, not an engine render), so it fails the "posed scene shots of our game" rule. I plan a real Studio
+  capture of Bramble in a School locker hall for my Studio turn.
+- **R5:** yes. Training counts as a place like the Office and School, but it doesn't need its own unlock
+  mechanic.
 
 ## Menu candidates built from our posed scene shots (not built, per the brief)
 1. **Hire / employee picker:** each employee posed in the hub, instead of flat portraits.
