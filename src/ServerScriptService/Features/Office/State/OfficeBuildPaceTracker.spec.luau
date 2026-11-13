@@ -45,7 +45,8 @@ return function()
 		pace:step()
 		local stats = pace:stats()
 		expect(stats.yields).to.equal(2)
-		expect(stats.longest).to.be.near(0.2, 1e-9)
+		-- The 0.02 and the 0.2 are one stretch (no yield between them): 0.22.
+		expect(stats.longest).to.be.near(0.22, 1e-9)
 	end)
 
 	it("restarts the stretch on begin, so time spent elsewhere is not charged to the build", function()
@@ -55,7 +56,8 @@ return function()
 		state.now += 0.05
 		expect(pace:step()).to.equal(false)
 		expect(state.waits).to.equal(0)
-		expect(pace:stats().longest).to.equal(0)
+		-- Only the 0.05 since begin counts (the stretch still running), never the 5 s before it.
+		expect(pace:stats().longest).to.be.near(0.05, 1e-9)
 	end)
 
 	it("counts the last stretch when the stats are read", function()
