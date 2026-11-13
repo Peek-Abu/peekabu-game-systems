@@ -683,4 +683,26 @@ return function()
 		check("office", OfficeLayoutGenerationUtils.generate)
 		check("school", SchoolLayoutGenerationUtils.generate)
 	end)
+	-- Spacing piles apart moves a pile a tight room cannot fit to a free marker; it never drops one. Every crew size's
+	-- contract stays coverable by the Gloom actually rolled, on generated Offices and Schools alike.
+	it(
+		"leaves every shift enough Gloom for its crew's contract, Offices and Schools, with piles spaced apart",
+		function()
+			for _, contract in ShiftConstants.QUOTA_BY_CREW do
+				for _, generate in { OfficeLayoutGenerationUtils.generate, SchoolLayoutGenerationUtils.generate } do
+					for seed = 1, 25 do
+						if seed % 5 == 0 then
+							task.wait()
+						end
+						local layout = generate(LAYOUT, seed)
+						local plan = OfficeSpawnUtils.roll(layout, options("B", contract), Random.new(seed))
+						local gloom = OfficeLootUtils.gloomOf(plan).total
+						if gloom < contract then
+							error(`seed {seed}: {gloom} Gloom for a contract of {contract}`)
+						end
+					end
+				end
+			end
+		end
+	)
 end

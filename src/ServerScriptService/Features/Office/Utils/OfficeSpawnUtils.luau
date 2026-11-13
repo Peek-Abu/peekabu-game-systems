@@ -224,13 +224,16 @@ local function pileOrder(
 			end
 		end
 	end
-	-- A marker whose pile art would overlap one already taken (piles first, then the spares a top-up may take, in its
-	-- order) is never used: in a tight room the room holds fewer piles instead.
+	-- A marker whose pile art would overlap one already taken is never used. A pile its room cannot fit moves to the
+	-- next free marker that fits (the dirty rooms' leftovers first, then the clean rooms', so the dust stays clustered):
+	-- the shift keeps every pile it rolled, and its Gloom. The spares after them (a top-up's) never crowd either.
 	local used: { Marker } = {}
 	local spare: { Marker } = {}
+	local wanted = 0
 	for _, room in dirty do
 		local markers = shuffled(byRoom[room], rng)
 		local count = math.min(rng:NextInteger(options.pilesPerRoom.min, options.pilesPerRoom.max), #markers)
+		wanted += count
 		local taken = 0
 		for _, marker in markers do
 			if taken < count and not crowds(marker, used) then
@@ -248,8 +251,16 @@ local function pileOrder(
 			end
 		end
 	end
-	local count = #used
+	local rest: { Marker } = {}
 	for _, marker in spare do
+		if #used < wanted and not crowds(marker, used) then
+			table.insert(used, marker)
+		else
+			table.insert(rest, marker)
+		end
+	end
+	local count = #used
+	for _, marker in rest do
 		if not crowds(marker, used) then
 			table.insert(used, marker)
 		end
