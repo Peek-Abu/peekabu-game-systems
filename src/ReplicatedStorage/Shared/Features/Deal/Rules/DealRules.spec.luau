@@ -111,15 +111,27 @@ return function()
 			expect(DealRules.spend(slice, "pickNewHire")).to.equal(false)
 		end)
 
-		it("grants the skin for a Legendary pick, and the employee plus their Legendary skin for a New Hire", function()
-			local legendary = DealRules.grants("pickLegendary", "Cappy.PJ")
-			expect(#legendary).to.equal(1)
-			expect(legendary[1]).to.equal("Cappy.PJ")
-			local hire = DealRules.grants("pickNewHire", "Prickles")
-			expect(#hire).to.equal(2)
-			expect(hire[1]).to.equal("Prickles")
-			expect(hire[2]).to.equal("Prickles.Sheriff")
-		end)
+		it(
+			"grants the Legendary skin's whole bundle for a Legendary pick, and the employee plus it for a New Hire",
+			function()
+				local CosmeticBundleRegistry =
+					require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
+				local pj = CosmeticBundleRegistry.containing("Cappy.PJ")[1]
+				local legendary = DealRules.grants("pickLegendary", "Cappy.PJ")
+				expect(#legendary).to.equal(#pj.items)
+				for _, id in pj.items do
+					expect(table.find(legendary, id)).to.be.ok()
+				end
+				-- "Pick any Legendary skin + its emote and stickers": the emote and the sticker pack come with it.
+				expect(table.find(legendary, "Cappy.CocoaSip")).to.be.ok()
+				expect(table.find(legendary, "CozyPack")).to.be.ok()
+				local hire = DealRules.grants("pickNewHire", "Prickles")
+				expect(hire[1]).to.equal("Prickles")
+				expect(table.find(hire, "Prickles.Sheriff")).to.be.ok()
+				expect(table.find(hire, "Prickles.Lasso")).to.be.ok()
+				expect(#hire).to.equal(1 + #CosmeticBundleRegistry.containing("Prickles.Sheriff")[1].items)
+			end
+		)
 
 		it("knows each employee's Legendary skin", function()
 			expect(DealRules.legendaryOf("Cappy")).to.equal("Cappy.PJ")

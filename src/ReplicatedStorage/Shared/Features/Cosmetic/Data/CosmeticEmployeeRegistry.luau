@@ -27,7 +27,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "Cappy",
 		rarity = "default",
 		source = "credits",
-		price = 2500,
+		price = 5000,
 		lore = "The boss's nephew. He says the building is NOT haunted.",
 	},
 	{
@@ -36,7 +36,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "Prickles",
 		rarity = "default",
 		source = "credits",
-		price = 2500,
+		price = 5000,
 		lore = "Looks grumpy, but he is a big softy. He can hide anywhere.",
 	},
 

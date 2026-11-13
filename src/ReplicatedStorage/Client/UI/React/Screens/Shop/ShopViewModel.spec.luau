@@ -72,7 +72,7 @@ return function()
 			local rate = ShopConstants.TOP_UP.credits
 			local prickles = ShopRegistry.get("Prickles")
 			-- 300 Credits short, with Gleam to spare: one tap (and a yes) pays the rest.
-			local topUp = VM.button(prickles, owner(), { gleam = 500, credits = 2200 })
+			local topUp = VM.button(prickles, owner(), { gleam = 500, credits = 4700 })
 			expect(topUp.kind).to.equal("topup")
 			expect(topUp.enabled).to.equal(true)
 			expect(topUp.gleam).to.equal(math.ceil(300 / rate))
@@ -81,20 +81,20 @@ return function()
 			local short = VM.button(prickles, owner(), broke)
 			expect(short.kind).to.equal("short")
 			expect(short.enabled).to.equal(true)
-			expect(short.text).to.equal("Need 2,500 more")
-			expect(short.gleam).to.equal(math.ceil(2500 / rate))
+			expect(short.text).to.equal("Need 5,000 more")
+			expect(short.gleam).to.equal(math.ceil(5000 / rate))
 			-- Enough Credits: Gleam is never touched.
-			expect(VM.button(prickles, owner(), { gleam = 500, credits = 2500 }).kind).to.equal("buy")
+			expect(VM.button(prickles, owner(), { gleam = 500, credits = 5000 }).kind).to.equal("buy")
 		end)
 
 		it("asks before spending, in plain words", function()
 			expect(VM.confirm(ShopRegistry.get("Pippa.BubbleBuddy"))).to.equal("Buy Bubble Buddy for 1,200 Gleam?")
-			expect(VM.confirm(ShopRegistry.get("Prickles"))).to.equal("Hire Prickles for 2,500 Credits?")
+			expect(VM.confirm(ShopRegistry.get("Prickles"))).to.equal("Hire Prickles for 5,000 Credits?")
 			local gleam = math.ceil(300 / ShopConstants.TOP_UP.credits)
-			expect(VM.confirm(ShopRegistry.get("Prickles"), { gleam = 500, credits = 2200 })).to.equal(
+			expect(VM.confirm(ShopRegistry.get("Prickles"), { gleam = 500, credits = 4700 })).to.equal(
 				`You need 300 more Credits. Use {gleam} Gleam to hire Prickles?`
 			)
-			expect(VM.product(ShopRegistry.get("Prickles"), owner(), { gleam = 500, credits = 2200 }).confirm).to.equal(
+			expect(VM.product(ShopRegistry.get("Prickles"), owner(), { gleam = 500, credits = 4700 }).confirm).to.equal(
 				`You need 300 more Credits. Use {gleam} Gleam to hire Prickles?`
 			)
 		end)
@@ -329,7 +329,7 @@ return function()
 			expect(VM.returnReady(back, 1199)).to.equal(false)
 			expect(VM.returnReady(back, 1200)).to.equal(true)
 			-- A hire needs only the Gleam for the rest.
-			local hire = VM.returnTo(ShopRegistry.get("Prickles"), owner(), { gleam = 0, credits = 2200 }, "hires")
+			local hire = VM.returnTo(ShopRegistry.get("Prickles"), owner(), { gleam = 0, credits = 4700 }, "hires")
 			expect(hire.gleam).to.equal(math.ceil(300 / ShopConstants.TOP_UP.credits))
 		end)
 

@@ -5,7 +5,7 @@
 	(exactly once), and the player spends the pick in the chooser. A deal shows until it is bought, and never when
 	nothing is left to pick; the chooser leaves out what the player already owns. Pure.
 
-	- Pick a Legendary: a Legendary skin (it comes with its bundle) of an employee the player has hired.
+	- Pick a Legendary: a Legendary skin (with the rest of its bundle) of an employee the player has hired.
 	- Pick a New Hire: an employee not hired yet who can be hired, granted with their Legendary skin.
 
 	@class DealRules
@@ -13,6 +13,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CosmeticBundleRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
@@ -180,15 +181,38 @@ function DealRules.canChoose(deal: DealId, choice: string, slice: Deals, owns: O
 	return true, nil
 end
 
+-- A Legendary skin and the rest of its bundle (its emote and sticker pack); the skin alone when it has no bundle.
+local function withBundle(skin: string): { string }
+	local bundle = CosmeticBundleRegistry.containing(skin)[1]
+	if bundle == nil then
+		return { skin }
+	end
+	local ids = { skin }
+	for _, id in bundle.items do
+		if id ~= skin then
+			table.insert(ids, id)
+		end
+	end
+	return ids
+end
+
 --[=[
-	The cosmetic ids a choice grants (each comes with its bundle through the cosmetic grant).
+	The cosmetic ids a choice grants: a Legendary skin comes with the rest of its bundle (CosmeticBundleRegistry), since
+	a skin is granted alone; a New Hire is the employee and their Legendary skin's bundle.
 ]=]
 function DealRules.grants(deal: DealId, choice: string): { string }
 	if deal == "pickLegendary" then
-		return { choice }
+		return withBundle(choice)
 	end
 	local skin = DealRules.legendaryOf(choice)
-	return if skin ~= nil then { choice, skin } else { choice }
+	if skin == nil then
+		return { choice }
+	end
+	local ids = { choice }
+	for _, id in withBundle(skin) do
+		table.insert(ids, id)
+	end
+	return ids
 end
 
 return DealRules

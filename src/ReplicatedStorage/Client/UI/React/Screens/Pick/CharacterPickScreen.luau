@@ -7,7 +7,7 @@
 	card (who they are, the five gold stat bars, the ability card with its render); and the big mint "Start as
 	Pippa!". It sends the pick (CosmeticServiceClient:requestPick); DepotServiceClient takes the scene off when the
 	synced loadout says picked. No close button: everyone picks once. A locked employee can be previewed,
-	and hired here for Credits when you have enough ("Hire for 2,500", a Shop purchase). Values: CharacterPickViewModel and InventoryViewModel (layout, stats, colours). Exempt (wires stores;
+	and hired here for Credits when you have enough ("Hire for 5,000", a Shop purchase). Values: CharacterPickViewModel and InventoryViewModel (layout, stats, colours). Exempt (wires stores;
 	story in CharacterPickScreen.story).
 
 	@class CharacterPickScreen

@@ -22,7 +22,7 @@ return function()
 		})
 		local price = panel.props.children.Cappy.props.children.surface.props.children.price
 		expect(price.type).to.equal(ToonButton)
-		expect(price.props.content.price.props.amount).to.equal("2,500")
+		expect(price.props.content.price.props.amount).to.equal("5,000")
 		price.props.onActivated()
 		expect(hired).to.equal("Cappy")
 	end)

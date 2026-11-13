@@ -21,7 +21,9 @@ export type Deal = {
 	robux: number,
 	-- Gleam added with the purchase (in the receipt's own save).
 	gleam: number,
-	-- "% off", measured against buying the same Gleam at the best bundle price (1,500 Gleam = 549 R$).
+	-- "% off": how much less than buying the same things at the best Gleam pack's rate (1,500 Gleam = R$ 999), with a
+	-- hire's Credits at the Shop's top-up rate (10 Credits a Gleam). DealViewModel.spec recomputes it from today's
+	-- prices, so a price change that makes it untrue fails the build.
 	off: number,
 	-- Words, kid reading level.
 	name: string,
@@ -41,7 +43,8 @@ local DEALS: { [string]: Deal } = {
 		productId = LEGENDARY_PRODUCT,
 		robux = 399,
 		gleam = 500,
-		off = 45,
+		-- A Legendary bundle (1,500) + 500 Gleam = 2,000 Gleam = R$ 1,332 at the best pack: R$ 399 is 70% off.
+		off = 70,
 		name = "Pick a Legendary",
 		line = "Pick any Legendary skin + its emote and stickers. Plus 500 Gleam!",
 		chooseTitle = "PICK YOUR LEGENDARY!",
@@ -53,7 +56,8 @@ local DEALS: { [string]: Deal } = {
 		productId = NEW_HIRE_PRODUCT,
 		robux = 349,
 		gleam = 0,
-		off = 36,
+		-- A hire (5,000 Credits = 500 Gleam) + a Legendary bundle (1,500) = 2,000 Gleam = R$ 1,332: R$ 349 is 74% off.
+		off = 74,
 		name = "Pick a New Hire",
 		line = "Hire a new employee now + their Legendary skin, emote and stickers!",
 		chooseTitle = "PICK YOUR NEW HIRE!",

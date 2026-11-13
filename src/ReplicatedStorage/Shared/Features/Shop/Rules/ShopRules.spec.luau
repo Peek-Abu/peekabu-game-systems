@@ -46,7 +46,7 @@ return function()
 	end)
 
 	it("says how much more you need", function()
-		expect(ShopRules.missing(ShopRegistry.get("Prickles"), 2000)).to.equal(500)
+		expect(ShopRules.missing(ShopRegistry.get("Prickles"), 2000)).to.equal(3000)
 		expect(ShopRules.missing(ShopRegistry.get("Prickles"), 9000)).to.equal(0)
 	end)
 end
