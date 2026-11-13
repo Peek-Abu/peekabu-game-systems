@@ -70,13 +70,11 @@ local EmployeePreviewSystem = {
 
 local live: { [Model]: RBXScriptConnection } = {}
 local liveCount = 0
--- Built static looks per source (weak: a source destroyed takes its builds with it), by `staticKey`; at most
--- STATIC_CACHE_CAP per source (past it the source's cache starts over).
+-- Built static looks per source (in the game only ReplicatedStorage; specs pass their own and `reset` clears them),
+-- by `staticKey`; at most STATIC_CACHE_CAP per source (past it the source's cache starts over).
 local STATIC_CACHE_CAP = 64
 local staticCache: { [Instance]: { [string]: Model } } = {}
 local staticCount: { [Instance]: number } = {}
-setmetatable(staticCache, { __mode = "k" })
-setmetatable(staticCount, { __mode = "k" })
 
 local function resolve(root: Instance, path: { string }): Instance?
 	local current: Instance? = root
