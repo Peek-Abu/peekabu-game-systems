@@ -316,6 +316,7 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			price = e(ToonPrice, {
 				currency = button.currency,
 				amount = button.price,
+				was = button.was,
 				textSize = math.floor(buttonHeight * 0.5),
 				meaning = "white",
 				align = "center",

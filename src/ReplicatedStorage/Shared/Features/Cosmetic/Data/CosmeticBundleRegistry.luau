@@ -20,14 +20,15 @@ type Bundle = CosmeticTypes.Bundle
 
 local BUNDLES: { Bundle } = {
 	-- The Legendary skins' bundles: the skin, its emote and its sticker pack (what buying the skin gave before the
-	-- split). The price is what the skin alone cost then.
+	-- split). Owner, 11-13 (price sheet Q3): a bundle is 30% off its items alone, rounded down to 10
+	-- (1,200 + 400 + 150 = 1,750 -> 1,220).
 	{
 		id = "Bundle.BubbleBuddy",
 		name = "Bubble Buddy Bundle",
 		rarity = "legendary",
 		items = { "Pippa.BubbleBuddy", "Pippa.Bubbles", "BubblePack" },
 		currency = "gleam",
-		price = 1500,
+		price = 1220,
 		lore = "Everything for a bubbly day: the skin, the Bubbles emote and the sticker pack.",
 	},
 	{
@@ -36,7 +37,7 @@ local BUNDLES: { Bundle } = {
 		rarity = "legendary",
 		items = { "Cappy.PJ", "Cappy.CocoaSip", "CozyPack" },
 		currency = "gleam",
-		price = 1500,
+		price = 1220,
 		lore = "Everything for a cozy night: the PJs, the Cocoa Sip emote and the sticker pack.",
 	},
 	{
@@ -45,7 +46,7 @@ local BUNDLES: { Bundle } = {
 		rarity = "legendary",
 		items = { "Prickles.Sheriff", "Prickles.Lasso", "SheriffPack" },
 		currency = "gleam",
-		price = 1500,
+		price = 1220,
 		lore = "Everything a sheriff needs: the skin, the Lasso emote and the sticker pack.",
 	},
 }

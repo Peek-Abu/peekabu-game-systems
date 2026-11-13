@@ -11,13 +11,13 @@ inside the game, so it never touches Robux directly.
 
 | Item | Kind | Id (code) | What the player gets | Where it is granted |
 |---|---|---|---|---|
-| 100 Gleam (R$ 49) | developer product | 3722076056 (`ShopConstants.PRODUCT_IDS.gleam100`) | +100 Gleam | Marketplace receipt → premium slice |
-| 275 Gleam (R$ 129) | developer product | 3722076494 (`gleam275`) | +275 Gleam (+10 % bonus shown) | same |
-| 600 Gleam (R$ 249) | developer product | 3722076599 (`gleam600`) | +600 Gleam (+20 %) | same |
-| 1,500 Gleam (R$ 549) | developer product | 3722076697 (`gleam1500`) | +1,500 Gleam (+35 %) | same |
+| 100 Gleam (R$ 99) | developer product | 3722076056 (`ShopConstants.PRODUCT_IDS.gleam100`) | +100 Gleam | Marketplace receipt → premium slice |
+| 150 Gleam (R$ 129) | developer product | 3722076494 (`gleam275`, the key kept its old name) | +150 Gleam (+15 % bonus shown) | same |
+| 600 Gleam (R$ 449) | developer product | 3722076599 (`gleam600`) | +600 Gleam (+32 %) | same |
+| 1,500 Gleam (R$ 999) | developer product | 3722076697 (`gleam1500`) | +1,500 Gleam (+49 %) | same |
 | Big Crew | game pass | 2058797732 (`HostConstants.PASS_ID`) | the host's truck holds 6 | Roblox owns it; checked on join and on purchase |
 
-Prices live on the Creator Dashboard and in `ShopConstants.BUNDLES`; change both together.
+Robux prices live on the Creator Dashboard (the Shop shows what Roblox reports); the Gleam amounts live in `ShopConstants.BUNDLES` and the bonus shown is worked out from both. Pack 2 went from 275 to 150 Gleam on 2026-11-13 (owner): its Dashboard name and description must say 150.
 
 ## How a receipt is handled (why "paid and got nothing" should be rare)
 
@@ -42,7 +42,7 @@ Big Crew pass:
 - [ ] Rejoin: still 6 seats; the Passes card shows Owned.
 
 Spending Gleam (no Robux, but money-like):
-- [ ] Buy one Gleam item in the Shop (e.g. Brass Bellows, 600): Gleam goes down by its price, the item is owned, and
+- [ ] Buy one Gleam item in the Shop (e.g. Brass Bellows, 600, or 480 on a sale day): Gleam goes down by the price shown, the item is owned, and
       it survives a rejoin.
 - [ ] Open the Gleam Locker once.
 - [ ] Try to buy with too little Gleam: refused, no Gleam taken.

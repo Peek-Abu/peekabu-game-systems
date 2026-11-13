@@ -34,6 +34,7 @@ local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.C
 local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
 local DealRules = require(ReplicatedStorage.Shared.Features.Deal.Rules.DealRules)
 local DealServiceClient = require(ReplicatedStorage.Client.Features.Deal.DealServiceClient)
+local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.ShopRotationUtils)
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
@@ -170,6 +171,7 @@ local function offerCard(
 			else e(ToonPrice, {
 				currency = card.currency,
 				amount = card.price,
+				was = card.was,
 				textSize = nameSize + 2,
 				anchor = Vector2.new(1, 1),
 				position = UDim2.new(1, -10, 1, -DEPTH.lip - 6),
@@ -196,6 +198,16 @@ local function offerCard(
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 0.42),
 			zIndex = 6,
+		})
+	end
+	if card.off ~= nil and card.state ~= "owned" then
+		nodes.off = e(ToonBurst, {
+			text = card.off,
+			hue = "coral",
+			size = if phone then 40 else 68,
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, 10, 0, -12),
+			zIndex = 7,
 		})
 	end
 	if card.rarity ~= "default" then
@@ -440,7 +452,12 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		end
 	local balances: VM.Balances = if preview ~= nil
 		then { gleam = preview.gleam, credits = preview.credits }
-		else { gleam = premium.balance, credits = CurrencyUtils.getCurrencyAmount(currency, "credits") }
+		else {
+			gleam = premium.balance,
+			credits = CurrencyUtils.getCurrencyAmount(currency, "credits"),
+			-- Sales run on the server's clock.
+			now = now,
+		}
 	local productId = if preview ~= nil then props.item else storeProduct
 
 	local viewport = props.viewport or liveViewport
@@ -532,7 +549,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local modal: React.ReactNode = nil
 	if offer ~= nil then
 		local product = VM.product(offer, owns, balances)
-		local resultNow = if result ~= nil and result.offer == offer.id then VM.resultText(result.reason) else nil
+		local resultNow = if result ~= nil and result.offer == offer.id
+			then VM.resultText(result.reason)
+			else VM.saleText(product.card.saleEnds, balances.now)
 		body = e(ShopProductPanel, {
 			product = product,
 			-- What you wear now: a vacuum's page shows it on you.
@@ -579,7 +598,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 						if preview == nil then
 							-- A yes to "Use 30 Gleam" is a yes to at most that much Gleam for the rest.
 							local gleam = if product.button.kind == "topup" then product.button.gleam else nil
-							ShopServiceClient:requestBuy(offer.id, gleam)
+							-- The price the player saw: the server never charges more.
+							local seen = ShopPriceRules.forPlayer(offer, owns, balances.now).price
+							ShopServiceClient:requestBuy(offer.id, gleam, seen)
 						end
 					end,
 				}),
@@ -818,6 +839,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				price = e(ToonPrice, {
 					currency = card.currency,
 					amount = card.price,
+					was = card.was,
 					textSize = if phone then 20 else 44,
 					meaning = "white",
 					align = "center",

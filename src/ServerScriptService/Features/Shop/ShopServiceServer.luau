@@ -42,6 +42,8 @@ local PlayerDataService = require(ServerScriptService.Features.PlayerData.Player
 local log = Logger.new("ShopServiceServer")
 
 local janitor = Janitor.new()
+-- The time prices are worked out at (sales); specs set one that returns nil (regular prices).
+local clock: () -> number? = os.time
 
 -- What a purchase can be priced in: Gleam (the account's premium balance) or a slot currency (Credits, Gloom).
 type PayCurrency = ShopTypes.Currency | CurrencyConstants.CurrencyType
@@ -157,7 +159,7 @@ local function payOpsImpl(
 	return payGleam(userId, price)
 end
 
-local function buyImpl(userId: number, offerId: string, agreedGleam: number): (boolean, string?)
+local function buyImpl(userId: number, offerId: string, agreedGleam: number, seen: number?): (boolean, string?)
 	Guard.userId(userId)
 	local listed = ShopRegistry.get(offerId)
 	if listed == nil then
@@ -173,7 +175,11 @@ local function buyImpl(userId: number, offerId: string, agreedGleam: number): (b
 		return CosmeticServiceServer:owns(userId, id)
 	end
 	-- What this player pays (a bundle they own part of costs less, ShopPriceRules); never a price from the client.
-	local offer = ShopPriceRules.forPlayer(listed, owns)
+	local offer = ShopPriceRules.forPlayer(listed, owns, clock())
+	-- Never more than the price the player saw (a sale that ended while they looked).
+	if seen ~= nil and offer.price > seen then
+		return false, "price changed"
+	end
 	local balance = if offer.currency == "gleam"
 		then MarketplaceServiceServer:getPremium(userId)
 		else CurrencyServiceServer:getCurrencyAmount(userId, "credits")
@@ -221,7 +227,7 @@ local onBuyRequest = RequestHandler.wrap({
 			return
 		end
 		local offer = request.offer
-		local ok, refusal = buyImpl(player.UserId, offer, request.gleam)
+		local ok, refusal = buyImpl(player.UserId, offer, request.gleam, request.price)
 		if not ok then
 			log:debug(`BuyRequest refused for {player.Name}: {refusal or "?"}`)
 		end
@@ -258,7 +264,14 @@ export type ShopServiceServer = {
 	init: (self: ShopServiceServer) -> (),
 	stop: (self: ShopServiceServer) -> (),
 	-- `gleam`: the most Gleam the player said yes to paying for the rest when short (default 0: pay in full).
-	buy: (self: ShopServiceServer, userId: number, offerId: string, gleam: number?) -> (boolean, string?),
+	-- `seen`: the price the player saw (nil: none shown); refused as "price changed" when the price is now higher.
+	buy: (
+		self: ShopServiceServer,
+		userId: number,
+		offerId: string,
+		gleam: number?,
+		seen: number?
+	) -> (boolean, string?),
 	-- The operations that pay `price` in `currency` (Gleam paying the rest when short and agreed), for any purchase
 	-- that is not a Shop offer (one transaction with whatever it grants); nil and a refusal when it cannot be paid.
 	payOps: (
@@ -269,6 +282,8 @@ export type ShopServiceServer = {
 		gleam: number
 	) -> ({ PlayerDataService.TransactionOperation }?, string?, ShopTopUpRules.Plan?),
 	getState: (self: ShopServiceServer) -> { [string]: any },
+	-- TEST SEAM: the clock prices are worked out at (nil restores os.time; a function returning nil: no sales).
+	_setClock: (self: ShopServiceServer, fn: (() -> number?)?) -> (),
 	-- TEST SEAM: the RequestHandler-wrapped buy handler (payload, player).
 	_onBuyRequest: (payload: unknown, player: Player) -> any,
 }
@@ -304,8 +319,8 @@ local ShopServiceServer: ShopServiceServer = {
 		DepotServiceServer:setPlacePayer(nil)
 	end,
 
-	buy = function(_self, userId, offerId, gleam)
-		return buyImpl(userId, offerId, gleam or 0)
+	buy = function(_self, userId, offerId, gleam, seen)
+		return buyImpl(userId, offerId, gleam or 0, seen)
 	end,
 
 	payOps = function(_self, userId, currency, price, gleam)
@@ -315,6 +330,10 @@ local ShopServiceServer: ShopServiceServer = {
 
 	getState = function(_self)
 		return { offers = #ShopRegistry.all() }
+	end,
+
+	_setClock = function(_self, fn)
+		clock = fn or os.time
 	end,
 
 	_onBuyRequest = onBuyRequest,

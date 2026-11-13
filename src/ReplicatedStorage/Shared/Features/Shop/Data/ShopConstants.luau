@@ -15,10 +15,12 @@ local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 -- `robux` and `image` are the products' price and icon on Roblox (Creator Dashboard, read 2026-11-12); the Shop shows
 -- what Roblox reports at runtime and these only until it answers, so a Dashboard change shows without a code change.
 local BUNDLES: { ShopTypes.GleamBundle } = {
-	{ key = "gleam100", gleam = 100, robux = 99, bonus = 0, image = "rbxassetid://112673750570330" },
-	{ key = "gleam275", gleam = 275, robux = 129, bonus = 10, image = "rbxassetid://82923918698099" },
-	{ key = "gleam600", gleam = 600, robux = 449, bonus = 20, image = "rbxassetid://138358363514131" },
-	{ key = "gleam1500", gleam = 1500, robux = 999, bonus = 35, image = "rbxassetid://138262914648345" },
+	-- Owner, 11-13 (price sheet Q1): each bigger pack is a better deal; pack 2 gives 150 (its key keeps the old name, it
+	-- is the developer product's registration key). The bonus shown is worked out from the numbers (ShopViewModel).
+	{ key = "gleam100", gleam = 100, robux = 99, image = "rbxassetid://112673750570330" },
+	{ key = "gleam275", gleam = 150, robux = 129, image = "rbxassetid://82923918698099" },
+	{ key = "gleam600", gleam = 600, robux = 449, image = "rbxassetid://138358363514131" },
+	{ key = "gleam1500", gleam = 1500, robux = 999, image = "rbxassetid://138262914648345" },
 }
 
 -- The developer product id of each bundle (owner, Creator Dashboard, 2026-10-24). The Gleam amounts and Robux prices
@@ -54,6 +56,9 @@ return table.freeze({
 	MAX_ID_LENGTH = 64,
 	-- A worked-out price (a bundle you own part of) is rounded up to a multiple of this.
 	PRICE_STEP = 10,
+	-- The daily rotation's sale (owner, 11-13: price sheet Q6): the Featured item and the first `picks` of Today's
+	-- picks are `percent` off until the shop changes (single items only; never an employee or a bundle).
+	DAILY_SALE = table.freeze({ percent = 20, picks = 2 }),
 	-- The most Gleam one buy request may agree to top up with (a hire from zero Credits is 250).
 	MAX_TOP_UP = 100000,
 	BUNDLES = table.freeze(BUNDLES),

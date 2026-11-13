@@ -2,7 +2,7 @@
 --[=[
 	ShopRequestRules: the build/parse contract for the Shop's buy request. The client BUILDS it, the server PARSES it
 	at the trust boundary (shape only: an offer id of 1-64 characters, and the Gleam the player agreed to pay for the
-	rest when short, a whole number from 0 to ShopConstants.MAX_TOP_UP; whether it exists, can be bought and what the
+	rest when short, and the price they saw, each a whole number from 0 to ShopConstants.MAX_TOP_UP; whether it exists, can be bought and what the
 	rest really costs is ShopRules' and ShopTopUpRules' job in the service).
 
 	@class ShopRequestRules
@@ -12,13 +12,27 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 
--- `gleam`: the most Gleam the player said yes to paying for the rest (0 = pay in full or not at all).
-export type BuyRequest = { offer: string, gleam: number }
+-- `gleam`: the most Gleam the player said yes to paying for the rest (0 = pay in full or not at all). `price`: the
+-- price the player saw (nil = not shown, e.g. the pick screen); the server never charges more than it.
+export type BuyRequest = { offer: string, gleam: number, price: number? }
+
+local function wholeAmount(value: unknown): number?
+	if
+		type(value) ~= "number"
+		or value ~= value
+		or value < 0
+		or value > ShopConstants.MAX_TOP_UP
+		or math.floor(value) ~= value
+	then
+		return nil
+	end
+	return value
+end
 
 local ShopRequestRules = {}
 
-function ShopRequestRules.buildBuy(offer: string, gleam: number?): BuyRequest
-	return { offer = offer, gleam = gleam or 0 }
+function ShopRequestRules.buildBuy(offer: string, gleam: number?, price: number?): BuyRequest
+	return { offer = offer, gleam = gleam or 0, price = price }
 end
 
 function ShopRequestRules.parseBuy(payload: unknown): (BuyRequest?, string?)
@@ -30,20 +44,22 @@ function ShopRequestRules.parseBuy(payload: unknown): (BuyRequest?, string?)
 	if type(offer) ~= "string" or #offer < 1 or #offer > ShopConstants.MAX_ID_LENGTH then
 		return nil, "missing or malformed offer"
 	end
-	local gleam = fields.gleam
-	if gleam == nil then
-		return { offer = offer, gleam = 0 }, nil
+	local gleam = 0
+	if fields.gleam ~= nil then
+		local parsed = wholeAmount(fields.gleam)
+		if parsed == nil then
+			return nil, "malformed gleam"
+		end
+		gleam = parsed
 	end
-	if
-		type(gleam) ~= "number"
-		or gleam ~= gleam
-		or gleam < 0
-		or gleam > ShopConstants.MAX_TOP_UP
-		or math.floor(gleam) ~= gleam
-	then
-		return nil, "malformed gleam"
+	local price: number? = nil
+	if fields.price ~= nil then
+		price = wholeAmount(fields.price)
+		if price == nil then
+			return nil, "malformed price"
+		end
 	end
-	return { offer = offer, gleam = gleam }, nil
+	return { offer = offer, gleam = gleam, price = price }, nil
 end
 
 return ShopRequestRules

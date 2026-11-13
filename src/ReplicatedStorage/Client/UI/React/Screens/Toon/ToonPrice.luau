@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	ToonPrice: a price as the kit draws money: the currency render (Gleam crystal or Credits ticket) overlapping a gold
-	number, and, only for a real sale, the old price struck through beside it. A row with no plate of its own: it sits
+	number, and, only for a real sale or a bundle's items alone, the old price small and struck through just above it
+	(owner, 11-13: Marvel Rivals style), lined up with the row. A row with no plate of its own: it sits
 	on a card's footer or inside a buy button. Presentational (exempt; story in ToonShopKit.story).
 
 	@class ToonPrice
@@ -22,7 +23,7 @@ export type ToonPriceProps = {
 	currency: Currency,
 	-- Already grouped ("1,500").
 	amount: string,
-	-- The price before a real sale (grouped), struck through.
+	-- A real higher price (grouped): before a sale, or a bundle's items alone. Struck through, above the price.
 	was: string?,
 	textSize: number,
 	-- "gold" (default) on dark or coloured plates, "white" inside a coloured button.
@@ -66,14 +67,19 @@ local function ToonPrice(props: ToonPriceProps): React.ReactNode
 			zIndex = props.zIndex,
 		}),
 	}
+	local row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = props.zIndex }, nodes)
+	local outer: { [string]: React.ReactNode } = { row = row }
 	local was = props.was
 	if was ~= nil then
 		local wasSize = math.floor(size * 0.6)
-		nodes.was = e("Frame", {
+		local xAnchor = if props.align == "left" then 0 elseif props.align == "center" then 0.5 else 1
+		outer.was = e("Frame", {
+			AnchorPoint = Vector2.new(xAnchor, 1),
+			Position = UDim2.new(xAnchor, 0, 0, 2),
 			Size = UDim2.fromOffset(0, wasSize + 4),
 			AutomaticSize = Enum.AutomaticSize.X,
 			BackgroundTransparency = 1,
-			LayoutOrder = 3,
+			ZIndex = props.zIndex,
 		}, {
 			text = e(ToonText, {
 				text = was,
@@ -101,7 +107,7 @@ local function ToonPrice(props: ToonPriceProps): React.ReactNode
 		Size = props.size,
 		BackgroundTransparency = 1,
 		ZIndex = props.zIndex,
-	}, nodes)
+	}, outer)
 end
 
 return ToonPrice

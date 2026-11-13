@@ -33,7 +33,8 @@ local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inv
 type Offer = ShopTypes.Offer
 type Owns = (id: string) -> boolean
 
-export type Balances = { gleam: number, credits: number }
+-- What the player has, and `now`: the server time prices are worked out at (sales; nil: regular prices only).
+export type Balances = { gleam: number, credits: number, now: number? }
 
 -- A game pass card: what its button says follows `state` (loading the price, on sale, owned, not for sale).
 export type PassState = "loading" | "buy" | "owned" | "unavailable"
@@ -59,8 +60,12 @@ export type OfferCard = {
 	rarity: CosmeticTypes.Rarity,
 	currency: ShopTypes.Currency,
 	price: string,
-	-- A real, higher price to cross out (a bundle's items alone); nil when there is none.
+	-- A real, higher price to cross out (a bundle's items alone, the price before a sale); nil when there is none.
 	was: string?,
+	-- "-20%" next to a crossed-out price; nil when there is none.
+	off: string?,
+	-- When a sale price ends (server time); nil when it is the regular price.
+	saleEnds: number?,
 	state: CardState,
 	-- Who to show in 3D (the item's employee, the employee itself, or Pippa for a shared item).
 	employee: string,
@@ -79,6 +84,8 @@ export type Button = {
 	kind: "buy" | "owned" | "short" | "topup",
 	currency: ShopTypes.Currency,
 	price: string,
+	-- The crossed-out price on the button (VM.card's `was`); nil when there is none.
+	was: string?,
 	-- "topup": the Gleam for the rest. "short": the Gleam balance it needs (the price, or the rest of a Credits price).
 	gleam: number?,
 }
@@ -190,7 +197,7 @@ local function lineOf(item: CosmeticTypes.Item): string
 end
 
 function VM.card(listed: Offer, owns: Owns, balances: Balances): OfferCard
-	local offer = ShopPriceRules.forPlayer(listed, owns)
+	local offer = ShopPriceRules.forPlayer(listed, owns, balances.now)
 	local item = main(offer)
 	local state: CardState = if ShopRules.owned(offer, owns)
 		then "owned"
@@ -215,12 +222,30 @@ function VM.card(listed: Offer, owns: Owns, balances: Balances): OfferCard
 		currency = offer.currency,
 		price = ToonStyleViewModel.grouped(offer.price),
 		was = if offer.was ~= nil then ToonStyleViewModel.grouped(offer.was) else nil,
+		off = VM.off(offer.price, offer.was),
+		saleEnds = offer.saleEnds,
 		state = state,
 		employee = employee,
 		skinKey = if item ~= nil and item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
 		vacuum = if item ~= nil and item.kind == "vacuum" then item.id else nil,
 		emote = if item ~= nil and item.kind == "emote" then item.id else nil,
 	}
+end
+
+-- "-20%": how much less than the crossed-out price, rounded to a whole percent; nil when nothing is crossed out.
+function VM.off(price: number, was: number?): string?
+	if was == nil or was <= price then
+		return nil
+	end
+	return `-{math.floor((was - price) / was * 100 + 0.5)}%`
+end
+
+-- "Sale ends in 6h 12m" while a sale price runs; nil otherwise.
+function VM.saleText(saleEnds: number?, now: number?): string?
+	if saleEnds == nil or now == nil or now >= saleEnds then
+		return nil
+	end
+	return `Sale ends in {VM.timer(saleEnds - now)}`
 end
 
 -- The page's hero plays its menu reaction when the page opens: not on a vacuum's page (seen from behind) or an emote's.
@@ -246,7 +271,7 @@ local function gleamNeeded(offer: Offer, balances: Balances): number
 end
 
 function VM.button(listed: Offer, owns: Owns, balances: Balances): Button
-	local offer = ShopPriceRules.forPlayer(listed, owns)
+	local offer = ShopPriceRules.forPlayer(listed, owns, balances.now)
 	local price = ToonStyleViewModel.grouped(offer.price)
 	if ShopRules.owned(offer, owns) then
 		return { text = "Owned", enabled = false, kind = "owned", currency = offer.currency, price = price }
@@ -274,7 +299,14 @@ function VM.button(listed: Offer, owns: Owns, balances: Balances): Button
 			gleam = gleamNeeded(offer, balances),
 		}
 	end
-	return { text = price, enabled = true, kind = "buy", currency = offer.currency, price = price }
+	return {
+		text = price,
+		enabled = true,
+		kind = "buy",
+		currency = offer.currency,
+		price = price,
+		was = if offer.was ~= nil then ToonStyleViewModel.grouped(offer.was) else nil,
+	}
 end
 
 -- The Yes/No question before spending; with `balances`, a short Credits price asks about the Gleam for the rest.
@@ -300,7 +332,7 @@ end
 	item with the Yes/No question already up, so finishing takes one tap.
 ]=]
 function VM.returnTo(listed: Offer, owns: Owns, balances: Balances, tab: string): ShopStore.Return
-	local offer = ShopPriceRules.forPlayer(listed, owns)
+	local offer = ShopPriceRules.forPlayer(listed, owns, balances.now)
 	local item = main(offer)
 	return {
 		offer = offer.id,
@@ -354,7 +386,7 @@ function VM.bestBundle(missing: number): string?
 end
 
 function VM.product(listed: Offer, owns: Owns, balances: Balances): Product
-	local offer = ShopPriceRules.forPlayer(listed, owns)
+	local offer = ShopPriceRules.forPlayer(listed, owns, balances.now)
 	local item = main(offer)
 	local card = VM.card(offer, owns, balances)
 	-- What it grants: the item, or every item of the bundle (the hero first, the rest with their own price alone).
@@ -472,14 +504,24 @@ end
 -- (ShopConstants.BUNDLES) until it does; `best` (a bundle key) is marked as the one to buy.
 function VM.bundles(infos: { [string]: ShopStore.ProductInfo }, best: string?): { Bundle }
 	local list: { Bundle } = {}
+	local function robuxOf(bundle: ShopTypes.GleamBundle): number
+		local info = infos[bundle.key]
+		return if info ~= nil and info.price ~= nil then info.price else bundle.robux
+	end
+	-- The bonus is worked out from the numbers: Gleam per Robux over the first (smallest) pack's.
+	local first = ShopConstants.BUNDLES[1]
+	local baseRate = if first ~= nil then first.gleam / robuxOf(first) else 0
 	for _, bundle in ShopConstants.BUNDLES do
 		local info = infos[bundle.key]
-		local price = if info ~= nil and info.price ~= nil then info.price else bundle.robux
+		local price = robuxOf(bundle)
+		local bonus = if baseRate > 0 and price > 0
+			then math.floor(((bundle.gleam / price) / baseRate - 1) * 100 + 0.5)
+			else 0
 		table.insert(list, {
 			key = bundle.key,
 			amount = ToonStyleViewModel.grouped(bundle.gleam),
 			robux = `R$ {ToonStyleViewModel.grouped(price)}`,
-			bonus = if bundle.bonus > 0 then `+{bundle.bonus}%` else nil,
+			bonus = if bonus > 0 then `+{bonus}%` else nil,
 			image = if info ~= nil and info.icon ~= nil then info.icon else bundle.image,
 			available = ShopConstants.PRODUCT_IDS[bundle.key] ~= nil,
 			best = bundle.key == best,
@@ -546,8 +588,8 @@ function VM.resultText(reason: string): string?
 		return "You already have it!"
 	elseif reason == "locked during a shift" then
 		return "The Shop opens at the depot."
-	elseif reason == "top up changed" then
-		return "The Gleam price changed. Look again!"
+	elseif reason == "top up changed" or reason == "price changed" then
+		return "The price changed. Look again!"
 	end
 	return "That didn't work. Try again!"
 end

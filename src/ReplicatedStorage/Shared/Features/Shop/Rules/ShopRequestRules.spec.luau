@@ -13,6 +13,11 @@ return function()
 		expect(request.gleam).to.equal(30)
 	end)
 
+	it("round-trips the price the player saw, and leaves it out when none was shown", function()
+		expect(ShopRequestRules.parseBuy(ShopRequestRules.buildBuy("Cappy", 0, 960)).price).to.equal(960)
+		expect(ShopRequestRules.parseBuy(ShopRequestRules.buildBuy("Cappy")).price).to.equal(nil)
+	end)
+
 	it("drops anything else", function()
 		for _, payload in
 			{
@@ -27,6 +32,9 @@ return function()
 				{ offer = "Cappy", gleam = "30" },
 				{ offer = "Cappy", gleam = 0 / 0 },
 				{ offer = "Cappy", gleam = math.huge },
+				{ offer = "Cappy", price = -5 },
+				{ offer = "Cappy", price = "960" },
+				{ offer = "Cappy", price = 9.5 },
 			}
 		do
 			local parsed, reason = ShopRequestRules.parseBuy(payload)

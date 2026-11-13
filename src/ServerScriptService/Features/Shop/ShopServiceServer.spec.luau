@@ -88,6 +88,10 @@ return function()
 		end
 
 		beforeEach(function()
+			-- Regular prices (no daily sale), so the numbers never depend on the day.
+			ShopService:_setClock(function()
+				return nil
+			end)
 			phase = "lobby"
 			ShiftServiceServer.getShift = function()
 				return { phase = phase }
@@ -97,6 +101,7 @@ return function()
 		afterEach(function()
 			task.wait()
 			ShiftServiceServer.getShift = realGetShift
+			ShopService:_setClock(nil)
 			for userId in seeded do
 				PlayerDataService:_setProfileForTesting(userId, nil)
 			end
@@ -104,7 +109,7 @@ return function()
 		end)
 
 		it("spends Gleam and grants only the skin when the skin is bought alone", function()
-			seed(1, 1600, 0)
+			seed(1, 1300, 0)
 			local ok, reason = ShopService:buy(1, "Pippa.BubbleBuddy")
 			expect(reason).to.equal(nil)
 			expect(ok).to.equal(true)
@@ -115,7 +120,7 @@ return function()
 		end)
 
 		it("spends Gleam once and grants every item of a bundle in one go", function()
-			seed(1, 1600, 0)
+			seed(1, 1320, 0)
 			local ok, reason = ShopService:buy(1, "Bundle.BubbleBuddy")
 			expect(reason).to.equal(nil)
 			expect(ok).to.equal(true)
@@ -177,11 +182,11 @@ return function()
 		end)
 
 		it("changes nothing when the balance is short", function()
-			seed(1, 1499, 0)
+			seed(1, 1199, 0)
 			local ok, reason = ShopService:buy(1, "Pippa.BubbleBuddy")
 			expect(ok).to.equal(false)
 			expect(reason).to.equal("short")
-			expect(MarketplaceService:getPremium(1)).to.equal(1499)
+			expect(MarketplaceService:getPremium(1)).to.equal(1199)
 			expect(CosmeticService:owns(1, "Pippa.BubbleBuddy")).to.equal(false)
 		end)
 
@@ -191,7 +196,7 @@ return function()
 			local ok, reason = ShopService:buy(1, "Pippa.BubbleBuddy")
 			expect(ok).to.equal(false)
 			expect(reason).to.equal("owned")
-			expect(MarketplaceService:getPremium(1)).to.equal(2500)
+			expect(MarketplaceService:getPremium(1)).to.equal(2800)
 		end)
 
 		it("refuses during a shift, an unknown offer, and a player with no profile", function()
@@ -231,6 +236,37 @@ return function()
 			expect(MarketplaceService:getPremium(1)).to.equal(1500)
 			ShopService._onBuyRequest({ offer = "Pippa.BubbleBuddy" }, fakePlayer)
 			expect(CosmeticService:owns(1, "Pippa.BubbleBuddy")).to.equal(true)
+		end)
+
+		it("never charges more than the price the player saw", function()
+			seed(1, 9999, 0)
+			local offer = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry).get("Pippa.Bubbles")
+			local ok, reason = ShopService:buy(1, "Pippa.Bubbles", 0, offer.price - 100)
+			expect(ok).to.equal(false)
+			expect(reason).to.equal("price changed")
+			expect(MarketplaceService:getPremium(1)).to.equal(9999)
+			expect(ShopService:buy(1, "Pippa.Bubbles", 0, offer.price)).to.equal(true)
+			expect(MarketplaceService:getPremium(1)).to.equal(9999 - offer.price)
+		end)
+
+		it("charges today's sale price on the server's clock", function()
+			local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
+			local NOON = 1792929600
+			ShopService:_setClock(function()
+				return NOON
+			end)
+			local id = next(ShopPriceRules.daily(NOON))
+			local registry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
+			local sale = ShopPriceRules.forPlayer(registry.get(id), function()
+				return false
+			end, NOON)
+			expect(sale.price < registry.get(id).price).to.equal(true)
+			seed(1, 9999, 9999)
+			expect(ShopService:buy(1, id, 0, sale.price)).to.equal(true)
+			local spent = if sale.currency == "gleam"
+				then 9999 - MarketplaceService:getPremium(1)
+				else 9999 - CurrencyService:getCurrencyAmount(1, "credits")
+			expect(spent).to.equal(sale.price)
 		end)
 
 		describe("bundles you own part of", function()

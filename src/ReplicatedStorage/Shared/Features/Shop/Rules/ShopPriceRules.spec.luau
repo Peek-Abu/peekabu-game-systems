@@ -78,6 +78,120 @@ return function()
 		expect(priced.price).to.equal(1500)
 	end)
 
+	describe("sales", function()
+		local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.ShopRotationUtils)
+		local NOON = 1792929600
+		local DAY = 86400
+
+		it("counts a sale only inside its window, and never one with no end", function()
+			expect(ShopPriceRules.saleAt({ price = 5, starts = 100, ends = 200 }, 150).price).to.equal(5)
+			expect(ShopPriceRules.saleAt({ price = 5, starts = 100, ends = 200 }, 150).ends).to.equal(200)
+			expect(ShopPriceRules.saleAt({ price = 5, starts = 100, ends = 200 }, 99)).to.equal(nil)
+			expect(ShopPriceRules.saleAt({ price = 5, starts = 100, ends = 200 }, 200)).to.equal(nil)
+			expect(ShopPriceRules.saleAt({ price = 5, ends = 200 }, 0).price).to.equal(5)
+			expect(ShopPriceRules.saleAt({ price = 5, starts = 100 }, 150)).to.equal(nil)
+			expect(ShopPriceRules.saleAt({ price = 5, ends = 200 }, nil)).to.equal(nil)
+			expect(ShopPriceRules.saleAt(nil, 150)).to.equal(nil)
+		end)
+
+		it("puts the Featured item and the first picks on the daily sale, never an employee or a bundle", function()
+			for day = 0, 30 do
+				local now = NOON + day * DAY
+				local live = ShopRotationUtils.live(ShopRegistry.all(), now)
+				local daily = ShopPriceRules.daily(now)
+				local count = 0
+				for id, ends in daily do
+					count += 1
+					expect(ends).to.equal(live.nextRotation)
+					local offer = ShopRegistry.get(id)
+					expect(#offer.items).to.equal(1)
+					expect(CosmeticRegistry.get(id).kind ~= "employee").to.equal(true)
+				end
+				expect(count <= ShopConstants.DAILY_SALE.picks + 1).to.equal(true)
+				for index = 1, math.min(ShopConstants.DAILY_SALE.picks, #live.picks) do
+					local pick = live.picks[index]
+					if #pick.items == 1 then
+						expect(daily[pick.id]).to.equal(live.nextRotation)
+					end
+				end
+			end
+		end)
+
+		it(
+			"sells a daily-sale item at its percent off with the regular price crossed out, until the shop changes",
+			function()
+				local now = NOON
+				local daily = ShopPriceRules.daily(now)
+				local id = next(daily)
+				expect(id).to.be.ok()
+				local offer = ShopRegistry.get(id)
+				local priced = ShopPriceRules.forPlayer(offer, owner(), now)
+				expect(priced.price).to.equal(up(offer.price * (100 - ShopConstants.DAILY_SALE.percent) / 100))
+				expect(priced.was).to.equal(offer.price)
+				expect(priced.saleEnds).to.equal(daily[id])
+				-- Without a time, nothing is on sale.
+				local plain = ShopPriceRules.forPlayer(offer, owner())
+				expect(plain.price).to.equal(offer.price)
+				expect(plain.was).to.equal(nil)
+				expect(plain.saleEnds).to.equal(nil)
+			end
+		)
+
+		it("never gives a bundle the daily percent on top of its own discount", function()
+			for day = 0, 30 do
+				local now = NOON + day * DAY
+				for _, offer in ShopRegistry.all() do
+					if #offer.items > 1 then
+						expect(ShopPriceRules.forPlayer(offer, owner(), now).price).to.equal(offer.price)
+					end
+				end
+			end
+		end)
+
+		it("lets an owned item on sale take off only its regular share of a bundle", function()
+			local checked = 0
+			for day = 0, 60 do
+				local now = NOON + day * DAY
+				local daily = ShopPriceRules.daily(now)
+				for _, offer in ShopRegistry.all() do
+					if #offer.items > 1 then
+						for _, id in offer.items do
+							if daily[id] ~= nil then
+								checked += 1
+								local all, missing, alone = 0, 0, 0
+								for _, other in offer.items do
+									all += regular(other)
+									if other ~= id then
+										missing += regular(other)
+										local item = ShopPriceRules.forPlayer(ShopRegistry.get(other), owner(), now)
+										alone += item.price
+									end
+								end
+								local priced = ShopPriceRules.forPlayer(offer, owner({ id }), now)
+								expect(priced.price).to.equal(
+									math.max(1, math.min(up(offer.price * missing / all), alone))
+								)
+							end
+						end
+					end
+				end
+			end
+			expect(checked > 0).to.equal(true)
+		end)
+	end)
+
+	it("prices every bundle 30% off its items alone, rounded down to 10", function()
+		for _, offer in ShopRegistry.all() do
+			if #offer.items > 1 then
+				local alone = 0
+				for _, id in offer.items do
+					alone += regular(id)
+				end
+				expect(offer.price).to.equal(math.floor(alone * 0.7 / 10) * 10)
+			end
+		end
+	end)
+
 	it("prices from the registered offer, so pricing twice changes nothing", function()
 		for _, offer in ShopRegistry.all() do
 			if #offer.items > 1 then

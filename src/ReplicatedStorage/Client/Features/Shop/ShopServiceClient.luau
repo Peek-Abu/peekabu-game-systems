@@ -89,7 +89,8 @@ export type ShopServiceClient = {
 	live: (self: ShopServiceClient) -> ShopTypes.LiveShop,
 	offer: (self: ShopServiceClient, id: string) -> ShopTypes.Offer?,
 	-- `gleam`: the most Gleam the player said yes to paying for the rest of a Credits price they are short for.
-	requestBuy: (self: ShopServiceClient, id: string, gleam: number?) -> (),
+	-- `price`: the price the player saw; the server never charges more.
+	requestBuy: (self: ShopServiceClient, id: string, gleam: number?, price: number?) -> (),
 }
 
 local ShopServiceClient: ShopServiceClient = {
@@ -137,11 +138,11 @@ local ShopServiceClient: ShopServiceClient = {
 		return ShopRegistry.get(id)
 	end,
 
-	requestBuy = function(_self, id, gleam)
+	requestBuy = function(_self, id, gleam, price)
 		if ShopRegistry.get(id) == nil then
 			return
 		end
-		ShopEvents.packets.BuyRequest.send(ShopRequestRules.buildBuy(id, gleam))
+		ShopEvents.packets.BuyRequest.send(ShopRequestRules.buildBuy(id, gleam, price))
 	end,
 }
 

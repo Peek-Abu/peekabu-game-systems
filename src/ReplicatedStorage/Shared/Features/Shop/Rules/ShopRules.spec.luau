@@ -17,7 +17,7 @@ return function()
 	end
 
 	it("allows a buy you can afford of something you don't own", function()
-		local ok, reason = ShopRules.check(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), 1500, NOON)
+		local ok, reason = ShopRules.check(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), 1200, NOON)
 		expect(ok).to.equal(true)
 		expect(reason).to.equal(nil)
 	end)
@@ -26,7 +26,7 @@ return function()
 		local bubble = ShopRegistry.get("Pippa.BubbleBuddy")
 		local _, owned = ShopRules.check(bubble, owner({ "Pippa.BubbleBuddy" }), 9999, NOON)
 		expect(owned).to.equal("owned")
-		local _, short = ShopRules.check(bubble, owner(), 1499, NOON)
+		local _, short = ShopRules.check(bubble, owner(), 1199, NOON)
 		expect(short).to.equal("short")
 		local event = {
 			id = "E",
@@ -41,7 +41,7 @@ return function()
 	end)
 
 	it("still sells a bundle when only a bundled extra is owned", function()
-		local ok = ShopRules.check(ShopRegistry.get("Pippa.BubbleBuddy"), owner({ "Pippa.Bubbles" }), 1500, NOON)
+		local ok = ShopRules.check(ShopRegistry.get("Pippa.BubbleBuddy"), owner({ "Pippa.Bubbles" }), 1200, NOON)
 		expect(ok).to.equal(true)
 	end)
 
