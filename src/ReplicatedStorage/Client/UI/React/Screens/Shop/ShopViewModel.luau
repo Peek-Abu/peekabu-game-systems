@@ -14,6 +14,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local CosmeticBundleRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
@@ -150,6 +151,27 @@ local function main(offer: Offer): CosmeticTypes.Item?
 	return CosmeticRegistry.get(offer.items[1])
 end
 
+-- The bundle an offer sells (nil for a single item's offer).
+local function bundleOf(offer: Offer): CosmeticTypes.Bundle?
+	return CosmeticBundleRegistry.get(offer.id)
+end
+
+-- Whose a bundle is: the one employee all its items belong to, else nil (a bundle can mix employees).
+local function bundleEmployee(bundle: CosmeticTypes.Bundle): string?
+	local who: string? = nil
+	for _, id in bundle.items do
+		local item = CosmeticRegistry.get(id)
+		local employee = if item ~= nil then item.employee else nil
+		if employee ~= nil then
+			if who ~= nil and who ~= employee then
+				return nil
+			end
+			who = employee
+		end
+	end
+	return who
+end
+
 local function balanceOf(offer: Offer, balances: Balances): number
 	return if offer.currency == "gleam" then balances.gleam else balances.credits
 end
@@ -174,12 +196,18 @@ function VM.card(offer: Offer, owns: Owns, balances: Balances): OfferCard
 		then "Pippa"
 		elseif item.kind == "employee" then item.id
 		else item.employee or "Pippa"
+	-- A bundle's card is the bundle's (its name and rarity), drawn with its first item (the hero).
+	local bundle = bundleOf(offer)
+	local bundleWho = if bundle ~= nil then bundleEmployee(bundle) else nil
 	return {
 		id = offer.id,
-		name = if item ~= nil then item.name else offer.id,
-		line = if item ~= nil then lineOf(item) else "",
+		name = if bundle ~= nil then bundle.name elseif item ~= nil then item.name else offer.id,
+		line = if bundle ~= nil
+			then (if bundleWho ~= nil then `Bundle · {bundleWho}` else "Bundle")
+			elseif item ~= nil then lineOf(item)
+			else "",
 		kind = if item ~= nil then item.kind else "skin",
-		rarity = if item ~= nil then item.rarity else "default",
+		rarity = if bundle ~= nil then bundle.rarity elseif item ~= nil then item.rarity else "default",
 		currency = offer.currency,
 		price = ToonStyleViewModel.grouped(offer.price),
 		state = state,
@@ -321,29 +349,28 @@ end
 function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 	local item = main(offer)
 	local card = VM.card(offer, owns, balances)
+	-- What it grants: the item, or every item of the bundle (the hero first, the rest with their own price alone).
 	local inside: { Inside } = {}
-	local bundle = if item ~= nil then item.bundle else nil
-	if item ~= nil then
-		table.insert(inside, { id = item.id, name = item.name, kind = KIND_WORD[item.kind] })
-		if bundle ~= nil then
-			for _, id in bundle do
-				local extra = CosmeticRegistry.get(id)
-				if extra ~= nil then
-					table.insert(inside, {
-						id = extra.id,
-						name = extra.name,
-						kind = KIND_WORD[extra.kind],
-						alone = if extra.price ~= nil then `alone {ToonStyleViewModel.grouped(extra.price)}` else nil,
-					})
-				end
-			end
+	local bundle = bundleOf(offer)
+	for index, id in offer.items do
+		local part = CosmeticRegistry.get(id)
+		if part ~= nil then
+			local price = part.price
+			table.insert(inside, {
+				id = part.id,
+				name = part.name,
+				kind = KIND_WORD[part.kind],
+				alone = if index > 1 and price ~= nil then `alone {ToonStyleViewModel.grouped(price)}` else nil,
+			})
 		end
 	end
-	local who = if item ~= nil and item.employee ~= nil
-		then ` for {item.employee}`
+	local bundleWho = if bundle ~= nil then bundleEmployee(bundle) else nil
+	local who = if bundle ~= nil
+		then (if bundleWho ~= nil then ` for {bundleWho}` else "")
+		elseif item ~= nil and item.employee ~= nil then ` for {item.employee}`
 		elseif item ~= nil and item.kind == "vacuum" then " for every employee"
 		else ""
-	local what = if bundle ~= nil and #bundle > 0
+	local what = if bundle ~= nil
 		then `Bundle{who}`
 		elseif item ~= nil and item.kind == "employee" then "A new employee"
 		elseif item ~= nil then `{KIND_WORD[item.kind]}{who}`
@@ -359,8 +386,8 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 		card = card,
 		rarityText = if card.rarity == "default" then "CLASSIC" else string.upper(card.rarity),
 		line = if item ~= nil and item.kind == "employee" then what else `{what} · cosmetic only`,
-		lore = if item ~= nil then item.lore else "",
-		quote = item ~= nil and item.quote == true,
+		lore = if bundle ~= nil then bundle.lore elseif item ~= nil then item.lore else "",
+		quote = bundle == nil and item ~= nil and item.quote == true,
 		styles = {
 			visible = #chips > 0,
 			count = #chips,

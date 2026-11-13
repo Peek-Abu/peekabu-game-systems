@@ -7,7 +7,7 @@
 	  to the buyer's `deals` account slice, plus the deal's Gleam, in the SAME save that records the receipt.
 	- **Choosing.** The client's chooser sends DealEvents.Choose; DealRules.canChoose checks a pick waits and the
 	  choice is offered (only what the player does not own; Pick a Legendary only for employees they have hired). ONE
-	  transaction spends the pick and grants the choice with its bundle (CosmeticServiceServer:grantOps), then the
+	  transaction spends the pick and grants the choice (CosmeticServiceServer:grantOps), then the
 	  reveal plays (CosmeticServiceServer:announce, source "shop").
 	- **Buy once.** The shop hides a bought deal (DealRules.offered). A second receipt that slips through still adds a
 	  pick, so a purchase is never lost.

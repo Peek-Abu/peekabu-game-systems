@@ -31,8 +31,14 @@ return function()
 		expect(view.name).to.equal("Bubble Buddy")
 		expect(view.employee).to.equal("Pippa")
 		expect(view.skinKey).to.equal("BubbleBuddy")
-		expect(#view.alsoGot).to.equal(2)
-		expect(view.alsoGot[1].kind).to.equal("Emote")
+		-- A skin alone brings nothing else (owner, 2026-11-13).
+		expect(#view.alsoGot).to.equal(0)
+		-- A bundle's grant lists every item: the hero first, the rest came with it.
+		local bundle = VM.view({ ids = { "Pippa.BubbleBuddy", "Pippa.Bubbles", "BubblePack" }, source = "shop" })
+		expect(bundle.name).to.equal("Bubble Buddy")
+		expect(#bundle.alsoGot).to.equal(2)
+		expect(bundle.alsoGot[1].kind).to.equal("Emote")
+		expect(bundle.alsoGot[2].id).to.equal("BubblePack")
 	end)
 
 	it("lets you pick which colour style to wear for a new skin that has styles", function()

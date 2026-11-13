@@ -71,6 +71,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.CurrencySet"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleAward"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.CosmeticGrant"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.CosmeticBundleGrant"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.CosmeticEquip"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleRevoke"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleEquip"] = "Cmdr command definition (server impl is specced)",

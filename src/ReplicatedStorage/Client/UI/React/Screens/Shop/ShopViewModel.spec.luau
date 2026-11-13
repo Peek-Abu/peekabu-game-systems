@@ -113,13 +113,21 @@ return function()
 
 	describe("product", function()
 		it("lists what is inside with each extra's own price", function()
-			local view = VM.product(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), rich)
+			local view = VM.product(ShopRegistry.get("Bundle.BubbleBuddy"), owner(), rich)
 			expect(view.line).to.equal("Bundle for Pippa · cosmetic only")
+			expect(view.card.name).to.equal("Bubble Buddy Bundle")
+			expect(view.card.line).to.equal("Bundle · Pippa")
+			expect(view.card.rarity).to.equal("legendary")
 			expect(#view.inside).to.equal(3)
 			expect(view.inside[1].name).to.equal("Bubble Buddy")
 			expect(view.inside[2].alone).to.equal("alone 400")
+			-- The skin alone is just the skin (owner, 2026-11-13).
+			local alone = VM.product(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), rich)
+			expect(alone.line).to.equal("Skin for Pippa · cosmetic only")
+			expect(#alone.inside).to.equal(1)
+			expect(alone.card.name).to.equal("Bubble Buddy")
 			expect(view.styles.visible).to.equal(true)
-			-- Every style is a chip that swaps the preview; the line no longer says the art is coming.
+			-- Every style is a chip that swaps the preview (the bundle's hero skin's styles).
 			expect(#view.styles.chips).to.equal(3)
 			expect(view.styles.chips[1].name).to.equal("Blue")
 			expect(string.find(string.lower(view.styles.text), "coming", 1, true)).never.to.be.ok()

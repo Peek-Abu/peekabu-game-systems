@@ -83,9 +83,8 @@ return function()
 		expect(item.name).to.equal("Showstopper")
 		expect(item.rarity).to.equal("epic")
 		expect(item.source).to.equal("gloomLocker")
-		-- A Locker prize: it has no shop price and comes with nothing else.
+		-- A Locker prize: it has no shop price.
 		expect(item.price).never.to.be.ok()
-		expect(item.bundle).never.to.be.ok()
 		expect(#item.lore > 0).to.equal(true)
 	end)
 
@@ -106,9 +105,8 @@ return function()
 		expect(item.name).to.equal("Bell Jester")
 		expect(item.rarity).to.equal("epic")
 		expect(item.source).to.equal("gloomLocker")
-		-- A Locker prize: it has no shop price and comes with nothing else.
+		-- A Locker prize: it has no shop price.
 		expect(item.price).never.to.be.ok()
-		expect(item.bundle).never.to.be.ok()
 		expect(#item.lore > 0).to.equal(true)
 	end)
 
@@ -120,9 +118,8 @@ return function()
 		expect(item.name).to.equal("Backstage")
 		expect(item.rarity).to.equal("epic")
 		expect(item.source).to.equal("gloomLocker")
-		-- A Locker prize: it has no shop price and comes with nothing else.
+		-- A Locker prize: it has no shop price.
 		expect(item.price).never.to.be.ok()
-		expect(item.bundle).never.to.be.ok()
 		expect(#item.lore > 0).to.equal(true)
 	end)
 
@@ -130,10 +127,6 @@ return function()
 		for _, item in all do
 			if item.employee ~= nil then
 				expect(CosmeticRegistry.get(item.employee).kind).to.equal("employee")
-			end
-			for _, part in item.bundle or {} do
-				expect(CosmeticRegistry.has(part)).to.equal(true)
-				expect(CosmeticRegistry.get(part).kind).never.to.equal("sticker")
 			end
 			if item.kind == "sticker" then
 				expect(CosmeticRegistry.get(item.pack).kind).to.equal("stickerPack")
@@ -205,10 +198,10 @@ return function()
 			table.sort(found)
 			expect(table.concat(found, ",")).to.equal(table.concat(ids, ","))
 		end
-		expect(table.find(CosmeticRegistry.get("Pippa.BubbleBuddy").bundle, "BubblePack")).to.be.ok()
-		expect(table.find(CosmeticRegistry.get("Prickles.Sheriff").bundle, "SheriffPack")).to.be.ok()
-		expect(table.find(CosmeticRegistry.get("Cappy.PJ").bundle, "CozyPack")).to.be.ok()
-		-- PJ Cappy's bundle: his cocoa emote and the pack (the owner cut its idle).
-		expect(table.concat(CosmeticRegistry.get("Cappy.PJ").bundle, ",")).to.equal("Cappy.CocoaSip,CozyPack")
+		-- Each pack is also sold alone (owner, 2026-11-13: items are bought on their own; bundles group them).
+		for pack in picks do
+			expect(CosmeticRegistry.get(pack).source).to.equal("gleam")
+			expect(CosmeticRegistry.get(pack).price > 0).to.equal(true)
+		end
 	end)
 end

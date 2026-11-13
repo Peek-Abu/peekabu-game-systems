@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cosmetic = ReplicatedStorage.Shared.Features.Cosmetic
 local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
+local CosmeticBundleRegistry = require(Cosmetic.Data.CosmeticBundleRegistry)
 local CosmeticRules = require(Cosmetic.Rules.CosmeticRules)
 local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
@@ -76,7 +77,12 @@ export type ItemCard = {
 	dim: boolean,
 	new: boolean,
 	band: Band?,
+	-- A vacuum skin (its card shows the vacuum alone; the hero shows you wearing it, from behind).
+	vacuum: boolean,
 }
+
+-- A row of cards on a page tab, with its heading (nil = none).
+export type Section = { title: string?, cards: { ItemCard } }
 
 -- One colour style's chip: a short name and its colours (the fur, then the outfit).
 export type StyleChip = { name: string, swatch: { Color3 } }
@@ -96,6 +102,7 @@ export type Detail = {
 	-- Chips preview the style on the hero (never equip: Wear does). `selected` is the style shown: the previewed one,
 	-- else the worn one, else 1.
 	styles: { visible: boolean, count: number, enabled: boolean, selected: number, chips: { StyleChip } },
+	-- The other items of the bundle it is in ("In a bundle with"); empty when it is in none.
 	comesWith: { Bundled },
 	action: Action,
 	-- Emotes: the employee's 4 wheel slots, the free slot "Add to wheel" uses (nil = none free), and whether its clip
@@ -124,8 +131,9 @@ export type WheelSlot = { slot: number, id: string?, name: string, empty: boolea
 -- One stat's row, in the shape ToonStatRows draws (its render, its name, its short line, its 1-5 value).
 export type StatRow = ToonStatRows.ToonStatRow
 export type Tab = { id: string, text: string, soon: boolean, icon: UIAssets.ToonIcon? }
--- "vacuums" is the Inventory's Vacuums tab (the same panel, for the vacuum every employee wears).
-export type PageTab = "skins" | "emotes" | "idles" | "about" | "vacuums"
+-- An employee page's tabs. Vacuum skins are skins: they sit in a row of their own on the Skins tab (owner,
+-- 2026-11-13; the old Vacuums tab is gone).
+export type PageTab = "skins" | "emotes" | "idles" | "about"
 -- The kinds a page lists.
 export type ListKind = "skin" | "emote" | "idle" | "vacuum"
 
@@ -358,9 +366,28 @@ function VM.items(kind: ListKind, employee: string, loadout: Loadout, owns: Owns
 			dim = not owned,
 			new = isNew(item, owned, loadout),
 			band = band,
+			vacuum = item.kind == "vacuum",
 		})
 	end
 	return cards
+end
+
+--[=[
+	A page tab's rows: Skins is the employee's skins, then a row of the vacuum skins (one vacuum for the whole crew);
+	Emotes and Idles one row each; About none.
+]=]
+function VM.sections(tab: PageTab, employee: string, loadout: Loadout, owns: Owns): { Section }
+	if tab == "skins" then
+		return {
+			{ title = nil, cards = VM.items("skin", employee, loadout, owns) },
+			{ title = "Vacuum skins: one for the whole crew", cards = VM.items("vacuum", employee, loadout, owns) },
+		}
+	elseif tab == "emotes" then
+		return { { title = nil, cards = VM.items("emote", employee, loadout, owns) } }
+	elseif tab == "idles" then
+		return { { title = nil, cards = VM.items("idle", employee, loadout, owns) } }
+	end
+	return {}
 end
 
 --[=[
@@ -376,11 +403,12 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?, styl
 	elseif item.kind == "vacuum" then
 		worn = CosmeticRules.vacuumFor(loadout, owns) == item.id
 	end
+	-- The other items of the first bundle it is in (CosmeticBundleRegistry); the item itself is never one.
 	local comesWith: { Bundled } = {}
-	local bundle = item.bundle
+	local bundle = CosmeticBundleRegistry.containing(item.id)[1]
 	if bundle ~= nil then
-		for _, id in bundle do
-			local other = CosmeticRegistry.get(id)
+		for _, id in bundle.items do
+			local other = if id ~= item.id then CosmeticRegistry.get(id) else nil
 			if other ~= nil then
 				table.insert(
 					comesWith,
@@ -559,8 +587,6 @@ function VM.pageTab(value: string): PageTab
 		return "idles"
 	elseif value == "about" then
 		return "about"
-	elseif value == "vacuums" then
-		return "vacuums"
 	elseif value == "emotes" then
 		return "emotes"
 	end
@@ -570,7 +596,6 @@ end
 function VM.tabs(): { Tab }
 	return {
 		{ id = "crew", text = "Crew", soon = false, icon = "pippaHappy" },
-		{ id = "vacuums", text = "Vacuums", soon = false, icon = "vacuum" },
 		{ id = "wheel", text = "Chat wheel", soon = false, icon = "shopGift" },
 	}
 end

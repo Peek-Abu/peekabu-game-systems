@@ -44,7 +44,7 @@ local e = React.createElement
 local COLOR = UIToonConstants.COLOR
 local DEPTH = UIToonConstants.DEPTH
 local CARD_RADIUS = 18
--- The Vacuums tab shows your employee from behind (a little round, so the face still shows): the pack is on the back.
+-- A vacuum skin's hero shows your employee from behind (a little round, so the face still shows): the pack is on the back.
 local BACK_TURN = 150
 
 export type InventoryCharacterPanelProps = {
@@ -127,8 +127,8 @@ local function itemCard(
 		gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(shade.hi, shade.base) }),
 		art = e(ToonViewport, {
 			-- A vacuum card shows the vacuum on its own; a skin or idle card shows the employee.
-			employee = if props.tab == "vacuums" then nil else props.employee,
-			vacuum = if props.tab == "vacuums" then VM.skinKey(entry.id) else nil,
+			employee = if entry.vacuum then nil else props.employee,
+			vacuum = if entry.vacuum then VM.skinKey(entry.id) else nil,
 			skin = skinKey,
 			framing = "full",
 			dim = entry.dim,
@@ -264,11 +264,12 @@ local function itemCard(
 	}, nodes)
 end
 
-local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard }, selected: string): React.ReactNode
+-- The page's rows of cards, each under its heading (if any), in one scrolling column.
+local function grid(props: InventoryCharacterPanelProps, sections: { VM.Section }, selected: string): React.ReactNode
 	local nodes: Nodes = {
-		layout = e("UIGridLayout", {
-			CellSize = UDim2.fromOffset(props.layout.cell.X, props.layout.cell.Y + DEPTH.drop + 8),
-			CellPadding = UDim2.fromOffset(props.layout.gap, props.layout.gap),
+		layout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Vertical,
+			Padding = UDim.new(0, props.layout.gap),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 		-- Room for what sticks out past a card (the tilted flags, the selected ring), which the list would cut.
@@ -281,10 +282,44 @@ local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard },
 	}
 	local look = props.loadout.looks[props.employee]
 	local wornSkin = if look ~= nil then look.skin else CosmeticRegistry.defaultOf(props.employee, "skin").id
-	for index, entry in cards do
-		local item = CosmeticRegistry.get(entry.id)
-		local skinKey = if item ~= nil and item.kind == "skin" then VM.skinKey(entry.id) else VM.skinKey(wornSkin)
-		nodes[entry.id] = itemCard(props, entry, skinKey, entry.id == selected, index)
+	local headingSize = if props.layout.phone then 13 else 20
+	local order = 0
+	for sectionIndex, section in sections do
+		local title = section.title
+		if title ~= nil then
+			order += 1
+			nodes[`heading{sectionIndex}`] = e("Frame", {
+				Size = UDim2.new(1, 0, 0, headingSize + 10),
+				BackgroundTransparency = 1,
+				LayoutOrder = order,
+			}, {
+				text = e(ToonText, {
+					text = string.upper(title),
+					textSize = headingSize,
+					meaning = "grape",
+					size = UDim2.fromScale(1, 1),
+				}),
+			})
+		end
+		local cards: Nodes = {
+			layout = e("UIGridLayout", {
+				CellSize = UDim2.fromOffset(props.layout.cell.X, props.layout.cell.Y + DEPTH.drop + 8),
+				CellPadding = UDim2.fromOffset(props.layout.gap, props.layout.gap),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+		}
+		for index, entry in section.cards do
+			local item = CosmeticRegistry.get(entry.id)
+			local skinKey = if item ~= nil and item.kind == "skin" then VM.skinKey(entry.id) else VM.skinKey(wornSkin)
+			cards[entry.id] = itemCard(props, entry, skinKey, entry.id == selected, index)
+		end
+		order += 1
+		nodes[`section{sectionIndex}`] = e("Frame", {
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			LayoutOrder = order,
+		}, cards)
 	end
 	return e("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),
@@ -298,7 +333,7 @@ local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard },
 	}, nodes)
 end
 
--- The hero: the item live on a 3D platform in the rarity's colour. On the Vacuums tab: you (your employee as you
+-- The hero: the item live on a 3D platform in the rarity's colour. For a vacuum skin: you (your employee as you
 -- are now, rank lanyard and all) wearing the selected vacuum, from behind.
 local function hero(
 	props: InventoryCharacterPanelProps,
@@ -333,7 +368,7 @@ local function hero(
 	})
 end
 
--- A "Comes with" tile: the bundled item on a small stage, its kind and name under it.
+-- An "In a bundle with" tile: a bundle mate on a small stage, its kind and name under it.
 local function bundledTile(
 	props: InventoryCharacterPanelProps,
 	item: VM.Bundled,
@@ -618,10 +653,10 @@ local function detail(
 			6,
 			group({
 				label = e(ToonText, {
-					text = "COMES WITH",
+					text = "IN A BUNDLE WITH",
 					textSize = size,
 					meaning = "grape",
-					size = UDim2.fromOffset(size * 8, size + 6),
+					size = UDim2.fromOffset(size * 12, size + 6),
 				}),
 				row = e("Frame", {
 					Position = UDim2.fromOffset(0, size + 12),
@@ -862,15 +897,22 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 	if props.tab == "about" then
 		left, right = about(props)
 	else
-		local kind: VM.ListKind = if props.tab == "skins"
-			then "skin"
-			elseif props.tab == "vacuums" then "vacuum"
-			elseif props.tab == "emotes" then "emote"
-			else "idle"
-		local cards = VM.items(kind, props.employee, props.loadout, props.owns)
+		local sections = VM.sections(props.tab, props.employee, props.loadout, props.owns)
+		-- The kinds on this tab (Skins holds the vacuum skins too); the first row's kind opens selected.
+		local kinds: { [string]: boolean } = {}
+		for _, section in sections do
+			for _, entry in section.cards do
+				local item = CosmeticRegistry.get(entry.id)
+				if item ~= nil then
+					kinds[item.kind] = true
+				end
+			end
+		end
+		local first = sections[1]
+		local cards: { VM.ItemCard } = if first ~= nil then first.cards else {}
 		local selectedId = props.selected
 		local selectedItem = if selectedId ~= nil then CosmeticRegistry.get(selectedId) else nil
-		if selectedItem == nil or selectedItem.kind ~= kind then
+		if selectedItem == nil or kinds[selectedItem.kind] ~= true then
 			selectedItem = nil
 			for _, entry in cards do
 				if entry.worn then
@@ -891,7 +933,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 				if picked.id == item.id then picked.style else nil
 			)
 			heroStyle = view.styles.selected
-			left = grid(props, cards, item.id)
+			left = grid(props, sections, item.id)
 			-- A chip only previews the style; Wear (enabled for another style of a worn skin) puts it on.
 			right = detail(props, view, item, heroStyle, function(index: number)
 				setPicked({ id = item.id, style = index })

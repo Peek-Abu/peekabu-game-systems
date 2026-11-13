@@ -6,7 +6,7 @@
 
 	- `open`: checks not in a shift, cooldown (1 open/s), profile loaded, pool non-empty, PolicyService restriction for
 	  paid random Lockers, and key or currency balance. Rolls with the server's Random (pity forces Epic+ at `pityAt`),
-	  then commits key/currency spend + duplicate refund + item/bundle grant + pity update in ONE transaction.
+	  then commits key/currency spend + duplicate refund + item grant + pity update in ONE transaction.
 	- `buyDirect`: for players restricted from paid random items (`PolicyServiceServer:paidRandomItemsRestricted`),
 	  sells a paid Locker's item directly at `LockerRules.directPrice(item)` in one transaction and announces the
 	  reveal.

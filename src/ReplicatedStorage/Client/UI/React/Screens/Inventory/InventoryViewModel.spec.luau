@@ -329,8 +329,28 @@ return function()
 			)
 		end)
 
-		it("reads the Vacuums page tab", function()
-			expect(VM.pageTab("vacuums")).to.equal("vacuums")
+		it("opens Skins for the old Vacuums tab: vacuum skins are skins (owner, 2026-11-13)", function()
+			expect(VM.pageTab("vacuums")).to.equal("skins")
+		end)
+
+		it("marks vacuum cards, and lists them in their own row under the employee's skins", function()
+			local sections = VM.sections("skins", "Cappy", loadout(), owner())
+			expect(#sections).to.equal(2)
+			expect(sections[1].title).to.equal(nil)
+			for _, card in sections[1].cards do
+				expect(CosmeticRegistry.get(card.id).kind).to.equal("skin")
+				expect(card.vacuum).to.equal(false)
+			end
+			expect(sections[2].title).to.equal("Vacuum skins: one for the whole crew")
+			expect(#sections[2].cards).to.equal(#CosmeticRegistry.ofKind("vacuum"))
+			for _, card in sections[2].cards do
+				expect(card.vacuum).to.equal(true)
+			end
+			-- Every other tab is one untitled row of its own kind.
+			local emotes = VM.sections("emotes", "Cappy", loadout(), owner())
+			expect(#emotes).to.equal(1)
+			expect(CosmeticRegistry.get(emotes[1].cards[1].id).kind).to.equal("emote")
+			expect(#VM.sections("about", "Cappy", loadout(), owner())).to.equal(0)
 		end)
 	end)
 
@@ -418,12 +438,16 @@ return function()
 			expect(theirs.styles.selected).to.equal(1)
 		end)
 
-		it("names the bundle's items under Comes with", function()
+		it("names the other items of its bundle under In a bundle with", function()
 			local bubble = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
 			expect(#bubble.comesWith).to.equal(2)
 			expect(bubble.comesWith[1].name).to.equal("Bubble Ride")
 			expect(bubble.comesWith[1].kind).to.equal("emote")
 			expect(bubble.comesWith[2].kind).to.equal("stickerPack")
+			-- The emote's bundle mates: the skin and the pack, never itself.
+			local emote = VM.detail(CosmeticRegistry.get("Pippa.Bubbles"), loadout(), owner())
+			expect(#emote.comesWith).to.equal(2)
+			expect(emote.comesWith[1].id).to.equal("Pippa.BubbleBuddy")
 			expect(#VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).comesWith).to.equal(0)
 		end)
 
@@ -504,13 +528,12 @@ return function()
 	end)
 
 	describe("tabs", function()
-		it("has Crew, Vacuums and the Chat wheel", function()
+		it("has Crew and the Chat wheel (vacuum skins sit in each employee's Skins tab)", function()
 			local tabs = VM.tabs()
-			expect(#tabs).to.equal(3)
+			expect(#tabs).to.equal(2)
 			expect(tabs[1].id).to.equal("crew")
-			expect(tabs[2].id).to.equal("vacuums")
-			expect(tabs[3].id).to.equal("wheel")
-			expect(tabs[3].soon).to.equal(false)
+			expect(tabs[2].id).to.equal("wheel")
+			expect(tabs[2].soon).to.equal(false)
 		end)
 
 		it("reads a page tab back from a string, Skins for anything unknown", function()

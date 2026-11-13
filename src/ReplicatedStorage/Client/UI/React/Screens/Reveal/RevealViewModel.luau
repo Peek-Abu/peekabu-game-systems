@@ -143,14 +143,12 @@ function VM.view(reveal: Reveal): View
 				else nil,
 		}
 	end
+	-- What came with it: the grant's other items (a bundle announces every item it granted, the hero first).
 	local alsoGot: { { id: string, name: string, kind: string } } = {}
-	local bundle = item.bundle
-	if bundle ~= nil then
-		for _, id in bundle do
-			local extra = CosmeticRegistry.get(id)
-			if extra ~= nil then
-				table.insert(alsoGot, { id = extra.id, name = extra.name, kind = KIND_WORD[extra.kind] })
-			end
+	for index = 2, #reveal.ids do
+		local extra = CosmeticRegistry.get(reveal.ids[index])
+		if extra ~= nil then
+			table.insert(alsoGot, { id = extra.id, name = extra.name, kind = KIND_WORD[extra.kind] })
 		end
 	end
 	local word = string.lower(KIND_WORD[item.kind])

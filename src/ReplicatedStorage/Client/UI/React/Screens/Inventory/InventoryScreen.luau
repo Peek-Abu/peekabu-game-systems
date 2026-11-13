@@ -2,13 +2,11 @@
 --[=[
 	InventoryScreen: the hub's Inventory (the INVENTORY tile). Full screen on a ToonBackdrop (night over the blurred
 	depot on the Crew tab; the employee's colour with rays behind the hero on their page) under a ToonMenuBar:
-	- Crew tab: the locker render on the title plate, tabs Crew / Vacuums / Chat wheel ("Soon"), then
-	  InventoryCrewPanel.
+	- Crew tab: the locker render on the title plate, tabs Crew / Chat wheel, then InventoryCrewPanel.
 	- Chat wheel tab: InventoryChatPanel (the 4 sticker slots, the pings, every sticker pack).
-	- Vacuums tab: the same bar, then InventoryCharacterPanel on its "vacuums" tab: every vacuum, your employee
-	  wearing the selected one (seen from behind), its lore and Wear. One vacuum for the whole crew.
 	- An employee's page: a back button, the employee's head breaking their name plate, tabs Skins / Idles / About,
-	  then InventoryCharacterPanel.
+	  then InventoryCharacterPanel. Skins also holds the vacuum skins in their own row (one vacuum for the whole crew;
+	  owner, 2026-11-13: vacuum skins are skins, no Vacuums tab).
 	Both wallets (Credits and Gleam) and the close sit on the right.
 
 	It reads the synced loadout, entitlements, Credits and Gleam (StateSyncClientStore) and sends only requests (Equip
@@ -66,8 +64,7 @@ export type InventoryScreenProps = {
 	onShop: ((id: string) -> ())?,
 }
 
-local PAGE_TAB_TEXT: { [VM.PageTab]: string } =
-	{ skins = "Skins", emotes = "Emotes", idles = "Idles", about = "About", vacuums = "Vacuums" }
+local PAGE_TAB_TEXT: { [VM.PageTab]: string } = { skins = "Skins", emotes = "Emotes", idles = "Idles", about = "About" }
 
 local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 	local liveViewport = usePaperViewport()
@@ -83,10 +80,8 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 	local tab, setTab = React.useState(props.tab or "skins")
 	local noOpen: number? = nil
 	local openedAt, setOpenedAt = React.useState(noOpen)
-	-- The top-level tab while no employee's page is open: "crew" or "vacuums".
-	local area, setArea = React.useState(
-		if props.employee == nil and (props.tab == "vacuums" or props.tab == "wheel") then props.tab else "crew"
-	)
+	-- The top-level tab while no employee's page is open: "crew" or "wheel".
+	local area, setArea = React.useState(if props.employee == nil and props.tab == "wheel" then props.tab else "crew")
 	local selected, setSelected = React.useState(function(): string?
 		return props.item
 	end)
@@ -136,7 +131,7 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			tabs = tabs,
 			current = area,
 			onTab = function(id: string)
-				if id == "crew" or id == "vacuums" or id == "wheel" then
+				if id == "crew" or id == "wheel" then
 					setArea(id)
 					setSelected(nil)
 				end
@@ -164,35 +159,6 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			})
 			local sky = UIToonConstants.shade("sky")
 			backdrop = { top = sky.base, bottom = UIToonConstants.shade("grape").lo, blur = preview == nil }
-		elseif area == "vacuums" then
-			body = e(InventoryCharacterPanel, {
-				employee = CosmeticRules.currentEmployee(loadout, owns),
-				tab = "vacuums",
-				layout = layout,
-				loadout = loadout,
-				owns = owns,
-				selected = selected,
-				onSelect = function(id: string)
-					setSelected(id)
-				end,
-				onWear = equip,
-				onShop = function(id: string)
-					local onShop = props.onShop
-					if onShop ~= nil then
-						onShop(id)
-					end
-				end,
-				onSeen = seen,
-			})
-			local mint = UIToonConstants.shade("mint")
-			local heroX = (layout.content.x + layout.gridWidth + layout.gap + layout.heroWidth / 2)
-				/ math.max(1, virtual.X)
-			backdrop = {
-				top = mint.base,
-				bottom = mint.lo,
-				rays = { position = UDim2.fromScale(heroX, 0.5), size = 0.7, color = mint.hi, transparency = 0.4 },
-				blur = preview == nil,
-			}
 		else
 			body = e(InventoryCrewPanel, {
 				cards = VM.crew(loadout, owns),

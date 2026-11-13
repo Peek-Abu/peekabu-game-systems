@@ -8,8 +8,9 @@
 	- What the player wears is the account slice `loadout`, owned here, validated by CosmeticRules.validateLoadout,
 	  replicated to its owner.
 	- `equip` and `pick` are refused during a shift (Shift's phase is not "lobby"; owner: no changes in a shift),
-	  then checked by CosmeticRules. `grant` / `grantOps` unlock an item and everything in its bundle (a purchase
-	  passes the ops into its own transaction, so paying and unlocking are one write).
+	  then checked by CosmeticRules. `grant` / `grantOps` unlock one item (a purchase passes the ops into its own
+	  transaction, so paying and unlocking are one write); `grantBundle` unlocks every item of a CosmeticBundleRegistry
+	  bundle in one transaction.
 	- `changed` fires after every committed change or grant (step 2 rebuilds the character on it).
 
 	@class CosmeticServiceServer
@@ -27,6 +28,7 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local CosmeticConstants = require(Cosmetic.Data.CosmeticConstants)
 local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
+local CosmeticBundleRegistry = require(Cosmetic.Data.CosmeticBundleRegistry)
 local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
 local CosmeticEvents = require(Cosmetic.Net.CosmeticEvents)
 local CosmeticOutfitRules = require(Cosmetic.Rules.CosmeticOutfitRules)
@@ -80,31 +82,14 @@ local function isLocked(): boolean
 	return ShiftServiceServer:getShift().phase ~= "lobby"
 end
 
--- The item and its bundle, in order, without duplicates or stickers.
-local function grantList(id: string): { string }
+-- The item alone (owner, 2026-11-13: an item never brings others; a bundle is bought or granted as a bundle).
+local function grantOps(userId: number, id: string): { PlayerDataService.TransactionOperation }
 	local item = CosmeticRegistry.get(id)
 	assert(item ~= nil and item.kind ~= "sticker", `{id} is not a grantable cosmetic`)
-	local list = { id }
-	local bundle = item.bundle
-	if bundle ~= nil then
-		for _, part in bundle do
-			if table.find(list, part) == nil then
-				table.insert(list, part)
-			end
-		end
+	if item.source == "default" then
+		return {}
 	end
-	return list
-end
-
-local function grantOps(userId: number, id: string): { PlayerDataService.TransactionOperation }
-	local ops: { PlayerDataService.TransactionOperation } = {}
-	for _, part in grantList(id) do
-		local item = CosmeticRegistry.get(part)
-		if item ~= nil and item.source ~= "default" then
-			table.insert(ops, EntitlementServiceServer:grantOp(userId, item.kind, part))
-		end
-	end
-	return ops
+	return { EntitlementServiceServer:grantOp(userId, item.kind, id) }
 end
 
 local function equipImpl(userId: number, change: Change): (boolean, string?)
@@ -254,6 +239,7 @@ export type CosmeticServiceServer = {
 	pick: (self: CosmeticServiceServer, userId: number, employee: string) -> (boolean, string?),
 	markSeen: (self: CosmeticServiceServer, userId: number, ids: { string }) -> (boolean, string?),
 	grant: (self: CosmeticServiceServer, userId: number, id: string) -> (boolean, string?),
+	grantBundle: (self: CosmeticServiceServer, userId: number, bundleId: string) -> (boolean, string?),
 	grantOps: (self: CosmeticServiceServer, userId: number, id: string) -> { PlayerDataService.TransactionOperation },
 	getState: (self: CosmeticServiceServer) -> { [string]: any },
 	-- TEST SEAMS: the RequestHandler-wrapped handlers (payload, player), as TitleServiceServer exposes its own.
@@ -390,32 +376,61 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 	end,
 
 	--[=[
-		Unlocks a registered item and its bundle in one transaction. False "already owned" when nothing new was
-		unlocked. Throws for an unknown id or a sticker (programmer error: stickers come with their pack).
+		Unlocks a registered item, alone. False "already owned" when the player has it. Throws for an unknown id or a
+		sticker (programmer error: stickers come with their pack).
 	]=]
 	grant = function(_self, userId, id)
 		Guard.userId(userId)
-		local list = grantList(id)
+		local ops = grantOps(userId, id)
 		local owns = ownsFor(userId)
 		if owns == nil then
 			return false, "no profile loaded"
 		end
-		local fresh = false
-		for _, part in list do
-			if not owns(part) then
-				fresh = true
-			end
-		end
-		if not fresh then
+		if owns(id) then
 			return false, "already owned"
 		end
-		local ok, result = PlayerDataService:transaction(grantOps(userId, id))
+		local ok, result = PlayerDataService:transaction(ops)
 		if not ok then
 			return false, result.rejectionReason or "transaction failed"
 		end
 		log:audit(`userId={userId}`, "COSMETIC_GRANTED", id)
 		changed:Fire(userId)
 		announce(userId, { id }, "grant")
+		return true, nil
+	end,
+
+	--[=[
+		Unlocks every item of a bundle in one transaction (the ones already owned stay owned). False "unknown bundle"
+		for an id CosmeticBundleRegistry does not have, "already owned" when the player has every item.
+	]=]
+	grantBundle = function(_self, userId, bundleId)
+		Guard.userId(userId)
+		local bundle = CosmeticBundleRegistry.get(bundleId)
+		if bundle == nil then
+			return false, "unknown bundle"
+		end
+		local owns = ownsFor(userId)
+		if owns == nil then
+			return false, "no profile loaded"
+		end
+		local ops: { PlayerDataService.TransactionOperation } = {}
+		for _, id in bundle.items do
+			if not owns(id) then
+				for _, op in grantOps(userId, id) do
+					table.insert(ops, op)
+				end
+			end
+		end
+		if #ops == 0 then
+			return false, "already owned"
+		end
+		local ok, result = PlayerDataService:transaction(ops)
+		if not ok then
+			return false, result.rejectionReason or "transaction failed"
+		end
+		log:audit(`userId={userId}`, "COSMETIC_BUNDLE_GRANTED", bundleId)
+		changed:Fire(userId)
+		announce(userId, bundle.items, "grant")
 		return true, nil
 	end,
 

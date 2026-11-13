@@ -2,7 +2,7 @@
 return {
 	Name = "cosmeticgrant",
 	Aliases = {},
-	Description = "Unlocks a cosmetic (employee, skin, idle, emote or sticker pack) and its bundle for a player.",
+	Description = "Unlocks one cosmetic (employee, skin, vacuum, idle, emote or sticker pack) for a player; bundlegrant unlocks a bundle.",
 	Group = "Admins",
 	Args = {
 		{ Type = "player", Name = "target", Description = "The player to unlock it for" },

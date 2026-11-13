@@ -144,7 +144,6 @@ local ITEMS: { CosmeticTypes.Item } = {
 		source = "gleam",
 		price = 1500,
 		styles = 3,
-		bundle = { "Pippa.Bubbles", "BubblePack" },
 		lore = "Rain or shine, Pippa thinks bubbles make cleaning fun.",
 	},
 	{
@@ -197,7 +196,6 @@ local ITEMS: { CosmeticTypes.Item } = {
 		source = "gleam",
 		price = 1500,
 		styles = 3,
-		bundle = { "Cappy.CocoaSip", "CozyPack" },
 		lore = "Cappy cleans in his PJs. He says the shark slippers are for speed. Probably.",
 	},
 	{
@@ -251,7 +249,6 @@ local ITEMS: { CosmeticTypes.Item } = {
 		source = "gleam",
 		price = 1500,
 		styles = 3,
-		bundle = { "Prickles.Lasso", "SheriffPack" },
 		lore = "There's a new sheriff on the night shift, and he is very prickly.",
 	},
 	{

@@ -2,8 +2,10 @@
 --[=[
 	ShopRegistry: the Shop's offers, built from the catalogue (CosmeticRegistry) so a new priced item is on sale by
 	itself: every item sold for Credits or Gleam with a price (stickers come in their pack) is one offer at its
-	catalogue price. Employees are always listed, Legendary skins and vacuums take turns in the Featured banner, everything
-	else rotates through Today's picks (ShopRotationUtils). Event offers (dates) and real sales (`was`) are added
+	catalogue price, and every bundle (CosmeticBundleRegistry) is one offer of all its items at the bundle's price.
+	Employees are always listed. Bundles, Legendary skins without a bundle and vacuum skins take turns in the Featured
+	banner (owner, 2026-11-13: promote the bundle, not the skin alone; a skin with no bundle is still promoted);
+	everything else, a bundled skin sold alone included, rotates through Today's picks (ShopRotationUtils). Event offers (dates) and real sales (`was`) are added
 	here when the owner runs one; there are none yet. It also registers the Gleam bundles' developer products with the
 	Marketplace (MarketplaceRegistry) at load.
 
@@ -13,6 +15,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local CosmeticBundleRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
@@ -23,8 +26,10 @@ type Offer = ShopTypes.Offer
 local function poolOf(item: CosmeticTypes.Item): ShopTypes.Pool
 	if item.kind == "employee" then
 		return "always"
-	elseif (item.kind == "skin" and item.rarity == "legendary") or item.kind == "vacuum" then
+	elseif item.kind == "vacuum" then
 		return "featured"
+	elseif item.kind == "skin" and item.rarity == "legendary" then
+		return if #CosmeticBundleRegistry.containing(item.id) == 0 then "featured" else "picks"
 	end
 	return "picks"
 end
@@ -45,6 +50,20 @@ for _, item in CosmeticRegistry.all() do
 		table.insert(offers, offer)
 		byId[item.id] = offer
 	end
+end
+-- Bundles are promoted in the Featured banner.
+local BUNDLE_POOL: ShopTypes.Pool = "featured"
+for _, bundle in CosmeticBundleRegistry.all() do
+	assert(byId[bundle.id] == nil, `ShopRegistry: bundle {bundle.id} clashes with an offer`)
+	local offer: Offer = table.freeze({
+		id = bundle.id,
+		items = bundle.items,
+		currency = bundle.currency,
+		price = bundle.price,
+		pool = BUNDLE_POOL,
+	})
+	table.insert(offers, offer)
+	byId[bundle.id] = offer
 end
 table.sort(offers, function(a: Offer, b: Offer): boolean
 	return a.id < b.id

@@ -45,10 +45,36 @@ export type Item = {
 	-- True when the lore is the employee speaking (first person): drawn as a quote. A choice per item (some lines
 	-- only sound right spoken), never tied to rarity.
 	quote: boolean?,
-	-- Items that come with this one (a Legendary skin's emote, idle and sticker pack).
-	bundle: { string }?,
 	-- A sticker's pack.
 	pack: string?,
+}
+
+--[=[
+	A bundle: items sold together (CosmeticBundleRegistry). It can mix employees and kinds. Buying it grants every item
+	in it; "owning a bundle" only means owning all of its items (nothing about the bundle itself is saved). Each item
+	is also its own item, owned, bought and granted alone (owner, 2026-11-13).
+]=]
+export type Bundle = {
+	-- `Bundle.<Name>`, never a CosmeticRegistry id.
+	id: string,
+	name: string,
+	rarity: Rarity,
+	-- The CosmeticRegistry ids it grants, in show order (the first is the hero). No stickers, no free defaults.
+	items: { string },
+	currency: "gleam" | "credits",
+	price: number,
+	lore: string,
+}
+
+--[=[
+	A collection: a named group of items, data only for launch (not shown or sold; CosmeticCollectionRegistry). It can
+	mix employees and kinds, and keeps a set linked even when its bundle is retired.
+]=]
+export type Collection = {
+	-- `Collection.<Name>`.
+	id: string,
+	name: string,
+	items: { string },
 }
 
 -- Why something was granted (the reveal's flavour): bought in the Shop, opened from a Locker, the first-join pick, any other grant.
