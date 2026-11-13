@@ -182,6 +182,57 @@ return function()
 			expect(find(list, "Cappy.Classic")).never.to.be.ok()
 		end)
 
+		it("locks an owned idle on a skin it does not fit, and says which skin it needs", function()
+			local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
+			local owns = owner({ "Pippa.BubbleBuddyIdle", "Pippa.BubbleBuddy", "Prickles.SheriffIdle" })
+			local item = CosmeticRegistry.get("Pippa.BubbleBuddyIdle")
+			-- Pippa in her Classic skin: the Bubble Buddy idle needs the Bubble Buddy skin.
+			if not CosmeticRules.idleFits(item.id, "Pippa.Default") then
+				local card = find(VM.items("idle", "Pippa", loadout(), owns), item.id)
+				expect(card.dim).to.equal(true)
+				expect(card.band.text).to.equal("Bubble Buddy only")
+				local view = VM.detail(item, loadout(), owns, "Pippa")
+				expect(view.action.kind).to.equal("none")
+				expect(view.action.text).to.equal("Wear Bubble Buddy first")
+				-- In the Bubble Buddy skin it is a normal owned idle.
+				local wearing = loadout({
+					looks = {
+						Pippa = {
+							skin = "Pippa.BubbleBuddy",
+							style = 1,
+							idle = "Pippa.Classic",
+							wheel = { "", "", "", "" },
+						},
+					},
+				})
+				expect(find(VM.items("idle", "Pippa", wearing, owns), item.id).dim).to.equal(false)
+				expect(VM.detail(item, wearing, owns, "Pippa").action.kind).to.equal("wear")
+			end
+			-- The Sheriff idle fits every Prickles skin.
+			local sheriff = find(VM.items("idle", "Prickles", loadout(), owns), "Prickles.SheriffIdle")
+			expect(sheriff.dim).to.equal(false)
+		end)
+
+		it("plays the worn idle on the hero, or the picked idle on the Idles tab when it fits", function()
+			local owns = owner({ "Prickles.SheriffIdle" })
+			local worn = loadout({
+				looks = {
+					Prickles = {
+						skin = "Prickles.Default",
+						style = 1,
+						idle = "Prickles.SheriffIdle",
+						wheel = { "", "", "", "" },
+					},
+				},
+			})
+			expect(VM.heroIdle("Prickles", worn, owns, nil)).to.equal("SheriffIdle")
+			expect(VM.heroIdle("Prickles", loadout(), owns, nil)).to.equal(nil)
+			expect(VM.heroIdle("Prickles", loadout(), owns, CosmeticRegistry.get("Prickles.SheriffIdle"))).to.equal(
+				"SheriffIdle"
+			)
+			expect(VM.heroIdle("Prickles", worn, owns, CosmeticRegistry.get("Prickles.Classic"))).to.equal(nil)
+		end)
+
 		it("flags owned items the player has not seen as New", function()
 			local list = VM.items("skin", "Pippa", loadout(), owner({ "Pippa.GloomTouched" }))
 			expect(find(list, "Pippa.GloomTouched").new).to.equal(true)

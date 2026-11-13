@@ -120,12 +120,14 @@ return function()
 		end)
 
 		it("spends Gleam once and grants every item of a bundle in one go", function()
-			seed(1, 1320, 0)
+			seed(1, 1600, 0)
 			local ok, reason = ShopService:buy(1, "Bundle.BubbleBuddy")
 			expect(reason).to.equal(nil)
 			expect(ok).to.equal(true)
 			expect(MarketplaceService:getPremium(1)).to.equal(100)
-			for _, id in { "Pippa.BubbleBuddy", "Pippa.Bubbles", "BubblePack", "BubblePack.Yay" } do
+			for _, id in
+				{ "Pippa.BubbleBuddy", "Pippa.Bubbles", "BubblePack", "BubblePack.Yay", "Pippa.BubbleBuddyIdle" }
+			do
 				expect(CosmeticService:owns(1, id)).to.equal(true)
 			end
 		end)

@@ -335,6 +335,33 @@ local function isNew(item: Item, owned: boolean, loadout: Loadout): boolean
 	return owned and item.source ~= "default" and loadout.seen[item.id] ~= true
 end
 
+-- The name of the first skin an idle fits ("Bubble Buddy"), for "Bubble Buddy only"; nil when it fits every skin.
+local function fitsName(item: Item): string?
+	local fits = item.fits
+	local skin = if fits ~= nil and fits[1] ~= nil then CosmeticRegistry.get(fits[1]) else nil
+	return if skin ~= nil then skin.name else nil
+end
+
+-- Whether `item` is an idle that does not fit the skin `employee` wears (it is locked for that skin).
+local function idleLocked(item: Item, employee: string, loadout: Loadout, owns: Owns): boolean
+	return item.kind == "idle"
+		and not CosmeticRules.idleFits(item.id, CosmeticRules.lookFor(loadout, employee, owns).skin)
+end
+
+--[=[
+	The idle item the page's hero plays (the key after the dot; nil = the skin's own idle): `selected` on the Idles tab
+	when it fits the worn skin, else the worn idle.
+]=]
+function VM.heroIdle(employee: string, loadout: Loadout, owns: Owns, selected: Item?): string?
+	local look = CosmeticRules.lookFor(loadout, employee, owns)
+	local id = look.idle
+	if selected ~= nil and selected.kind == "idle" and CosmeticRules.idleFits(selected.id, look.skin) then
+		id = selected.id
+	end
+	local item = CosmeticRegistry.get(id)
+	return if item ~= nil and item.source ~= "default" then CosmeticRegistry.keyOf(item.id) else nil
+end
+
 -- The employee's skins or idles (idles include the shared ones), the free one first, then by rarity.
 function VM.items(kind: ListKind, employee: string, loadout: Loadout, owns: Owns): { ItemCard }
 	local worn = wornId(kind, employee, loadout, owns)
@@ -356,14 +383,18 @@ function VM.items(kind: ListKind, employee: string, loadout: Loadout, owns: Owns
 		local slot = if kind == "emote" then slotOf(item.id, employee, loadout, owns) else nil
 		local isWorn = item.id == worn or slot ~= nil
 		local onSlot: Band? = if slot ~= nil then { kind = "wearing", text = `Slot {slot}` } else nil
-		local band = onSlot or VM.band(item, owned, isWorn)
+		-- An owned idle that does not fit the worn skin: locked, and the band names the skin it needs.
+		local locked = owned and idleLocked(item, employee, loadout, owns)
+		local needs = if locked then fitsName(item) else nil
+		local lockedBand: Band? = if needs ~= nil then { kind = "later", text = `{needs} only` } else nil
+		local band = onSlot or lockedBand or VM.band(item, owned, isWorn)
 		table.insert(cards, {
 			id = item.id,
 			name = item.name,
 			rarity = item.rarity,
 			owned = owned,
 			worn = isWorn,
-			dim = not owned,
+			dim = not owned or locked,
 			new = isNew(item, owned, loadout),
 			band = band,
 			vacuum = item.kind == "vacuum",
@@ -435,6 +466,14 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?, styl
 	end
 	local selectedStyle = if style ~= nil and chips[style] ~= nil then style else wornStyle
 	local action = VM.action(item, owned, worn and selectedStyle == wornStyle)
+	local needs = if owned
+			and employee ~= nil
+			and idleLocked(item, employee, loadout, owns)
+		then fitsName(item)
+		else nil
+	if needs ~= nil then
+		action = { text = `Wear {needs} first`, enabled = false, variant = "secondary", kind = "none" }
+	end
 	local wheel: { WheelSlot }? = nil
 	local wheelSlot: number? = nil
 	local comingSoon = false

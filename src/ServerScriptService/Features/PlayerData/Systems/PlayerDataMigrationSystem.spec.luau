@@ -15,8 +15,8 @@ local PlayerDataMigrationSystem = require(ServerScriptService.Features.PlayerDat
 return function()
 	describe("PlayerDataMigrationSystem", function()
 		describe("apply (production list)", function()
-			it("has CURRENT_VERSION = 4 (three migrations registered)", function()
-				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(4)
+			it("has CURRENT_VERSION = 5 (four migrations registered)", function()
+				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(5)
 			end)
 
 			it("migrates unversioned data to current and leaves unrelated fields intact", function()
@@ -102,7 +102,7 @@ return function()
 				expect(data.account.coffee.vouchers).to.equal(nil)
 				expect(data.account.coffee.seconds).to.equal(3600)
 				expect(data.account.coffee.since).to.equal(0)
-				expect(data._schemaVersion).to.equal(4)
+				expect(data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
 			end)
 
 			it("v3 -> v4 leaves no coffee time for no vouchers, and is safe without the slice", function()
@@ -113,6 +113,46 @@ return function()
 				expect(data.account.coffee.since).to.equal(0)
 				expect(PlayerDataMigrationSystem.apply({ account = {} }, 3)).to.equal("ok")
 				expect(PlayerDataMigrationSystem.apply({}, 3)).to.equal("ok")
+			end)
+
+			it("v4 -> v5 gives each Legendary skin's owner its idle, and changes nothing else", function()
+				local look = { skin = "Cappy.PJ", style = 2, idle = "Cappy.Classic", wheel = { "", "", "", "" } }
+				local data = {
+					account = {
+						entitlements = { owned = { skin = { ["Cappy.PJ"] = true, ["Pippa.GloomTouched"] = true } } },
+						loadout = { looks = { Cappy = look } },
+					},
+				}
+				expect(PlayerDataMigrationSystem.apply(data, 4)).to.equal("ok")
+				local owned = data.account.entitlements.owned
+				expect(owned.idle["Cappy.PJIdle"]).to.equal(true)
+				expect(owned.idle["Pippa.BubbleBuddyIdle"]).to.equal(nil)
+				expect(owned.idle["Prickles.SheriffIdle"]).to.equal(nil)
+				expect(owned.skin["Cappy.PJ"]).to.equal(true)
+				-- The look keeps the skin's own idle: nothing the player sees changes.
+				expect(data.account.loadout.looks.Cappy.idle).to.equal("Cappy.Classic")
+				expect(data._schemaVersion).to.equal(5)
+			end)
+
+			it("v4 -> v5 keeps idles already owned and is safe without entitlements", function()
+				local data = {
+					account = {
+						entitlements = {
+							owned = {
+								skin = { ["Prickles.Sheriff"] = true },
+								idle = { ["Pippa.BubbleBuddyIdle"] = true },
+							},
+						},
+					},
+				}
+				expect(PlayerDataMigrationSystem.apply(data, 4)).to.equal("ok")
+				expect(data.account.entitlements.owned.idle["Pippa.BubbleBuddyIdle"]).to.equal(true)
+				expect(data.account.entitlements.owned.idle["Prickles.SheriffIdle"]).to.equal(true)
+				expect(PlayerDataMigrationSystem.apply({ account = { entitlements = { owned = {} } } }, 4)).to.equal(
+					"ok"
+				)
+				expect(PlayerDataMigrationSystem.apply({ account = {} }, 4)).to.equal("ok")
+				expect(PlayerDataMigrationSystem.apply({}, 4)).to.equal("ok")
 			end)
 		end)
 

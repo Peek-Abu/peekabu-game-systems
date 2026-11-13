@@ -25,13 +25,13 @@ local EmployeeLocomotionUtils = {}
 	@param skin string? -- the worn skin key
 	@return Config?
 ]=]
-function EmployeeLocomotionUtils.fromDef(def: EmployeeRegistry.EmployeeDef, skin: string?): Config?
+function EmployeeLocomotionUtils.fromDef(def: EmployeeRegistry.EmployeeDef, skin: string?, idle: string?): Config?
 	local locomotion = def.locomotion
 	if locomotion == nil then
 		return nil
 	end
-	local idle = EmployeeSkinRules.idleOf(def, skin) or locomotion.idle
-	local poseIds: { [string]: string } = { idle = idle, walk = locomotion.walk, run = locomotion.run }
+	local idleClip = EmployeeSkinRules.idleOf(def, skin, idle) or locomotion.idle
+	local poseIds: { [string]: string } = { idle = idleClip, walk = locomotion.walk, run = locomotion.run }
 	-- Both crouch clips and their planted speed, or no crouch at all (the core then stays standing).
 	local crouchIdle, crouchWalk = locomotion.crouchIdle, locomotion.crouchWalk
 	local crouchPlanted = locomotion.crouchWalkPlantedSpeed
@@ -61,12 +61,17 @@ end
 	one without a fidget.
 	@param name unknown -- the attribute value (untrusted type)
 	@param skin unknown -- the skin attribute value (untrusted type); nil or a non-string = the employee's own
+	@param idle unknown -- the idle attribute value (untrusted type; EmployeeConstants.IDLE_ATTRIBUTE); nil = the skin's own
 	@return { string }
 ]=]
-function EmployeeLocomotionUtils.fidgetsFor(name: unknown, skin: unknown?): { string }
+function EmployeeLocomotionUtils.fidgetsFor(name: unknown, skin: unknown?, idle: unknown?): { string }
 	local def = if type(name) == "string" then EmployeeRegistry.get(name) else nil
 	local fidget = if def ~= nil
-		then EmployeeSkinRules.fidgetOf(def, if type(skin) == "string" then skin else nil)
+		then EmployeeSkinRules.fidgetOf(
+			def,
+			if type(skin) == "string" then skin else nil,
+			if type(idle) == "string" then idle else nil
+		)
 		else nil
 	return if fidget ~= nil then { fidget } else {}
 end
@@ -76,15 +81,20 @@ end
 	EmployeeSkin attribute names; nil for a non-employee, an unknown name, or an employee without its own set.
 	@param name unknown -- the attribute value (untrusted type)
 	@param skin unknown -- the skin attribute value (untrusted type); nil or a non-string = the employee's own idle
+	@param idle unknown -- the idle attribute value (untrusted type); nil or a non-string = the skin's own idle
 	@return Config?
 ]=]
-function EmployeeLocomotionUtils.forName(name: unknown, skin: unknown?): Config?
+function EmployeeLocomotionUtils.forName(name: unknown, skin: unknown?, idle: unknown?): Config?
 	if type(name) ~= "string" then
 		return nil
 	end
 	local def = EmployeeRegistry.get(name)
 	return if def ~= nil
-		then EmployeeLocomotionUtils.fromDef(def, if type(skin) == "string" then skin else nil)
+		then EmployeeLocomotionUtils.fromDef(
+			def,
+			if type(skin) == "string" then skin else nil,
+			if type(idle) == "string" then idle else nil
+		)
 		else nil
 end
 

@@ -178,6 +178,37 @@ return function()
 			expect(loadout.looks.Cappy.idle).to.equal("Cappy.Classic")
 		end)
 
+		it("wears an owned Legendary idle on a skin it fits, and locks the pairs it does not fit", function()
+			local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
+			local loadout = CosmeticConstants.defaultLoadout()
+			local idleOwns =
+				ownsOf({ "Prickles", "Prickles.SheriffIdle", "Pippa.BubbleBuddyIdle", "Pippa.BubbleBuddy" })
+			-- Sheriff Idle fits every Prickles skin: on in his Classic skin.
+			local change = { kind = "idle", employee = "Prickles", id = "Prickles.SheriffIdle" }
+			expect(CosmeticRules.checkEquip(loadout, change, idleOwns)).to.equal(true)
+			expect(CosmeticRules.applyEquip(loadout, change, idleOwns)).to.equal(true)
+			expect(CosmeticRules.lookFor(loadout, "Prickles", idleOwns).idle).to.equal("Prickles.SheriffIdle")
+			-- An idle that fits only some skins: refused on another skin, worn on its own.
+			local bubble = CosmeticRegistry.get("Pippa.BubbleBuddyIdle")
+			if bubble.fits ~= nil then
+				local idle = { kind = "idle", employee = "Pippa", id = "Pippa.BubbleBuddyIdle" }
+				local ok, reason = CosmeticRules.checkEquip(loadout, idle, idleOwns)
+				expect(ok).to.equal(false)
+				expect(reason).to.equal("not with this skin")
+				CosmeticRules.applyEquip(loadout, { kind = "skin", id = "Pippa.BubbleBuddy", style = 1 }, idleOwns)
+				expect(CosmeticRules.checkEquip(loadout, idle, idleOwns)).to.equal(true)
+				CosmeticRules.applyEquip(loadout, idle, idleOwns)
+				expect(CosmeticRules.lookFor(loadout, "Pippa", idleOwns).idle).to.equal("Pippa.BubbleBuddyIdle")
+				-- Back in a skin it does not fit: the skin's own idle plays; the saved pick comes back with the skin.
+				CosmeticRules.applyEquip(loadout, { kind = "skin", id = "Pippa.Default", style = 1 }, idleOwns)
+				expect(CosmeticRules.lookFor(loadout, "Pippa", idleOwns).idle).to.equal("Pippa.Classic")
+				expect(loadout.looks.Pippa.idle).to.equal("Pippa.BubbleBuddyIdle")
+				expect(CosmeticRules.idleFits("Pippa.BubbleBuddyIdle", "Pippa.Default")).to.equal(false)
+			end
+			expect(CosmeticRules.idleFits("Prickles.SheriffIdle", "Prickles.Default")).to.equal(true)
+			expect(CosmeticRules.idleFits("Prickles.Classic", "Prickles.Sheriff")).to.equal(true)
+		end)
+
 		it("fills, moves and clears emote-wheel slots", function()
 			local loadout = CosmeticConstants.defaultLoadout()
 			for _, slot in { 0, 5, 1.5, -1 } do

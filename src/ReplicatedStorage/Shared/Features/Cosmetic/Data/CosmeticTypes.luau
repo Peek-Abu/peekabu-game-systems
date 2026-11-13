@@ -55,6 +55,9 @@ export type Item = {
 	quote: boolean?,
 	-- A sticker's pack.
 	pack: string?,
+	-- An idle that fits only some of its employee's skins (it needs a prop only they have): their ids. nil = every
+	-- skin of its employee. On any other skin the idle is locked and the skin's own idle plays (owner, 2026-11-13).
+	fits: { string }?,
 }
 
 --[=[

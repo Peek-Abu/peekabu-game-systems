@@ -167,6 +167,25 @@ local function skinKeyOf(userId: number, employee: string): string?
 	return string.match(look.skin, "^[^%.]+%.(.+)$")
 end
 
+-- The chosen idle item's key (after the dot) for `employee`: only a non-free idle that fits the worn skin
+-- (CosmeticRules.lookFor already drops one that does not); nil = the skin's own idle.
+local function idleKeyOf(userId: number, employee: string): string?
+	local look = CosmeticServiceServer:lookOf(userId, employee)
+	local item = if look ~= nil then CosmeticRegistry.get(look.idle) else nil
+	if item == nil or item.source == "default" then
+		return nil
+	end
+	return CosmeticRegistry.keyOf(item.id)
+end
+
+-- Names the idle the player's look picks on their character (Animate rebinds its idle when it changes): no rebuild.
+local function markIdle(userId: number, character: Model, employee: string)
+	local key = idleKeyOf(userId, employee)
+	if character:GetAttribute(EmployeeConstants.IDLE_ATTRIBUTE) ~= key then
+		character:SetAttribute(EmployeeConstants.IDLE_ATTRIBUTE, key)
+	end
+end
+
 -- The colour style the player's loadout picks for `skin` on `employee`, clamped to one the skin has (1 before the
 -- loadout loads, or for a skin with no styles).
 local function styleOf(userId: number, employee: string, skin: EmployeeRegistry.SkinDef): number
@@ -205,6 +224,7 @@ local function dress(player: Player, character: Model)
 	-- The skin the outfit asks for (its art may still be the Default's): a preview of the outfit matches on it.
 	character:SetAttribute(EmployeeConstants.SKIN_ATTRIBUTE, skinKeyOf(player.UserId, def.name) or skin.name)
 	character:SetAttribute(EmployeeConstants.STYLE_ATTRIBUTE, style)
+	markIdle(player.UserId, character, def.name)
 	character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, rankLevelOf(player.UserId).level)
 	for _, legacyName in { "PippaVest", "PippaLanyard" } do
 		local legacy = character:FindFirstChild(legacyName)
@@ -308,8 +328,12 @@ local function swapIfChanged(userId: number)
 	-- A new vacuum needs no rebuild: the pack is swapped on the character as it stands.
 	markVacuum(userId, character)
 	local employee = CosmeticServiceServer:currentEmployee(userId)
-	local def = EmployeeRegistry.get(employee)
+	-- A new idle needs no rebuild either: the character's idle attribute changes and its Animate rebinds.
 	local current = worn[userId]
+	if current ~= nil and current.employee == employee then
+		markIdle(userId, character, employee)
+	end
+	local def = EmployeeRegistry.get(employee)
 	if def == nil or current == nil then
 		return
 	end

@@ -19,8 +19,17 @@ export type SkinSet = {
 -- The fields `idleOf` / `fidgetOf` read (an EmployeeDef has them).
 export type LocomotionSet = {
 	skins: { [string]: EmployeeRegistry.SkinDef },
+	idles: { [string]: string }?,
 	locomotion: EmployeeRegistry.LocomotionDef?,
 }
+
+-- The skin whose showcase idle the idle item `idleKey` plays (nil = no such item, or its skin has no idle).
+local function idleSkin(def: LocomotionSet, idleKey: string?): EmployeeRegistry.SkinDef?
+	local idles = def.idles
+	local skinKey = if idleKey ~= nil and idles ~= nil then idles[idleKey] else nil
+	local skin = if skinKey ~= nil then def.skins[skinKey] else nil
+	return if skin ~= nil and skin.showcaseIdle ~= nil then skin else nil
+end
 
 -- What a character was built as: its employee, skin key and colour style (EmployeeServiceServer).
 export type Worn = {
@@ -40,10 +49,16 @@ function EmployeeSkinRules.wornChanged(current: Worn?, employee: string, skin: s
 end
 
 --[=[
-	The AnimationRegistry key of the idle loop a character or preview wearing `skinKey` plays: the skin's own showcase
-	idle when it has one, else the employee's idle; nil for an employee without its own locomotion.
+	The AnimationRegistry key of the idle loop a character or preview wearing `skinKey` plays: the chosen idle item's
+	(`idleKey`, the key after the dot; nil or unknown = the skin's own), else the skin's own showcase idle when it has
+	one, else the employee's idle; nil for an employee without its own locomotion. Whether an idle fits the skin is
+	CosmeticRules.idleFits: the caller passes only an idle that does.
 ]=]
-function EmployeeSkinRules.idleOf(def: LocomotionSet, skinKey: string?): string?
+function EmployeeSkinRules.idleOf(def: LocomotionSet, skinKey: string?, idleKey: string?): string?
+	local chosen = idleSkin(def, idleKey)
+	if chosen ~= nil then
+		return chosen.showcaseIdle
+	end
 	local skin = if skinKey ~= nil then def.skins[skinKey] else nil
 	if skin ~= nil and skin.showcaseIdle ~= nil then
 		return skin.showcaseIdle
@@ -56,7 +71,11 @@ end
 	The AnimationRegistry key of the fidget that goes with `idleOf`: a skin with a showcase idle has its own fidget or
 	none (the employee's would not fit that idle); any other skin plays the employee's. nil = no fidget.
 ]=]
-function EmployeeSkinRules.fidgetOf(def: LocomotionSet, skinKey: string?): string?
+function EmployeeSkinRules.fidgetOf(def: LocomotionSet, skinKey: string?, idleKey: string?): string?
+	local chosen = idleSkin(def, idleKey)
+	if chosen ~= nil then
+		return chosen.showcaseFidget
+	end
 	local skin = if skinKey ~= nil then def.skins[skinKey] else nil
 	if skin ~= nil and skin.showcaseIdle ~= nil then
 		return skin.showcaseFidget

@@ -40,11 +40,11 @@ return function()
 		end
 	end)
 
-	it("has the 3 Legendary bundles: the skin first, then its emote and sticker pack", function()
+	it("has the 3 Legendary bundles: the skin first, then its emote, sticker pack and idle", function()
 		local expected = {
-			["Bundle.BubbleBuddy"] = "Pippa.BubbleBuddy,Pippa.Bubbles,BubblePack",
-			["Bundle.PJCappy"] = "Cappy.PJ,Cappy.CocoaSip,CozyPack",
-			["Bundle.SheriffPrickles"] = "Prickles.Sheriff,Prickles.Lasso,SheriffPack",
+			["Bundle.BubbleBuddy"] = "Pippa.BubbleBuddy,Pippa.Bubbles,BubblePack,Pippa.BubbleBuddyIdle",
+			["Bundle.PJCappy"] = "Cappy.PJ,Cappy.CocoaSip,CozyPack,Cappy.PJIdle",
+			["Bundle.SheriffPrickles"] = "Prickles.Sheriff,Prickles.Lasso,SheriffPack,Prickles.SheriffIdle",
 		}
 		for id, items in expected do
 			local bundle = CosmeticBundleRegistry.get(id)

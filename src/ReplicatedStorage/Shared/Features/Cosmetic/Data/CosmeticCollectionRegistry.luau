@@ -22,22 +22,21 @@ local COLLECTIONS: { Collection } = {
 		name = "Gloom-Touched",
 		items = { "Pippa.GloomTouched", "Cappy.GloomTouched", "Prickles.GloomTouched" },
 	},
-	-- The Legendary sets (coordinator's suggestion on the owner's idea, 2026-11-13; drop these three if the owner says
-	-- no).
+	-- The Legendary sets: skin, emote, sticker pack and idle (the owner's idea, 2026-11-13).
 	{
 		id = "Collection.BubbleBuddy",
 		name = "Bubble Buddy",
-		items = { "Pippa.BubbleBuddy", "Pippa.Bubbles", "BubblePack" },
+		items = { "Pippa.BubbleBuddy", "Pippa.Bubbles", "BubblePack", "Pippa.BubbleBuddyIdle" },
 	},
 	{
 		id = "Collection.PJCappy",
 		name = "PJ Cappy",
-		items = { "Cappy.PJ", "Cappy.CocoaSip", "CozyPack" },
+		items = { "Cappy.PJ", "Cappy.CocoaSip", "CozyPack", "Cappy.PJIdle" },
 	},
 	{
 		id = "Collection.SheriffPrickles",
 		name = "Sheriff Prickles",
-		items = { "Prickles.Sheriff", "Prickles.Lasso", "SheriffPack" },
+		items = { "Prickles.Sheriff", "Prickles.Lasso", "SheriffPack", "Prickles.SheriffIdle" },
 	},
 }
 

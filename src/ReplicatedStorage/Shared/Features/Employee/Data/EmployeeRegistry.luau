@@ -151,6 +151,9 @@ export type EmployeeDef = {
 	-- The FootstepAssets set its steps play (the client's FootstepSet attribute); nil = its own name in lower case.
 	footstepSet: string?,
 	defaultSkin: string,
+	-- The idle items (CosmeticRegistry, kind "idle", by the key after the dot) and the skin whose showcase idle and
+	-- fidget each plays, on any skin (owner, 2026-11-13: the Legendary idles are their own items). nil = none.
+	idles: { [string]: string }?,
 	-- Its own idle/walk/run; nil = the stock locomotion.
 	locomotion: LocomotionDef?,
 	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this employee is hired (and for a skin
@@ -264,6 +267,7 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			},
 		},
 		defaultSkin = "Default",
+		idles = { BubbleBuddyIdle = "BubbleBuddy" },
 		-- Company vest and static PippaLanyard removed: all employees wear the client-fitted v4 lanyard + v6 rank badge
 		-- driven by the player's general rank (EmployeeLanyardSystem; gates/7f_badges_v6_info_front_icon_back.md).
 		uniform = {},
@@ -413,6 +417,7 @@ EMPLOYEES.Cappy = {
 		},
 	},
 	defaultSkin = "Default",
+	idles = { PJIdle = "PJ" },
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
 	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32, "cappyfidget"),
@@ -505,6 +510,7 @@ EMPLOYEES.Prickles = {
 		},
 	},
 	defaultSkin = "Default",
+	idles = { SheriffIdle = "Sheriff" },
 	uniform = {},
 	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34, "pricklesfidget"),
 }

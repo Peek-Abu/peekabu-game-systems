@@ -71,6 +71,16 @@ function CosmeticRules.owns(entitlements: PlayerDataTypes.Entitlements, id: stri
 end
 
 --[=[
+	Whether the idle `idleId` fits the skin `skinId` (its `fits` list; nil = every skin of its employee). A free idle and
+	an unknown id always fit: the skin's own idle plays.
+]=]
+function CosmeticRules.idleFits(idleId: string, skinId: string): boolean
+	local item = CosmeticRegistry.get(idleId)
+	local fits = if item ~= nil then item.fits else nil
+	return fits == nil or table.find(fits, skinId) ~= nil
+end
+
+--[=[
 	The employee's look with every fallback applied, as a fresh table. With no saved look: the employee's free skin,
 	idle and emote (in slot 1).
 ]=]
@@ -92,8 +102,13 @@ function CosmeticRules.lookFor(loadout: Loadout, employee: string, owns: Owns): 
 			style = saved.style
 		end
 	end
+	-- An idle that does not fit the worn skin waits in the save: the skin's own idle plays until a skin it fits is on.
 	local idle = defaultIdle
-	if usable(saved.idle, "idle", employee) ~= nil and owns(saved.idle) then
+	if
+		usable(saved.idle, "idle", employee) ~= nil
+		and owns(saved.idle)
+		and CosmeticRules.idleFits(saved.idle, skin)
+	then
 		idle = saved.idle
 	end
 	for slot = 1, CosmeticConstants.WHEEL_SLOTS do
@@ -225,7 +240,11 @@ function CosmeticRules.checkEquip(loadout: Loadout, change: Change, owns: Owns):
 		if not owns(change.id) then
 			return false, "not owned"
 		end
-		if CosmeticRules.lookFor(loadout, change.employee, owns).idle == change.id then
+		local look = CosmeticRules.lookFor(loadout, change.employee, owns)
+		if not CosmeticRules.idleFits(change.id, look.skin) then
+			return false, "not with this skin"
+		end
+		if look.idle == change.id then
 			return false, "no change"
 		end
 		return true, nil

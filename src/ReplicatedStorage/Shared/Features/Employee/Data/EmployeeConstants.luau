@@ -37,6 +37,9 @@ local EmployeeConstants = {
 	-- On a player's character, written by the server as it dresses it: the EmployeeRegistry skin key it wears (a
 	-- preview of the player's own outfit clones the character only when it matches).
 	SKIN_ATTRIBUTE = "EmployeeSkin",
+	-- On a player's character, written by the server from their look: the chosen idle item's key (after the dot), only
+	-- when it fits the worn skin; unset = the skin's own idle (EmployeeSkinRules.idleOf).
+	IDLE_ATTRIBUTE = "EmployeeIdle",
 	-- On a player's character, written by the server as it builds it (EmployeeStatSystem): the five stat bars (1-5)
 	-- the game reads (EmployeeStatFormulas.barsOn), by EmployeeProfileRegistry.Stat.
 	STAT_ATTRIBUTES = table.freeze(STAT_ATTRIBUTES),

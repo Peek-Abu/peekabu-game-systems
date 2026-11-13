@@ -62,16 +62,19 @@ local function bind()
 		release()
 	end
 	local skin = character:GetAttribute(EmployeeConstants.SKIN_ATTRIBUTE)
-	unbind = AnimationLocomotionHumanoidSystem.bind(character, EmployeeLocomotionUtils.forName(employee, skin), {
+	local idle = character:GetAttribute(EmployeeConstants.IDLE_ATTRIBUTE)
+	unbind = AnimationLocomotionHumanoidSystem.bind(character, EmployeeLocomotionUtils.forName(employee, skin, idle), {
 		crouchAttribute = CrouchConstants.CROUCHING_ATTRIBUTE,
-		fidgets = EmployeeLocomotionUtils.fidgetsFor(employee, skin),
+		fidgets = EmployeeLocomotionUtils.fidgetsFor(employee, skin, idle),
 		fidgetBlocked = fidgetBlocked,
 	})
 end
 bind()
 local skinChanged = character:GetAttributeChangedSignal(EmployeeConstants.SKIN_ATTRIBUTE):Connect(bind)
+local idleChanged = character:GetAttributeChangedSignal(EmployeeConstants.IDLE_ATTRIBUTE):Connect(bind)
 local function releaseAll()
 	skinChanged:Disconnect()
+	idleChanged:Disconnect()
 	local release = unbind
 	if release ~= nil then
 		release()

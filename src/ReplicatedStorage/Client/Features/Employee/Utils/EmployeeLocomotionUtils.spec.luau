@@ -14,6 +14,19 @@ local function defWith(locomotion, scale)
 end
 
 return function()
+	describe("idle items", function()
+		it("plays the chosen Legendary idle on another skin, and the skin's own without one", function()
+			expect(EmployeeLocomotionUtils.forName("Prickles", "Default", "SheriffIdle").poseIds.idle).to.equal(
+				"pricklessheriffidle"
+			)
+			expect(EmployeeLocomotionUtils.fidgetsFor("Prickles", "Default", "SheriffIdle")[1]).to.equal(
+				"pricklessherifffidget"
+			)
+			expect(EmployeeLocomotionUtils.forName("Prickles", "Default", nil).poseIds.idle).to.equal("pricklesidle")
+			expect(EmployeeLocomotionUtils.forName("Prickles", "Default", 7).poseIds.idle).to.equal("pricklesidle")
+		end)
+	end)
+
 	describe("fidgetsFor", function()
 		it("gives an employee's fidget clip", function()
 			expect(EmployeeLocomotionUtils.fidgetsFor("Pippa")[1]).to.equal("pippafidget")

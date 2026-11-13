@@ -118,7 +118,7 @@ return function()
 			expect(view.card.name).to.equal("Bubble Buddy Bundle")
 			expect(view.card.line).to.equal("Bundle · Pippa")
 			expect(view.card.rarity).to.equal("legendary")
-			expect(#view.inside).to.equal(3)
+			expect(#view.inside).to.equal(4)
 			expect(view.inside[1].name).to.equal("Bubble Buddy")
 			expect(view.inside[2].alone).to.equal("alone 400")
 			-- The skin alone is just the skin (owner, 2026-11-13).

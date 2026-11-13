@@ -72,28 +72,29 @@ local ITEMS: { CosmeticTypes.Item } = {
 		id = "Pippa.Classic",
 		kind = "idle",
 		employee = "Pippa",
-		name = "Classic",
+		-- The free idle is whatever the worn skin does (owner, 2026-11-13): her bounce, or a Legendary skin's own.
+		name = "Skin's Own",
 		rarity = "default",
 		source = "default",
-		lore = "Pippa can't stand still. She bounces, always.",
+		lore = "Pippa can't stand still. She bounces, or does what her skin does.",
 	},
 	{
 		id = "Cappy.Classic",
 		kind = "idle",
 		employee = "Cappy",
-		name = "Classic",
+		name = "Skin's Own",
 		rarity = "default",
 		source = "default",
-		lore = "Hands in his pocket. Cappy is totally chill.",
+		lore = "Hands in his pocket, or what his skin does. Cappy is totally chill.",
 	},
 	{
 		id = "Prickles.Classic",
 		kind = "idle",
 		employee = "Prickles",
-		name = "Classic",
+		name = "Skin's Own",
 		rarity = "default",
 		source = "default",
-		lore = "Arms crossed. Prickles is not impressed.",
+		lore = "Arms crossed, or what his skin does. Prickles is not impressed.",
 	},
 	{
 		id = "Pippa.Wave",
@@ -185,6 +186,19 @@ local ITEMS: { CosmeticTypes.Item } = {
 		price = 400,
 		lore = "Pippa blows one giant bubble and floats away inside it. Pop!",
 	},
+	-- Bubble Buddy's idle as its own item (owner, 2026-11-13): her paws on the duck ring the Bubble Buddy outfit wears,
+	-- so it fits that skin only until the duck ring is a prop every skin can show.
+	{
+		id = "Pippa.BubbleBuddyIdle",
+		kind = "idle",
+		employee = "Pippa",
+		name = "Bubble Buddy Idle",
+		rarity = "epic",
+		source = "gleam",
+		price = 400,
+		fits = { "Pippa.BubbleBuddy" },
+		lore = "Pippa floats in her duck ring, ready for a splash.",
+	},
 
 	-- Cappy
 	{
@@ -238,6 +252,19 @@ local ITEMS: { CosmeticTypes.Item } = {
 		price = 400,
 		lore = "A slow sip of cocoa, then a happy sigh. Ahh.",
 	},
+	-- PJ Cappy's idle as its own item (owner, 2026-11-13): the pillow he naps on is the PJ outfit's, so it fits that skin
+	-- only until the pillow is a prop every skin can show.
+	{
+		id = "Cappy.PJIdle",
+		kind = "idle",
+		employee = "Cappy",
+		name = "PJ Idle",
+		rarity = "epic",
+		source = "gleam",
+		price = 400,
+		fits = { "Cappy.PJ" },
+		lore = "Cappy hugs his pillow and naps standing up.",
+	},
 
 	-- Prickles
 	{
@@ -290,6 +317,18 @@ local ITEMS: { CosmeticTypes.Item } = {
 		price = 400,
 		lore = "Spin it, throw it, yank it back. Yee-haw!",
 		quote = true,
+	},
+	-- Sheriff Prickles' idle as its own item (owner, 2026-11-13): the hose coil is an emote prop every skin can show, so
+	-- it fits every Prickles skin.
+	{
+		id = "Prickles.SheriffIdle",
+		kind = "idle",
+		employee = "Prickles",
+		name = "Sheriff Idle",
+		rarity = "epic",
+		source = "gleam",
+		price = 400,
+		lore = "Prickles spins his hose like a rope. Yee-haw!",
 	},
 }
 

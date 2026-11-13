@@ -341,7 +341,8 @@ local function hero(
 	rarity: CosmeticTypes.Rarity,
 	tryOn: string?,
 	style: number,
-	emote: string?
+	emote: string?,
+	idle: string?
 ): React.ReactNode
 	local shade = UIToonConstants.rarity(rarity)
 	local outfit = if tryOn ~= nil
@@ -354,6 +355,7 @@ local function hero(
 			turn = if outfit ~= nil then BACK_TURN else nil,
 			skin = skinKey,
 			style = style,
+			idle = if outfit == nil then idle else nil,
 			live = true,
 			react = props.openedAt,
 			-- The player turns it round (drag, flick, right stick).
@@ -893,6 +895,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 	local tryOn: string? = nil
 	local heroStyle = 1
 	local heroEmote: string? = nil
+	local heroIdle: string? = VM.heroIdle(props.employee, props.loadout, props.owns, nil)
 	local seenId = ""
 	if props.tab == "about" then
 		left, right = about(props)
@@ -940,6 +943,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			end)
 			heroRarity = selectedItem.rarity
 			heroEmote = if selectedItem.kind == "emote" then selectedItem.id else nil
+			heroIdle = VM.heroIdle(props.employee, props.loadout, props.owns, selectedItem)
 			if selectedItem.kind == "skin" then
 				heroSkin = VM.skinKey(selectedItem.id)
 			elseif selectedItem.kind == "vacuum" then
@@ -968,7 +972,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			Position = UDim2.fromOffset(layout.gridWidth + layout.gap, 0),
 			Size = UDim2.new(0, layout.heroWidth, 1, 0),
 			BackgroundTransparency = 1,
-		}, { content = hero(props, heroSkin, heroRarity, tryOn, heroStyle, heroEmote) }),
+		}, { content = hero(props, heroSkin, heroRarity, tryOn, heroStyle, heroEmote, heroIdle) }),
 		right = e("Frame", {
 			Position = UDim2.fromOffset(layout.gridWidth + layout.heroWidth + 2 * layout.gap, 0),
 			Size = UDim2.new(0, layout.detailWidth, 1, 0),

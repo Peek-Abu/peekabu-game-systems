@@ -182,6 +182,43 @@ return function()
 		expect(#CosmeticRegistry.ofKind("skin") >= #CosmeticRegistry.ofKind("skin", "Cappy")).to.equal(true)
 	end)
 
+	it("sells each Legendary skin's idle as its own Epic item (owner, 2026-11-13)", function()
+		local idles = {
+			["Pippa.BubbleBuddyIdle"] = "Pippa.BubbleBuddy",
+			["Cappy.PJIdle"] = "Cappy.PJ",
+			["Prickles.SheriffIdle"] = "Prickles.Sheriff",
+		}
+		for id, skin in idles do
+			local item = CosmeticRegistry.get(id)
+			expect(item).to.be.ok()
+			expect(item.kind).to.equal("idle")
+			expect(item.rarity).to.equal("epic")
+			expect(item.source).to.equal("gleam")
+			expect(item.price > 0).to.equal(true)
+			expect(item.employee).to.equal(CosmeticRegistry.get(skin).employee)
+			-- Where it fits only some skins (a prop only that skin has), its own skin is one of them.
+			if item.fits ~= nil then
+				expect(table.find(item.fits, skin)).to.be.ok()
+			end
+		end
+		-- The free idle is "Skin's Own": whatever the worn skin does, so nobody's look changes.
+		for _, employee in CosmeticRegistry.employees() do
+			expect(CosmeticRegistry.defaultOf(employee, "idle").name).to.equal("Skin's Own")
+		end
+	end)
+
+	it("lets only idles say which skins they fit, and only that employee's skins", function()
+		for _, item in all do
+			if item.fits ~= nil then
+				expect(item.kind).to.equal("idle")
+				for _, skin in item.fits do
+					expect(CosmeticRegistry.get(skin).kind).to.equal("skin")
+					expect(CosmeticRegistry.get(skin).employee).to.equal(item.employee)
+				end
+			end
+		end
+	end)
+
 	it("holds the owner's 4 picks in each Legendary skin's sticker pack", function()
 		local picks = {
 			BubblePack = { "BubblePack.GoodJob", "BubblePack.ThankYou", "BubblePack.UhOh", "BubblePack.Yay" },

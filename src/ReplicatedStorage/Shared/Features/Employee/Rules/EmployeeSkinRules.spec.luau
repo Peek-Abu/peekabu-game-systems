@@ -29,6 +29,25 @@ return function()
 		local idleOnly = skin("IdleOnly", nil)
 		idleOnly.showcaseIdle = "skinidle"
 		local e = emp({ Default = plain, Legendary = legendary, IdleOnly = idleOnly })
+		-- An idle item borrows a skin's showcase idle and fidget (EmployeeDef `idles`: idle key -> skin key).
+		e.idles = { LegendaryIdle = "Legendary", IdleOnlyIdle = "IdleOnly", Broken = "Nope" }
+
+		it("plays a chosen idle item's clip on any skin, and its fidget (or none)", function()
+			for _, key in { "Default", "IdleOnly", "Nope" } do
+				expect(EmployeeSkinRules.idleOf(e, key, "LegendaryIdle")).to.equal("skinidle")
+				expect(EmployeeSkinRules.fidgetOf(e, key, "LegendaryIdle")).to.equal("skinfidget")
+			end
+			expect(EmployeeSkinRules.idleOf(e, "Default", "IdleOnlyIdle")).to.equal("skinidle")
+			expect(EmployeeSkinRules.fidgetOf(e, "Default", "IdleOnlyIdle")).never.to.be.ok()
+		end)
+
+		it("plays the skin's own idle for no idle item, an unknown one or one pointing at a missing skin", function()
+			for _, idle in { nil, "", "Unknown", "Broken" } do
+				expect(EmployeeSkinRules.idleOf(e, "Legendary", idle)).to.equal("skinidle")
+				expect(EmployeeSkinRules.idleOf(e, "Default", idle)).to.equal("ownidle")
+				expect(EmployeeSkinRules.fidgetOf(e, "Default", idle)).to.equal("ownfidget")
+			end
+		end)
 
 		it("plays the skin's own idle and fidget when it has them, in menus and in a shift alike", function()
 			expect(EmployeeSkinRules.idleOf(e, "Legendary")).to.equal("skinidle")

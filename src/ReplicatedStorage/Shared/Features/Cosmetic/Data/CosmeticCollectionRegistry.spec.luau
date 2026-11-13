@@ -34,9 +34,9 @@ return function()
 
 	it("keeps each Legendary set linked: skin, emote and sticker pack", function()
 		local expected = {
-			["Collection.BubbleBuddy"] = "Pippa.BubbleBuddy,Pippa.Bubbles,BubblePack",
-			["Collection.PJCappy"] = "Cappy.PJ,Cappy.CocoaSip,CozyPack",
-			["Collection.SheriffPrickles"] = "Prickles.Sheriff,Prickles.Lasso,SheriffPack",
+			["Collection.BubbleBuddy"] = "Pippa.BubbleBuddy,Pippa.Bubbles,BubblePack,Pippa.BubbleBuddyIdle",
+			["Collection.PJCappy"] = "Cappy.PJ,Cappy.CocoaSip,CozyPack,Cappy.PJIdle",
+			["Collection.SheriffPrickles"] = "Prickles.Sheriff,Prickles.Lasso,SheriffPack,Prickles.SheriffIdle",
 		}
 		for id, items in expected do
 			local collection = CosmeticCollectionRegistry.get(id)

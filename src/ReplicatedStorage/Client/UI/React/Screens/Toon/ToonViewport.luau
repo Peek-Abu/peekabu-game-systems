@@ -79,6 +79,8 @@ export type ToonViewportProps = {
 	skin: string?,
 	-- The skin's colour style (nil = 1); an outfit look carries its own.
 	style: number?,
+	-- A live hero's idle item (the key after the dot, one that fits the skin; nil = the skin's own idle).
+	idle: string?,
 	live: boolean?,
 	-- A Cosmetic emote id: a live hero loops it.
 	emote: string?,
@@ -223,7 +225,7 @@ local function lookKey(props: ToonViewportProps): string
 end
 
 -- The live hero a reaction plays on.
-type Hero = { model: Model, who: string, skin: string? }
+type Hero = { model: Model, who: string, skin: string?, idle: string? }
 
 local function ToonViewport(props: ToonViewportProps): React.ReactNode
 	local noFrame: ViewportFrame? = nil
@@ -264,7 +266,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		if stop ~= nil then
 			stop()
 		end
-		stopReaction.current = EmployeePreviewSystem.playReaction(live.model, live.who, live.skin)
+		stopReaction.current = EmployeePreviewSystem.playReaction(live.model, live.who, live.skin, live.idle)
 	end
 
 	local platform = props.platform
@@ -278,6 +280,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		props.turn or 0,
 		props.emote or "",
 		props.reveal == true,
+		props.idle or "",
 	}
 	React.useEffect(function(): () -> ()
 		if frame == nil then
@@ -398,18 +401,21 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		if moving and who ~= nil then
 			table.insert(untrack, previewProps.track(model))
 			table.insert(untrack, previewFaces.track(model))
-			local stopReveal = if props.reveal == true then EmployeePreviewSystem.playReveal(model, who, skin) else nil
+			local idle = if props.outfit ~= nil then nil else props.idle
+			local stopReveal = if props.reveal == true
+				then EmployeePreviewSystem.playReveal(model, who, skin, idle)
+				else nil
 			if stopReveal ~= nil then
 				table.insert(untrack, stopReveal)
 			else
-				EmployeePreviewSystem.playIdle(model, who, skin)
+				EmployeePreviewSystem.playIdle(model, who, skin, nil, idle)
 			end
-			local stopFidgets = EmployeePreviewSystem.playFidgets(model, who, skin)
+			local stopFidgets = EmployeePreviewSystem.playFidgets(model, who, skin, idle)
 			if stopFidgets ~= nil then
 				table.insert(untrack, stopFidgets)
 			end
 			if props.reveal ~= true then
-				hero.current = { model = model, who = who, skin = skin }
+				hero.current = { model = model, who = who, skin = skin, idle = idle }
 				answerClick(false)
 			end
 		end

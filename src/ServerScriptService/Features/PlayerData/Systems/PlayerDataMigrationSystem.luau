@@ -105,6 +105,30 @@ local MIGRATIONS: { Migration } = {
 			coffee.since = 0
 		end
 	end,
+	-- v4 -> v5: the Legendary skins' idles became their own items (owner, 2026-11-13); each Legendary skin's owner gets
+	-- its idle. The look is left alone: its free idle now means "the skin's own", so nothing the player sees changes.
+	-- The ids are written here, not read from CosmeticRegistry: a migration stays as it shipped.
+	function(data)
+		local account = data.account
+		local entitlements = if type(account) == "table" then account.entitlements else nil
+		local owned = if type(entitlements) == "table" then entitlements.owned else nil
+		local skins = if type(owned) == "table" then owned.skin else nil
+		if type(skins) ~= "table" then
+			return
+		end
+		local idleOf = {
+			["Pippa.BubbleBuddy"] = "Pippa.BubbleBuddyIdle",
+			["Cappy.PJ"] = "Cappy.PJIdle",
+			["Prickles.Sheriff"] = "Prickles.SheriffIdle",
+		}
+		for skin, idle in idleOf do
+			if skins[skin] == true then
+				local idles = if type(owned.idle) == "table" then owned.idle else {}
+				idles[idle] = true
+				owned.idle = idles
+			end
+		end
+	end,
 }
 
 local PlayerDataMigrationSystem = {}
