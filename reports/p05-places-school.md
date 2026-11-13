@@ -24,6 +24,13 @@ coordinator hands out Studio. Both rows stay "Ready to check" until the specs pa
   - Server: new account slice `places` (`DepotPlaceSystem`). One PlayerData transaction does both the
     `CurrencyServiceServer:currencyOp` spend (the same server spend path the Shop uses) and the unlock.
   - No shop entry, and no Shop or price files touched.
+- **Gleam pays the rest** (`73368e33`, store-flow's owner-approved rate of 1 Gleam = 10 Credits):
+  - When Credits are short, BUY says "Use N Gleam", with "You need N more Credits" under it. It still takes two
+    taps.
+  - The server pays through `ShopServiceServer:payOps` in the same transaction as the unlock.
+  - Depot can't require the Shop: the Shop already reaches Depot through Cosmetic and Shift, so that would be a
+    require cycle. Instead the Shop hands Depot its payment at init (`DepotServiceServer:setPlacePayer`), the same
+    way Timecard injects its phase reader. That is a 6-line edit in `ShopServiceServer.init`/`stop`.
 - **A truck plays only a place its host owns.** This is checked when the pick is made, every tick (so if a new
   host doesn't own the place, the truck goes back to the Office), and at departure.
 
