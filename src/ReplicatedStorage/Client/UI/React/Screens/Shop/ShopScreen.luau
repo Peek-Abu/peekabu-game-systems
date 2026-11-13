@@ -234,7 +234,7 @@ local function bundleCard(
 		local artSize = math.floor((size.Y - DEPTH.drop - DEPTH.lip) * 0.92)
 		face = {
 			icon = e(ToonIcon, {
-				icon = bundle.icon,
+				image = bundle.image,
 				anchor = Vector2.new(0, 0.5),
 				position = UDim2.new(0, 8, 0.5, -DEPTH.lip / 2),
 				size = UDim2.fromOffset(artSize, artSize),
@@ -267,7 +267,7 @@ local function bundleCard(
 	else
 		face = {
 			icon = e(ToonIcon, {
-				icon = bundle.icon,
+				image = bundle.image,
 				anchor = Vector2.new(0.5, 0),
 				position = UDim2.new(0.5, 0, 0, if phone then 2 else 6),
 				size = UDim2.fromOffset(math.floor(size.Y * 0.5), math.floor(size.Y * 0.5)),
@@ -332,6 +332,7 @@ local function bundleRow(
 	height: number,
 	phone: boolean,
 	gap: number,
+	bundles: { VM.Bundle },
 	onBuy: (key: string) -> ()
 ): React.ReactNode
 	local nodes: Nodes = {
@@ -341,7 +342,6 @@ local function bundleRow(
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	}
-	local bundles = VM.bundles()
 	local cardWidth = math.floor((width - (#bundles - 1) * gap) / #bundles)
 	for index, bundle in bundles do
 		nodes[bundle.key] = bundleCard(bundle, Vector2.new(cardWidth, height), phone, index, onBuy)
@@ -370,6 +370,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local result = ReactCharm.useAtom(ShopStore.result)
 	local lockerOpening = ReactCharm.useAtom(LockerStore.opening)
 	local passInfo = ReactCharm.useAtom(ShopStore.passInfo)
+	local bundleInfo = ReactCharm.useAtom(ShopStore.bundleInfo)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
 	local deals = ReactCharm.useAtom(StateSyncClientStore.deals)
 	-- Which thing the Featured banner spot shows: the offered one-time deals first, then today's banner.
@@ -423,6 +424,8 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local function close()
 		SceneStack.remove(VM.SCENE)
 	end
+	-- Roblox's price and icon for each bundle once fetched (the story keeps the known ones).
+	local bundles = VM.bundles(if preview ~= nil then {} else bundleInfo)
 	local function buyBundle(key: string)
 		if preview == nil then
 			MarketplaceServiceClient:promptProduct(key)
@@ -675,7 +678,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				Size = UDim2.new(1, 0, 0, math.floor(content.height * 0.6)),
 				BackgroundTransparency = 1,
 			}, {
-				row = bundleRow(content.width, math.floor(content.height * 0.6), phone, gap + 10, buyBundle),
+				row = bundleRow(content.width, math.floor(content.height * 0.6), phone, gap + 10, bundles, buyBundle),
 			}),
 		})
 	else
@@ -868,7 +871,14 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				Size = UDim2.new(1, 0, 1, -rowY - headingSize - 14),
 				BackgroundTransparency = 1,
 			}, {
-				row = bundleRow(content.width, content.height - rowY - headingSize - 14, phone, gap + 10, buyBundle),
+				row = bundleRow(
+					content.width,
+					content.height - rowY - headingSize - 14,
+					phone,
+					gap + 10,
+					bundles,
+					buyBundle
+				),
 			})
 		end
 		body = group(nodes)

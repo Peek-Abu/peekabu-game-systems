@@ -159,15 +159,30 @@ return function()
 
 	describe("gleam", function()
 		it("shows the four bundles, bought with Robux only once their products exist", function()
-			local bundles = VM.bundles()
+			local bundles = VM.bundles({})
 			expect(#bundles).to.equal(4)
 			expect(bundles[1].amount).to.equal("100")
-			expect(bundles[1].robux).to.equal("R$ 49")
 			expect(bundles[1].bonus).to.equal(nil)
 			expect(bundles[2].bonus).to.equal("+10%")
 			for _, bundle in bundles do
 				expect(bundle.available).to.equal(ShopConstants.PRODUCT_IDS[bundle.key] ~= nil)
 			end
+		end)
+
+		it("shows each bundle's product icon and price from Roblox, the known ones until Roblox answers", function()
+			local known = VM.bundles({})[1]
+			expect(known.robux).to.equal(`R$ {ShopConstants.BUNDLES[1].robux}`)
+			expect(known.image).to.equal(ShopConstants.BUNDLES[1].image)
+			expect(string.match(known.image, "^rbxassetid://%d+$")).to.be.ok()
+
+			local live = VM.bundles({ gleam100 = { price = 1099, icon = "rbxassetid://7" } })[1]
+			expect(live.robux).to.equal("R$ 1,099")
+			expect(live.image).to.equal("rbxassetid://7")
+
+			-- A product Roblox has no price or icon for keeps the known ones.
+			local partial = VM.bundles({ gleam100 = {} })[1]
+			expect(partial.robux).to.equal(known.robux)
+			expect(partial.image).to.equal(known.image)
 		end)
 	end)
 

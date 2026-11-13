@@ -3,7 +3,8 @@
 	ShopStore: the Shop's client state: which product page is open (`product`, nil = the Shop's front) and the last
 	buy result from the server (`result`, from ShopEvents.BuyResult) so the page can say "Need 300 more" or that it
 	is already owned. Opening another page clears the old result. `passInfo` holds each game pass's price and icon as
-	Roblox reported them (ShopServiceClient fetches them), by MarketplaceRegistry key. `tab` is the tab the Shop opens on next (`openTab`, the hub's Lost & Found lockers).
+	Roblox reported them (ShopServiceClient fetches them), by MarketplaceRegistry key; `bundleInfo` the same for each Gleam
+	bundle's developer product (its Robux price and icon), by bundle key. `tab` is the tab the Shop opens on next (`openTab`, the hub's Lost & Found lockers).
 	Charm atoms the Shop screen reads.
 
 	@class ShopStore
@@ -19,6 +20,9 @@ export type Result = { offer: string, reason: string }
 -- and Dashboard name.
 export type PassInfo = { price: number?, icon: string?, name: string?, forSale: boolean }
 
+-- A Gleam bundle's developer product as Roblox reports it: its Robux price and icon (nil when Roblox gave none).
+export type ProductInfo = { price: number?, icon: string? }
+
 local noProduct: string? = nil
 local product = Charm.atom(noProduct)
 local noResult: Result? = nil
@@ -28,11 +32,14 @@ local noPasses: { [string]: PassInfo } = {}
 local noTab: string? = nil
 local tab = Charm.atom(noTab)
 local passInfo = Charm.atom(noPasses)
+local noBundles: { [string]: ProductInfo } = {}
+local bundleInfo = Charm.atom(noBundles)
 
 local ShopStore = {
 	product = product,
 	result = result,
 	passInfo = passInfo,
+	bundleInfo = bundleInfo,
 	tab = tab,
 }
 
@@ -40,6 +47,12 @@ function ShopStore.setPassInfo(key: string, info: PassInfo)
 	local nextInfo = table.clone(passInfo())
 	nextInfo[key] = info
 	passInfo(nextInfo)
+end
+
+function ShopStore.setBundleInfo(key: string, info: ProductInfo)
+	local nextInfo = table.clone(bundleInfo())
+	nextInfo[key] = info
+	bundleInfo(nextInfo)
 end
 
 function ShopStore.open(id: string?)
@@ -69,6 +82,7 @@ function ShopStore.reset()
 	product(nil)
 	result(nil)
 	passInfo({})
+	bundleInfo({})
 	tab(nil)
 end
 

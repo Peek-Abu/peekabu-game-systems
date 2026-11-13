@@ -12,11 +12,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 
+-- `robux` and `image` are the products' price and icon on Roblox (Creator Dashboard, read 2026-11-12); the Shop shows
+-- what Roblox reports at runtime and these only until it answers, so a Dashboard change shows without a code change.
 local BUNDLES: { ShopTypes.GleamBundle } = {
-	{ key = "gleam100", gleam = 100, robux = 49, bonus = 0, icon = "gleamPile" },
-	{ key = "gleam275", gleam = 275, robux = 129, bonus = 10, icon = "gleamBucket" },
-	{ key = "gleam600", gleam = 600, robux = 249, bonus = 20, icon = "gleamCrate" },
-	{ key = "gleam1500", gleam = 1500, robux = 549, bonus = 35, icon = "gleamTruck" },
+	{ key = "gleam100", gleam = 100, robux = 99, bonus = 0, image = "rbxassetid://112673750570330" },
+	{ key = "gleam275", gleam = 275, robux = 129, bonus = 10, image = "rbxassetid://82923918698099" },
+	{ key = "gleam600", gleam = 600, robux = 449, bonus = 20, image = "rbxassetid://138358363514131" },
+	{ key = "gleam1500", gleam = 1500, robux = 999, bonus = 35, image = "rbxassetid://138262914648345" },
 }
 
 -- The developer product id of each bundle (owner, Creator Dashboard, 2026-10-24). The Gleam amounts and Robux prices

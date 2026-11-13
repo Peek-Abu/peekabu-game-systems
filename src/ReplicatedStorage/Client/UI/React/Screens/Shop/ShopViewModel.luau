@@ -98,7 +98,8 @@ export type Bundle = {
 	amount: string,
 	robux: string,
 	bonus: string?,
-	icon: UIAssets.ToonIcon,
+	-- The product's icon (rbxassetid).
+	image: string,
 	available: boolean,
 }
 
@@ -303,20 +304,19 @@ function VM.skins(owns: Owns, balances: Balances, employee: string?): { OfferCar
 	return cards
 end
 
-function VM.bundles(): { Bundle }
+-- The Gleam bundles; each one's price and icon as Roblox reported them in `infos` (by bundle key), the known ones
+-- (ShopConstants.BUNDLES) until it does.
+function VM.bundles(infos: { [string]: ShopStore.ProductInfo }): { Bundle }
 	local list: { Bundle } = {}
 	for _, bundle in ShopConstants.BUNDLES do
-		local icon: UIAssets.ToonIcon = if bundle.icon == "gleamBucket"
-			then "gleamBucket"
-			elseif bundle.icon == "gleamCrate" then "gleamCrate"
-			elseif bundle.icon == "gleamTruck" then "gleamTruck"
-			else "gleamPile"
+		local info = infos[bundle.key]
+		local price = if info ~= nil and info.price ~= nil then info.price else bundle.robux
 		table.insert(list, {
 			key = bundle.key,
 			amount = ToonStyleViewModel.grouped(bundle.gleam),
-			robux = `R$ {bundle.robux}`,
+			robux = `R$ {ToonStyleViewModel.grouped(price)}`,
 			bonus = if bundle.bonus > 0 then `+{bundle.bonus}%` else nil,
-			icon = icon,
+			image = if info ~= nil and info.icon ~= nil then info.icon else bundle.image,
 			available = ShopConstants.PRODUCT_IDS[bundle.key] ~= nil,
 		})
 	end

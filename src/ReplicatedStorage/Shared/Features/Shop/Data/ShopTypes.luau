@@ -43,7 +43,9 @@ export type GleamBundle = {
 	robux: number,
 	-- The bonus over the smallest bundle's rate, in percent (0 = none).
 	bonus: number,
-	icon: string,
+	-- The developer product's own icon (rbxassetid), the one its Roblox store page shows; the Shop shows the icon
+	-- Roblox reports for the product once it answers, this one until then.
+	image: string,
 }
 
 return {}
