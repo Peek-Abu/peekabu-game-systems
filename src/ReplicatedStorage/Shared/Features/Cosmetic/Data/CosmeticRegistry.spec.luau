@@ -158,6 +158,17 @@ return function()
 		end
 	)
 
+	it("sells the Legendary skins' emotes as Epic (owner, 2026-11-12): only skins are Legendary", function()
+		for _, id in { "Pippa.Bubbles", "Cappy.CocoaSip", "Prickles.Lasso" } do
+			local item = CosmeticRegistry.get(id)
+			expect(item.kind).to.equal("emote")
+			expect(item.rarity).to.equal("epic")
+		end
+		for _, item in CosmeticRegistry.ofKind("emote") do
+			expect(item.rarity).never.to.equal("legendary")
+		end
+	end)
+
 	it("registers every ownable item in the entitlements catalogue under its kind", function()
 		for _, item in all do
 			expect(EntitlementRegistry.has(item.kind, item.id)).to.equal(item.kind ~= "sticker")

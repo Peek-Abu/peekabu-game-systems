@@ -7,7 +7,7 @@
 	  to play it. A click or tap on a slot plays it too (`play`), and the phone's HUD button opens the wheel.
 	- `play(slot)` asks the server (EmoteEvents.PlayRequest); the server decides and grants the replicated clip.
 	- While an emote may be playing, moving or jumping asks the server to stop it (EmoteEvents.StopRequest), once.
-	- Every character's emote props show and hide from its clip's markers (EmotePropSystem), and its Legendary
+	- Every character's emote props show and hide from its clip's markers (EmotePropSystem), and its bundle
 	  emote effects (bubbles, faces) run on them (EmoteEffectSystem, EmoteVfxSystem), started and stopped with this
 	  service. Sheriff Prickles' lasso loop is drawn bendy over its clip-posed prop (EmoteLassoSystem). A skin's
 	  showcase idle shows its prop while that character stands idle, away while it vacuums, carries, hides or is knocked

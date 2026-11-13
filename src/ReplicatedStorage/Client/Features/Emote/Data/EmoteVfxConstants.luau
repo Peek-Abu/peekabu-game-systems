@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	EmoteVfxConstants: the Legendary emotes' world effects (EmoteVfxSystem plays them on the clip's markers,
+	EmoteVfxConstants: the skin-bundle emotes' world effects (EmoteVfxSystem plays them on the clip's markers,
 	EmoteEffectRegistry). Bubble Ride (Bubble Buddy), game-vfx-design tier 3 (a showcase moment):
 	- STREAM: soap bubbles pour from the wand loop while she blows, drift forward and rise.
 	- GIANT: a giant bubble grows from the wand round her whole body, floats with her (it rides LowerTorso, so the

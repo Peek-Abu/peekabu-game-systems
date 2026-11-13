@@ -180,7 +180,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		kind = "emote",
 		employee = "Pippa",
 		name = "Bubble Ride",
-		rarity = "legendary",
+		-- Epic, not Legendary (owner, 2026-11-12): only the skins are Legendary.
+		rarity = "epic",
 		source = "gleam",
 		price = 400,
 		lore = "Pippa blows one giant bubble and floats away inside it. Pop!",
@@ -233,7 +234,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		kind = "emote",
 		employee = "Cappy",
 		name = "Cocoa Sip",
-		rarity = "legendary",
+		-- Epic, not Legendary (owner, 2026-11-12): only the skins are Legendary.
+		rarity = "epic",
 		source = "gleam",
 		price = 400,
 		lore = "A slow sip of cocoa, then a happy sigh. Ahh.",
@@ -285,7 +287,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		kind = "emote",
 		employee = "Prickles",
 		name = "Big Roundup",
-		rarity = "legendary",
+		-- Epic, not Legendary (owner, 2026-11-12): only the skins are Legendary.
+		rarity = "epic",
 		source = "gleam",
 		price = 400,
 		lore = "Spin it, throw it, yank it back. Yee-haw!",

@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	EmoteVfxSystem: the Legendary emotes' effects on this client, started and ended by EmoteEffectSystem from the
+	EmoteVfxSystem: the skin-bundle emotes' effects on this client, started and ended by EmoteEffectSystem from the
 	clip's markers (EmoteEffectRegistry). `start(id, character, value)` returns how to end the effect, or nil.
 	- bubbleStream: soap bubbles pour from the BubbleWand's loop, away from her face; ends by letting the last ones
 	  drift off.
