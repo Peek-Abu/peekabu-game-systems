@@ -72,10 +72,11 @@ local LOOKS: { [UIToonConstants.Rarity]: Look } = table.freeze({
 		goo = false,
 	},
 	legendary = {
-		top = Color3.fromHex("FFF0A0"),
+		-- Tuned in play (2026-11-14): on a solid backdrop, white rays on pale yellow vanished.
+		top = Color3.fromHex("FFD23F"),
 		bottom = Color3.fromHex("E06A00"),
-		rays = { color = WHITE, transparency = 0.4 },
-		counterRays = { color = Color3.fromHex("FFF2A8"), transparency = 0.65 },
+		rays = { color = WHITE, transparency = 0.1 },
+		counterRays = { color = UIToonConstants.rarity("legendary").base, transparency = 0.55 },
 		word = "LEGENDARY",
 		wordColor = INK,
 		wordTransparency = 0.86,
