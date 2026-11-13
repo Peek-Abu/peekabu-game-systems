@@ -100,8 +100,9 @@ local GRAYBOX: { Piece } = {
 	piece("BandLeft", Vector3.new(-8.525, 5.2, 0.15), Vector3.new(0.07, 2.6, 23.8), BAND),
 	piece("BandRight", Vector3.new(8.525, 5.2, 0.15), Vector3.new(0.07, 2.6, 23.8), BAND),
 }
--- The tandem rear axles under the box and the front axle under the cab (x: the wheel's centre).
-for _, axle in { { z = -6, x = 7.7 }, { z = -9.3, x = 7.7 }, { z = 15.72, x = 6.9 } } do
+-- The tandem rear axles beside the box (v4: the tyres stand just outside the walls, owner 2026-11-13) and the front
+-- axle under the cab (x: the wheel's centre).
+for _, axle in { { z = -6, x = 9.22 }, { z = -9.3, x = 9.22 }, { z = 15.72, x = 6.9 } } do
 	for _, side in { -1, 1 } do
 		table.insert(
 			GRAYBOX,
@@ -254,7 +255,8 @@ return table.freeze({
 	BED_SIZE = Vector3.new(16, 3, 24),
 	RAMP_LENGTH = 4,
 	-- Deck-space extents of the whole truck (arch, ramp foot, bumper): what a layout must keep clear.
-	HALF_WIDTH = 9.3,
+	-- v4: the rear wheels' hubs, beside the box, reach x +-10.2.
+	HALF_WIDTH = 10.25,
 	BACK = 16.2,
 	FRONT = 20.2,
 	TOP = 11.8,

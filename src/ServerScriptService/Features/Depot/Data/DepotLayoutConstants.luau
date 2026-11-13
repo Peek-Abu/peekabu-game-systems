@@ -73,7 +73,8 @@ return table.freeze({
 	BED_SIZE = Vector3.new(16, 3, 24),
 	CAB_SIZE = Vector3.new(13, 11, 9),
 	RAMP_DEPTH = 4.5,
-	TRUCK_WIDTH = 19,
+	-- Truck v4's rear wheels stand beside the box (20.4 wide). The hub bays are 28 apart, so 7.5 studs stay between trucks.
+	TRUCK_WIDTH = 20.5,
 	BOARD_SIZE = Vector3.new(12, 8, 1),
 	-- The contract board's body (DepotBoardVisualSystem): its sign is drawn on the board part's front face, so this is
 	-- everything behind it, INSET from the part's outline so the work-order card's rounded corners cover it from the
