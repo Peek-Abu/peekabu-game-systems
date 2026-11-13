@@ -98,3 +98,20 @@ price tag, Let's Go; plus "which Pippa: coral / lavender / both".
 - Round 3 on the review page: backpack with fewer colours, Let's Go with simpler fur, the price tag with the edge fixed.
 - Still open: which Pippa (coral / lavender / both) and the Pippa re-render (needs Studio); the in-game capture of the
   clipboard and colours (waiting for "Lobby go").
+
+## Round 3 + Pippa (ed7a56b6)
+- Picks: backpack A (blue, coral pocket), Let's Go A (simpler fur, motion lines), gold price tag (C).
+- Inventory icon = backpack (hub INVENTORY tile, Inventory bar). Price tag marks what you can buy: unhired crew cards,
+  the pick screen's locked employees (hireable there), and item cards whose band is a Credits/Gleam price
+  (`InventoryViewModel.lockIcon`, specced); everything else keeps the Gloom lock. Let's Go icon replaced.
+- Pippa re-rendered in Shift Edit from the v13 model, coral (Default) and lavender (Owner Special skin applied with
+  `EmployeeSkinSystem.apply`, glasses included), lanyard via `EmployeeLanyardSystem.attachPreview`. Poses chosen by a
+  grid search that rejects any pose where `GetPartsInPart` finds a hand or forearm in the head, face plate or ears;
+  the award card became a cheer (a salute with her short arms always overlaps her head from the front). Captured on a
+  flat green backdrop and keyed with `p05-ui-kit/pippa/chroma.py` (the generic cutout dropped the lavender body).
+- Colour per icon (owner: "both, depends on the icon"): coral on chat-wheel Emotes, CREW chip, Crew tab, hire
+  silhouette, award card; lavender on the Shop Skins tab (`pippaSkins`); the welcome/loading card already shows the
+  live lavender model. Listed on the review page with a veto button each.
+- Uploads (Icey Labs, Approved, Image ids verified group 189923277): backpack 81160659671419, Let's Go 124538881139374,
+  price tag 140520500336666, Pippa wave coral 126227546924097, wave lavender 97692146860492, cheer coral
+  89228375154099. The old `pippaSaluteCut` is replaced by `pippaCheerCut`.
