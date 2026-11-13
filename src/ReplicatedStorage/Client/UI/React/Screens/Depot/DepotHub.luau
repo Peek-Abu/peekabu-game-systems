@@ -25,6 +25,10 @@ local Company = require(ReplicatedStorage.Client.Features.UI.State.UICompanyStor
 local TimecardMomentStore = require(ReplicatedStorage.Client.Features.Timecard.State.TimecardMomentStore)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
+local HostSnapshotUtils = require(ReplicatedStorage.Shared.Features.Host.Utils.HostSnapshotUtils)
+local HostStore = require(ReplicatedStorage.Client.Features.Host.State.HostStore)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
 local ShopViewModel = require(script.Parent.Parent.Shop.ShopViewModel)
@@ -74,6 +78,13 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
 	local daily = ReactCharm.useAtom(StateSyncClientStore.dailyReward)
 	local queue = ReactCharm.useAtom(QueueStore.snapshot)
+	local hosts = ReactCharm.useAtom(HostStore.snapshot)
+	local world = ReactCharm.useAtom(StateSyncClientStore.world)
+	-- Aboard a hosted truck, the Tonight card shows the place its host picked (the Office otherwise).
+	local truckId = QueueSnapshotUtils.padOf(queue, Players.LocalPlayer.UserId)
+	local picked: ShiftTypes.MapId? = if truckId ~= nil and HostSnapshotUtils.hostOf(hosts, truckId) ~= nil
+		then DepotMapRules.mapOf(DepotMapRules.decode(world[DepotConstants.MAP_WORLD_ENTRY]), truckId)
+		else nil
 	local now = useServerClock(1)
 	local timecard = ReactCharm.useAtom(StateSyncClientStore.timecard)
 	local workOrder = ReactCharm.useAtom(StateSyncClientStore.workOrder)
@@ -142,7 +153,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				profile = VM.profile(player.DisplayName, rank),
 				credits = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
 				gift = VM.gift(daily, now),
-				tonight = VM.tonight(boardContract()),
+				tonight = VM.tonight(boardContract(), picked),
 				cta = nil,
 				findTruck = VM.findTruck(pad ~= nil, promptUp),
 				newJobs = rank == nil or rank.xp == 0,

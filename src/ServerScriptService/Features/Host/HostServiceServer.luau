@@ -10,7 +10,8 @@
 	  ghost bays and popping trucks read it).
 	- START (host only) starts Queue's START_SECONDS countdown; CANCEL (host only) stops it; LEAVE (any member) puts
 	  the player on the floor in front of the truck (HostRules.exit), so Queue drops them on its next sample.
-	- A truck that nobody started for IDLE_SECONDS starts on its own, so an away host can't trap kids aboard.
+	- A truck that nobody started for IDLE_SECONDS starts on its own, so an away host can't trap kids aboard. It waits
+	  while the host has the places menu open (Browse; at most BROWSE_MAX_SECONDS, then a BROWSE_GRACE_SECONDS grace).
 	- KICK (host only) keeps a member off the truck until it empties; SET LOCK (host only) makes it friends only (the
 	  host's Roblox friends, from Social's SocialFriendTracker; a pair not checked yet counts as not friends). Queue's
 	  board filter asks HostRules.canBoard every sample; a refused player (a kicked member included) is put outside
@@ -272,6 +273,18 @@ local onSetLock = RequestHandler.wrap({
 	end,
 })
 
+local onBrowse = RequestHandler.wrap({
+	name = "Hostbrowse",
+	rateLimit = HostConstants.REQUEST_RATE,
+	handler = function(data: boolean, player: Player)
+		local pad = truckFor(player, "browse")
+		local padId = if pad ~= nil then QueueServiceServer.pads:padIdOf(pad) else nil
+		if padId ~= nil then
+			tracker:browse(padId, data == true, serverNow())
+		end
+	end,
+})
+
 export type HostServiceServer = {
 	dependencies: { string },
 	start: (self: HostServiceServer) -> (),
@@ -322,6 +335,14 @@ local HostServiceServer: HostServiceServer = {
 			HostEvents.packets.SetLock.listen(function(data: boolean, player: Player?)
 				if player then
 					onSetLock(data, player)
+				end
+			end)
+		)
+		table.insert(
+			stoppers,
+			HostEvents.packets.Browse.listen(function(data: boolean, player: Player?)
+				if player then
+					onBrowse(data, player)
 				end
 			end)
 		)

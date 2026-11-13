@@ -49,6 +49,11 @@ local HostEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.bool,
 				reliabilityType = "reliable",
 			}),
+			-- The host opened (true) or closed the places menu: the idle start waits while it is open (capped).
+			Browse = ByteNet.definePacket({
+				value = ByteNet.bool,
+				reliabilityType = "reliable",
+			}),
 		},
 		queries = {},
 		structs = {},

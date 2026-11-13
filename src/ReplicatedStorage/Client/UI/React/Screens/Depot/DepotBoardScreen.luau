@@ -5,7 +5,8 @@
 	the world entry (DepotMapRules.decode), the reader's bought places and Credits from the synced profile, and the
 	device layout, and draws DepotBoardPanel from DepotBoardViewModel, scaled to the viewport. A host's tap on an open
 	place picks it (DepotPlaceSender.pick); anyone's tap on a card shows its detail; BUY takes two taps (the first asks
-	SURE? for DepotPlaceConstants.CONFIRM_SECONDS, the second sends DepotPlaceSender.buy; short of Credits, the
+	SURE? for DepotPlaceConstants.CONFIRM_SECONDS, and while a host has it open the truck's idle start waits
+	(HostServiceClient:browse); the second sends DepotPlaceSender.buy; short of Credits, the
 	button offers the Gleam for the rest at the Shop's rate and sends that as the agreed most). The LOCKER and GUIDE tabs (and
 	READ THE BRIEF) swap the board for that hub page. CLOSE and FIND A TRUCK take the scene off the stack (Escape pops
 	it through UIServiceClient); DepotServiceClient clears the store's board once the scene has left the stack.
@@ -27,6 +28,7 @@ local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local DepotPlaceSender = require(ReplicatedStorage.Client.Features.Depot.Net.DepotPlaceSender)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
+local HostServiceClient = require(ReplicatedStorage.Client.Features.Host.HostServiceClient)
 local HostStore = require(ReplicatedStorage.Client.Features.Host.State.HostStore)
 local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
@@ -89,6 +91,16 @@ local function DepotBoardScreen(): React.ReactNode
 	local picked: MapId? = if role ~= "none"
 		then DepotMapRules.mapOf(DepotMapRules.decode(world[DepotConstants.MAP_WORLD_ENTRY]), padId)
 		else nil
+	-- While the host has the menu open, the truck's idle start waits (capped on the server).
+	React.useEffect(function(): (() -> ())?
+		if role ~= "host" then
+			return nil
+		end
+		HostServiceClient:browse(true)
+		return function()
+			HostServiceClient:browse(false)
+		end
+	end, { role })
 	local credits = if currency ~= nil then currency[CREDITS] or 0 else 0
 	local layout: UIPaperConstants.Layout = usePaperLayout()
 	local viewport = usePaperViewport()

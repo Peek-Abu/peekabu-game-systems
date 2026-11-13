@@ -6,7 +6,8 @@
 ]=]
 
 -- What a player asks of their truck. Only the host starts, cancels, kicks and locks; any member may leave.
-export type Action = "start" | "cancel" | "leave" | "kick" | "lock"
+-- "browse": the host has the places menu open (the idle start waits; HostRules.idleDue).
+export type Action = "start" | "cancel" | "leave" | "kick" | "lock" | "browse"
 
 -- Why a player may not board a truck: the host kicked them, or it is friends only and they aren't the host's friend.
 export type RefuseReason = "kicked" | "friends"

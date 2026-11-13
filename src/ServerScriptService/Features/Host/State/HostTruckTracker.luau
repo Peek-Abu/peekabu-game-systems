@@ -5,7 +5,8 @@
 	them here. The decisions are HostRules.
 
 	A truck's idle wait starts when it gets a host, restarts when the host changes and when a countdown stops without
-	the truck leaving (cancelled, or a failed trip put the crew back), and pauses while a countdown runs. An emptied
+	the truck leaving (cancelled, or a failed trip put the crew back), and pauses while a countdown runs and while the
+	host has the places menu open (`browse`; HostRules.idleDue caps it, and closing leaves a grace). An emptied
 	truck is forgotten, with its kicks and lock. A kick lasts until the truck empties (it leaves, or everyone steps
 	out), across host changes; the friends-only lock turns off when the host changes, since it was the old host's
 	friends.
@@ -23,6 +24,8 @@ type Truck = {
 	-- When the idle wait began (server time).
 	since: number,
 	started: boolean,
+	-- When the host opened the places menu (nil: closed).
+	browsing: number?,
 	locked: boolean,
 	kicked: { [number]: boolean },
 }
@@ -31,6 +34,7 @@ export type HostTruckTracker = {
 	sync: (self: HostTruckTracker, padId: string, members: { number }, started: boolean, now: number) -> boolean,
 	hostOf: (self: HostTruckTracker, padId: string) -> number?,
 	idleDue: (self: HostTruckTracker, now: number) -> { string },
+	browse: (self: HostTruckTracker, padId: string, open: boolean, now: number) -> boolean,
 	kick: (self: HostTruckTracker, padId: string, userId: number) -> boolean,
 	isKicked: (self: HostTruckTracker, padId: string, userId: number) -> boolean,
 	setLocked: (self: HostTruckTracker, padId: string, locked: boolean) -> boolean,
@@ -58,7 +62,8 @@ function HostTruckTracker.new(): HostTruckTracker
 			end
 			if truck == nil or truck.host ~= host then
 				local kicked = if truck ~= nil then truck.kicked else {}
-				trucks[padId] = { host = host, since = now, started = started, locked = false, kicked = kicked }
+				trucks[padId] =
+					{ host = host, since = now, started = started, browsing = nil, locked = false, kicked = kicked }
 				return true
 			end
 			if truck.started and not started then
@@ -77,12 +82,29 @@ function HostTruckTracker.new(): HostTruckTracker
 		idleDue = function(_self, now)
 			local list: { string } = {}
 			for padId, truck in trucks do
-				if HostRules.idleDue(truck.since, truck.started, now) then
+				if HostRules.idleDue(truck.since, truck.started, now, truck.browsing) then
 					table.insert(list, padId)
 				end
 			end
 			table.sort(list)
 			return list
+		end,
+
+		-- The host opened (`open`) or closed the places menu at `now`. Whether the truck is hosted.
+		browse = function(_self, padId, open, now)
+			local truck = trucks[padId]
+			if truck == nil then
+				return false
+			end
+			if open then
+				if truck.browsing == nil then
+					truck.browsing = now
+				end
+			elseif truck.browsing ~= nil then
+				truck.browsing = nil
+				truck.since = HostRules.afterBrowse(truck.since, now)
+			end
+			return true
 		end,
 
 		-- Keeps `userId` off a hosted truck. Whether it was hosted.

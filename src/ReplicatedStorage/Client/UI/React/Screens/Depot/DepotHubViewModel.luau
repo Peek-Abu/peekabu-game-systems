@@ -16,7 +16,8 @@ local SECONDS_PER_DAY = 86400
 
 export type ProfileView = { name: string, level: string, rank: string, xpText: string, fill: number }
 export type GiftView = { ready: boolean, text: string }
-export type TonightView = { title: string, site: string }
+-- The Tonight card: the place's name and site, its posed photo, and its monster's render breaking the card.
+export type TonightView = { title: string, site: string, photo: string, monster: UIAssets.ToonIcon }
 
 -- The hub's profile card (V1): the player's name in caps, their Clearance Level, its name, the XP bar to the next
 -- level. `rank` is the published XP (RankViewModel.rankOf), nil until the server publishes it (the first rung).
@@ -64,8 +65,17 @@ function VM.pageHue(page: Page): "gold" | "night"
 	return if page == "guide" then "gold" else "night"
 end
 
--- The Tonight card: tonight's building (the board's contract; the first contract until the board is found).
-function VM.tonight(id: string?): TonightView
+-- The Tonight card: the place the reader's truck picked (`map`, nil off a hosted truck: the Office), as tonight's
+-- building. The Office's name comes from the board's contract (the first contract until the board is found).
+function VM.tonight(id: string?, map: ShiftTypes.MapId?): TonightView
+	if map == "school" then
+		return {
+			title = string.upper(DepotConstants.SCHOOL_CONTRACTS[1].client),
+			site = DepotConstants.SCHOOL_SITE.site,
+			photo = UIAssets.toonPhotos.schoolWide,
+			monster = "brambleHunt",
+		}
+	end
 	local contract = DepotConstants.CONTRACTS[1]
 	for _, entry in DepotConstants.CONTRACTS do
 		if entry.id == id then
@@ -74,7 +84,12 @@ function VM.tonight(id: string?): TonightView
 	end
 	local client = string.upper(contract.client)
 	client = string.gsub(client, "%s+LTD%.?$", "")
-	return { title = client, site = DepotConstants.SITE }
+	return {
+		title = client,
+		site = DepotConstants.SITE,
+		photo = UIAssets.toonPhotos.officeCard,
+		monster = "managerHunt",
+	}
 end
 -- (The old Company Equipment page is gone: the Inventory's Vacuums tab is the vacuum's page now.)
 export type Page = "guide" | "settings"

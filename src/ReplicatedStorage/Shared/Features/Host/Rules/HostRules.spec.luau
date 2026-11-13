@@ -118,6 +118,24 @@ return function()
 			expect(HostRules.idleDue(100, false, 100 + IDLE)).to.equal(true)
 		end)
 
+		it("waits while the host has the places menu open, for at most the browse cap", function()
+			local MAX = HostConstants.BROWSE_MAX_SECONDS
+			expect(HostRules.idleDue(100, false, 100 + IDLE, 100 + IDLE - 5)).to.equal(false)
+			expect(HostRules.idleDue(100, false, 100 + IDLE + MAX - 1, 100 + IDLE)).to.equal(false)
+			expect(HostRules.idleDue(100, false, 110 + MAX, 110)).to.equal(true)
+			expect(HostRules.idleDue(100, false, 100 + IDLE, nil)).to.equal(true)
+		end)
+
+		it("leaves at least the grace time once the menu closes", function()
+			local GRACE = HostConstants.BROWSE_GRACE_SECONDS
+			local now = 100 + IDLE + 30
+			local since = HostRules.afterBrowse(100, now)
+			expect(HostRules.idleDue(since, false, now + GRACE - 1)).to.equal(false)
+			expect(HostRules.idleDue(since, false, now + GRACE)).to.equal(true)
+			-- Closed early: the wait it had left is kept, never shortened.
+			expect(HostRules.afterBrowse(100, 105)).to.equal(100)
+		end)
+
 		it("never fires while a countdown runs or with nobody aboard", function()
 			expect(HostRules.idleDue(100, true, 100 + IDLE * 2)).to.equal(false)
 			expect(HostRules.idleDue(nil, false, 100 + IDLE * 2)).to.equal(false)

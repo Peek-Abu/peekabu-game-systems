@@ -10,7 +10,9 @@
 	  member.
 	- `canBoard`: a kicked player never (a kicked member is taken off); on a friends-only truck only the host's
 	  friends get on, but the lock never ejects the host or anyone already aboard.
-	- `idleDue`: a truck with someone aboard that nobody started for IDLE_SECONDS starts on its own.
+	- `idleDue`: a truck with someone aboard that nobody started for IDLE_SECONDS starts on its own; it waits while
+	  the host has the places menu open (since `browsing`), for at most BROWSE_MAX_SECONDS. `afterBrowse` is the
+	  idle wait's new start once the menu closes: at least BROWSE_GRACE_SECONDS left.
 	- `exit`: where LEAVE (or a kick) puts a player: on the floor past the pad's front (-Z) edge, facing away.
 
 	@class HostRules
@@ -82,8 +84,18 @@ function HostRules.canBoard(
 end
 
 -- Whether a truck boarded (or last changed host, or last stopped its countdown) at `since` starts on its own now.
-function HostRules.idleDue(since: number?, started: boolean, now: number): boolean
+-- `browsing`: when its host opened the places menu (nil: closed); the start waits for at most BROWSE_MAX_SECONDS of it.
+function HostRules.idleDue(since: number?, started: boolean, now: number, browsing: number?): boolean
+	if browsing ~= nil and now - browsing < HostConstants.BROWSE_MAX_SECONDS then
+		return false
+	end
 	return since ~= nil and not started and now - since >= HostConstants.IDLE_SECONDS
+end
+
+-- The idle wait's start once the host closes the places menu at `now`: unchanged, or moved so that at least
+-- BROWSE_GRACE_SECONDS are left before the truck starts on its own.
+function HostRules.afterBrowse(since: number, now: number): number
+	return math.max(since, now - HostConstants.IDLE_SECONDS + HostConstants.BROWSE_GRACE_SECONDS)
 end
 
 function HostRules.exit(padCFrame: CFrame, padSize: Vector3): CFrame

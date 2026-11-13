@@ -29,6 +29,7 @@ export type HostServiceClient = {
 	leaveTruck: (self: HostServiceClient) -> (),
 	kick: (self: HostServiceClient, userId: number) -> (),
 	setLock: (self: HostServiceClient, locked: boolean) -> (),
+	browse: (self: HostServiceClient, open: boolean) -> (),
 	getState: (self: HostServiceClient) -> { [string]: any },
 }
 
@@ -58,6 +59,11 @@ local HostServiceClient: HostServiceClient = {
 	-- The host turns friends only on or off.
 	setLock = function(_self, locked)
 		HostEvents.packets.SetLock.send(locked)
+	end,
+
+	-- The host opened or closed the places menu (the idle start waits while it is open; the server checks the host).
+	browse = function(_self, open)
+		HostEvents.packets.Browse.send(open)
 	end,
 
 	getState = function(_self)

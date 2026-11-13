@@ -23,6 +23,10 @@ return table.freeze({
 	START_SECONDS = 5,
 	-- A truck with anyone aboard that nobody starts for this long starts on its own (an away host can't trap kids).
 	IDLE_SECONDS = 60,
+	-- While the host has the places menu open the idle start waits, but never more than BROWSE_MAX_SECONDS of it (a
+	-- host who walks away with the menu open can't trap kids); closing it leaves at least BROWSE_GRACE_SECONDS more.
+	BROWSE_MAX_SECONDS = 90,
+	BROWSE_GRACE_SECONDS = 15,
 	-- Where LEAVE puts a player: this many studs past the pad's front (-Z) edge, the root this high over its floor.
 	EXIT_DISTANCE = 7,
 	EXIT_HEIGHT = 3,

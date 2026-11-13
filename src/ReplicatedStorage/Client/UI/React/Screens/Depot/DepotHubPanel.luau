@@ -315,7 +315,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 				Position = UDim2.fromOffset(14, 14),
 				Size = UDim2.new(1, -28, 0, 136),
 				BackgroundColor3 = COLOR.ink,
-				Image = UIAssets.toonPhotos.officeCard,
+				Image = tonight.photo,
 				ScaleType = Enum.ScaleType.Crop,
 				ZIndex = 1,
 			}, {
@@ -345,7 +345,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 				}),
 			}),
 			manager = e(ToonIcon, {
-				icon = "managerHunt",
+				icon = tonight.monster,
 				anchor = Vector2.new(1, 1),
 				position = UDim2.new(1, 18, 0, 164),
 				size = UDim2.fromOffset(98, 98),
