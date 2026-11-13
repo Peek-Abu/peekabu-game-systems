@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	ShopRarityLookViewModel: how the shop's backdrop changes with the open item's rarity (owner, 2026-11-14: look B, "the
-	backdrop takes the tier"). Every tier gets its own top-to-bottom colours and its name written huge and faint behind
-	the model. Rays start at Rare and grow stronger up the ladder, and Legendary adds a second layer turning the other
+	backdrop takes the tier"). Every tier gets its own top-to-bottom colours (opaque) and its name written huge and faint
+	behind the model, in the same words as its flag (the default tier is CLASSIC). Rays start at Rare and grow stronger up the ladder, and Legendary adds a second layer turning the other
 	way. Odd turns dark red, with Gloom goo along the top edge and red screen edges in place of the ink vignette. The
 	model itself is never covered (owner: the item must always be clearly visible). ShopScreen hands this to
 	ToonBackdrop. Pure.
@@ -40,7 +40,7 @@ local LOOKS: { [UIToonConstants.Rarity]: Look } = table.freeze({
 	default = {
 		top = Color3.fromHex("E6E3EE"),
 		bottom = Color3.fromHex("7D7891"),
-		word = "COMMON",
+		word = "CLASSIC",
 		wordColor = INK,
 		wordTransparency = 0.86,
 		goo = false,

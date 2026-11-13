@@ -1044,7 +1044,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	return e(ToonBackdrop, {
 		top = if look ~= nil then look.top else UIToonConstants.shade("coral").base,
 		bottom = if look ~= nil then look.bottom else UIToonConstants.shade("grape").lo,
-		see = 0.2,
+		-- A tier's colours are opaque (play-check 2026-11-14: the depot showed through the pale ones); the lists keep the
+		-- world faintly behind them.
+		see = if look ~= nil then 0 else 0.2,
 		blur = preview == nil,
 		rays = if look ~= nil then raysOf(look.rays) else nil,
 		counterRays = if look ~= nil then raysOf(look.counterRays) else nil,

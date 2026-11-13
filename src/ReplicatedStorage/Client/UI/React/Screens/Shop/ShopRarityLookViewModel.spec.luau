@@ -19,11 +19,14 @@ return function()
 			end
 		end)
 
-		it("shows the tier's name behind the model, in words a player reads on the flag", function()
-			expect(VM.look("default").word).to.equal("COMMON")
-			expect(VM.look("legendary").word).to.equal("LEGENDARY")
-			expect(VM.look("odd").word).to.equal("ODD")
-		end)
+		it(
+			"shows the tier's name behind the model, in the same words as its flag (the default tier is CLASSIC)",
+			function()
+				expect(VM.look("default").word).to.equal("CLASSIC")
+				expect(VM.look("legendary").word).to.equal("LEGENDARY")
+				expect(VM.look("odd").word).to.equal("ODD")
+			end
+		)
 
 		it("keeps the name faint so it never competes with the item", function()
 			for _, tier in TIERS do
