@@ -27,7 +27,12 @@ Commit `a4722b80` on `game/cleanup-crew`.
 **Checks**
 - selene, stylua and luau-lsp are clean on every file I touched. Two warnings remain in files I did not touch: `UIPreloadRules` shadowing and `QueueTicketSystem` ForRange.
 - The TestEZ spec `ToonSpinViewModel.spec` has not run yet. It needs Studio or Open Cloud.
-- **Not yet play-checked.** I asked the coordinator for a Lobby Play slot to try mouse drag, flick, the emote stage turn, and the vacuum try-on in Inventory. Phone touch and the controller stick need the owner's own devices.
+- **Lobby Play check (2026-11-14, real mouse input through Studio):**
+  - A right-drag of 100 px across the 685 px hero turned it 26°, as the maths says. A drag that stopped before letting go did not coast.
+  - On the emote stage (Bubble Ride), a left-drag turned Pippa 37° in place, still centred.
+  - The light follows the turn.
+  - Phone touch and the controller stick are not checked yet; they need the owner's devices.
+- **Found, not caused by this work (follow-up):** the shop's vacuum try-on (`turn = 150`) opened facing the front, not the back. The camera ended up on the model's front side, so the cloned character probably keeps the player's own world facing (`EmployeePreviewSystem.outfit`). Spin now lets the player turn it round, but the opening angle should be fixed at the source.
 
 **Files I edited** (please keep these in mind for the other shop sessions)
 - `src/ReplicatedStorage/Client/UI/React/Screens/Toon/ToonViewport.luau` (spin input and apply)
@@ -60,5 +65,8 @@ No sparkle, diamond or 4-point-star motifs. Mock-up sources are in this session'
 - `Shop/ShopRarityLookViewModel` (new, specced) maps a tier to its look: colours, rays (none on Common and Uncommon, stronger from Rare to Epic to Legendary, plus a second counter-turning layer on Legendary), the tier word, and Odd's goo and red edges.
 - `Toon/ToonBackdrop` gets additive props: `counterRays`, `word` (faint display text behind the hero), `edge` (vignette colour, stronger when set) and `goo` (a ToonGoo cap along the top edge). Every other screen passes none of them and looks as before.
 - `Shop/ShopScreen` changes only at its backdrop call plus a `HERO_X` constant: an open item's page takes the look, and the lists and tabs keep the coral-to-grape backdrop.
-- Lint, format and types are clean. Not yet play-checked; it goes in the same Lobby Play as the spin.
+- Lint, format and types are clean.
+- **Lobby Play check (2026-11-14):** captured Classic (Cappy), Rare (Brass Bellows), Epic (Bubble Ride on the 3D stage) and Legendary (Bubble Buddy). No Uncommon or Odd item is on sale, so those two were shown by forcing the look on the Bubble Buddy page in that Play only. All draw as designed, the goo is attached along the top edge, and the model is never covered.
+- **Fixed after the check** (commit `ccd3cce6`): the default tier's word now says CLASSIC like its flag (it said COMMON), and a tier's backdrop is opaque (the depot showed through the pale colours; the emote stage was already opaque and looked cleaner).
+- Captures are on the review page (top section, "B in the game").
 - The Launch List row stays open for later polish (sounds, VFX, per-tier poses).
