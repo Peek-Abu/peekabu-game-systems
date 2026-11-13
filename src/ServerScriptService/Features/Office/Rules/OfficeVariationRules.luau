@@ -30,7 +30,8 @@ local ONE_ANOMALY_CHANCE = 0.65
 local CLUTTER_ORDER = { "mug", "stationeryCup", "folder", "paperTray", "paperStack", "bookStack" }
 -- Rooms whose light never varies: the Office's storage, server room and reception, and the School's janitor's closet and
 -- front hall (its storage and reception).
--- The School's landmarks (gym, cafeteria, library) are steady too: a dark 64 x 56 room is a black arena, not a mood.
+-- The School's landmarks (gym, cafeteria, library) are steady too: a dark 64 x 56 room is a black arena, not a mood. So is
+-- its nurse's office: a small room with its cots and cabinet, which rolled "dark" reads as a black box (owner play-check).
 local STEADY_ROOMS: { [string]: boolean } = {
 	storage = true,
 	server = true,
@@ -40,6 +41,7 @@ local STEADY_ROOMS: { [string]: boolean } = {
 	gym = true,
 	cafeteria = true,
 	library = true,
+	nurse = true,
 }
 
 local OfficeVariationRules = {}
@@ -94,7 +96,7 @@ end
 
 --[=[
 	A room's light this run: normal for the authored layout and for halls, storage, server and reception (and the
-	School's janitor's closet, front hall, gym, cafeteria and library); else
+	School's janitor's closet, front hall, nurse's office, gym, cafeteria and library); else
 	60% normal, 30% dim, 10% dark.
 	@param seed number? -- the shift's layout seed
 	@param roomId string

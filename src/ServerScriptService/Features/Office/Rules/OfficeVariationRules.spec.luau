@@ -62,16 +62,19 @@ return function()
 			end
 		end)
 
-		it("keeps the School's janitor's closet, front hall and landmarks normal, and varies its classrooms", function()
-			local seen = {}
-			for seed = 1, 300 do
-				for _, roomType in { "janitor", "fronthall", "gym", "cafeteria", "library" } do
-					expect(OfficeVariationRules.lightMood(seed, "r" .. seed, roomType)).to.equal("normal")
+		it(
+			"keeps the School's janitor's closet, front hall, nurse's office and landmarks normal, and varies its classrooms",
+			function()
+				local seen = {}
+				for seed = 1, 300 do
+					for _, roomType in { "janitor", "fronthall", "nurse", "gym", "cafeteria", "library" } do
+						expect(OfficeVariationRules.lightMood(seed, "r" .. seed, roomType)).to.equal("normal")
+					end
+					seen[OfficeVariationRules.lightMood(seed, "classroom1", "classroom")] = true
 				end
-				seen[OfficeVariationRules.lightMood(seed, "classroom1", "classroom")] = true
+				expect(seen.normal and seen.dim and seen.dark).to.equal(true)
 			end
-			expect(seen.normal and seen.dim and seen.dark).to.equal(true)
-		end)
+		)
 
 		it("gives pods all three moods", function()
 			local seen = {}
