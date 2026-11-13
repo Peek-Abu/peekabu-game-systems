@@ -305,16 +305,19 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 		)
 		-- Studio only, opted in (CosmeticDevPickRules): pick for a player who has not picked yet, through the real pick
 		-- path (it still refuses an employee they do not own).
-		janitor:Add(PlayerDataService.profileLoaded:Connect(function(userId: number)
-			local employee = CosmeticDevPickRules.employee(
-				RunService:IsStudio(),
-				workspace:GetAttribute(CosmeticConstants.DEV_PICK_ATTRIBUTE)
-			)
-			if employee ~= nil then
-				local ok, refusal = pickImpl(userId, employee)
-				log:info(`dev auto-pick {employee} for {userId}: {if ok then "picked" else refusal or "?"}`)
-			end
-		end))
+		janitor:Add(
+			PlayerDataService.profileLoaded:Connect(function(userId: number)
+				local employee = CosmeticDevPickRules.employee(
+					RunService:IsStudio(),
+					workspace:GetAttribute(CosmeticConstants.DEV_PICK_ATTRIBUTE)
+				)
+				if employee ~= nil then
+					local ok, refusal = pickImpl(userId, employee)
+					log:info(`dev auto-pick {employee} for {userId}: {if ok then "picked" else refusal or "?"}`)
+				end
+			end),
+			"Disconnect"
+		)
 	end,
 
 	stop = function(_self)
