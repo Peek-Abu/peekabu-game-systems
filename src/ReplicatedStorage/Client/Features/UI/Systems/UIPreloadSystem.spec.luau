@@ -21,6 +21,30 @@ end
 
 return function()
 	describe("UIPreloadSystem", function()
+		it("marks the load screen's art ready once its own batch is in, before the rest", function()
+			local root = art()
+			local screenSeen
+			UIPreloadSystem.start({
+				art = root,
+				images = {},
+				screen = { "rbxassetid://9" },
+				warm = function()
+					return function() end
+				end,
+				preload = function(items)
+					if items[1] == "rbxassetid://9" then
+						return
+					end
+					-- The batch after the screen's: the screen's art is already marked ready.
+					if screenSeen == nil then
+						screenSeen = UIPreloadStore.screenReady()
+					end
+				end,
+			})
+			expect(screenSeen).to.equal(true)
+			root:Destroy()
+		end)
+
 		afterEach(function()
 			UIPreloadSystem.stop()
 			UIPreloadStore.reset()
@@ -49,6 +73,7 @@ return function()
 			expect(loaded[3][1].Name).to.equal("Pippa")
 			expect(loaded[4][1].Name).to.equal("Outfits")
 			expect(UIPreloadStore.ready()).to.equal(true)
+			expect(UIPreloadStore.screenReady()).to.equal(true)
 			expect(UIPreloadStore.progress()).to.equal(1)
 			local state = UIPreloadSystem.getState()
 			expect(state.done).to.equal(3)

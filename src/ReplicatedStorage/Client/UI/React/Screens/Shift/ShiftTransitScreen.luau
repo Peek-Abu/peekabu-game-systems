@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
+local UIPreloadStore = require(ReplicatedStorage.Client.Features.UI.State.UIPreloadStore)
 local ShiftTransitPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitPanel)
 local ShiftTransitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitViewModel)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
@@ -20,6 +21,7 @@ local function ShiftTransitScreen(): React.ReactNode
 	local covered = ReactCharm.useAtom(ShiftTransitStore.covered)
 	local slip = ReactCharm.useAtom(ShiftTransitStore.slip)
 	local welcome = ReactCharm.useAtom(ShiftTransitStore.welcome)
+	local mascot = ReactCharm.useAtom(UIPreloadStore.screenReady)
 	local arrived = ReactCharm.useAtom(ShiftTransitStore.arrived)
 	local snapshot = ReactCharm.useAtom(ShiftTransitStore.snapshot)
 	local progress = ReactCharm.useAtom(ShiftTransitStore.progress)
@@ -29,6 +31,7 @@ local function ShiftTransitScreen(): React.ReactNode
 		cover = ShiftTransitStore.coverOf(covered, slip, welcome),
 		view = if covered and slip then ShiftTransitViewModel.slip(snapshot, arrived) else nil,
 		welcome = if covered and welcome and not slip then ShiftTransitViewModel.welcome(arrived) else nil,
+		mascot = mascot,
 		scale = ShiftTransitViewModel.fit(viewport),
 		progress = progress,
 		fadeSeconds = fadeSeconds,

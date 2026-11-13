@@ -200,6 +200,7 @@ function UIPreloadSystem.start(options: Options?)
 		end
 		state.elapsed = os.clock() - startedAt
 		state.timedOut = timedOut
+		UIPreloadStore.screenReady(true)
 		UIPreloadStore.ready(true)
 		if timedOut then
 			log:warn(`the art was not all in after {timeout}s ({state.done}/{total} batches); showing the game anyway`)
@@ -213,6 +214,10 @@ function UIPreloadSystem.start(options: Options?)
 		if total == 0 then
 			finish(false)
 		end
+		local first = batches[1]
+		if first == nil or first.name ~= UIPreloadRules.SCREEN_BATCH then
+			UIPreloadStore.screenReady(true)
+		end
 		for _, batch in batches do
 			if mine ~= generation then
 				return
@@ -225,6 +230,9 @@ function UIPreloadSystem.start(options: Options?)
 			state.seconds[batch.name] = os.clock() - began
 			if not ok then
 				log:warn(`preloading {batch.name} failed: {err}`)
+			end
+			if batch.name == UIPreloadRules.SCREEN_BATCH then
+				UIPreloadStore.screenReady(true)
 			end
 			if batch.essential then
 				state.done += 1

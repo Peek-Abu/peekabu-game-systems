@@ -22,6 +22,9 @@ local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data
 
 local UIPreloadRules = {}
 
+-- The name of the load screen's own batch (loaded first; UIPreloadStore.screenReady follows it).
+UIPreloadRules.SCREEN_BATCH = "screen"
+
 -- The longest the first load screen waits for the essential art before the game shows anyway (s).
 UIPreloadRules.ESSENTIAL_TIMEOUT = 12
 
@@ -104,7 +107,7 @@ function UIPreloadRules.batches(art: Instance?, images: { string }, screen: { In
 		for _, id in screen do
 			table.insert(items, id)
 		end
-		table.insert(batches, { name = "screen", items = items, essential = true })
+		table.insert(batches, { name = UIPreloadRules.SCREEN_BATCH, items = items, essential = true })
 	end
 	local roster: { Instance } = {}
 	if art ~= nil then

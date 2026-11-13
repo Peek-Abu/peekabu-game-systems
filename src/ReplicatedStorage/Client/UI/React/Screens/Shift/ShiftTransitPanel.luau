@@ -43,6 +43,8 @@ export type ShiftTransitPanelProps = {
 	view: ShiftTransitViewModel.SlipView?,
 	-- The welcome card's words, with cover "welcome".
 	welcome: ShiftTransitViewModel.WelcomeView?,
+	-- The welcome card's Pippa is drawn (UIPreloadStore.screenReady: her look is loaded); nil or false leaves her out.
+	mascot: boolean?,
 	-- ShiftTransitViewModel.fit of this screen.
 	scale: number,
 	-- How far this client is toward its reveal (ShiftTransitStore.progress): the loading bar's target.
@@ -230,7 +232,7 @@ local function trip(view: ShiftTransitViewModel.SlipView, progress: number): Rea
 end
 
 -- A first join's welcome card: the game's name and a line on the cream card, Pippa saluting, a tip, the bar.
-local function greeting(view: ShiftTransitViewModel.WelcomeView, progress: number): React.ReactNode
+local function greeting(view: ShiftTransitViewModel.WelcomeView, progress: number, mascot: boolean): React.ReactNode
 	local face: Nodes = {
 		title = e(ToonText, {
 			text = view.title,
@@ -277,15 +279,17 @@ local function greeting(view: ShiftTransitViewModel.WelcomeView, progress: numbe
 			children = tipFace,
 		}),
 		-- Pippa in Lavender Specs (ShiftConstants.WELCOME_SKIN), from her live model, waving (her profile pose).
-		pippa = e(ToonViewport, {
-			employee = ShiftConstants.WELCOME_EMPLOYEE,
-			skin = ShiftConstants.WELCOME_SKIN,
-			context = "profile",
-			framing = "full",
-			position = UDim2.fromOffset(900, 10),
-			size = UDim2.fromOffset(520, 620),
-			zIndex = 2,
-		}),
+		pippa = if mascot
+			then e(ToonViewport, {
+				employee = ShiftConstants.WELCOME_EMPLOYEE,
+				skin = ShiftConstants.WELCOME_SKIN,
+				context = "profile",
+				framing = "full",
+				position = UDim2.fromOffset(900, 10),
+				size = UDim2.fromOffset(520, 620),
+				zIndex = 2,
+			})
+			else nil,
 		bar = e(LoadBar, { label = view.bar, arrived = view.arrived, progress = progress }),
 	})
 end
@@ -391,7 +395,7 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 					BackgroundTransparency = 1,
 				}, {
 					scale = e("UIScale", { Scale = props.scale }),
-					greeting = greeting(welcome, props.progress),
+					greeting = greeting(welcome, props.progress, props.mascot == true),
 				})
 				else nil,
 		}),

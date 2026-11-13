@@ -51,6 +51,7 @@ return UILabs.CreateReactStory({
 		cover = cover,
 		view = ShiftTransitViewModel.slip(snapshot, props.controls.Arrived),
 		welcome = ShiftTransitViewModel.welcome(props.controls.Arrived),
+		mascot = true,
 		scale = ShiftTransitViewModel.fit(screen),
 		progress = math.clamp(props.controls.Progress, 0, 1),
 	}
