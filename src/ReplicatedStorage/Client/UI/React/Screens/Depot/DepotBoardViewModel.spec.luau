@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotBoardViewModel = require(script.Parent.DepotBoardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotPlaceConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants)
+local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopTopUpRules)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
@@ -247,7 +248,8 @@ return function()
 
 	describe("places", function()
 		local function places(extra)
-			local value = { owned = nil, picked = nil, viewing = nil, role = "none", credits = 0, confirming = nil }
+			local value =
+				{ owned = nil, picked = nil, viewing = nil, role = "none", credits = 0, gleam = 0, confirming = nil }
 			for key, item in extra do
 				value[key] = item
 			end
@@ -313,12 +315,26 @@ return function()
 			expect(second.buildings[2].buy.confirming).to.equal(true)
 		end)
 
-		it("greys the BUY of a player short of Credits", function()
+		it("greys the BUY of a player short of Credits and of the Gleam to pay the rest", function()
 			local view =
 				DepotBoardViewModel.board(nil, nil, false, nil, places({ credits = PRICE - 1, confirming = "school" }))
 			expect(view.buildings[2].buy.enabled).to.equal(false)
 			expect(view.buildings[2].buy.confirming).to.equal(false)
 			expect(view.buildings[2].buy.text).to.equal("Need more Credits")
+		end)
+
+		it("offers Gleam for the rest when Credits are short, at the Shop's rate", function()
+			local plan = ShopTopUpRules.plan("credits", PRICE, PRICE - 100)
+			local view =
+				DepotBoardViewModel.board(nil, nil, false, nil, places({ credits = PRICE - 100, gleam = plan.gleam }))
+			local buy = view.buildings[2].buy
+			expect(buy.enabled).to.equal(true)
+			expect(buy.gleam).to.equal(plan.gleam)
+			expect(buy.text).to.equal(`Use {plan.gleam} Gleam`)
+			expect(buy.note).to.equal("You need 100 more Credits")
+			local enough = DepotBoardViewModel.board(nil, nil, false, nil, places({ credits = PRICE }))
+			expect(enough.buildings[2].buy.gleam).to.equal(0)
+			expect(enough.buildings[2].buy.note).to.equal(nil)
 		end)
 
 		it("tells the host, the crew and everyone else apart", function()

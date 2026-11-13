@@ -21,9 +21,10 @@ function DepotPlaceSender.pick(map: ShiftTypes.MapId)
 	DepotEvents.packets.PickMap.send(map)
 end
 
--- Buys `map` with Credits (the server checks the price and the balance).
-function DepotPlaceSender.buy(map: ShiftTypes.MapId)
-	DepotEvents.packets.BuyPlace.send(map)
+-- Buys `map` with Credits, `gleam` Gleam at most paying the rest when short (0: Credits only). The server checks
+-- the price and both balances.
+function DepotPlaceSender.buy(map: ShiftTypes.MapId, gleam: number)
+	DepotEvents.packets.BuyPlace.send({ map = map, gleam = math.max(0, math.floor(gleam)) })
 end
 
 return DepotPlaceSender

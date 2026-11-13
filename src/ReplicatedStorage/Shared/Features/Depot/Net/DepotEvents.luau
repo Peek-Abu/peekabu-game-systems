@@ -81,11 +81,15 @@ local DepotEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.string,
 				reliabilityType = "reliable",
 			}),
-			-- A player buys a place with Credits ("school"; anything else is dropped). The server checks the price and
-			-- the balance (DepotPlaceRules.canBuy) and spends and unlocks in one transaction (DepotPlaceSystem); the
-			-- client sees the result in its `places` slice.
+			-- A player buys a place with Credits ("school"; anything else is dropped). `gleam` is the most Gleam they said
+			-- yes to for the rest when short of Credits (0: Credits only). The server checks it is for sale
+			-- (DepotPlaceRules.canBuy), pays through ShopServiceServer:payOps and unlocks in one transaction
+			-- (DepotPlaceSystem); the client sees the result in its `places` slice.
 			BuyPlace = ByteNet.definePacket({
-				value = ByteNet.string,
+				value = ByteNet.struct({
+					map = ByteNet.string,
+					gleam = ByteNet.uint32,
+				}),
 				reliabilityType = "reliable",
 			}),
 			-- Payload unused; the packet is the signal that this client now listens for Card.

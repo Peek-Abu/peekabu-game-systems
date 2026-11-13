@@ -255,6 +255,8 @@ export type DepotServiceServer = {
 	contract: (self: DepotServiceServer) -> DepotTypes.Contract,
 	canPunchTimecard: (self: DepotServiceServer, player: Player) -> boolean,
 	setTimecardPhaseReader: (self: DepotServiceServer, phaseReader: (() -> ShiftTypes.ShiftPhase)?) -> (),
+	-- How a place is paid for (ShopServiceServer sets its payOps; nil clears it). Injected: Depot cannot require the Shop.
+	setPlacePayer: (self: DepotServiceServer, payer: DepotPlaceSystem.Payer?) -> (),
 }
 
 local DepotServiceServer: DepotServiceServer = {
@@ -265,9 +267,8 @@ local DepotServiceServer: DepotServiceServer = {
 		"StateSyncServiceServer",
 		"DeathServiceServer",
 		"HostServiceServer",
-		-- DepotPlaceSystem's `places` slice and its Credits spend.
+		-- DepotPlaceSystem's `places` slice (its payment is the Shop's, set through setPlacePayer).
 		"PlayerDataServiceServer",
-		"CurrencyServiceServer",
 	},
 
 	--[=[
@@ -461,6 +462,10 @@ local DepotServiceServer: DepotServiceServer = {
 		)
 	end,
 	-- Only callbacks cross into Depot; it does not require Timecard or Shift services.
+	setPlacePayer = function(_self, payer)
+		DepotPlaceSystem.setPayer(payer)
+	end,
+
 	setTimecardPhaseReader = function(_self, phaseReader)
 		timecardShiftPhase = phaseReader
 	end,

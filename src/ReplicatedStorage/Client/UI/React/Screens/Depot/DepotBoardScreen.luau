@@ -5,7 +5,8 @@
 	the world entry (DepotMapRules.decode), the reader's bought places and Credits from the synced profile, and the
 	device layout, and draws DepotBoardPanel from DepotBoardViewModel, scaled to the viewport. A host's tap on an open
 	place picks it (DepotPlaceSender.pick); anyone's tap on a card shows its detail; BUY takes two taps (the first asks
-	SURE? for DepotPlaceConstants.CONFIRM_SECONDS, the second sends DepotPlaceSender.buy). The LOCKER and GUIDE tabs (and
+	SURE? for DepotPlaceConstants.CONFIRM_SECONDS, the second sends DepotPlaceSender.buy; short of Credits, the
+	button offers the Gleam for the rest at the Shop's rate and sends that as the agreed most). The LOCKER and GUIDE tabs (and
 	READ THE BRIEF) swap the board for that hub page. CLOSE and FIND A TRUCK take the scene off the stack (Escape pops
 	it through UIServiceClient); DepotServiceClient clears the store's board once the scene has left the stack.
 
@@ -64,6 +65,7 @@ local function DepotBoardScreen(): React.ReactNode
 	local world = useAtom(StateSyncClientStore.world)
 	local owned = useAtom(StateSyncClientStore.places)
 	local currency = useAtom(StateSyncClientStore.currency)
+	local premium = useAtom(StateSyncClientStore.premium)
 	local none: MapId? = nil
 	local viewing, setViewing = React.useState(none)
 	local confirming, setConfirming = React.useState(none)
@@ -97,6 +99,7 @@ local function DepotBoardScreen(): React.ReactNode
 		viewing = viewing,
 		role = role,
 		credits = credits,
+		gleam = premium.balance,
 		confirming = confirming,
 	}
 	local props: DepotBoardPanel.DepotBoardPanelProps = {
@@ -112,10 +115,10 @@ local function DepotBoardScreen(): React.ReactNode
 		onView = function(map: MapId)
 			setViewing(map)
 		end,
-		onBuy = function(map: MapId)
+		onBuy = function(map: MapId, gleam: number)
 			if confirming == map then
 				setConfirming(nil)
-				DepotPlaceSender.buy(map)
+				DepotPlaceSender.buy(map, gleam)
 			else
 				setConfirming(map)
 			end

@@ -33,6 +33,7 @@ local ShopTopUpRules = require(Shop.Rules.ShopTopUpRules)
 local ShopTypes = require(Shop.Data.ShopTypes)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
+local DepotServiceServer = require(ServerScriptService.Features.Depot.DepotServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
@@ -274,6 +275,12 @@ local ShopServiceServer: ShopServiceServer = {
 
 	init = function(_self)
 		registerBundles()
+		-- The places menu's School unlock pays the Shop's way (Credits, Gleam for the rest). Depot cannot require the
+		-- Shop (the Shop reaches Depot through Cosmetic and Shift), so the Shop hands it the payment.
+		DepotServiceServer:setPlacePayer(function(userId, price, gleam)
+			local ops, refusal = payOpsImpl(userId, "credits", price, gleam)
+			return ops, refusal
+		end)
 		janitor:Add(
 			ShopEvents.packets.BuyRequest.listen(function(payload: unknown, player: Player?)
 				if player then
@@ -286,6 +293,7 @@ local ShopServiceServer: ShopServiceServer = {
 
 	stop = function(_self)
 		janitor:Cleanup()
+		DepotServiceServer:setPlacePayer(nil)
 	end,
 
 	buy = function(_self, userId, offerId, gleam)

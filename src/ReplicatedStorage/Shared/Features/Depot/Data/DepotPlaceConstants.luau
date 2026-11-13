@@ -50,6 +50,10 @@ local DepotPlaceConstants = table.freeze({
 		buy = "BUY",
 		sure = "SURE?",
 		tooPoor = "Need more Credits",
+		-- Short of Credits: Gleam pays the rest (ShopTopUpRules; string.format: the Gleam).
+		useGleam = "Use %d Gleam",
+		-- Under that button (string.format: the Credits missing).
+		shortBy = "You need %d more Credits",
 		youPick = "Tap a place to pick it!",
 		hostPicks = "The host picks the place.",
 		hostNeeds = "The host must unlock it first.",

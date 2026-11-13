@@ -53,8 +53,8 @@ export type DepotBoardPanelProps = {
 	onPick: ((map: ShiftTypes.MapId) -> ())?,
 	-- Anyone else's tap on a place card (shows its detail).
 	onView: ((map: ShiftTypes.MapId) -> ())?,
-	-- A tap on a locked place's BUY (the first asks SURE?, the second buys).
-	onBuy: ((map: ShiftTypes.MapId) -> ())?,
+	-- A tap on a locked place's BUY (the first asks SURE?, the second buys), with the Gleam it offered for the rest.
+	onBuy: ((map: ShiftTypes.MapId, gleam: number) -> ())?,
 }
 
 type Nodes = { [string]: React.ReactNode }

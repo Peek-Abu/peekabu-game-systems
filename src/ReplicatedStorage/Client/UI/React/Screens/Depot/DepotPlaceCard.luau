@@ -37,7 +37,8 @@ type Nodes = { [string]: React.ReactNode }
 export type Handlers = {
 	onPick: ((map: ShiftTypes.MapId) -> ())?,
 	onView: ((map: ShiftTypes.MapId) -> ())?,
-	onBuy: ((map: ShiftTypes.MapId) -> ())?,
+	-- `gleam`: the Gleam the button offered for the rest (0: Credits only).
+	onBuy: ((map: ShiftTypes.MapId, gleam: number) -> ())?,
 }
 
 local function photoOf(photo: DepotBoardViewModel.Photo): string
@@ -227,8 +228,12 @@ local function DepotPlaceCard(
 		if buy ~= nil then
 			nodes.buy = e(ToonButton, {
 				variant = if buy.confirming then "primary" else "gleam",
-				icon = if buy.enabled and not buy.confirming then "credits" else nil,
-				text = if buy.enabled and not buy.confirming then `{buy.text} · {buy.price}` else buy.text,
+				icon = if not buy.enabled or buy.confirming then nil elseif buy.gleam > 0 then "gleam" else "credits",
+				text = if buy.enabled
+						and not buy.confirming
+						and buy.gleam == 0
+					then `{buy.text} · {buy.price}`
+					else buy.text,
 				textSize = if phone then 12 else 26,
 				small = phone,
 				anchor = Vector2.new(0.5, 0.5),
@@ -240,10 +245,25 @@ local function DepotPlaceCard(
 				zIndex = 8,
 				onActivated = function()
 					if buy.enabled and props.onBuy ~= nil then
-						props.onBuy(map)
+						props.onBuy(map, buy.gleam)
 					end
 				end,
 			})
+			local note = buy.note
+			if note ~= nil and not phone then
+				nodes.note = e(ToonText, {
+					text = note,
+					font = "body",
+					color = COLOR.white,
+					textSize = 17,
+					anchor = Vector2.new(0.5, 0),
+					position = UDim2.new(0.5, 0, 0.6, 34),
+					size = UDim2.new(1, -24, 0, 22),
+					align = "center",
+					fit = true,
+					zIndex = 8,
+				})
+			end
 		end
 	end
 	if building.focused then

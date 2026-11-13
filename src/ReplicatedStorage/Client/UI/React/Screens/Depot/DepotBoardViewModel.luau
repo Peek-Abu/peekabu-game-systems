@@ -27,6 +27,7 @@ local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopTopUpRules)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -46,9 +47,17 @@ export type LastView = {
 -- V1: one contract chip (QUOTA, SHIFT, PAY, CREW) with its render.
 export type ChipView = { label: string, value: string, icon: UIAssets.ToonIcon }
 
--- A locked place's BUY button: its price, whether the reader can afford it, and whether the first tap waits on SURE?
--- (two taps buy, so a kid never spends Credits by mistake).
-export type BuyView = { text: string, price: string, enabled: boolean, confirming: boolean }
+-- A locked place's BUY button: its price, whether the reader can pay it, and whether the first tap waits on SURE?
+-- (two taps buy, so a kid never spends by mistake). Short of Credits, Gleam pays the rest (ShopTopUpRules, the
+-- Shop's rate): the button offers `gleam` Gleam (0: Credits only), and `note` says how many Credits are missing.
+export type BuyView = {
+	text: string,
+	price: string,
+	enabled: boolean,
+	confirming: boolean,
+	gleam: number,
+	note: string?,
+}
 
 export type Photo = "office" | "school" | "hospital" | "motel" | "mall"
 
@@ -83,6 +92,8 @@ export type PlacesInput = {
 	viewing: MapId?,
 	role: Role,
 	credits: number,
+	-- Their Gleam (pays the rest when Credits are short).
+	gleam: number,
 	-- The place whose BUY was tapped once and waits on SURE?.
 	confirming: MapId?,
 }
@@ -238,6 +249,7 @@ local NO_PLACES: PlacesInput = {
 	viewing = nil,
 	role = "none",
 	credits = 0,
+	gleam = 0,
 	confirming = nil,
 }
 
@@ -279,13 +291,24 @@ local function placeCard(map: MapId, name: string, places: PlacesInput, focus: M
 	local buy: BuyView? = nil
 	if not open then
 		local price = DepotPlaceRules.price(map)
-		local affordable = places.credits >= price
-		local confirming = affordable and places.confirming == map
+		-- nil when the Credits cover it; else the Gleam that pays the rest.
+		local plan = ShopTopUpRules.plan("credits", price, places.credits)
+		local enabled = plan == nil or places.gleam >= plan.gleam
+		local confirming = enabled and places.confirming == map
+		local label = if not enabled
+			then text.tooPoor
+			elseif confirming then text.sure
+			elseif plan ~= nil then string.format(text.useGleam, plan.gleam)
+			else text.buy
 		buy = {
-			text = if not affordable then text.tooPoor elseif confirming then text.sure else text.buy,
+			text = label,
 			price = DepotBoardViewModel.commas(price),
-			enabled = affordable,
+			enabled = enabled,
 			confirming = confirming,
+			gleam = if plan ~= nil then plan.gleam else 0,
+			note = if plan ~= nil and enabled
+				then string.format(text.shortBy, price - math.max(0, places.credits))
+				else nil,
 		}
 	end
 	return {
