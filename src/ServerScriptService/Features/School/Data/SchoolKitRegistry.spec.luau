@@ -152,6 +152,23 @@ return function()
 		end
 	)
 
+	it("stands the library's bookshelves as tall stacks on their 5 x 2 footprint, clear of the ceiling", function()
+		local library = SchoolKitRegistry.get("library")
+		local count = 0
+		for _, marker in library.markers do
+			if marker.art == "bookshelf" then
+				count += 1
+				local size = OfficeLayoutUtils.markerSize(marker)
+				expect(size ~= nil).to.equal(true)
+				expect(size.X).to.be.near(5, 1e-4)
+				expect(size.Z).to.be.near(2, 1e-4)
+				expect(size.Y >= 7.5).to.equal(true)
+				expect(size.Y <= OfficeConstants.WALL_HEIGHT - 4).to.equal(true)
+			end
+		end
+		expect(count > 0).to.equal(true)
+	end)
+
 	it("every kit passes OfficeKitRules", function()
 		for _, kit in SchoolKitRegistry.KITS do
 			local ok, errors = OfficeKitRules.check(kit)

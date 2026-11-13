@@ -92,6 +92,9 @@ local ART_SIZES: { [string]: Vector3 } = {
 	breakTable = Vector3.new(5, 1.8, 3) * HIDE_FURNITURE_SCALE,
 	-- c_bookshelf v2 (2026-11-12): v1's 5.54 width was its book stack poking through the side panel.
 	shelf = Vector3.new(5.16, 8, 2.08),
+	-- The School library's stacks: the shelf art's own height on the kind's 5 x 2 footprint (the kind size, 6 tall,
+	-- shrank the art to 75%; owner: "bookshelves are a bit small"). Uniform fit: no stretched books, about 7.7 tall.
+	bookshelf = Vector3.new(5, 7.7, 2),
 	serverRack = Vector3.new(2, 7, 3.5),
 	kitchenCounter = Vector3.new(8, 6.35, 3.08),
 	receptionDesk = Vector3.new(12.86, 4.6, 5.16),
