@@ -321,6 +321,8 @@ local function hero(
 			style = style,
 			live = true,
 			react = props.openedAt,
+			-- The player turns it round (drag, flick, right stick).
+			spin = true,
 			-- On the Emotes tab the hero loops the selected emote, in the skin you wear.
 			emote = emote,
 			framing = "full",

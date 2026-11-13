@@ -381,6 +381,8 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 				style = style,
 				live = true,
 				react = if VM.reacts(card) then openedAt else nil,
+				-- The player turns it round (drag, flick, right stick).
+				spin = true,
 				-- An emote's page loops it on its employee.
 				emote = card.emote,
 				framing = "full",

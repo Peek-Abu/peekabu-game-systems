@@ -70,6 +70,9 @@ export type Spec = {
 export type Stage = {
 	-- The UI window (pixels from the screen's top-left) the model shows in.
 	place: (rect: EmployeeStageFormulas.Rect) -> (),
+	-- Turns the model and its platform round their upright axis (degrees, positive = the front to the screen's
+	-- right; ToonSpinViewModel), from where they first stood.
+	turn: (degrees: number) -> (),
 	release: () -> (),
 }
 
@@ -208,6 +211,8 @@ function EmployeeStageSystem.show(spec: Spec): Stage?
 		platform:PivotTo(platform:GetPivot() + shift)
 		platform.Parent = folder
 	end
+	local modelHome = spec.model:GetPivot()
+	local platformHome = if platform ~= nil then platform:GetPivot() else nil
 	local yaw = math.rad(YAW)
 	local front = CFrame.lookAt(ORIGIN, ORIGIN + Vector3.new(math.sin(yaw), 0, -math.cos(yaw)))
 	-- The box in the stage's facing: every corner turned, then boxed again.
@@ -317,6 +322,16 @@ function EmployeeStageSystem.show(spec: Spec): Stage?
 	stage = {
 		place = function(rect)
 			window = rect
+		end,
+		turn = function(degrees)
+			if released then
+				return
+			end
+			local spin = CFrame.new(ORIGIN) * CFrame.Angles(0, math.rad(degrees), 0) * CFrame.new(-ORIGIN)
+			spec.model:PivotTo(spin * modelHome)
+			if platform ~= nil and platformHome ~= nil then
+				platform:PivotTo(spin * platformHome)
+			end
 		end,
 		release = function()
 			if released then
