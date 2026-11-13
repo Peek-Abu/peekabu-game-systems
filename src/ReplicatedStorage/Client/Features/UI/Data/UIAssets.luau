@@ -217,6 +217,10 @@ UIAssets.toonPhotos = table.freeze({
 	-- OK 2026-11-11; decal 90341198768642). An empty slot would draw the School map card's look instead
 	-- (ShiftTransitViewModel.slip).
 	schoolWide = "rbxassetid://75797686913598",
+	-- The School's places-menu card: a real Studio shot of Bramble in a Maple Hill locker hall, graded like the other
+	-- place cards (owner K3 yes 2026-11-13; Icey Labs, decal 87857217997292; source in
+	-- characters/ui/implemented/upload/photos/school-card-2026-11-13).
+	schoolCard = "rbxassetid://111071270210494",
 	pippaPortrait = "rbxassetid://100337810904422",
 	truckCut = "rbxassetid://72922265291902",
 	-- Today's coral Pippa cheering, both arms up, on the empty award card (owner 2026-11-13: the old salute pressed her

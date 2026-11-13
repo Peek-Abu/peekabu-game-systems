@@ -72,7 +72,7 @@ function VM.tonight(id: string?, map: ShiftTypes.MapId?): TonightView
 		return {
 			title = string.upper(DepotConstants.SCHOOL_CONTRACTS[1].client),
 			site = DepotConstants.SCHOOL_SITE.site,
-			photo = UIAssets.toonPhotos.schoolWide,
+			photo = UIAssets.toonPhotos.schoolCard,
 			monster = "brambleHunt",
 		}
 	end

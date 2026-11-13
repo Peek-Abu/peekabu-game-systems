@@ -44,8 +44,8 @@ export type Handlers = {
 local function photoOf(photo: DepotBoardViewModel.Photo): string
 	local photos = UIAssets.toonPhotos
 	if photo == "school" then
-		-- The School's approved posed shot (Bramble at the end of a locker hall), shared with its trip card.
-		return photos.schoolWide
+		-- The School's posed Studio shot (Bramble in a locker hall).
+		return photos.schoolCard
 	elseif photo == "hospital" then
 		return photos.hospitalCard
 	elseif photo == "motel" then

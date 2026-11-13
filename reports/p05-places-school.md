@@ -107,7 +107,12 @@ Yes to everything except:
 - **D1 (DANGER): School 2, not 3.** Applied. Office stays 1.
 - **S5 (Bramble unchanged): NO, with no note.** The owner wants Bramble changed but didn't say how. I need a
   concrete yes/no follow-up before changing his speed or rules.
-- **K1 (School photo):** the owner asked whether it is posed like the Office shot or an AI image. It looks AI-made
+- **K1/K3 (School photo): done.** A real Studio shot of Bramble in a School locker hall, graded like the Office
+  card (`photos.py grade --aspect 16:10 --size 960x600 --shadow #34145F`). Uploaded to Icey Labs: decal
+  87857217997292, image **111071270210494** (owner verified: Icey Labs). It is used on the places-menu card and the hub's TONIGHT
+  card. The truck trip card still uses the older AI picture (`schoolWide`) until the owner says to swap it.
+  Source: `characters/ui/implemented/upload/photos/school-card-2026-11-13/`.
+- **K1 (School photo, original question):** the owner asked whether it is posed like the Office shot or an AI image. It looks AI-made
   (painterly, not an engine render), so it fails the "posed scene shots of our game" rule. I plan a real Studio
   capture of Bramble in a School locker hall for my Studio turn.
 - **R5:** yes. Training counts as a place like the Office and School, but it doesn't need its own unlock
