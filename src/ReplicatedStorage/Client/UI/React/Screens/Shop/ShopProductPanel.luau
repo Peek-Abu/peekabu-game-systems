@@ -206,6 +206,9 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	local y = pad + (if phone then 30 else 50) + nameSize + 8
 	face.line = text(product.line, size, pad, y, inner, UIToonConstants.shade("grape").lo)
 	y += size + 10
+	-- The scrolling body starts here (`body`, positions relative to `bodyTop`).
+	local bodyTop = y
+	local body: Nodes = {}
 	local quoteHeight = size * 3 + (if phone then 12 else 30)
 	-- The lore in a cream box: a quote mark when the employee is speaking (the item's choice), else the lore book.
 	local quote: Nodes = {
@@ -226,22 +229,22 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			}),
 		lore = text(product.lore, size, size * 2 + 8, 10, inner - size * 2 - 24),
 	}
-	face.quote = e(ToonSurface, {
+	body.quote = e(ToonSurface, {
 		hue = "cream",
 		small = true,
 		radius = 16,
-		position = UDim2.fromOffset(pad, y),
+		position = UDim2.fromOffset(pad, y - bodyTop),
 		size = UDim2.fromOffset(inner, quoteHeight),
 		children = quote,
 	})
 	y += quoteHeight + DEPTH.drop + 10
 	local style = if picked.id == card.id then picked.style else 1
 	if product.styles.visible then
-		face.styles = e(ToonText, {
+		body.styles = e(ToonText, {
 			text = product.styles.text,
 			textSize = size - 4,
 			meaning = "grape",
-			position = UDim2.fromOffset(pad, y),
+			position = UDim2.fromOffset(pad, y - bodyTop),
 			size = UDim2.fromOffset(inner, size),
 			fit = true,
 		})
@@ -251,11 +254,11 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 		local chipWidth = math.floor((inner - (count - 1) * 10) / count)
 		local chipHeight = size + 22
 		for index, chip in product.styles.chips do
-			face[`style{index}`] = e(ToonButton, {
+			body[`style{index}`] = e(ToonButton, {
 				variant = "secondary",
 				selected = index == style,
 				content = chipFace(chip, size),
-				position = UDim2.fromOffset(pad + (index - 1) * (chipWidth + 10), y),
+				position = UDim2.fromOffset(pad + (index - 1) * (chipWidth + 10), y - bodyTop),
 				size = UDim2.fromOffset(chipWidth, chipHeight),
 				onActivated = function()
 					setPicked({ id = card.id, style = index })
@@ -270,42 +273,41 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	}
 	local buttonHeight = if phone then 46 else 96
 	local listGap = if phone then 34 else 70
-	local listHeight = layout.content.height - DEPTH.drop - y - buttonHeight - listGap
-	local window = listHeight
+	-- The body's window: from under the item's line down to the buy button.
+	local window = math.max(0, layout.content.height - DEPTH.drop - bodyTop - buttonHeight - listGap)
 	if #product.stats > 0 then
-		for key, node in ShopHireRows.rows(product, size, phone, listHeight) do
+		-- The hire rows get the room left under the lore, or enough for the ability card and readable stats when the
+		-- screen is shorter (the body scrolls).
+		local room = math.max(window - (y - bodyTop), if phone then 190 else 400)
+		for key, node in ShopHireRows.rows(product, size, phone, room) do
 			rows[key] = node
 		end
 	else
-		-- Each row's slot is its card and its hard drop; on a short screen the rows shrink, then only whole rows show
-		-- and the rest scroll (VM.listFit), so a row is never cut in half.
-		local fit = VM.listFit(
-			listHeight,
-			#product.inside,
-			(if phone then 40 else 84) + DEPTH.drop,
-			(if phone then 34 else 54) + DEPTH.drop,
-			rowGap
-		)
-		window = fit.window
-		local rowHeight = fit.row - DEPTH.drop
-		local rowText =
-			math.min(if phone then 13 else 24, math.max(if phone then 13 else 16, math.floor(rowHeight * 0.29)))
+		local rowHeight = if phone then 40 else 84
 		for index, entry in product.inside do
-			rows[entry.id] = insideRow(entry, card, rowText, rowHeight, index)
+			rows[entry.id] = insideRow(entry, card, if phone then 13 else 24, rowHeight, index)
 		end
 	end
-	face.inside = e("ScrollingFrame", {
-		Position = UDim2.fromOffset(pad, y),
-		Size = UDim2.fromOffset(inner, window),
+	body.list = e("Frame", {
+		Position = UDim2.fromOffset(pad, y - bodyTop),
+		Size = UDim2.fromOffset(inner, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+	}, rows)
+	body.pad = e("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, DEPTH.drop + 8) })
+	-- Everything between the item's line and the buy button scrolls as one (owner, 2026-11-12: on a short screen or a
+	-- phone the list was cut in half or hidden under the button), with a clear bar in the panel's right margin.
+	face.body = e("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, bodyTop - 4),
+		Size = UDim2.new(1, 0, 0, window + 4),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		CanvasSize = UDim2.fromOffset(0, 0),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		-- A clear bar beside the rows (never over them) when the rest scroll.
+		ScrollingDirection = Enum.ScrollingDirection.Y,
 		ScrollBarThickness = if phone then 5 else 8,
 		ScrollBarImageColor3 = UIToonConstants.shade("grape").base,
-		VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
-	}, rows)
+	}, body)
 
 	local button = product.button
 	local content: Nodes? = nil

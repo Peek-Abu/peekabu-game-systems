@@ -358,27 +358,6 @@ function VM.passes(
 	return cards
 end
 
--- A product page's list of `count` rows (each `row` px tall at most, `gap` apart) in `room` px: the rows shrink
--- (never below `minRow`) until all of them fit; when even the smallest rows overflow, the window shows only whole
--- rows (at least one) and the rest scroll, so no row is ever cut in half (owner, 2026-11-12).
-function VM.listFit(
-	room: number,
-	count: number,
-	row: number,
-	minRow: number,
-	gap: number
-): { row: number, window: number }
-	if count <= 0 then
-		return { row = row, window = math.max(room, 0) }
-	end
-	local shrunk = math.clamp(math.floor((room - (count - 1) * gap) / count), minRow, row)
-	if count * shrunk + (count - 1) * gap <= room then
-		return { row = shrunk, window = room }
-	end
-	local whole = math.max(1, math.floor((room + gap) / (shrunk + gap)))
-	return { row = shrunk, window = whole * shrunk + (whole - 1) * gap }
-end
-
 -- "2d 14h", "6h 12m", "12m".
 function VM.timer(seconds: number): string
 	local left = math.max(0, math.floor(seconds))
