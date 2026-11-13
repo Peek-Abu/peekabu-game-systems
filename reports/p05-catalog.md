@@ -48,3 +48,31 @@ Price note for the owner: the bundle costs 1,500, and the skin alone still costs
 - Real-play check: buy a bundle and a skin alone (2nd client not needed); `bundlegrant`; the Inventory Skins tab with its vacuum row (desktop + phone).
 - Type tags (Q13): mock at https://claude.ai/artifact/5uXBTmGBGRefE1ZPJSs9KV. Build after the owner picks A/B.
 - Idles as items (Q2–Q4, Q15): on hold. The split leaves room for it: a Legendary idle becomes an `idle` item and joins its bundle's `items`. `EmployeeSkinRules.idleOf` would read the look's idle instead of the skin's showcase idle. The migration grants the idle to skin owners.
+
+## Update: idles are items, type tags dropped (commit 5eec1d8a)
+The owner said yes to Q2–Q4, Q14 and Q15 (following the recommendation). Type tags: a firm **no**. Nothing may
+cover a card's picture, and none was ever built. Item types are told apart by the Shop/Inventory tabs and rows they
+sit in, and by the item's name line.
+- New Epic idle items, 400 Gleam each: `Pippa.BubbleBuddyIdle`, `Cappy.PJIdle`, `Prickles.SheriffIdle`. Each one is the
+  4th item of its Legendary bundle and collection. Bundles are now 1,500, which is 30% off 2,150, following store-flow's
+  rule. The skin alone stays 1,200.
+- The free idle (`<Employee>.Classic`) is renamed **"Skin's Own"**. It plays whatever the worn skin does, which is the
+  same as before, so nobody's look changes.
+- Fit ("lock that pair"): `Item.fits` lists the skins an idle needs. Sheriff Idle fits every Prickles skin, because
+  the hose coil is an emote prop template.
+- Bubble Buddy Idle fits only Bubble Buddy: the duck ring is worn by her outfit.
+- PJ Idle fits only PJ: the pillow is assumed to be in the PJ outfit only. **To verify in Studio**: check
+  `ReplicatedStorage.Assets.CleanupCrew.EmoteProps` for a `Pillow` or `DuckRing` template. If one is there, drop that
+  idle's `fits` line.
+- A locked pair shows "Bubble Buddy only" on the card and "Wear Bubble Buddy first" on the button. Changing to a skin
+  the idle doesn't fit plays that skin's own idle. The saved pick comes back with the right skin.
+- How the idle plays:
+  - `EmployeeRegistry` `idles` maps an idle item to the Legendary skin whose showcase idle and fidget it borrows.
+  - `EmployeeSkinRules.idleOf` / `fidgetOf` take the idle key. The server writes `EmployeeIdle` on the character with
+    no rebuild, and `Animate.client` rebinds when it changes.
+  - `EmployeePreviewSystem` and `ToonViewport` (new `idle` prop) play it in previews. The Inventory hero plays the
+    worn idle, or the picked one on the Idles tab.
+- Migration v4→v5 (`PlayerDataMigrationSystem`): each owner of a Legendary skin is given its idle. The look is left
+  alone.
+- Not run yet: TestEZ and a play check (wear the Sheriff Idle on Classic Prickles, then a locked pair, then a migrated
+  save).
