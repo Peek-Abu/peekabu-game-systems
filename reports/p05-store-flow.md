@@ -32,33 +32,54 @@ Rows: `p1-gleam-topup`, `p1-return-after-gleam`, `p1-sell-hires`, `p1-prices`. A
   - The server prices on its own clock and never charges more than the price the player saw.
 
 Shop UI files touched: `ShopScreen`, `ShopProductPanel`, `ShopViewModel`, `ShopStore`, `CharacterPickScreen`,
-`CharacterPickViewModel`, and the kit's `ToonPrice` (its old price now sits above the price).
+`CharacterPickViewModel`, and two kit pieces: `ToonPrice` (old price above on a card, beside it in a button) and
+`ToonMenuBar` (optional `width`: the tabs shrink to fit beside the wallets).
+
+Hires cost 5,000 Credits (owner, 11-13). The deals now give the whole Legendary bundle again (the catalog split had
+left only the skin), and their "% off" is recomputed: Pick a Legendary -70%, Pick a New Hire -74%. A spec fails the
+build if a price change makes those numbers untrue.
 
 ## Commits (game/cleanup-crew)
 
 - `7dbb2162`: Gleam top-up, back to the item, Hire tab
 - `e9c29401`: partial-bundle price, only new items granted and revealed
 - `e74aaa39`: owner prices, sales, daily sale, crossed-out look
+- `e8dde5ed`: hires 5,000, deals give the whole bundle, deal % recomputed
+- `19b5400e`: spec fixes from the full suite run (a priced fixture kept its own items)
+- `f5d42f38`: Shop tabs fit beside the wallets; crossed-out price never clipped
 
-## Check in play (Lobby)
+## Studio (Lobby, 11-13)
 
-1. **Hire** tab: Cappy and Prickles priced in Credits; a hired one says OWNED, last.
-2. With 2,200 Credits and some Gleam, open Prickles → **Use 30 Gleam** → Yes → hired; Credits 0, Gleam −30.
-3. With 0 Gleam, open a skin → **Need … more** → the Gleam tab shows the line and **Just right!** → buy it → back
-   on the skin with "Buy …?" up. **Back to …** opens the page with no question.
-4. Pick Your Employee with Gleam: **Hire with 250 Gleam** → tap again → hired.
-5. Featured and Today's picks: up to 3 single items show ~~1,200~~ 960 with a -20% burst. The product page says
-   "Sale ends in …". A bundle card shows ~~1,750~~ 1,220, -30%.
-6. Own a bundle's emote, then open the bundle: the price drops, and buying it reveals only the new items.
-7. Gleam tab: 100 / 150 / 600 / 1,500 with +15 / +32 / +49%.
-8. Phone: six tabs fit, and the old price above the new one doesn't hit the card's name.
+Full TestEZ suite on the served worktree: 6,619 passed, 8 failed. Five of the failures were mine, fixed in
+`19b5400e` but not rerun yet. The other three went to their owners through the coordinator: InventoryViewModel and
+LockerServiceServer are catalog's, VacuumMountSystem is the vacuum session's.
+
+Played in the Lobby; balances were set and purchases sent from the server and client, so no real clicks yet. Then I
+put the account back to how it was:
+- The Hire tab shows Cappy and Prickles at 5,000.
+- Top-up: with 4,700 Credits, Prickles' page says "Use 30 Gleam" and asks "You need 300 more Credits. Use 30 Gleam to
+  hire Prickles?". Buying took Credits 4,700 → 0 and Gleam 600 → 570, and Prickles was hired.
+- Back to the item: the Gleam tab said "Get 630 more Gleam for Bubble Buddy!" with Just right! on 1,500, plus a Back
+  button. After +1,500 Gleam arrived, the Shop jumped back to Bubble Buddy with "Buy Bubble Buddy for 1,200 Gleam?"
+  up.
+- Today's sale: Cocoa Sip 320 and Sheriff Prickles 960, each -20%; the deal banner reads -70%.
+- Two problems seen in play are fixed in `f5d42f38` but not seen in Studio yet: the Passes tab ran under the wallet,
+  and the crossed-out price was clipped on the bundle's buy button.
+
+## Owner check in play (real clicks)
+
+1. **Hire** tab: Cappy and Prickles at 5,000 Credits; a hired one says OWNED, last.
+2. With 4,700 Credits and some Gleam, open Prickles → **Use 30 Gleam** → Yes → hired.
+3. With too little Gleam, open a skin → **Need … more** → Gleam tab (line, **Just right!**, Back) → buy a pack →
+   back on the skin with "Buy …?" up.
+4. Pick Your Employee with Gleam and no Credits: **Hire with 500 Gleam** → tap again → hired.
+5. Featured and picks show sale prices (~~1,200~~ 960, -20%) and the page says "Sale ends in …". Bundles show
+   ~~2,150~~ 1,500, -30%. Owning one item of a bundle lowers its price.
+6. Gleam tab: 100 / 150 / 600 / 1,500 with +15 / +32 / +49%. All six tabs fit on desktop and phone.
 
 ## Owner to-do (Creator Dashboard)
 
 - Product 3722076494 (pack 2, R$ 129): name and description must say **150 Gleam**, not 275. The icon has no
   number.
-
-## Open
-
-- Deal cards' "% off" (Pick a Legendary 45%, Pick a New Hire 36%) were worked out against old prices. Whoever owns
-  Deals should recompute them.
+- When the Robux prices go up, send them on: I update ShopConstants / DealConstants and the "% off" spec forces
+  the numbers to match.
