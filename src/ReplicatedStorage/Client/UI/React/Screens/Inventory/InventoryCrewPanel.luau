@@ -360,8 +360,8 @@ local function InventoryCrewPanel(props: InventoryCrewPanelProps): React.ReactNo
 		pad = e("UIPadding", {
 			PaddingLeft = UDim.new(0, 20),
 			PaddingRight = UDim.new(0, 20),
-			PaddingTop = UDim.new(0, 16),
-			PaddingBottom = UDim.new(0, 8),
+			PaddingTop = UDim.new(0, layout.crewPad.top),
+			PaddingBottom = UDim.new(0, layout.crewPad.bottom - 6),
 		}),
 	}
 	for index, entry in props.cards do
@@ -377,6 +377,8 @@ local function InventoryCrewPanel(props: InventoryCrewPanelProps): React.ReactNo
 		ScrollingDirection = Enum.ScrollingDirection.X,
 		ScrollBarThickness = 6,
 		ScrollBarImageColor3 = UIToonConstants.shade("lilac").base,
+		-- The bar sits under the cards, never over their feet.
+		HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
 	}, rows)
 end
 

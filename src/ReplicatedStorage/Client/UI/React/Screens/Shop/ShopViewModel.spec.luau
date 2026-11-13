@@ -159,6 +159,33 @@ return function()
 		end)
 	end)
 
+	describe("listFit (a product page's list on a short screen)", function()
+		it("keeps the full row height when every row fits", function()
+			local fit = VM.listFit(400, 3, 90, 50, 8)
+			expect(fit.row).to.equal(90)
+			expect(fit.window).to.equal(400)
+		end)
+
+		it("shrinks the rows, never below the smallest, so all of them fit", function()
+			local fit = VM.listFit(116, 2, 90, 50, 8)
+			expect(fit.row).to.equal(54)
+			expect(2 * fit.row + 8 <= fit.window).to.equal(true)
+		end)
+
+		it("shows only whole rows when even the smallest rows overflow, so none is cut in half", function()
+			local fit = VM.listFit(130, 4, 90, 50, 8)
+			expect(fit.row).to.equal(50)
+			-- Two whole rows and the gap between them; the rest scroll.
+			expect(fit.window).to.equal(108)
+		end)
+
+		it("always shows at least one whole row", function()
+			local fit = VM.listFit(20, 3, 90, 50, 8)
+			expect(fit.row).to.equal(50)
+			expect(fit.window).to.equal(50)
+		end)
+	end)
+
 	describe("gleam", function()
 		it("shows the four bundles, bought with Robux only once their products exist", function()
 			local bundles = VM.bundles({})

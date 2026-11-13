@@ -264,33 +264,47 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 		end
 		y += chipHeight + DEPTH.drop + 10
 	end
-	local rowHeight = if phone then 40 else 84
+	local rowGap = if phone then 4 else 8
 	local rows: Nodes = {
-		list = e(
-			"UIListLayout",
-			{ Padding = UDim.new(0, if phone then 4 else 8), SortOrder = Enum.SortOrder.LayoutOrder }
-		),
+		list = e("UIListLayout", { Padding = UDim.new(0, rowGap), SortOrder = Enum.SortOrder.LayoutOrder }),
 	}
 	local buttonHeight = if phone then 46 else 96
 	local listGap = if phone then 34 else 70
+	local listHeight = layout.content.height - DEPTH.drop - y - buttonHeight - listGap
+	local window = listHeight
 	if #product.stats > 0 then
-		local listHeight = layout.content.height - DEPTH.drop - y - buttonHeight - listGap
 		for key, node in ShopHireRows.rows(product, size, phone, listHeight) do
 			rows[key] = node
 		end
 	else
+		-- Each row's slot is its card and its hard drop; on a short screen the rows shrink, then only whole rows show
+		-- and the rest scroll (VM.listFit), so a row is never cut in half.
+		local fit = VM.listFit(
+			listHeight,
+			#product.inside,
+			(if phone then 40 else 84) + DEPTH.drop,
+			(if phone then 34 else 54) + DEPTH.drop,
+			rowGap
+		)
+		window = fit.window
+		local rowHeight = fit.row - DEPTH.drop
+		local rowText =
+			math.min(if phone then 13 else 24, math.max(if phone then 13 else 16, math.floor(rowHeight * 0.29)))
 		for index, entry in product.inside do
-			rows[entry.id] = insideRow(entry, card, if phone then 13 else 24, rowHeight, index)
+			rows[entry.id] = insideRow(entry, card, rowText, rowHeight, index)
 		end
 	end
 	face.inside = e("ScrollingFrame", {
 		Position = UDim2.fromOffset(pad, y),
-		Size = UDim2.new(0, inner, 1, -y - buttonHeight - listGap),
+		Size = UDim2.fromOffset(inner, window),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		CanvasSize = UDim2.fromOffset(0, 0),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		ScrollBarThickness = 4,
+		-- A clear bar beside the rows (never over them) when the rest scroll.
+		ScrollBarThickness = if phone then 5 else 8,
+		ScrollBarImageColor3 = UIToonConstants.shade("grape").base,
+		VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
 	}, rows)
 
 	local button = product.button

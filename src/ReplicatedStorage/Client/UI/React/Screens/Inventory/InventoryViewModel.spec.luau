@@ -489,7 +489,8 @@ return function()
 				expect(content.y >= layout.barY + layout.barHeight).to.equal(true)
 				expect(content.x + content.width <= case.size.X).to.equal(true)
 				expect(content.y + content.height <= case.size.Y).to.equal(true)
-				expect(layout.crewCard.Y <= content.height).to.equal(true)
+				-- The card, its wearing ring and the scroll bar all fit under the bar, so a card's foot is never clipped.
+				expect(layout.crewCard.Y + layout.crewPad.top + layout.crewPad.bottom <= content.height).to.equal(true)
 				expect(layout.gridWidth + layout.heroWidth + layout.detailWidth + 2 * layout.gap).to.equal(
 					content.width
 				)

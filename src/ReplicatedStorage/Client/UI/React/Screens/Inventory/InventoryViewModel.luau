@@ -140,6 +140,9 @@ export type Layout = {
 	-- The area under the bar.
 	content: { x: number, y: number, width: number, height: number },
 	crewCard: Vector2,
+	-- The Crew row's room above the cards (their tilted flags) and below them (the wearing ring's overhang and the
+	-- scroll bar), px.
+	crewPad: { top: number, bottom: number },
 	gap: number,
 	-- The character page (its tabs are in the menu bar): grid | hero | detail.
 	gridWidth: number,
@@ -582,7 +585,9 @@ function VM.layout(virtual: Vector2, phone: boolean): Layout
 	local width = math.max(0, virtual.X - safe.left - safe.right)
 	local height = math.max(0, virtual.Y - y - safe.bottom)
 	-- The concept's proportions: Crew cards fill the height; the page is grid | hero | detail.
-	local cardHeight = math.min(height - 16, if phone then 290 else 760)
+	-- The flags above the cards; below: the wearing ring's 8 px overhang, 8 px of air and the 6 px scroll bar.
+	local crewPad = { top = 16, bottom = 22 }
+	local cardHeight = math.min(height - crewPad.top - crewPad.bottom, if phone then 290 else 760)
 	local gridWidth = math.floor(width * (if phone then 0.34 else 0.29))
 	local heroWidth = math.floor(width * (if phone then 0.3 else 0.36))
 	local cellWidth = math.floor((gridWidth - 2 * UIToonConstants.DEPTH.outline - 24 - gap) / 2)
@@ -594,6 +599,7 @@ function VM.layout(virtual: Vector2, phone: boolean): Layout
 		titleSize = if phone then 34 else 64,
 		content = { x = x, y = y, width = width, height = height },
 		crewCard = Vector2.new(math.floor(cardHeight * (if phone then 0.78 else 0.54)), cardHeight),
+		crewPad = crewPad,
 		gap = gap,
 		gridWidth = gridWidth,
 		heroWidth = heroWidth,

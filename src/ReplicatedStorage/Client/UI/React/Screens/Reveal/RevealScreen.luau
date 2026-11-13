@@ -302,6 +302,11 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	if view.kind == "hire" then
 		local cardHeight = if phone then 120 else 300
 		local photo = math.floor(cardHeight * 0.66)
+		-- The ID photo shows the whole new hire, ears to feet, in a frame taller than wide (owner, 2026-11-12: a hire is
+		-- never cut off; a bust cut Pippa's ear tips and legs).
+		local photoTop = if phone then 30 else 64
+		local photoWidth = math.floor(photo * 0.78)
+		local photoHeight = cardHeight - photoTop - (if phone then 8 else 18)
 		local card: Nodes = {
 			header = e(ToonText, {
 				text = "MORROW & MORROW",
@@ -313,17 +318,17 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			}),
 			photo = e(ToonViewport, {
 				employee = view.employee,
-				framing = "bust",
-				position = UDim2.fromOffset(14, if phone then 30 else 64),
-				size = UDim2.fromOffset(photo, photo),
+				framing = "full",
+				position = UDim2.fromOffset(14, photoTop),
+				size = UDim2.fromOffset(photoWidth, photoHeight),
 			}),
 			name = e(ToonText, {
 				text = `Name: {view.name}`,
 				font = "body",
 				color = COLOR.ink,
 				textSize = size + 2,
-				position = UDim2.fromOffset(photo + 26, if phone then 34 else 76),
-				size = UDim2.new(1, -photo - 40, 0, size + 6),
+				position = UDim2.fromOffset(photoWidth + 26, if phone then 34 else 76),
+				size = UDim2.new(1, -photoWidth - 40, 0, size + 6),
 				fit = true,
 			}),
 			job = e(ToonText, {
@@ -331,8 +336,8 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				font = "body",
 				color = COLOR.ink,
 				textSize = size + 2,
-				position = UDim2.fromOffset(photo + 26, if phone then 56 else 124),
-				size = UDim2.new(1, -photo - 40, 0, size + 6),
+				position = UDim2.fromOffset(photoWidth + 26, if phone then 56 else 124),
+				size = UDim2.new(1, -photoWidth - 40, 0, size + 6),
 				fit = true,
 			}),
 			stamp = e(ToonStamp, {
