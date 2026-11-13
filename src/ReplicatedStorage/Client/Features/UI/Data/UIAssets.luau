@@ -124,9 +124,10 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	fishtank = "rbxassetid://72370733106499",
 	flashlight = "rbxassetid://115788026706324",
 	-- Owner picks 2026-11-13 (one picture per job, no more shared gift): the daily reward's calendar with a gold tick and
-	-- the Shop's Featured spotlight (GPT renders, ink outline; Icey Labs decals 123972910876460 / 86065362565121).
-	daily = "rbxassetid://133319516052590",
-	featured = "rbxassetid://114915594745213",
+	-- the Shop's Featured spotlight (GPT renders, ink outline, floor shadow cut away before the outline; Icey Labs v2
+	-- decals 87370888087827 / 94822868730395).
+	daily = "rbxassetid://97644014132156",
+	featured = "rbxassetid://94219536392095",
 	-- Round 2 (glossy family, softer shine; owner picks 2026-11-13): the Shop's stall and the sticker sheet for sticker
 	-- packs, stickers and the chat wheel (Icey Labs decals 106048651825814 / 104162197575790). They replace the shared
 	-- gift box.
