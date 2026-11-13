@@ -68,6 +68,43 @@ Launch List row `p1-sound-pass`. Status: **round 1 is waiting on the owner's pic
 9. **Round 2 additions:** card 15, shop buy as a rarity ladder, made from the owner's shop-buy note (A's register +
    coins, with the locker's value layers by rarity).
 
+## Owner picks (all three pages, read 11-13 evening)
+
+| Page | Picked | None | Unpicked |
+|---|---|---|---|
+| R1 | Lunch Line A; yard tune A, which goes on the hub radio; shift bell A | teammate ping A/B | Coffee Break, PA chime, pressure sting, overtime sting (in-shift music dropped) |
+| R2 | hide in A, hide out A, pushed out A, glass break A, truck door A, truck engine A, Bramble steps A | shop buy, shop buy by rarity, locker open, hire, rank up, quota tick, drive-by | scanner beep |
+| R3 | none | none | all 21 cards (asked the coordinator to have the owner check the page saved) |
+
+Owner notes:
+- **On hire, rank up and shop buy:** "We are always using same instruments (pizzicato, marimba, weird chord, I think
+  timpani, etc!)". The next reward round needs a new palette.
+- **On Bramble steps:** "super quiet / pretty much quiet as a bat until pretty close and then his footsteps suddenly
+  sound loud and quick!"
+
+## Wiring plan for the picks (ready; it lands with the upload)
+
+The upload files are in `E:/AudioTools/work/p05-sound/upload/`. They're gated and cut-off checked. Lunch Line's only
+flags are its staccato note ends, which are the march style the owner heard and picked. Effective level
+E = loudest-0.4 s RMS + 20 log10(volume), against the 2026-11-10 mix spec bands.
+
+| Key (file) | Registry home | Call site | Space / roll-off | Volume (E) |
+|---|---|---|---|---|
+| `depotHubLunch` (depotHubLunch.ogg, 32 s loop) | DepotAssets | `DepotSpotConstants.STATIONS`: new station "Lunch Line" | 2D Music, looped | 1.0 (matches the hub theme, -20 LUFS master) |
+| `depotHubNightLot` (depotHubNightLot.ogg, 40 s loop) | DepotAssets | new station "Night Lot" | 2D Music, looped | 1.12 (+1 dB: its master is -21 LUFS) |
+| `depotShiftBell` (depotShiftBell.wav) | DepotAssets: **replace the id** (it was the office far ding) | unchanged (DepotSpotSystem bell) | 3D, 18/140 kept | 0.8 (E ≈ -17) |
+| `hideIn` (hideIn.wav) | HideAssets: new | HideServiceServer `enter`: `playAt(root.Position, IN, HIDE_SOUND_RADIUS)` | 3D, roll-off 45 | 1.0 (E ≈ -24.5, the Action band) |
+| `hideOut` (hideOut.wav) | HideAssets: new | HideServiceServer `leave`, not cramped, at `outAt` | 3D, roll-off 45 | 1.0 (E ≈ -23) |
+| `hideTumble` (hideTumble.wav) | HideAssets: **replace the id** (it was the body fall) | unchanged (cramped push-out) | 3D, roll-off 45 | 0.9, pitch 0.97-1.03 (E ≈ -20) |
+| `cargoShatter` (cargoShatter.wav) | CargoAssets: **replace the id** (was library PSE 9114597147) | unchanged (CargoFeedbackUtils fragile drop) | 3D, as today | 0.9 (E ≈ -21) |
+| `shiftTruckDoor` / `shiftTruckStart` (truckDoor.wav, truckStart.wav) | ShiftAssets: new (shared, so the server can validate) | DepotServiceServer `departing`: door at the pad, engine 0.9 s later. Adds `SoundServiceServer` to its dependencies | 3D at the pad, roll-off 120 | 0.9 / 0.8 (E ≈ -21 / -20) |
+| `footstep_bramble_1..4` (footstep_bramble_N.wav, 4 variants matched to -20 dB loudest window) | FootstepAssets: new `bramble` set | OccupantKindRegistry bramble `sounds.footsteps = "bramble"` (spec line 238 changes from nil to "bramble") | 3D on the foot. **Quiet as a bat until close:** FootstepSet gets an optional `rollOffMinDistance` (3 studs), with roll-off max 30 and volume 2.2, so a step is loud within a few studs and gone past about 25. **Quick:** walk 16 / run 27 with sprint pitch 1.12 | 2.2 |
+
+Not wired this round:
+- **Truck door and engine at the shift clock-out:** the truck leaves inside ShiftClockOutSystem's state flow, which
+  is another session's logic. Hub departure only for now.
+- **Everything picked "none" or left unpicked.**
+
 ## Open questions
 - **SFX generator:** settled by the coordinator. Use local SA3 + CC0, with no ElevenLabs: the owner prefers free tools.
   The ElevenLabs key (the key ID was saved instead of the `sk_` key) has been passed to the owner. The GPU was used in
