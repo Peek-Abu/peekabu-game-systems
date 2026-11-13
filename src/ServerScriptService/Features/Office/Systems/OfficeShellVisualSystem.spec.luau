@@ -265,12 +265,13 @@ return function()
 					end
 				end
 				-- No trim along the doorway's own wall in the middle of it: the opening less the walls bounding its mouth
-				-- (half a wall each side) and a trim depth, 1.9 deep at x = 0.
+				-- (half a wall each side) and a trim depth, 1.9 deep at x = 0. (A pilaster's band wraps its corner up to
+				-- that edge exactly: float32 positions, so a 1e-3 margin.)
 				for _, part in model.Shell:GetChildren() do
 					if part.Name == "Wainscot" or part.Name == "Rail" or part.Name == "Skirt" then
 						local x, z = part.Position.X - ORIGIN.X, part.Position.Z
 						local hx, hz = part.Size.X / 2, part.Size.Z / 2
-						local along = part.Size.Z > part.Size.X and z - hz < span - 1 and z + hz > 1
+						local along = part.Size.Z > part.Size.X and z - hz < span - 1 - 1e-3 and z + hz > 1 + 1e-3
 						expect(along and x - hx < 0.95 and x + hx > -0.95).to.equal(false)
 					end
 				end

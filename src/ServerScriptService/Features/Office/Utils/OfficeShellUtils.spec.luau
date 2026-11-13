@@ -377,45 +377,45 @@ return function()
 					for _, box in named(boxes, material) do
 						local f = footprint(box)
 						local bottom = box.cframe.Position.Y - box.size.Y / 2
-						local overlapsAlong = f.maxX > p.minX - 1e-6
-							and f.minX < p.maxX + proud + 1e-6
-							and f.minX > p.minX - proud - 1e-6
-						local collar = math.abs(f.minX - (p.minX - proud)) < 1e-6
-							and math.abs(f.maxX - (p.maxX + proud)) < 1e-6
+						local overlapsAlong = f.maxX > p.minX - 1e-4
+							and f.minX < p.maxX + proud + 1e-4
+							and f.minX > p.minX - proud - 1e-4
+						local collar = math.abs(f.minX - (p.minX - proud)) < 1e-4
+							and math.abs(f.maxX - (p.maxX + proud)) < 1e-4
 						-- A face band is a collar from the wall's band surface out past the pilaster, over both its sides.
 						local inner = S.slab + proud
 						if
 							overlapsAlong
-							and math.abs(bottom - y0) < 1e-6
-							and math.abs(bottom + box.size.Y - y1) < 1e-6
+							and math.abs(bottom - y0) < 1e-4
+							and math.abs(bottom + box.size.Y - y1) < 1e-4
 						then
 							expect(box.collide).to.equal(false)
 							if
 								collar
-								and math.abs(f.minZ - inner) < 1e-6
-								and math.abs(f.maxZ - (reach + proud)) < 1e-6
+								and math.abs(f.minZ - inner) < 1e-4
+								and math.abs(f.maxZ - (reach + proud)) < 1e-4
 							then
 								found.wallPlus += 1
 								expect(box.side).to.equal(1)
 							elseif
 								collar
-								and math.abs(f.maxZ + inner) < 1e-6
-								and math.abs(f.minZ + reach + proud) < 1e-6
+								and math.abs(f.maxZ + inner) < 1e-4
+								and math.abs(f.minZ + reach + proud) < 1e-4
 							then
 								found.wallMinus += 1
 								expect(box.side).to.equal(-1)
-							elseif math.abs((if inward > 0 then f.minX else f.maxX) - opening) < 1e-6 then
+							elseif math.abs((if inward > 0 then f.minX else f.maxX) - opening) < 1e-4 then
 								expect(
 									math.abs((if inward > 0 then f.maxX else f.minX) - (opening + inward * proud))
-										< 1e-6
+										< 1e-4
 								).to.equal(true)
-								if f.minZ > -1e-6 then
-									expect(f.maxZ).to.be.near(reach, 1e-6)
+								if f.minZ > -1e-4 then
+									expect(f.maxZ).to.be.near(reach, 1e-4)
 									expect(box.side).to.equal(1)
 									found.openPlus += 1
 								else
-									expect(f.minZ).to.be.near(-reach, 1e-6)
-									expect(f.maxZ).to.be.near(0, 1e-6)
+									expect(f.minZ).to.be.near(-reach, 1e-4)
+									expect(f.maxZ).to.be.near(0, 1e-4)
 									expect(box.side).to.equal(-1)
 									found.openMinus += 1
 								end
