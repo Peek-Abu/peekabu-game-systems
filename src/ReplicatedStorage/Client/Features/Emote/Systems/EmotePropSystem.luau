@@ -333,6 +333,8 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				unmount()
 			end
 
+			-- The character's tracks, once bound: a prop clip that stops hands its props back to one still playing.
+			local boundSource: TrackSource? = nil
 			local function adopt(track: PropTrack)
 				local key = use.keyForAsset(track.assetId)
 				local entry = if key ~= nil then EmotePropRegistry.get(key) else nil
@@ -391,6 +393,15 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 					track.onStopped(function()
 						if owner == track then
 							disown()
+							-- A prop clip still playing under it (a showcase idle under its fidget) takes its props back.
+							local playing = boundSource
+							if playing ~= nil and not released then
+								for _, other in playing.playing() do
+									if other ~= track and other.isPlaying() then
+										adopt(other)
+									end
+								end
+							end
 						end
 					end)
 				)
@@ -436,6 +447,7 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 			end)
 
 			local function bind(source: TrackSource)
+				boundSource = source
 				table.insert(cleanups, source.onPlayed(adopt))
 				for _, track in source.playing() do
 					adopt(track)
