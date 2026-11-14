@@ -160,11 +160,38 @@ menus that would gain most from the same treatment. Every shot follows `game-ui-
 - **Files:** `mock2.html`, `r2/` renders and `photos/` in the notes folder.
 - **Skill profile updated:** the stars ban and soap bubbles in the profile, plus a taste-log entry for this round.
 
+### How-to-play Play shots (2026-11-13, Shift place, coordinator slot)
+All four were staged during Play (runtime only: server execute_luau into `workspace.P075_TEMP`, nothing saved):
+1. Pippa (`point`) and Cappy (`wave`) in depot `truck1`'s bed.
+2. Pippa vacuuming in the real Office open-plan: hand-fitted vacuum, Gloom pile = clones of the Training map's
+   GloomCreep parts.
+3. Prickles crouched by an Office desk (`RevealSuspicious` face), the Manager behind with a coral light.
+4. Cappy carrying the office kit's snow globe into `truck1`.
+
+**How the shots were taken:**
+- Client RenderStep camera override from Workspace attributes.
+- The game's ScreenGuis and BillboardGuis disabled for the shots.
+- `truck1`'s LocalTransparencyModifier held at 0, because the depot fades trucks near the camera.
+- ReplicationFocus moved to the shot.
+- The idle Office is unlit, so temp PointLights were used there.
+
+**Clean-up, verified in Edit after stopping:**
+- The client binds are removed and the GUIs re-enabled.
+- `P075_TEMP` is destroyed; Play is stopped.
+- In Edit: RunTests false, Lighting unchanged, the workspace back to its 6 children, no injected scripts.
+
+**Lobby:** the Lobby Studio was in Play (another session), so the time-clock shot is still a stand-in. The rank
+line-up and the truck at night were skipped to free Shift for p075-monsters.
+
+**Files:**
+- Raw captures: `raw/play_s1..4.jpg`.
+- Graded: `photos/s1..4.jpg` (37:45) and `photos/job.jpg` (TODAY'S JOB).
+- Review page v3 shows them.
+
 **Still needed:**
-- Studio time for the real pictures:
-  - Shift Edit: the rank line-up in lanyards, and the truck in the yard at night.
-  - Shift Play: the 4 How-to-play shots.
+- Studio time for the remaining pictures:
   - Lobby Edit: Pippa at the time clock.
+  - Shift Edit: the rank line-up in lanyards, and the truck at night.
 - The SOON card still needs the "spice" the owner asked for in round 1.
 
 ## Next
