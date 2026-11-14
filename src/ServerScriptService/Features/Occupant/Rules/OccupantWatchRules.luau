@@ -3,7 +3,8 @@
 	OccupantWatchRules: who watches a "freezes while watched" monster, and its freeze (Bramble; the substitute spec's
 	"Watched is decided on the server" and fairness sections). A crew member is a watcher only if all of these hold:
 
-	- alive, not knocked down, not hidden (even peeking) and not in the truck's box (`eligible`);
+	- alive, not knocked down, not hidden (even peeking), not in the truck's box and not vacuuming (`eligible`; B1, owner
+	  11-14: a running vacuum takes your eyes, so the crew cannot clean and freeze it at once);
 	- their client's camera report is fresh: received under FREEZE_REPORT_FRESH (0.3 s) ago (`fresh`);
 	- the reported camera sits within FREEZE_CAMERA_RANGE (16) studs of their head (`cameraNear`), with a clear line
 	  from the head to the camera (`cameraClear`, the caller's ray): no camera forged far off or through a wall;
@@ -55,6 +56,8 @@ export type Viewer = {
 	downed: boolean,
 	hidden: boolean,
 	inTruck: boolean,
+	-- Their vacuum is sucking now (VacuumMotionConstants.ACTIVE_ATTRIBUTE on the character).
+	vacuuming: boolean,
 	head: Vector3,
 	report: Report?,
 	-- The ray from their head to the reported camera hit nothing.
@@ -75,7 +78,7 @@ local COS_CONE = math.cos(math.rad(OccupantConstants.FREEZE_CONE))
 local OccupantWatchRules = {}
 
 function OccupantWatchRules.eligible(viewer: Viewer): boolean
-	return viewer.alive and not viewer.downed and not viewer.hidden and not viewer.inTruck
+	return viewer.alive and not viewer.downed and not viewer.hidden and not viewer.inTruck and not viewer.vacuuming
 end
 
 function OccupantWatchRules.fresh(report: Report?, now: number): boolean

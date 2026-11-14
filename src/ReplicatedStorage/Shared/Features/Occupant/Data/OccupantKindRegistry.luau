@@ -9,7 +9,7 @@
 
 	- `harlow`: today's manager, unchanged (his template, faces and speeds; every block; no twist).
 	- `bramble`: the School's owl mascot. No painted face swap (its buttons and stitched smile are the model), never
-	  sits at desks, chases at 27 (past a sprint at 23: watching it is the only way to stop it), catches with a strike (its sound and one life) and has the freeze twist: it cannot move while a crew
+	  sits at desks, chases at 30 (past a sprint at 23: watching it is the only way to stop it), catches with a strike (its sound and one life) and has the freeze twist: it cannot move while a crew
 	  member watches it, its head turns to the kid it is after and swaps target after HEAD_SWAP_SECONDS of non-stop
 	  watching, and it leaves a feather trail where it moved unwatched.
 
@@ -139,9 +139,9 @@ local BRAMBLE: Kind = {
 	id = "bramble",
 	templatePath = { "Assets", "CleanupCrew", "Characters", "Bramble" },
 	faces = false,
-	-- Owner 11-13: "much faster": past a sprint (23), so the crew must watch it, not outrun it.
+	-- Owner 11-13: "much faster": past a sprint (23), so the crew must watch it, not outrun it. Chase 27 -> 30 (S7, 11-14).
 	patrolSpeed = 16,
-	chaseSpeed = 27,
+	chaseSpeed = 30,
 	blocks = { desks = false, stares = true },
 	freeze = {
 		headTurn = true,

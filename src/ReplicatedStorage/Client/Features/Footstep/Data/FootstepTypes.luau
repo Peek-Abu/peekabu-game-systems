@@ -46,6 +46,14 @@ export type LayerPools = {
 	puddle: { string },
 }
 
+-- A set's proximity gate (FootstepProximityFormulas): silent while the listener is farther than `silentBeyond` studs,
+-- then suddenly loud and quick (x loudVolume, x quickPitch) from there in. Bramble's steps (owner 11-13).
+export type Proximity = {
+	silentBeyond: number,
+	loudVolume: number,
+	quickPitch: number,
+}
+
 -- One character's footsteps (FootstepAssets.SETS): the sound and its variant pools per surface.
 export type FootstepSet = {
 	-- Sound.Volume of a walking step (0..10), before the gait scale.
@@ -58,6 +66,8 @@ export type FootstepSet = {
 	walkSpeed: number,
 	runSpeed: number,
 	gaits: GaitScales,
+	-- Optional: silent far from the listener, suddenly loud and quick close (nil: heard at every distance).
+	proximity: Proximity?,
 	-- Asset ids (rbxassetid://N) per surface; each step plays one at random. `default` is the fallback for an empty
 	-- surface, and must not be empty.
 	surfaces: SurfacePools,

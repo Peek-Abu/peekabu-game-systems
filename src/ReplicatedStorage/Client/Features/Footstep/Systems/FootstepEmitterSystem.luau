@@ -5,7 +5,8 @@
 	lowest corner, which dips below the stance as the foot rolls heel to toe) goes through
 	FootstepPlantFormulas; on the frame a foot lands, and only while the character is moving on the ground (its root
 	really crossing the floor, a floor under it, alive, not seated), it plays one variant of its set's pool for the
-	surface under it (FootstepSurfaceUtils), scaled by its gait (FootstepGaitFormulas), 3D on that foot; on an outdoor
+	surface under it (FootstepSurfaceUtils), scaled by its gait (FootstepGaitFormulas) and, for a set with a proximity
+	gate, by how near this client's character is (FootstepProximityFormulas), 3D on that foot; on an outdoor
 	surface (the floor in the yard: SoundServiceClient:placeAt) the shared surface layer (FootstepAssets.LAYERS:
 	asphalt, grass, gravel, puddle) plays with it, on the same foot at the same gait scale. Steps are
 	one-shots (SoundServiceClient:playOneShot): each foot reuses the Sounds of its earlier steps (a walk keeps one a
@@ -21,6 +22,7 @@
 	@class FootstepEmitterSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -28,6 +30,7 @@ local FootstepAssets = require(ReplicatedStorage.Client.Features.Footstep.Data.F
 local FootstepConstants = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants)
 local FootstepTypes = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepTypes)
 local FootstepGaitFormulas = require(ReplicatedStorage.Client.Features.Footstep.Utils.FootstepGaitFormulas)
+local FootstepProximityFormulas = require(ReplicatedStorage.Client.Features.Footstep.Utils.FootstepProximityFormulas)
 local FootstepPlantFormulas = require(ReplicatedStorage.Client.Features.Footstep.Utils.FootstepPlantFormulas)
 local FootstepSurfaceUtils = require(ReplicatedStorage.Client.Features.Footstep.Utils.FootstepSurfaceUtils)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
@@ -110,6 +113,17 @@ local function floorUnder(rig: Rig): Surface?
 		floor = floor.Parent
 	end
 	return FootstepSurfaceUtils.surfaceFor(hit.Material, override, SoundServiceClient:placeAt(hit.Position))
+end
+
+-- Where this client hears from: its own character's root, else the camera; nil when neither exists.
+local function listenerAt(): Vector3?
+	local character = Players.LocalPlayer and Players.LocalPlayer.Character
+	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	if root ~= nil and root:IsA("BasePart") then
+		return root.Position
+	end
+	local camera = Workspace.CurrentCamera
+	return if camera ~= nil then camera.CFrame.Position else nil
 end
 
 local FootstepEmitterSystem = {}
@@ -201,6 +215,13 @@ function FootstepEmitterSystem.update(rig: Rig, dt: number, counters: Counters):
 	end
 	local gait: Gait = FootstepGaitFormulas.gaitFor(rig.gaitInput())
 	local gaitScale = FootstepGaitFormulas.scale(rig.set, gait, rig.speed)
+	local proximity = rig.set.proximity
+	if proximity ~= nil then
+		local listener = listenerAt()
+		local distance = if listener ~= nil then (rig.root.Position - listener).Magnitude else math.huge
+		local near = FootstepProximityFormulas.scale(proximity, distance)
+		gaitScale = { volume = gaitScale.volume * near.volume, pitch = gaitScale.pitch * near.pitch }
+	end
 	if gaitScale.volume <= 0 then
 		counters.silent += #landed
 		return played

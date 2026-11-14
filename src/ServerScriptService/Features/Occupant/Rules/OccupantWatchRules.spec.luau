@@ -19,6 +19,7 @@ local function viewer(extra)
 		downed = false,
 		hidden = false,
 		inTruck = false,
+		vacuuming = false,
 		head = Vector3.new(0, 5, 0),
 		report = { position = camera, look = (CHEST - camera).Unit, receivedAt = 100 },
 		cameraClear = true,
@@ -53,6 +54,8 @@ return function()
 			expect(OccupantWatchRules.watching(viewer({ downed = true }), 100.1)).to.equal(false)
 			expect(OccupantWatchRules.watching(viewer({ hidden = true }), 100.1)).to.equal(false)
 			expect(OccupantWatchRules.watching(viewer({ inTruck = true }), 100.1)).to.equal(false)
+			-- B1 (owner 11-14): a running vacuum takes your eyes; you cannot clean and freeze it at once.
+			expect(OccupantWatchRules.watching(viewer({ vacuuming = true }), 100.1)).to.equal(false)
 		end)
 
 		it("needs a camera report", function()
@@ -158,9 +161,10 @@ return function()
 			expect(OccupantWatchRules.inCone(Vector3.zero, Vector3.zAxis, Vector3.zero)).to.equal(false)
 		end)
 
-		it("eligible: alive, standing, not hiding and outside the truck", function()
+		it("eligible: alive, standing, not hiding, outside the truck and not vacuuming", function()
 			expect(OccupantWatchRules.eligible(viewer())).to.equal(true)
 			expect(OccupantWatchRules.eligible(viewer({ hidden = true }))).to.equal(false)
+			expect(OccupantWatchRules.eligible(viewer({ vacuuming = true }))).to.equal(false)
 		end)
 	end)
 

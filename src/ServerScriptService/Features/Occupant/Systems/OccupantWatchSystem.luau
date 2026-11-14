@@ -38,6 +38,7 @@ local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
 local OccupantEvents = require(OccupantShared.Net.OccupantEvents)
 local OccupantKindRegistry = require(OccupantShared.Data.OccupantKindRegistry)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
+local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local OccupantHeadRules = require(OccupantServer.Rules.OccupantHeadRules)
 local OccupantWatchRules = require(OccupantServer.Rules.OccupantWatchRules)
@@ -304,6 +305,8 @@ local function check(now: number)
 					downed = DeathServiceServer:isDown(player),
 					hidden = hidden,
 					inTruck = OccupantSightUtils.inZone(root.Position, zone),
+					vacuuming = character ~= nil
+						and character:GetAttribute(VacuumMotionConstants.ACTIVE_ATTRIBUTE) == true,
 					head = headPart.Position,
 					report = nil,
 					cameraClear = false,

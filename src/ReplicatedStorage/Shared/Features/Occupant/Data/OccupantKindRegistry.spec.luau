@@ -63,10 +63,10 @@ return function()
 		end)
 
 		it(
-			"is much faster (owner 11-13): patrols at 16 and chases at 27, past a sprint (23), so only watching it stops it",
+			"is much faster: patrols at 16 and chases at 30 (owner 11-13, S7 11-14), past a sprint (23), so only watching it stops it",
 			function()
 				expect(bramble.patrolSpeed).to.equal(16)
-				expect(bramble.chaseSpeed).to.equal(27)
+				expect(bramble.chaseSpeed).to.equal(30)
 			end
 		)
 
