@@ -188,10 +188,17 @@ line-up and the truck at night were skipped to free Shift for p075-monsters.
 - Graded: `photos/s1..4.jpg` (37:45) and `photos/job.jpg` (TODAY'S JOB).
 - Review page v3 shows them.
 
+### Time-clock shot (2026-11-13, Lobby Edit, coordinator slot)
+- `Assets.CleanupCrew.TimeClock` (x1.6) on the hub wall at the `Board_clock` marker, with Pippa (`point`, Happy)
+  pointing at it.
+- One temp key light; Lighting untouched.
+- Temp folder deleted, RunTests false, nothing saved.
+- The editor-only marker labels ("clock", "daily") were patched out of the mock photo. A final shot should hide the
+  markers in Studio instead.
+- File: `raw/lobby_clock*.jpg`, graded `photos/clock2.jpg`. Page v4 shows it on TIMECARD.
+
 **Still needed:**
-- Studio time for the remaining pictures:
-  - Lobby Edit: Pippa at the time clock.
-  - Shift Edit: the rank line-up in lanyards, and the truck at night.
+- Studio time for the remaining pictures: Shift Edit for the rank line-up in lanyards and the truck at night.
 - The SOON card still needs the "spice" the owner asked for in round 1.
 
 ## Next
