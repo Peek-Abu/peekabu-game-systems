@@ -342,6 +342,18 @@ return function()
 			expect(DepotBoardViewModel.roleOf(nil, 3, 3)).to.equal("none")
 		end)
 
+		it("tabs the places menu CONTRACTS and GUIDE only: no Vacuums tab (owner play check 11-14)", function()
+			local tabs = DepotBoardViewModel.tabs()
+			expect(#tabs).to.equal(2)
+			expect(tabs[1].key).to.equal("contracts")
+			expect(tabs[1].label).to.equal("CONTRACTS")
+			expect(tabs[2].key).to.equal("guide")
+			expect(tabs[2].label).to.equal("GUIDE")
+			for _, tab in tabs do
+				expect(string.find(string.upper(tab.label), "VACUUM")).to.equal(nil)
+			end
+		end)
+
 		it("prints prices with commas", function()
 			expect(DepotBoardViewModel.commas(1500)).to.equal("1,500")
 			expect(DepotBoardViewModel.commas(999)).to.equal("999")

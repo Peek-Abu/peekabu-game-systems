@@ -79,6 +79,11 @@ export type BuildingView = {
 	buy: BuyView?,
 }
 
+-- A tab along the places menu's top: CONTRACTS (this page) and GUIDE (the hub's Guide page). The Vacuums tab is gone
+-- (owner play check 11-14: the vacuum lives in the Inventory, not the places menu).
+export type Tab = "contracts" | "guide"
+export type TabView = { key: Tab, label: string, width: number }
+
 -- Where the reader stands: the host of a hosted truck, crew aboard one, or not on a hosted truck.
 export type Role = "host" | "crew" | "none"
 
@@ -230,6 +235,14 @@ local function quotaChip(crew: number?, map: MapId): string
 		return `{low}–{high} Gloom`
 	end
 	return `{ShiftQuotaFormulas.quota(crew, map)} Gloom`
+end
+
+-- The places menu's tabs, left to right.
+function DepotBoardViewModel.tabs(): { TabView }
+	return {
+		{ key = "contracts", label = "CONTRACTS", width = 200 },
+		{ key = "guide", label = "GUIDE", width = 140 },
+	}
 end
 
 -- "1,500": a whole number with thousands commas.

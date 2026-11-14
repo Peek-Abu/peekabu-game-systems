@@ -2,8 +2,9 @@
 --[=[
 	DepotBoardPanel: the places menu (the contract board scene; p1-places-menu) in the V1 kit (menu-jobs render): a
 	cream modal popping in over the dimmed depot, its grape PLACES header with the clipboard render breaking the corner,
-	the header's foot melting into Gloom drips over the panel, and the coral close. Under it the tabs (CONTRACTS,
-	LOCKER, GUIDE: the current one in V2's lilac selected ring), then a Doors-style photo card per place, each from our
+	the header's foot melting into Gloom drips over the panel, and the coral close. Under it the tabs
+	(DepotBoardViewModel.tabs: CONTRACTS and GUIDE; no Vacuums tab since the owner's play check 11-14;
+	the current one in V2's lilac selected ring), then a Doors-style photo card per place, each from our
 	own posed scene shots: the Office and the School, each with its DANGER meter (Gloom drops, filled to the place's
 	level), and the planned buildings locked (darkened concept photo, the padlock render, Gloom pooled inside the
 	photo's floor, a SOON sticker). A locked place (the School before it is bought) shows the padlock and a gold BUY
@@ -39,7 +40,7 @@ local e = React.createElement
 
 local COLOR = UIToonConstants.COLOR
 
-export type Tab = "contracts" | "locker" | "guide"
+export type Tab = DepotBoardViewModel.Tab
 
 export type DepotBoardPanelProps = {
 	view: DepotBoardViewModel.BoardView,
@@ -47,7 +48,7 @@ export type DepotBoardPanelProps = {
 	-- The board's scale on this screen (DepotBoardViewModel.fit).
 	scale: number,
 	onClose: () -> (),
-	-- The other tabs (the hub's Locker and Guide pages) and READ THE BRIEF (the Guide).
+	-- The GUIDE tab and READ THE BRIEF (the hub's Guide page).
 	onTab: ((tab: Tab) -> ())?,
 	-- A host's tap on an open place (picks it for their truck).
 	onPick: ((map: ShiftTypes.MapId) -> ())?,
@@ -181,14 +182,8 @@ local function desktop(props: DepotBoardPanelProps): Nodes
 	local onTab = props.onTab
 	local nodes: Nodes = {}
 	-- The tabs.
-	type TabSpec = { key: Tab, label: string, width: number }
-	local tabs: { TabSpec } = {
-		{ key = "contracts", label = "CONTRACTS", width = 200 },
-		{ key = "locker", label = "VACUUMS", width = 160 },
-		{ key = "guide", label = "GUIDE", width = 140 },
-	}
 	local x = 44
-	for _, tab: TabSpec in tabs do
+	for _, tab in DepotBoardViewModel.tabs() do
 		local key: Tab = tab.key
 		nodes[`tab_{key}`] = e(ToonButton, {
 			variant = if key == "contracts" then "gleam" else "secondary",

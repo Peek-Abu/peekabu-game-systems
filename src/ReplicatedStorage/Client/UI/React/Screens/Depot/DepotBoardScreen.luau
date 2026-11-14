@@ -7,7 +7,7 @@
 	place picks it (DepotPlaceSender.pick); anyone's tap on a card shows its detail; BUY takes two taps (the first asks
 	SURE? for DepotPlaceConstants.CONFIRM_SECONDS, and while a host has it open the truck's idle start waits
 	(HostServiceClient:browse); the second sends DepotPlaceSender.buy; short of Credits, the
-	button offers the Gleam for the rest at the Shop's rate and sends that as the agreed most). The LOCKER and GUIDE tabs (and
+	button offers the Gleam for the rest at the Shop's rate and sends that as the agreed most). The GUIDE tab (and
 	READ THE BRIEF) swap the board for that hub page. CLOSE and FIND A TRUCK take the scene off the stack (Escape pops
 	it through UIServiceClient); DepotServiceClient clears the store's board once the scene has left the stack.
 
@@ -39,7 +39,6 @@ local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local DepotBoardPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardPanel)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
-local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -52,11 +51,10 @@ local function close()
 	SceneStack.remove(DepotConstants.BOARD_SCENE)
 end
 
--- The Jobs menu's other tabs (and READ THE BRIEF): leave the board for that hub page.
-local function openTab(tab: DepotBoardPanel.Tab)
+-- The GUIDE tab (and READ THE BRIEF): leave the places menu for the hub's Guide page.
+local function openTab(_tab: DepotBoardPanel.Tab)
 	SceneStack.remove(DepotConstants.BOARD_SCENE)
-	-- The Locker tab is the Inventory now (the vacuum and the crew live there).
-	SceneStack.push(if tab == "locker" then InventoryViewModel.SCENE else DepotHubViewModel.scene("guide"))
+	SceneStack.push(DepotHubViewModel.scene("guide"))
 end
 
 local function DepotBoardScreen(): React.ReactNode
