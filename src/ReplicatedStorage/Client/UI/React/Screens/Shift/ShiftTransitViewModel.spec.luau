@@ -86,7 +86,7 @@ return function()
 			)
 			expect(view.client).to.equal("MAPLE HILL SCHOOL")
 			expect(view.site).to.equal("School halls · 8:30 shift")
-			expect(view.tip).to.equal("Bramble the owl can't move while you look at it. Watch it and take turns!")
+			expect(view.tip).to.equal("Bramble the owl still guards these halls.")
 		end)
 
 		it("keeps the Office run's slip as it was", function()

@@ -110,7 +110,9 @@ return function()
 		end)
 
 		it("never perches for a kind with no perches (Harlow)", function()
-			local step = OccupantBrainRules.step(fresh(), perchSenses({ perches = nil }))
+			local harlow = perchSenses()
+			harlow.perches = nil
+			local step = OccupantBrainRules.step(fresh(), harlow)
 			expect(step.mind.mode).to.equal("patrol")
 		end)
 

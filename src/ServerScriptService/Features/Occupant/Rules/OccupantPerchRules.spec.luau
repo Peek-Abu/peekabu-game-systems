@@ -22,7 +22,7 @@ local function senses(extra)
 		resting = false,
 		route = { Vector3.new(0, 0, 0), Vector3.new(30, 0, 4), Vector3.new(40, 0, -4) },
 		restPoint = Vector3.zero,
-		zone = { center = Vector3.new(0, 0, -500), size = Vector3.new(4, 4, 4) },
+		zone = { min = Vector3.new(-2, -2, -502), max = Vector3.new(2, 2, -498) },
 		-- 30 studs from the kid (between PERCH_NEAR and PERCH_FAR), 50 studs (too far), 55 (too close: 5).
 		perches = { perch("lockers", 30), perch("far", 10), perch("close", 55) },
 		watchedAt = nil,
@@ -80,7 +80,10 @@ return function()
 		end)
 
 		it("never for a kind with no perches, nor during the cooldown after a drop", function()
-			expect(OccupantPerchRules.ready(mind(), senses({ perches = nil }))).to.equal(false)
+			-- (A nil in the overrides table is no key at all, so drop the field after building.)
+			local harlow = senses()
+			harlow.perches = nil
+			expect(OccupantPerchRules.ready(mind(), harlow)).to.equal(false)
 			expect(OccupantPerchRules.ready(mind({ perchReadyAt = 101 }), senses())).to.equal(false)
 		end)
 	end)

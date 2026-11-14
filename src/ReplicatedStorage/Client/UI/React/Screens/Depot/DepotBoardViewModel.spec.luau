@@ -56,12 +56,10 @@ return function()
 
 	it("words the HAZARD row for every map's monster", function()
 		local desktop = DepotBoardViewModel.board(nil, nil, false)
-		expect(rowOf(desktop, "HAZARD").text).to.equal(
-			"Monsters roam the site. They hear vacuums and things you drop. Empty hands run faster."
-		)
+		expect(rowOf(desktop, "HAZARD").text).to.equal("Monsters roam the site. Stay quiet and stick together.")
 		expect(desktop.tip).to.equal(rowOf(desktop, "HAZARD").text)
 		local phone = DepotBoardViewModel.board(nil, nil, true)
-		expect(rowOf(phone, "HAZARD").text).to.equal("Monsters hear vacuums and drops")
+		expect(rowOf(phone, "HAZARD").text).to.equal("Monsters roam the site")
 	end)
 
 	it("keeps the phone to four short rows", function()

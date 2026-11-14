@@ -118,9 +118,8 @@ return function()
 			local site = DepotMapRules.siteOf("office")
 			expect(site.site).to.equal(DepotConstants.SITE)
 			expect(site.hud).to.equal("Harlow & Finch · offices")
-			expect(site.tip).to.equal(
-				"The Manager is here. He hears vacuums and things you drop. Empty hands run faster."
-			)
+			-- Lore and tiny tips only (owner 11-14): never how he hunts or how to get away.
+			expect(site.tip).to.equal("The Manager is here. He never went home.")
 			expect(site.monster).to.equal("harlow")
 			expect(site.reviewTab).to.equal("SHIFT REVIEW · HARLOW & FINCH")
 			expect(site.quote).to.equal(ShiftConstants.REVIEW_QUOTES.met)
@@ -128,7 +127,7 @@ return function()
 
 		it("gives the school its own words, with a tip about Bramble and no Office or Manager", function()
 			local site = DepotMapRules.siteOf("school")
-			expect(site.tip).to.equal("Bramble the owl can't move while you look at it. Watch it and take turns!")
+			expect(site.tip).to.equal("Bramble the owl still guards these halls.")
 			expect(site.monster).to.equal("bramble")
 			for _, text in { site.site, site.hud, site.tip, site.reviewTab, site.quote.line, site.quote.by } do
 				expect(string.find(string.lower(text), "office", 1, true)).to.equal(nil)
