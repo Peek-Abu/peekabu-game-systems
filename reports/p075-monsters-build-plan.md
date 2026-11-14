@@ -162,4 +162,8 @@ saying, so this is **Q2**.
 - **Not checked yet:**
   - The specs: they run only in Studio (suite).
   - Real play: Shift place, a 2-client School run. Waiting on a Studio slot from the coordinator.
-- **Held:** Batch 3, Safety Sam (D1 and its timing are with the owner).
+- **Scope (owner, 11-14):** "nevermind on new monster plan for p0.75!"
+  - Batch 3 (Safety Sam) and the Lookalike are out of P0.75; the plan above stays for later.
+  - B5 is dropped.
+  - The first-catch tips stay as they are until Q1 is answered.
+  - The perch pose, drop animation and thump are held for the owner.
