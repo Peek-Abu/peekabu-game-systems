@@ -26,6 +26,7 @@ local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.
 local LeaderboardConstants = require(ReplicatedStorage.Shared.Features.Leaderboard.Data.LeaderboardConstants)
 local LeaderboardCrewUtils = require(ReplicatedStorage.Shared.Features.Leaderboard.Utils.LeaderboardCrewUtils)
 local CoffeeServiceClient = require(ReplicatedStorage.Client.Features.Coffee.CoffeeServiceClient)
+local CoffeeStore = require(ReplicatedStorage.Client.Features.Coffee.State.CoffeeStore)
 local RankServiceClient = require(ReplicatedStorage.Client.Features.Rank.RankServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
@@ -54,6 +55,7 @@ end
 
 local function CoffeeScreen(): React.ReactNode
 	local premium = ReactCharm.useAtom(StateSyncClientStore.premium)
+	local robux = ReactCharm.useAtom(CoffeeStore.robux)
 	local close = closer(SCENES.coffee)
 	return e(CoffeeChoice, {
 		phone = usePaperLayout() == "phone",
@@ -66,6 +68,7 @@ local function CoffeeScreen(): React.ReactNode
 				CoffeeServiceClient:buyRobux()
 			end
 			else nil,
+		robuxText = CoffeeRules.robuxText(robux),
 		onGleam = function()
 			close()
 			CoffeeServiceClient:buyGleam()

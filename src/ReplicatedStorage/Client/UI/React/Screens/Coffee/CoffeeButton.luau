@@ -3,7 +3,7 @@
 	CoffeeButton: Coffee for the crew in the shift HUD (owner 11-08; 30 minutes, owner 11-10). Small and quiet, right
 	side under the Today tracker (phone: top right): a lilac "2x PAY" button while coffee is offered
 	(CoffeeRules.offered); while someone's coffee runs, a gold badge with a sparkle and the countdown,
-	"2x PAY · ICE · 24:10" (CoffeeRules.badgeText). Either press opens the 99 R$ / 250 Gleam choice (CoffeeChoice;
+	"2x PAY · ICE · 24:10" (CoffeeRules.badgeText). Either press opens the Robux / 250 Gleam choice (CoffeeChoice;
 	buying while coffee runs adds 30 minutes). No pulsing, no unasked pop-ups. Presentational (exempt; what shows is the specced CoffeeRules, the press is CoffeeServiceClient's).
 
 	@class CoffeeButton
@@ -25,7 +25,7 @@ export type CoffeeButtonProps = {
 	-- Coffee is offered (show the buy button), or the running coffee's badge text (the countdown).
 	offered: boolean,
 	badge: string?,
-	-- Opens the 99 R$ / 250 Gleam choice; nil during training (the badge still shows).
+	-- Opens the Robux / 250 Gleam choice; nil during training (the badge still shows).
 	onPress: (() -> ())?,
 }
 

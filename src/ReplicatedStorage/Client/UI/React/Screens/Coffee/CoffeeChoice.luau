@@ -2,7 +2,7 @@
 --[=[
 	CoffeeChoice: how to pay for Coffee for the crew (owner 11-10). A small cream panel under the coffee button (phone:
 	under it at the top right) with the grape title band and its X, the line "2x pay for 30 minutes", and two buttons:
-	"99 R$" (lilac; Roblox's purchase prompt) and "250" with the Gleam coin (gleam). The hub's coffee machine shows it centred with its own line. Presentational (exempt; the
+	the Robux price (lilac; Roblox's purchase prompt) and "250" with the Gleam coin (gleam). The hub's coffee machine shows it centred with its own line. Presentational (exempt; the
 	Gleam buy is the server's, checked by the specced CoffeeRules.payGleam).
 
 	@class CoffeeChoice
@@ -23,6 +23,8 @@ export type CoffeeChoiceProps = {
 	phone: boolean,
 	-- Robux: nil when the product cannot be bought (only Gleam is offered).
 	onRobux: (() -> ())?,
+	-- The Robux button's words (CoffeeRules.robuxText of the live price).
+	robuxText: string,
 	onGleam: () -> (),
 	onClose: () -> (),
 	-- The player has under 250 Gleam (CoffeeRules.affords): the Gleam button greys out (a press plays the error
@@ -72,7 +74,7 @@ local function CoffeeChoice(props: CoffeeChoiceProps): React.ReactNode
 		children.robux = e(ToonButton, {
 			variant = "lilac",
 			layout = "inline",
-			text = CoffeeConstants.TEXT.robux,
+			text = props.robuxText,
 			textSize = textSize,
 			small = true,
 			anchor = Vector2.new(1, 1),

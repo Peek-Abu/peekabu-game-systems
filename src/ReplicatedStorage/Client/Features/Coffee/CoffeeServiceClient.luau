@@ -4,7 +4,8 @@
 	CoffeeButton HUD widget, which reads the shift snapshot, the `training` world entry and the
 	CoffeeConstants.WORLD_ENTRY world entry (whose coffee runs and how long it has left, CoffeeRules.badge). With no
 	coffee running it offers "2x PAY" (CoffeeRules.offered); while one runs it shows the gold countdown badge. Either
-	press opens CoffeeChoice: "99 R$" (Roblox's purchase prompt) or "250 Gleam" (CoffeeEvents.BuyGleam; the server
+	press opens CoffeeChoice: the Robux price (Roblox's purchase prompt; at start it asks Roblox for the product's
+	live price, into CoffeeStore.robux, so the button shows what the prompt charges) or "250 Gleam" (CoffeeEvents.BuyGleam; the server
 	checks the balance). Buying while coffee runs adds 30 minutes. The PA line, the countdown and the doubled pay are
 	the server's.
 
@@ -24,6 +25,7 @@ local CoffeeEvents = require(ReplicatedStorage.Shared.Features.Coffee.Net.Coffee
 local CoffeeRules = require(ReplicatedStorage.Shared.Features.Coffee.Rules.CoffeeRules)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local CoffeeStore = require(ReplicatedStorage.Client.Features.Coffee.State.CoffeeStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -31,6 +33,30 @@ local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.Pa
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local CoffeeButton = require(ReplicatedStorage.Client.UI.React.Screens.Coffee.CoffeeButton)
 local CoffeeChoice = require(ReplicatedStorage.Client.UI.React.Screens.Coffee.CoffeeChoice)
+
+-- Tries at the product's price, and the wait between them (seconds).
+local INFO_ATTEMPTS = 3
+local INFO_RETRY_SECONDS = 2
+
+-- The coffee product's live Robux price from Roblox, into CoffeeStore; nothing is stored when every try fails (the
+-- button keeps CoffeeConstants.ROBUX_PRICE).
+local function fetchPrice(productId: number)
+	for attempt = 1, INFO_ATTEMPTS do
+		local ok, data = pcall(function()
+			return MarketplaceService:GetProductInfo(productId, Enum.InfoType.Product)
+		end)
+		if ok and type(data) == "table" then
+			local price = data.PriceInRobux
+			if type(price) == "number" then
+				CoffeeStore.setRobux(price)
+			end
+			return
+		end
+		if attempt < INFO_ATTEMPTS then
+			task.wait(INFO_RETRY_SECONDS)
+		end
+	end
+end
 
 local function buyRobux()
 	local productId = CoffeeConstants.PRODUCT_ID
@@ -49,6 +75,7 @@ local function widget(): React.ReactNode
 	local scale = usePaperHudScale()
 	local choosing, setChoosing = React.useState(false)
 	local premium = ReactCharm.useAtom(StateSyncClientStore.premium)
+	local robux = ReactCharm.useAtom(CoffeeStore.robux)
 	local badge = CoffeeRules.badge(world[CoffeeConstants.WORLD_ENTRY])
 	local training = world[TrainingConstants.WORLD_ENTRY] ~= nil
 	local phase = if snapshot ~= nil then snapshot.phase else "lobby"
@@ -84,6 +111,7 @@ local function widget(): React.ReactNode
 							buyRobux()
 						end
 						else nil,
+					robuxText = CoffeeRules.robuxText(robux),
 					onGleam = function()
 						close()
 						buyGleam()
@@ -118,7 +146,12 @@ local CoffeeServiceClient: CoffeeServiceClient = {
 		end
 	end,
 
-	start = function(_self) end,
+	start = function(_self)
+		local productId = CoffeeConstants.PRODUCT_ID
+		if productId ~= nil then
+			task.spawn(fetchPrice, productId)
+		end
+	end,
 
 	stop = function(_self) end,
 

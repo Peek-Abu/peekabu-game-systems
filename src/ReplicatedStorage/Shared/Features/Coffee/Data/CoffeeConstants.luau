@@ -21,6 +21,9 @@ local CoffeeConstants = {
 	SECONDS = 1800,
 	-- The Gleam price of the same coffee (owner 11-10), next to the Robux product.
 	GLEAM_PRICE = 250,
+	-- The Robux price the choice shows until Roblox reports the product's live one (the real price is the product's,
+	-- set on the Creator Dashboard). 149 (11-14): 250 Gleam at the best pack is about R$ 167, so Robux stays the deal.
+	ROBUX_PRICE = 149,
 	-- How often the server takes a second off the coffee time it is spending.
 	TICK_SECONDS = 1,
 	-- How often the spent seconds are written to the buyer's slice (each write is an audited profile mutation; a crash
@@ -42,7 +45,7 @@ local CoffeeConstants = {
 		short = "You need %d Gleam!",
 		choiceTitle = "COFFEE FOR THE CREW",
 		choiceLine = "2x pay for 30 minutes",
-		robux = "99 R$",
+		robux = "%d R$",
 		gleam = "%d",
 		card = "Credits earned · Coffee %sx",
 	}),

@@ -5,7 +5,7 @@
 	adds CoffeeConstants.SECONDS (`add`) in the same save as its receipt (exactly once). The time counts down only
 	while a real shift runs with players in the server (`runs`), one buyer at a time: the earliest buyer in the server
 	(`spender`), so two coffees never stack past 2x. While it runs the crew's Credits pay is doubled; the review pays
-	2x for the part of the shift the coffee ran (`payScale`). A coffee costs 99 R$ (the developer product) or
+	2x for the part of the shift the coffee ran (`payScale`). A coffee costs the developer product's Robux (`robuxText`) or
 	CoffeeConstants.GLEAM_PRICE Gleam (`affords`, `payGleam`). Pure.
 
 	@class CoffeeRules
@@ -187,6 +187,14 @@ end
 ]=]
 function CoffeeRules.shortLine(): string
 	return string.format(CoffeeConstants.TEXT.short, CoffeeConstants.GLEAM_PRICE)
+end
+
+--[=[
+	The Robux button's words: Roblox's live product price when it has answered (`live`), else
+	CoffeeConstants.ROBUX_PRICE.
+]=]
+function CoffeeRules.robuxText(live: number?): string
+	return string.format(CoffeeConstants.TEXT.robux, live or CoffeeConstants.ROBUX_PRICE)
 end
 
 --[=[
