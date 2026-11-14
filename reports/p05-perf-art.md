@@ -220,6 +220,28 @@ sheet shows plain and uneven side by side).
   (LocalTransparencyModifier 1). Seeing it needs a second client: worth one look in the owner's play-check. Every part
   keeps its original size (about 0.01 studs), so furniture fit is unchanged. Captures: notes `d1-10k-lobby-check-*.jpg`.
 
+### D1 follow-up: the carry test and Pippa's upper torso (both places; owner to save both)
+
+- The suite at 5e84b7b1 had 1 failure: AnimationCarryHarness `Pippa keyring (hand): plan right: palm 0.125 from the
+  handle`. The live idle and walk poses were fine, and the StockR15 plan passed.
+- Cause, found by putting Pippa's pre-swap meshes back in Play only:
+  - all parts back: passes;
+  - the hand only, or the arms too: still fails;
+  - the UpperTorso only: passes (the lower torso or the head only: still fails).
+
+  So the planner's one-hand keyring hold depends on Pippa's UpperTorso mesh: her chest with the bell and bow tie, cut
+  from 13,824 to 1,000 triangles. The hand, attachments and part sizes were unchanged.
+- Fix (art, not the tolerance):
+  - Pippa's UpperTorso rebuilt at 2,000 triangles (largest error 0.005 studs), uploaded as 88534524319865; all 34
+    carry holds pass.
+  - A 3,000 version (116222203120920, unused) failed the coffee mug instead, so the planner sits close to its limits
+    for Pippa.
+  - Pippa is now 10,899 triangles.
+- Applied in both places (TextureID carried over, PreDecimateMeshId still the original). The mesh-blind fingerprint
+  is unchanged and equal to pre-swap in both: Pippa 52eb3556, Cappy 04d171ff, Prickles a4a2abeb.
+- Full TestEZ suite, Shift, with the fix: **6,663 passed, 0 failed.**
+- `decimate_swap.luau` now loads the 2,000 torso for Pippa (a later asset overrides an earlier one by part name).
+
 ## 4. Truck redo (`p1-truck-lore`): v4 is in both places (owner to save both), ready for the owner's play-check
 
 Shipped (2026-11-13). Owner: T1 "fine", T2 pass, plus one fix: "move wheels to side for back wheels? The top of

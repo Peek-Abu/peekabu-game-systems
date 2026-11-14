@@ -21,7 +21,9 @@ local CH = game:GetService("ChangeHistoryService")
 local chars = game.ReplicatedStorage.Assets.CleanupCrew.Characters
 -- Icey Labs uploads (reports/p05-decimation-assets.json): 10k, uneven per-part budget.
 local PLAN = {
-	Pippa = { assets = { 121831375393658 }, parts = { "Head", "FacePlate", "LeftEar", "RightEar", "LeftHand", "RightHand", "LeftFoot", "RightFoot", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg" } },
+	-- Pippa's UpperTorso comes from 88534524319865 (2,000 tris): at 1,000 the carry planner missed the keyring handle.
+	-- Later asset ids override earlier ones for the same part name.
+	Pippa = { assets = { 121831375393658, 88534524319865 }, parts = { "Head", "FacePlate", "LeftEar", "RightEar", "LeftHand", "RightHand", "LeftFoot", "RightFoot", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg" } },
 	Prickles = { assets = { 137010044011782, 119997776729942, 137899872075531 }, parts = { "Head", "FacePlate", "Flower_Head", "HardHat_Head", "LeftHand", "RightHand", "LeftFoot", "RightFoot", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg" } },
 	Cappy = { assets = { 129334512397399, 101043745487395, 138632442766031, 134776856534115 }, parts = { "Head", "FacePlate", "Cap_Head", "Hoodie_UpperTorso", "UpperTorso", "Hoodie_LeftUpperArm", "Hoodie_RightUpperArm", "Hoodie_LeftLowerArm", "Hoodie_RightLowerArm", "Hoodie_LowerTorso", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm", "LeftHand", "RightHand", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg", "LeftFoot", "RightFoot", "Sneakers_LeftFoot", "Sneakers_RightFoot", "LowerTorso" } },
 }

@@ -10,7 +10,18 @@
   "Cappy body (v6)": 129334512397399,
   "Cappy Cap": 101043745487395,
   "Cappy Hoodie": 138632442766031,
-  "Cappy Sneakers": 134776856534115
+  "Cappy Sneakers": 134776856534115,
+  "Pippa UpperTorso 2000 (replaces the 10k body upload's UpperTorso)": 88534524319865
  },
- "untouched": ["Cappy earbuds", "Cappy hair", "Cappy Shorts_ConnectedSkinned", "Cappy socks", "Cappy VisibleWaist"]
+ "untouched": [
+  "Cappy earbuds",
+  "Cappy hair",
+  "Cappy Shorts_ConnectedSkinned",
+  "Cappy socks",
+  "Cappy VisibleWaist"
+ ],
+ "unused_tests": {
+  "Pippa UpperTorso 3000 (failed the coffee mug carry hold)": 116222203120920
+ },
+ "note": "Pippa UpperTorso at 1000 made the carry planner miss the keyring handle (palm 0.125); at 2000 all 34 carry holds pass. Pippa total 10,899."
 }
