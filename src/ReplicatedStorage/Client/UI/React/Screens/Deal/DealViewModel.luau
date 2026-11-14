@@ -20,8 +20,9 @@ export type Banner = {
 	id: DealId,
 	name: string,
 	line: string,
-	-- "R$ 399", or "Soon" until the product exists.
+	-- "R$ 449" (Roblox's live price, else DealConstants'), or "Soon" until the product exists.
 	price: string,
+	-- "-72%": DealRules.offPercent of the price shown.
 	off: string,
 	buyable: boolean,
 	-- Who the card shows: the employees whose Legendary skins it can give.
@@ -50,8 +51,10 @@ local function nameOf(id: string): string
 	return if item ~= nil then item.name else id
 end
 
-function VM.banner(id: DealId, productReady: boolean): Banner
+-- `live`: the product's Robux price as Roblox reported it (DealStore), nil until it answers.
+function VM.banner(id: DealId, productReady: boolean, live: number?): Banner
 	local deal = DealRules.deal(id)
+	local robux = live or deal.robux
 	local faces = {}
 	for _, employee in CosmeticRegistry.employees() do
 		local skin = DealRules.legendaryOf(employee)
@@ -65,8 +68,8 @@ function VM.banner(id: DealId, productReady: boolean): Banner
 		id = id,
 		name = string.upper(deal.name),
 		line = deal.line,
-		price = if productReady then `R$ {deal.robux}` else DealConstants.TEXT.soon,
-		off = `-{deal.off}%`,
+		price = if productReady then `R$ {robux}` else DealConstants.TEXT.soon,
+		off = `-{DealRules.offPercent(id, robux)}%`,
 		buyable = productReady,
 		faces = faces,
 	}
@@ -101,16 +104,22 @@ end
 
 --[=[
 	The Pick Your Employee screen's deal button for the selected employee: its words while Pick a New Hire is offered
-	and can hire them (and the product exists), else nil.
+	and can hire them (and the product exists), else nil. `live`: the product's Robux price from Roblox (DealStore).
 ]=]
-function VM.hireButton(selected: string, owns: Owns, slice: PlayerDataTypes.Deals, productReady: boolean): string?
+function VM.hireButton(
+	selected: string,
+	owns: Owns,
+	slice: PlayerDataTypes.Deals,
+	productReady: boolean,
+	live: number?
+): string?
 	if not productReady or not DealRules.offered("pickNewHire", slice, owns) then
 		return nil
 	end
 	if table.find(DealRules.choices("pickNewHire", owns), selected) == nil then
 		return nil
 	end
-	return `R$ {DealRules.deal("pickNewHire").robux} + Legendary`
+	return `R$ {live or DealRules.deal("pickNewHire").robux} + Legendary`
 end
 
 return VM

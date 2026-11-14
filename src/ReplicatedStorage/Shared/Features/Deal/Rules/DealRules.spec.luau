@@ -13,6 +13,51 @@ local function ownsOf(list)
 end
 
 return function()
+	describe("honest % off", function()
+		-- Worked out here on its own: the best Gleam pack's Robux a Gleam, the cheapest Legendary bundle and hire.
+		local function expected(id, robux)
+			local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
+			local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+			local CosmeticBundleRegistry =
+				require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
+			local bestRate = math.huge
+			for _, pack in ShopConstants.BUNDLES do
+				bestRate = math.min(bestRate, pack.robux / pack.gleam)
+			end
+			local legendary, hire = math.huge, math.huge
+			for _, bundle in CosmeticBundleRegistry.all() do
+				if bundle.rarity == "legendary" then
+					legendary = math.min(legendary, bundle.price)
+				end
+			end
+			for _, employee in CosmeticRegistry.employees() do
+				local item = CosmeticRegistry.get(employee)
+				if item.price ~= nil then
+					hire = math.min(hire, item.price / ShopConstants.TOP_UP.credits)
+				end
+			end
+			local deal = DealRules.deal(id)
+			local gleam = legendary + deal.gleam + (if id == "pickNewHire" then hire else 0)
+			return math.floor((1 - robux / (gleam * bestRate)) * 100 + 0.5)
+		end
+
+		it("is 72% and 69% at the owner's R$ 449 and R$ 499 (2,400 Gleam = R$ 1,598)", function()
+			expect(DealRules.offPercent("pickLegendary", 449)).to.equal(72)
+			expect(DealRules.offPercent("pickNewHire", 499)).to.equal(69)
+		end)
+
+		it("follows whatever Robux price is shown, from today's catalogue", function()
+			for _, robux in { 299, 449, 499, 799 } do
+				expect(DealRules.offPercent("pickLegendary", robux)).to.equal(expected("pickLegendary", robux))
+				expect(DealRules.offPercent("pickNewHire", robux)).to.equal(expected("pickNewHire", robux))
+			end
+		end)
+
+		it("never shows a negative % off", function()
+			expect(DealRules.offPercent("pickLegendary", 5000)).to.equal(0)
+		end)
+	end)
+
 	describe("fresh and validate", function()
 		it("starts with nothing bought and no picks", function()
 			local slice = DealRules.fresh()

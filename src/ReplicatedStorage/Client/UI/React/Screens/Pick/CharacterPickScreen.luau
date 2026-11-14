@@ -22,6 +22,7 @@ local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employ
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local DealServiceClient = require(ReplicatedStorage.Client.Features.Deal.DealServiceClient)
+local DealStore = require(ReplicatedStorage.Client.Features.Deal.State.DealStore)
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
@@ -290,6 +291,7 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local sureOf, setSureOf = React.useState("")
 	local buyResult = ReactCharm.useAtom(ShopStore.result)
 	local deals = ReactCharm.useAtom(StateSyncClientStore.deals)
+	local dealPrices = ReactCharm.useAtom(DealStore.robux)
 	local selected, setSelected = React.useState(VM.DEFAULT)
 	local noClick: number? = nil
 	local clickedAt, setClickedAt = React.useState(noClick)
@@ -350,7 +352,13 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	)
 	-- Pick a New Hire for a locked employee: hire them now with their Legendary skin (a Robux deal, once).
 	local dealText = if props.owns == nil
-		then DealViewModel.hireButton(selected, owns, deals, DealServiceClient:productReady("pickNewHire"))
+		then DealViewModel.hireButton(
+			selected,
+			owns,
+			deals,
+			DealServiceClient:productReady("pickNewHire"),
+			dealPrices.pickNewHire
+		)
 		else nil
 	local dealHeight = if phone then 40 else 76
 	local plateHeight = if phone then 44 else 104

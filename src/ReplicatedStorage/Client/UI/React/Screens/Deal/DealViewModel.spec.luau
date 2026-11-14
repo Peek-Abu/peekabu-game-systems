@@ -25,39 +25,13 @@ return function()
 			expect(soon.price).to.equal("Soon")
 			expect(soon.buyable).to.equal(false)
 		end)
-	end)
 
-	describe("honest % off", function()
-		it("matches today's prices at the best Gleam pack's rate", function()
-			local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
-			local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
-			local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
-			local CosmeticBundleRegistry =
-				require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
-			local bestRate = math.huge
-			for _, pack in ShopConstants.BUNDLES do
-				bestRate = math.min(bestRate, pack.robux / pack.gleam)
-			end
-			-- The cheapest Legendary bundle and hire (so the % is never overstated).
-			local legendary, hire = math.huge, math.huge
-			for _, bundle in CosmeticBundleRegistry.all() do
-				if bundle.rarity == "legendary" then
-					legendary = math.min(legendary, bundle.price)
-				end
-			end
-			for _, id in CosmeticRegistry.employees() do
-				local item = CosmeticRegistry.get(id)
-				if item.price ~= nil then
-					hire = math.min(hire, item.price / ShopConstants.TOP_UP.credits)
-				end
-			end
-			local function off(robux, gleam)
-				return math.floor((1 - robux / (gleam * bestRate)) * 100 + 0.5)
-			end
-			local pick = DealConstants.DEALS.pickLegendary
-			expect(pick.off).to.equal(off(pick.robux, legendary + pick.gleam))
-			local newHire = DealConstants.DEALS.pickNewHire
-			expect(newHire.off).to.equal(off(newHire.robux, hire + legendary))
+		it("shows Roblox's live price when it has answered, with the % off of that price", function()
+			local live = VM.banner("pickLegendary", true, 599)
+			expect(live.price).to.equal("R$ 599")
+			expect(live.off).to.equal(`-{DealRules.offPercent("pickLegendary", 599)}%`)
+			local hire = VM.banner("pickNewHire", true, 499)
+			expect(hire.off).to.equal("-69%")
 		end)
 	end)
 
@@ -89,6 +63,12 @@ return function()
 			local bought = { bought = { pickNewHire = true }, picks = {} }
 			expect(VM.hireButton("Cappy", owns, bought, true)).to.equal(nil)
 			expect(VM.hireButton("Cappy", owns, DealRules.fresh(), false)).to.equal(nil)
+		end)
+
+		it("says Roblox's live price when it has answered", function()
+			expect(VM.hireButton("Cappy", ownsOf({ "Pippa" }), DealRules.fresh(), true, 549)).to.equal(
+				"R$ 549 + Legendary"
+			)
 		end)
 	end)
 end

@@ -17,14 +17,11 @@ export type Deal = {
 	-- the Creator Dashboard (the card then says "Soon" and nothing can be bought).
 	productKey: string,
 	productId: number?,
-	-- The Robux price shown on the card (the real price is the product's, set on the Dashboard).
+	-- The Robux price shown until Roblox reports the product's live one (the real price is the product's, set on the
+	-- Dashboard; DealStore holds the live one).
 	robux: number,
 	-- Gleam added with the purchase (in the receipt's own save).
 	gleam: number,
-	-- "% off": how much less than buying the same things at the best Gleam pack's rate (1,500 Gleam = R$ 999), with a
-	-- hire's Credits at the Shop's top-up rate (10 Credits a Gleam). DealViewModel.spec recomputes it from today's
-	-- prices, so a price change that makes it untrue fails the build.
-	off: number,
 	-- Words, kid reading level.
 	name: string,
 	line: string,
@@ -43,8 +40,8 @@ local DEALS: { [string]: Deal } = {
 		productId = LEGENDARY_PRODUCT,
 		robux = 449,
 		gleam = 500,
-		-- A Legendary bundle (1,900) + 500 Gleam = 2,400 Gleam = R$ 1,598 at the best pack: R$ 449 is 72% off.
-		off = 72,
+		-- A Legendary bundle (1,900) + 500 Gleam = 2,400 Gleam = R$ 1,598 at the best pack: R$ 449 is 72% off
+		-- (DealRules.offPercent works it out from the price shown).
 		name = "Pick a Legendary",
 		line = "Pick any Legendary skin + its emote, stickers and idle. Plus 500 Gleam!",
 		chooseTitle = "PICK YOUR LEGENDARY!",
@@ -57,7 +54,6 @@ local DEALS: { [string]: Deal } = {
 		robux = 499,
 		gleam = 0,
 		-- A hire (5,000 Credits = 500 Gleam) + a Legendary bundle (1,900) = 2,400 Gleam = R$ 1,598: R$ 499 is 69% off.
-		off = 69,
 		name = "Pick a New Hire",
 		line = "Hire a new employee now + their Legendary skin, emote, stickers and idle!",
 		chooseTitle = "PICK YOUR NEW HIRE!",

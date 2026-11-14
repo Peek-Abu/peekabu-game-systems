@@ -34,6 +34,7 @@ local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.C
 local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
 local DealRules = require(ReplicatedStorage.Shared.Features.Deal.Rules.DealRules)
 local DealServiceClient = require(ReplicatedStorage.Client.Features.Deal.DealServiceClient)
+local DealStore = require(ReplicatedStorage.Client.Features.Deal.State.DealStore)
 local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.ShopRotationUtils)
@@ -403,6 +404,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local bundleInfo = ReactCharm.useAtom(ShopStore.bundleInfo)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
 	local deals = ReactCharm.useAtom(StateSyncClientStore.deals)
+	local dealPrices = ReactCharm.useAtom(DealStore.robux)
 	-- Which thing the Featured banner spot shows: the offered one-time deals first, then today's banner.
 	local slot, setSlot = React.useState(1)
 	local passKeys = MarketplaceRegistry.passKeys()
@@ -827,7 +829,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		local dealId = dealIds[spot]
 		if dealId ~= nil then
 			nodes.banner = e(DealBanner, {
-				banner = DealViewModel.banner(dealId, DealServiceClient:productReady(dealId)),
+				banner = DealViewModel.banner(dealId, DealServiceClient:productReady(dealId), dealPrices[dealId]),
 				phone = phone,
 				textSize = size,
 				headingSize = layout.headingSize,

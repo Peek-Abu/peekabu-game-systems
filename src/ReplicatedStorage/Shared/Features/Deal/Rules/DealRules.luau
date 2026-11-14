@@ -17,6 +17,7 @@ local CosmeticBundleRegistry = require(ReplicatedStorage.Shared.Features.Cosmeti
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
+local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 
 type Owns = (id: string) -> boolean
 type DealId = DealConstants.DealId
@@ -56,6 +57,46 @@ end
 ]=]
 function DealRules.deal(id: DealId): DealConstants.Deal
 	return assert(DealConstants.DEALS[id], `unknown deal "{id}"`)
+end
+
+--[=[
+	What deal `id` gives, in Gleam: the cheapest Legendary bundle, its own Gleam, and for Pick a New Hire the cheapest
+	hire's Credits at the Shop's top-up rate (10 Credits a Gleam). The cheapest, so the % off is never overstated.
+]=]
+function DealRules.worth(id: DealId): number
+	local deal = DealRules.deal(id)
+	local legendary = math.huge
+	for _, bundle in CosmeticBundleRegistry.all() do
+		if bundle.rarity == "legendary" then
+			legendary = math.min(legendary, bundle.price)
+		end
+	end
+	local gleam = legendary + deal.gleam
+	if id == "pickNewHire" then
+		local hire = math.huge
+		for _, employee in CosmeticRegistry.employees() do
+			local item = CosmeticRegistry.get(employee)
+			if item ~= nil and item.price ~= nil then
+				hire = math.min(hire, item.price / ShopConstants.TOP_UP.credits)
+			end
+		end
+		gleam += hire
+	end
+	return gleam
+end
+
+--[=[
+	Deal `id`'s "% off" at `robux`: how much less than buying the same Gleam (`worth`) at the best Gleam pack's rate
+	(1,500 Gleam = R$ 999), rounded; never below 0. From the price the card shows, so a Dashboard price change keeps
+	the badge honest.
+]=]
+function DealRules.offPercent(id: DealId, robux: number): number
+	local bestRate = math.huge
+	for _, pack in ShopConstants.BUNDLES do
+		bestRate = math.min(bestRate, pack.robux / pack.gleam)
+	end
+	local off = math.floor((1 - robux / (DealRules.worth(id) * bestRate)) * 100 + 0.5)
+	return math.max(0, off)
 end
 
 --[=[

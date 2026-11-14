@@ -6,6 +6,9 @@
 	(DealRules.pending on the synced `deals` slice) and the player is in the depot, the chooser scene opens; `choose`
 	sends the choice (DealEvents.Choose). The server checks and grants; the cosmetic reveal shows what was got.
 
+	At start it asks Roblox for each deal product's live Robux price (a few tries), into DealStore, so the cards show
+	what the prompt charges and their % off follows it.
+
 	Studio only: the workspace attribute `DevDealProducts` = true treats the products as made, so the cards and the
 	pick screen's button can be seen before the owner creates them (a press then prompts nothing).
 
@@ -25,6 +28,7 @@ local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.C
 local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
 local DealEvents = require(ReplicatedStorage.Shared.Features.Deal.Net.DealEvents)
 local DealRules = require(ReplicatedStorage.Shared.Features.Deal.Rules.DealRules)
+local DealStore = require(ReplicatedStorage.Client.Features.Deal.State.DealStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
@@ -37,6 +41,10 @@ local DealChooserScene = require(ReplicatedStorage.Client.UI.React.Screens.Deal.
 type DealId = DealConstants.DealId
 
 local DEV_ATTRIBUTE = "DevDealProducts"
+
+-- Tries at a product's price, and the wait between them (seconds).
+local INFO_ATTEMPTS = 3
+local INFO_RETRY_SECONDS = 2
 
 -- The choice to spend a pick on without asking (set when bought from the pick screen), per deal.
 local preferred: { [string]: string } = {}
@@ -52,6 +60,26 @@ local function productReady(id: DealId): boolean
 		return true
 	end
 	return RunService:IsStudio() and workspace:GetAttribute(DEV_ATTRIBUTE) == true
+end
+
+-- Deal `id`'s live Robux price from Roblox, into DealStore; nothing is stored when every try fails (the card keeps
+-- the DealConstants price).
+local function fetchPrice(id: DealId, productId: number)
+	for attempt = 1, INFO_ATTEMPTS do
+		local ok, data = pcall(function()
+			return MarketplaceService:GetProductInfo(productId, Enum.InfoType.Product)
+		end)
+		if ok and type(data) == "table" then
+			local price = data.PriceInRobux
+			if type(price) == "number" then
+				DealStore.setRobux(id, price)
+			end
+			return
+		end
+		if attempt < INFO_ATTEMPTS then
+			task.wait(INFO_RETRY_SECONDS)
+		end
+	end
 end
 
 local function send(deal: DealId, choice: string)
@@ -117,6 +145,12 @@ local DealServiceClient: DealServiceClient = {
 			end)
 		)
 		sync()
+		for _, id in DealConstants.ORDER do
+			local productId = DealRules.deal(id).productId
+			if productId ~= nil then
+				task.spawn(fetchPrice, id, productId)
+			end
+		end
 	end,
 
 	stop = function(_self)
