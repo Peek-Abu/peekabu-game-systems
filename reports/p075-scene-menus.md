@@ -281,6 +281,48 @@ Only `r2-L1` (monster colours: yes) was saved in the db; the rest came as these 
   - Cut out with rembg, with the baseboard and floor masked off.
 - Cleanup: Play stopped; Edit clean (Lighting 0 / 0.5 / -0.7, no P075 objects, RunTests and DevAutoPick unset). Audio was muted. Nothing was saved.
 
+## Build (2026-11-14, owner: "approve to build", uploads "yesd")
+Commits: 87e2ba48 (the build), 441a0f6b and 2ce02421 (fixes from the Studio play check).
+
+**New modules** (placement per docs/project-structure.md; all Client UI, `Screens/Depot`):
+
+| Name | Job |
+|---|---|
+| DepotGuideViewModel (+spec) | Guide tabs, the 4 steps (with the live vacuum control), the 3 monster cards, the sheet size, the top-biased photo crop |
+| DepotGuidePanel | The Guide body: tabs, step cards, monster cards, coming-soon card (exempt: presentational) |
+| DepotRankBadge | A rank's real `LanyardBadges.R<n>` model in a ViewportFrame, icon side (exempt: presentational) |
+
+**Changed:**
+- `DepotRankChartViewModel` (+spec) and `DepotRankChart`: a staircase with the badge, LEVEL and XP on each step; the NEXT RANK card; TOP RANK for Big Boss.
+- `DepotHubScreen` and `DepotHubViewModel`: the Guide page uses the panel, and the old Field Guide text was retired.
+- `EmployeePoseRegistry` (+spec): `RANK_POSES` on profile, crew and the new `ladder` context.
+- `UIAssets`: nine `guide*` photos.
+
+**Uploads:** 9 decals to Icey Labs (189923277), all Approved. Each Image id was checked as type 1 and owned by Icey Labs. Sources and `upload.log` are in the notes folder `upload/`.
+
+**Checks:**
+- selene, stylua and luau-lsp are clean, and the module map is current.
+- PR rules pass against game/cleanup-crew. Against main they fail only on older commits' trailers and the pre-existing VacuumVisualSystem length.
+- TestEZ in Studio: 6702 passed, 0 failed (on 2ce02421).
+- Studio Play (Shift hub Guide, Lobby rank chart): screenshots are `playcheck_*.jpg` in the notes folder. Bugs found and fixed:
+  - the tabs sat under the header goo;
+  - the vacuum hint overflowed card 2;
+  - the training button overlapped the cards;
+  - the names were white (the display type takes a meaning, not a colour);
+  - heads were cropped on a short window.
+
+**Play-check list (for the owner):**
+1. Hub → GUIDE: four photo cards, each in its own colour and numbered. Step 2 shows your control ("Hold the left mouse button…"). PLAY TRAINING AGAIN sits under the cards.
+2. GUIDE → MONSTERS:
+   - The Manager (face to camera) and Bramble (head turned) stand out of their photos, with gold / white names and lore only.
+   - The coming-soon card is the same size, with goo, a "?" and COMING SOON tape.
+3. Rank chart spot (Lobby, E):
+   - Every step shows its real badge, LEVEL and XP, and you stand on your step under YOU!.
+   - NEXT RANK shows the next badge, the XP bar (e.g. 0 / 75 XP) and the "You get" list.
+4. Rank up (play shifts or use an admin XP grant): the profile card's portrait changes pose (shy → wave → proud → point → coach cheer → cheer → victory), the crew pictures too, and the chart moves YOU up a step.
+5. Big Boss (5,200+ XP): the TOP RANK card, all steps lit, "More levels coming soon". Not seen in Studio (needs XP).
+6. Phone layout: GUIDE and the rank chart at phone size. Not checked in Studio.
+
 ## Next
 2. Read the owner's picks. Build only the YES items. Each build:
    - states its module placement first;
