@@ -91,3 +91,13 @@ The owner said the spin "spins the WHOLE PLATFORM" and that the item drifted off
   - Locker pages: Bell Jester's page opens with the Epic backdrop, its source and chance, and the live model. It spins, and Back returns to the list and the normal backdrop.
   - Not checked: the phone layout of the dots (needs a phone or a device emulator).
   - Note for later checks: coordinate clicks from the Studio MCP sometimes miss small buttons; clicks by instance path are reliable.
+
+## Owner play-check round 3 (2026-11-14): Legendary spin drift, banner discounts, Locker page parts
+- **Spin root cause (`312fd115`).** Only Legendary skins drifted. Their showcase idles hold props out (the duck ring, the bubble wand, the lasso). The live hero's grow-to-fit measured the figure's raw world box, so a prop swinging round widened the view to one side and pulled the camera off the model. It never came back, and fast spins made it worse. A spinning model's measured box is now the box round its root (`ToonSpinViewModel.around`), so the view only ever widens evenly (specced).
+- **Banner discounts (`600d06b2`).** Every slide with a real discount shows the cards' "-xx%" burst (the bundles' 30%, sales, the daily sale), on the buy button's top-left corner, clear of the art.
+- **Locker page = the Shop's product page (`b5be5cfe`).** `ShopViewModel.itemProduct` (specced) gives any item the product page's rarity, type line, lore box, styles and inside row. `ShopProductPanel` takes an optional Locker `foot`: source and chance under the lore, and Buy / Get more Gleam / Back in place of the buy button.
+- **Lobby Play check on live code** (Rojo had stalled before; I confirmed the served Lobby had each change before Play):
+  - Bubble Buddy, Sheriff and PJ Cappy: fast flicks, long drags, right-drags and jiggles. A per-frame tracker kept the camera aimed exactly at the root (max sideways offset 0.000); the view only eased out evenly, 1.3 to 2 studs.
+  - Banner bursts: deals -75% and -78%, today's -10%, bundles -30%.
+  - Bell Jester's Locker page shows the shop page parts plus its source and chance, and Back works.
+- **From that check (`8d0298a2`):** the current carousel dot is now ink (gold vanished on the gold banner), and a long slide name ("BUBBLE BUDDY BUNDLE") shrinks to one line instead of wrapping over its line (`ShopCarouselViewModel.nameSize`, specced). These two have not been play-checked.
