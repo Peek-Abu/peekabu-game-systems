@@ -167,13 +167,12 @@ local function DepotHub(): React.ReactNode
 				onSettings = function()
 					SceneStack.push(VM.scene("settings"))
 				end,
-				-- The calendar is the punch-in (owner 2026-11-14): a tap punches while today is free (the stamp moment
-				-- opens the Timecard to show it), else opens the Timecard.
+				-- The calendar is the punch-in (owner 2026-11-14): a tap opens the Timecard and, while today is free,
+				-- punches; the stamp then lands on it (TimecardMomentSystem).
 				onGift = function()
+					Company.open("timecard")
 					if daily.tap == "punch" then
 						TimecardService:punch()
-					else
-						Company.open("timecard")
 					end
 				end,
 				onGo = openBoard,

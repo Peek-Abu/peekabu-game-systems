@@ -3,7 +3,8 @@
 	TimecardMomentSystem: the Timecard's two moments on this client.
 
 	- **The stamp.** When the replicated card gains today's punch after this client asked for one
-	  (TimecardMomentStore.expecting), it shows the stamp (TimecardMomentStore.stamp, drawn by DepotTimecardStamp),
+	  (TimecardMomentStore.expecting), it opens the Timecard (so a punch from the hub's calendar shows it too) and shows
+	  the stamp (TimecardMomentStore.stamp, drawn by DepotTimecardStamp),
 	  plays the punch clock, then the rubber stamp as it lands, then the contract-met fanfare when the punch paid a
 	  reward, and takes the stamp down after STAMP_SECONDS. The server already paid; this only shows it.
 	- **The greeting.** In the hub, on the real card, with no other screen up (a waiting reveal counts), it opens the
@@ -92,6 +93,9 @@ function TimecardMomentSystem.punched(
 	end
 	TimecardMomentStore.expect(false)
 	TimecardMomentStore.show(moment)
+	-- The stamp is drawn on the Timecard: open it (a no-op when it is already up), so a punch from the hub's calendar
+	-- shows where it landed and what it paid (owner 2026-11-14).
+	use.open()
 	use.play(SOUNDS.clock)
 	use.delay(STAMP_LANDS, function()
 		use.play(SOUNDS.stamp)

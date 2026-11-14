@@ -12,7 +12,7 @@ local NAME_MAX = 14
 local SECONDS_PER_DAY = 86400
 
 export type ProfileView = { name: string, level: string, rank: string, xpText: string, fill: number }
--- `tap`: what pressing the calendar does: punch in (today is free) or open the Timecard.
+-- `tap`: what pressing the calendar does besides opening the Timecard: "punch" (today is free) punches in too.
 export type GiftView = { ready: boolean, text: string, tap: "punch" | "open" }
 -- The Tonight card: the place's name and site, its posed photo, and its monster's render breaking the card.
 export type TonightView = { title: string, site: string, photo: string, monster: UIAssets.ToonIcon }
@@ -33,8 +33,8 @@ end
 
 -- The calendar tile (top right) is the hub's one daily button (owner 2026-11-14: the empty daily gift merged into the
 -- punch-in): PUNCH IN! while today's punch is free (the phone tile is 66 px: PUNCH), else the time to tomorrow's
--- punch (h:mm:ss, UTC days like the Timecard). While today is free a tap punches in (the stamp moment then opens the
--- Timecard to show it); after, a tap opens the Timecard.
+-- punch (h:mm:ss, UTC days like the Timecard). A tap always opens the Timecard; while today is free it also punches in,
+-- and the stamp lands on the open Timecard.
 function VM.daily(canPunch: boolean, now: number, phone: boolean): GiftView
 	if canPunch then
 		return { ready = true, text = if phone then "PUNCH" else "PUNCH IN!", tap = "punch" }
