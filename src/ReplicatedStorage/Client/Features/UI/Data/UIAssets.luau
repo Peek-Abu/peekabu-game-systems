@@ -213,10 +213,10 @@ UIAssets.toonPhotos = table.freeze({
 	mallCard = "rbxassetid://108801045193529",
 	managerPortrait = "rbxassetid://136047524517573",
 	officeWide = "rbxassetid://105469082592765",
-	-- The School's trip-card picture (the Office's is officeWide): Bramble at the end of a locker hall (Icey Labs, owner
-	-- OK 2026-11-11; decal 90341198768642). An empty slot would draw the School map card's look instead
-	-- (ShiftTransitViewModel.slip).
-	schoolWide = "rbxassetid://75797686913598",
+	-- The School's trip-card picture (the Office's is officeWide): a real Studio shot of Pippa from behind with Bramble
+	-- down a Maple Hill locker hall, graded like officeWide (owner K5 yes 2026-11-13, replacing the AI picture; Icey
+	-- Labs, decal 93629730256648). An empty slot would draw the School map card's look instead (ShiftTransitViewModel.slip).
+	schoolWide = "rbxassetid://124690567292753",
 	-- The School's places-menu card: a real Studio shot of Bramble in a Maple Hill locker hall, graded like the other
 	-- place cards (owner K3 yes 2026-11-13; Icey Labs, decal 87857217997292; source in
 	-- characters/ui/implemented/upload/photos/school-card-2026-11-13).

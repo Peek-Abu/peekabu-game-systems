@@ -114,7 +114,9 @@ Yes to everything except:
 - **K1/K3 (School photo): done.** A real Studio shot of Bramble in a School locker hall, graded like the Office
   card (`photos.py grade --aspect 16:10 --size 960x600 --shadow #34145F`). Uploaded to Icey Labs: decal
   87857217997292, image **111071270210494** (owner verified: Icey Labs). It is used on the places-menu card and the hub's TONIGHT
-  card. The truck trip card still uses the older AI picture (`schoolWide`) until the owner says to swap it.
+  card. The owner kept it (K4). **K5 yes:** the truck trip card (`schoolWide`) is now a real shot too: Pippa from behind with
+  Bramble down a locker hall, graded 16:9 like `officeWide`. Icey Labs decal 93629730256648, image **124690567292753**
+  (owner verified). It's on the sheet as K6 for the owner to see.
   Source: `characters/ui/implemented/upload/photos/school-card-2026-11-13/`.
 - **K1 (School photo, original question):** the owner asked whether it is posed like the Office shot or an AI image. It looks AI-made
   (painterly, not an engine render), so it fails the "posed scene shots of our game" rule. I plan a real Studio
