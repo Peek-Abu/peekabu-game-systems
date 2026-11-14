@@ -963,6 +963,23 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 						zIndex = 6,
 					})
 					else nil,
+				-- A real discount shows its "-xx%" like the offer cards (a bundle's 30%, a sale), on the buy button's
+				-- top-left corner, clear of the item art on the right.
+				off = if card.off ~= nil and product.button.kind ~= "owned"
+					then e(ToonBurst, {
+						text = card.off,
+						hue = "coral",
+						size = if phone then 40 else 68,
+						anchor = Vector2.new(0.5, 0.5),
+						position = UDim2.new(
+							0,
+							(if phone then 12 else 28) + 6,
+							1,
+							-((if phone then 40 else 84) + (if phone then 44 else 90)) + 6
+						),
+						zIndex = 7,
+					})
+					else nil,
 				timer = if today
 					then e(ToonPill, {
 						text = `Changes in {VM.timer(live.nextRotation - now)}`,
