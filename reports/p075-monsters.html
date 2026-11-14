@@ -1,0 +1,322 @@
+<title>Bramble and the Second Monster</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one reading column; each idea is a card with its yes/no ask at the bottom. Night-school palette. */
+:root {
+  --bg: #f4f2f8; --panel: #ffffff; --ink: #1e1a2b; --muted: #5d5670; --line: #ddd7e8;
+  --gloom: #6b3fa0; --gleam: #0f8f86; --warn: #b5541c; --yes: #1f7a4d; --no: #a23838; --chip: #ece6f6;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15121d; --panel: #1f1a2a; --ink: #ece8f4; --muted: #a59cb8; --line: #352d45;
+  --gloom: #b58ae6; --gleam: #4fd1c5; --warn: #f0a070; --yes: #5fd39a; --no: #f08a8a; --chip: #2c2440; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15121d; --panel: #1f1a2a; --ink: #ece8f4; --muted: #a59cb8; --line: #352d45;
+  --gloom: #b58ae6; --gleam: #4fd1c5; --warn: #f0a070; --yes: #5fd39a; --no: #f08a8a; --chip: #2c2440; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 2rem; } h2 { font-size: 1.45rem; margin-top: 18px; } h3 { font-size: 1.15rem; }
+p { margin: 0; } .muted { color: var(--muted); }
+.lead { display: grid; gap: 10px; }
+.status { font-weight: 700; color: var(--gleam); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 10px; min-width: 0; }
+.card header { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.id { font-family: var(--display); font-weight: 700; color: var(--gloom); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: .8rem; letter-spacing: .02em; }
+.chip.cost-s { color: var(--yes); } .chip.cost-m { color: var(--warn); } .chip.cost-b { color: var(--no); }
+dl { display: grid; grid-template-columns: 8.5rem 1fr; gap: 6px 12px; margin: 0; }
+dt { font-weight: 700; color: var(--muted); font-size: .9rem; } dd { margin: 0; min-width: 0; }
+@media (max-width: 520px) { dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
+.ask { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 8px; }
+.ask .q { font-weight: 700; }
+.ask .grp { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 6px; }
+.btns { display: flex; gap: 8px; }
+.btns button { font: 700 1rem var(--display); padding: 8px 22px; border-radius: 10px; border: 2px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.btns button:focus-visible, .note:focus-visible { outline: 3px solid var(--gleam); outline-offset: 2px; }
+.btns button.on[data-v="yes"] { background: var(--yes); border-color: var(--yes); color: var(--panel); }
+.btns button.on[data-v="no"] { background: var(--no); border-color: var(--no); color: var(--panel); }
+.note { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; box-sizing: border-box; }
+ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 4px; }
+.tablebox { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--display); }
+</style>
+
+<div class="wrap">
+  <section class="lead">
+    <h1>Bramble and the Second Monster</h1>
+    <p>Two Launch List rows: <b>p075-bramble-scarier</b> and <b>p075-monster-anywhere</b>. These are ideas only. Nothing gets built until you pick.</p>
+    <p class="muted">Tap YES or NO on each ask. Add a note if you want a change. Answers save to this page.</p>
+    <p class="status" id="status">Loading your answers…</p>
+  </section>
+
+  <section class="card">
+    <h3>What makes a stalker scary (what I took from other games)</h3>
+    <ul>
+      <li><b>A tell before the danger.</b> Doors' Rush flickers the lights and rumbles before it comes. Piggy and Dandy's World play a sound that gets louder as the monster nears. Kids learn the tell, then dread it.</li>
+      <li><b>Watching must cost you something.</b> Lethal Company's Coil-head (a freeze-when-seen monster) is scary because you have to look away to work. Right now our camera can stare at Bramble while your character keeps cleaning, so nothing is lost by watching.</li>
+      <li><b>He's never where you left him.</b> Weeping-angel monsters work because every blink or blackout moves them. The scare is the gap: "he was over there a second ago".</li>
+      <li><b>Silence, then loud.</b> Granny and Apeirophobia stay quiet until the monster is close. A sudden change is scarier than a steady sound.</li>
+      <li><b>Third person needs help to feel close.</b> First-person games get "he's right in my face" for free. In third person we have to pull the camera in for that moment, briefly.</li>
+      <li><b>Set pieces.</b> Doors' Seek hallway and Halt corridor are short, scripted runs everyone remembers. One per shift is enough.</li>
+    </ul>
+  </section>
+
+  <h2>Part 1: Bramble, scarier</h2>
+  <p class="muted">Today: patrol 16, chase 27 (a sprint is 23), freezes while a crew member's camera looks within 35° of him. A hit takes one coat. He has no footsteps yet.</p>
+
+  <article class="card">
+    <header><span class="id">B1</span><h3>Busy hands, busy eyes</h3></header>
+    <div class="chips"><span class="chip">rules</span><span class="chip cost-s">small build</span><span class="chip">fixes "you can just clean while he's staring"</span></div>
+    <dl>
+      <dt>How it plays</dt><dd>While your vacuum is on, you don't count as watching Bramble. To freeze him you must stop cleaning and look. So one kid watches while another cleans, or you clean in short bursts and keep checking.</dd>
+      <dt>Why it's scary</dt><dd>Every second of cleaning is a second he can move. It's the Coil-head rule: the job and the watching fight each other.</dd>
+      <dt>Look-to-freeze</dt><dd>Makes the rule matter. Watching is still the only way to stop him.</dd>
+      <dt>Kid safety</dt><dd>Nothing visual. The tip can say: "You can't watch Bramble and clean at the same time!"</dd>
+      <dt>Cost</dt><dd>Small. The watch report already goes to the server; it skips players with the vacuum on.</dd>
+    </dl>
+    <div class="ask" data-q="B1" data-group="rules">Vacuuming stops you from freezing Bramble?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">B2</span><h3>The lights blink</h3></header>
+    <div class="chips"><span class="chip">rules</span><span class="chip">look</span><span class="chip cost-m">medium build</span></div>
+    <dl>
+      <dt>How it plays</dt><dd>Every 20 to 40 seconds, the lights where he stands buzz for 1 second, then go dark for half a second. In the dark nobody can see him, so he jumps up to 10 studs closer. When the lights come back, he's closer and still.</dd>
+      <dt>Why it's scary</dt><dd>The buzz is a tell you start to dread. You keep watching and he still gets closer.</dd>
+      <dt>Look-to-freeze</dt><dd>It's the weeping-angel "blink". Watching still works, just not during the blink.</dd>
+      <dt>Kid safety</dt><dd>One blink, never flashing. At least 15 seconds between blinks. Never fully black.</dd>
+      <dt>Cost</dt><dd>Medium. Needs the School's room lights grouped by room (a small map tag pass if they aren't yet).</dd>
+    </dl>
+    <div class="ask" data-q="B2" data-group="rules">Add the light blink that lets him jump closer?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">B3</span><h3>Quiet as a bat, then loud and quick</h3></header>
+    <div class="chips"><span class="chip">rules</span><span class="chip">sound</span><span class="chip cost-s">small build</span><span class="chip">your ask</span></div>
+    <dl>
+      <dt>How it plays</dt><dd>Far away he makes no sound at all. Within about 18 studs his steps suddenly turn on: loud, quick, soft-foam thumps with a feather rustle, faster as he gets closer. They stop dead whenever he's frozen. The heartbeat and dark edges we already use for Mr. Harlow come on with them.</dd>
+      <dt>Why it's scary</dt><dd>Silence lets him sneak up. The sudden switch to loud and quick says "he's right here, turn around".</dd>
+      <dt>Look-to-freeze</dt><dd>When the steps stop, you know someone is watching him. When they start again, nobody is.</dd>
+      <dt>Kid safety</dt><dd>Soft foam thumps, not stomps or screams. Volume kept under the chase music.</dd>
+      <dt>Cost</dt><dd>Small. A Bramble footstep set plus a distance switch, and the dread effects turned on for him.</dd>
+    </dl>
+    <div class="ask" data-q="B3" data-group="rules">Silent far away, loud quick steps inside about 18 studs?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">B4</span><h3>The perch</h3></header>
+    <div class="chips"><span class="chip">rules</span><span class="chip">layout</span><span class="chip cost-m">medium build</span></div>
+    <dl>
+      <dt>How it plays</dt><dd>If nobody has seen him for 15 seconds and he's far away, he moves to a high spot near the crew that no camera can see: on top of the lockers, the trophy case, a basketball hoop, the stage. You walk in and he's up there, looking down. Look away and you hear one thump as he drops to the floor.</dd>
+      <dt>Why it's scary</dt><dd>He's never where you left him, and you start checking up high in every room. It also fits an owl.</dd>
+      <dt>Look-to-freeze</dt><dd>On a perch he freezes like anywhere else. He only moves to a perch where nobody is looking.</dd>
+      <dt>Kid safety</dt><dd>A reveal, not a jumpscare: no sound sting when you spot him.</dd>
+      <dt>Cost</dt><dd>Medium. Perch spots tagged by the School generator, a perch pose and a drop, and an "only where unseen" move.</dd>
+    </dl>
+    <div class="ask" data-q="B4" data-group="rules">Let him move to high perches when nobody sees him?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">B5</span><h3>"He's right here" camera</h3></header>
+    <div class="chips"><span class="chip">look</span><span class="chip cost-s">small to medium build</span><span class="chip">third-person answer to first-person</span></div>
+    <dl>
+      <dt>How it plays</dt><dd>The first time each life that he gets within 6 studs of you, your camera pulls in close over your shoulder for about half a second and the view narrows, so he fills the screen. His owl head turns all the way round to face you. Then the camera goes back.</dd>
+      <dt>Why it's scary</dt><dd>It gives a first-person "in my face" moment without making the game first person.</dd>
+      <dt>Look-to-freeze</dt><dd>The pull-in points your camera at him, so it also freezes him. It's a scare and a save at once.</dd>
+      <dt>Kid safety</dt><dd>Short, no scream, no face close-up beyond his stitched owl look. Turned off by the reduced-motion setting.</dd>
+      <dt>Cost</dt><dd>Small to medium. Uses the Camera feature; needs a play-check on phones.</dd>
+    </dl>
+    <div class="ask" data-q="B5" data-group="look">Add the quick close-camera moment?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">B6</span><h3>The long locker hall</h3></header>
+    <div class="chips"><span class="chip">layout</span><span class="chip">rules</span><span class="chip cost-b">bigger build</span></div>
+    <dl>
+      <dt>How it plays</dt><dd>Once a shift, when a player is in the main locker hall, the lights at the far end go out one bank at a time, coming toward you. Each time a bank goes dark, the lockers in it rattle and Bramble shows up in the next lit bank, closer. Get out of the hall, or keep looking at him until the lights come back.</dd>
+      <dt>Why it's scary</dt><dd>A short set piece kids will talk about, like the hallway runs in Doors.</dd>
+      <dt>Look-to-freeze</dt><dd>He can only move through dark banks. Lit and watched, he's stuck.</dd>
+      <dt>Kid safety</dt><dd>About 10 seconds, rattles not bangs, and the hall always has a lit way out.</dd>
+      <dt>Cost</dt><dd>Bigger. Needs a tagged hall, light banks and a scripted event. Better after launch.</dd>
+    </dl>
+    <div class="ask" data-q="B6" data-group="layout">Plan the locker-hall set piece (after launch)?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">E</span><h3>Two small extras</h3></header>
+    <dl>
+      <dt>E1 Copycat hoot</dt><dd>Now and then he plays a crew sound (a vacuum start, the ping) from a room nobody is in, to pull kids away. Small build.</dd>
+      <dt>E2 Head spin</dt><dd>When you look away and back, his head has turned to follow you even though his body hasn't moved. Small build; his head turn already exists.</dd>
+    </dl>
+    <div class="ask" data-q="E1" data-group="rules">Add the copycat sound (E1)?</div>
+    <div class="ask" data-q="E2" data-group="look">Add the head spin (E2)?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">S</span><h3>From the places sheet</h3></header>
+    <dl>
+      <dt>S7</dt><dd>Bramble chases faster at School: 27 to 30. Looking away already lets him catch a runner; 30 makes it quicker.</dd>
+      <dt>S8</dt><dd>You must look more directly at him to freeze him: the cone goes from 35° to 25° off center. Shared with any future freeze monster.</dd>
+    </dl>
+    <div class="ask" data-q="S7" data-group="rules">S7: chase speed 27 to 30 at School?</div>
+    <div class="ask" data-q="S8" data-group="rules">S8: freeze cone 35° to 25°?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">O1</span><h3>My build order</h3></header>
+    <p><b>First:</b> B1 and B3 together (both small, and they hit your two notes directly). <b>Next:</b> B5 and B2. <b>Then:</b> B4. <b>After launch:</b> B6. Each step gets a play-check before the next.</p>
+    <div class="ask" data-q="O1" data-group="rules">Build in this order?</div>
+  </article>
+
+  <h2>Part 2: a second monster for any map</h2>
+  <p class="muted">One rule I kept for all of these: <b>no employee turns evil.</b> That is what makes Dandy's World what it is (its own toons twisted into monsters). Ours come from the building's leftovers and the company's old things, which already fits our lore: buildings grow trouble from mess and forgotten stuff. Each would join a shift through the roster plan from 11-10: the map's main monster starts the shift, the second one shows up later.</p>
+
+  <article class="card">
+    <header><span class="id">M1</span><h3>Big Dust Bunny</h3></header>
+    <div class="chips"><span class="chip">my pick</span><span class="chip cost-m">medium build</span></div>
+    <dl>
+      <dt>Hook</dt><dd>Leave the mess, and the Dust Bunny gets bigger.</dd>
+      <dt>How it hunts</dt><dd>It hops from the dirtiest room to the next dirtiest. The more Gloom left on the map, the bigger, faster and wider-reaching it gets. A touch takes a coat.</dd>
+      <dt>Counterplay</dt><dd>Cleaning shrinks it. When it's small, vacuum it straight on and it pops into tiny bunnies that scatter (it comes back later). A heavy "thump, thump" hop and lint puffs tell you where it is.</dd>
+      <dt>With the others</dt><dd>With Harlow, it makes the quiet rooms busy. With Bramble, kids who only watch Bramble and never clean feed the bunny. It gives cleaning a way to fight back.</dd>
+      <dt>Look</dt><dd>A lumpy round ball of lint and Gloom, two long floppy ears, a stub tail. Grey with Gloom purple. No face. No clothes, so it never reads as Pippa.</dd>
+      <dt>Cost</dt><dd>Medium: a simple rig, a hop move, size tied to the Gloom count, the pop.</dd>
+    </dl>
+    <div class="ask" data-q="M1" data-group="rules">Keep Big Dust Bunny in the running?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">M2</span><h3>The Lookalike</h3></header>
+    <div class="chips"><span class="chip cost-m">medium build</span></div>
+    <dl>
+      <dt>Hook</dt><dd>One of your crew is made of Gloom.</dd>
+      <dt>How it hunts</dt><dd>It takes the shape of one of your real crewmates, solid Gloom all over. It acts like a friend: walks near you, stands by goo. If you get close while alone, it grabs and takes a coat.</dd>
+      <dt>Counterplay</dt><dd>Real crew have a name above their head; the Lookalike's tag is blank. Real friends wave back; it waves late. It's Gloom, so 3 seconds of vacuum pops it, and it forms again much later.</dd>
+      <dt>With the others</dt><dd>With Bramble it is nasty in a fun way: it can stand there "watching" him, but it doesn't freeze him. A kid who thinks a friend is watching gets caught.</dd>
+      <dt>Look</dt><dd>Crew-shaped, drippy edges, deep Gloom purple, smooth blank head, no face, blank lanyard. It copies whoever is in your lobby, not a fixed character, which is the opposite of a twisted toon.</dd>
+      <dt>Cost</dt><dd>Medium: copy a crew rig's shape, the tag rule, the vacuum pop.</dd>
+    </dl>
+    <div class="ask" data-q="M2" data-group="rules">Keep the Lookalike in the running?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">M3</span><h3>Unit-7, the old cleaning robot</h3></header>
+    <div class="chips"><span class="chip cost-b">bigger build</span></div>
+    <dl>
+      <dt>Hook</dt><dd>The old cleaning robot thinks you are the mess.</dd>
+      <dt>How it hunts</dt><dd>It rolls a route and goes toward noise and dropped things. When it sees you, its hose pulls you toward it and you have to run against the pull. If it gets you, it bags you: you pop out at the truck, one coat less, without what you carried.</dd>
+      <dt>Counterplay</dt><dd>It won't roll over a Wet Floor sign, so you can move signs to block halls. Unplug it at its dock to stop it for 30 seconds.</dd>
+      <dt>With the others</dt><dd>It's loud, so it hides Bramble's steps. With Harlow, its noise brings him over.</dd>
+      <dt>Look</dt><dd>A squat barrel on treads, a long ribbed hose arm, one amber work light, the company's old orange stripe.</dd>
+      <dt>Cost</dt><dd>Bigger: the pull, the sign blocking, the dock.</dd>
+    </dl>
+    <div class="ask" data-q="M3" data-group="rules">Keep Unit-7 in the running?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">M4</span><h3>Morry the Mop</h3></header>
+    <div class="chips"><span class="chip cost-m">medium build</span></div>
+    <dl>
+      <dt>Hook</dt><dd>The company's old mascot only dances while its song plays.</dd>
+      <dt>How it hunts</dt><dd>A mascot costume with a boombox. While its jingle plays, it dances toward the nearest player. When the song stops, anyone still moving is spotted and it zooms at them.</dd>
+      <dt>Counterplay</dt><dd>Stand still when the music stops. Vacuum the batteries out of its boombox for a long quiet break.</dd>
+      <dt>With the others</dt><dd>Good with Harlow. Not with Bramble: two "freeze" games at once is confusing, so never on the same shift. It is also close to the Roll Call idea from 11-10.</dd>
+      <dt>Look</dt><dd>A big mop head for a head with a little company cap, so there is no face. Faded orange and teal suit.</dd>
+      <dt>Cost</dt><dd>Medium: song timing, the movement check, the boombox.</dd>
+    </dl>
+    <div class="ask" data-q="M4" data-group="rules">Keep Morry the Mop in the running?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">M5</span><h3>Safety Sam, the cardboard cutout</h3></header>
+    <div class="chips"><span class="chip cost-s">small to medium build</span></div>
+    <dl>
+      <dt>Hook</dt><dd>The flat man from the old safety video. Turn him sideways and he's gone.</dd>
+      <dt>How it hunts</dt><dd>A life-size cardboard cutout. He's paper thin, so from the side you can't see him. He slides along walls and turns his thin edge toward anyone looking. A paper flap sound tells you he's moving. A touch slaps a "SAFETY FIRST" sticker on you and takes a coat.</dd>
+      <dt>Counterplay</dt><dd>Walk around to see his front. Your vacuum pulls him off the wall and folds him up for 10 seconds.</dd>
+      <dt>With the others</dt><dd>Good with Harlow. With Bramble it's two sight monsters, so I'd keep them apart.</dd>
+      <dt>Look</dt><dd>A printed thumbs-up worker with the face peeled off (no face). Faded print colours, bent corners.</dd>
+      <dt>Cost</dt><dd>Small to medium: a thin part already vanishes edge-on in the engine; the turn-to-watcher move is the work.</dd>
+    </dl>
+    <div class="ask" data-q="M5" data-group="rules">Keep Safety Sam in the running?</div>
+  </article>
+
+  <article class="card">
+    <header><span class="id">P</span><h3>Picks</h3></header>
+    <div class="tablebox"><table>
+      <tr><th>Monster</th><th>Any map?</th><th>Best with</th><th>Build</th></tr>
+      <tr><td>Big Dust Bunny</td><td>Yes (needs Gloom only)</td><td>Harlow, Bramble</td><td>Medium</td></tr>
+      <tr><td>The Lookalike</td><td>Yes</td><td>Bramble, Harlow</td><td>Medium</td></tr>
+      <tr><td>Unit-7</td><td>Yes (signs and a dock per map)</td><td>Harlow, Bramble</td><td>Bigger</td></tr>
+      <tr><td>Morry the Mop</td><td>Yes</td><td>Harlow only</td><td>Medium</td></tr>
+      <tr><td>Safety Sam</td><td>Yes</td><td>Harlow only</td><td>Small to medium</td></tr>
+    </table></div>
+    <div class="ask" data-q="P1" data-group="rules">Build Big Dust Bunny first?</div>
+    <div class="ask" data-q="P2" data-group="rules">Second monster joins partway through a shift, never at the start?</div>
+  </article>
+</div>
+
+<script>
+const answers = {};
+const status = document.getElementById("status");
+const asks = Array.from(document.querySelectorAll(".ask"));
+let db = null;
+
+for (const el of asks) {
+  const id = el.dataset.q;
+  const text = el.textContent.trim();
+  el.textContent = "";
+  const p = document.createElement("p"); p.className = "q";
+  const g = document.createElement("span"); g.className = "grp"; g.textContent = el.dataset.group;
+  p.append(g, document.createTextNode(text));
+  const btns = document.createElement("div"); btns.className = "btns";
+  for (const v of ["yes", "no"]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.v = v; b.id = "b-" + id + "-" + v; b.textContent = v.toUpperCase();
+    b.addEventListener("click", () => save(id, v));
+    btns.append(b);
+  }
+  const note = document.createElement("input");
+  note.className = "note"; note.id = "n-" + id; note.placeholder = "Note (optional)";
+  note.addEventListener("change", () => save(id, (answers[id] && answers[id].answer) || null, note.value));
+  el.append(p, btns, note);
+}
+
+function render() {
+  for (const el of asks) {
+    const a = answers[el.dataset.q] || {};
+    for (const b of el.querySelectorAll("button")) b.classList.toggle("on", a.answer === b.dataset.v);
+    const n = el.querySelector(".note");
+    if (document.activeElement !== n) n.value = a.note || "";
+  }
+  const done = asks.filter(el => answers[el.dataset.q] && answers[el.dataset.q].answer).length;
+  if (db) status.textContent = done + " of " + asks.length + " answered.";
+}
+
+async function save(id, answer, note) {
+  if (!db) { status.textContent = "Answers can't be saved in this view. Open the page signed in to claude.ai."; return; }
+  const prev = answers[id] || {};
+  const body = { answer: answer, note: note !== undefined ? note : (prev.note || ""), at: new Date().toISOString() };
+  answers[id] = body; render();
+  try { await db.collection("answers").doc(id).set(body); }
+  catch (e) { status.textContent = "That answer didn't save. Try again."; }
+}
+
+render();
+(async () => {
+  const timer = setTimeout(() => { if (!db) status.textContent = "Answers can't load right now. You can still read the page."; }, 10000);
+  try { db = await window.claude?.use?.("db"); } catch (e) { db = null; }
+  if (!db) { clearTimeout(timer); status.textContent = "Answers can't be saved in this view. Open the page signed in to claude.ai."; return; }
+  db.collection("answers").onSnapshot(snap => {
+    clearTimeout(timer);
+    for (const d of snap.docs) answers[d.id] = d.data();
+    render();
+  }, () => { status.textContent = "Answers stopped updating. Reload the page."; });
+})();
+</script>
