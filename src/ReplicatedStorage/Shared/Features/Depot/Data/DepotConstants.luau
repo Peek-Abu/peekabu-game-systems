@@ -31,8 +31,8 @@ local BOARD_COPY = table.freeze({
 	shiftPhone = "clock out at the truck",
 	crew = "1–4 per truck. 6 with Big Crew.",
 	-- Any map's monster (a truck may pick the Office or the School).
-	hazard = "Monsters roam the site. They hear vacuums and things you drop. Empty hands run faster.",
-	hazardPhone = "Monsters hear vacuums and drops",
+	hazard = "Monsters roam the site. Stay quiet and stick together.",
+	hazardPhone = "Monsters roam the site",
 	sticky = "Lights on the 4th floor again?? — night guard",
 	approved = "APPROVED",
 	dispatchLabel = "DISPATCH · HOW TO START",
@@ -93,12 +93,13 @@ local SCHOOL_CONTRACTS: { DepotTypes.Contract } = {
 }
 
 -- Each map's words during a run (DepotMapRules.siteOf): the route slip's site line and tip (the tip is about the map's
--- monster, its OccupantRosterRegistry pick), the HUD meter's site line, and the shift review's tab and closing quote
+-- monster, its OccupantRosterRegistry pick; lore and tiny tips only, never how it hunts or how to get away, owner
+-- 11-14), the HUD meter's site line, and the shift review's tab and closing quote
 -- when the goal is met, and the monster kind the tip is about (its portrait). The Office's are the words it always had.
 local OFFICE_SITE: DepotTypes.MapSite = {
 	site = "4th floor offices",
 	hud = "Harlow & Finch · offices",
-	tip = "The Manager is here. He hears vacuums and things you drop. Empty hands run faster.",
+	tip = "The Manager is here. He never went home.",
 	reviewTab = "SHIFT REVIEW · HARLOW & FINCH",
 	quote = ShiftConstants.REVIEW_QUOTES.met,
 	monster = "harlow",
@@ -106,7 +107,7 @@ local OFFICE_SITE: DepotTypes.MapSite = {
 local SCHOOL_SITE: DepotTypes.MapSite = {
 	site = "School halls",
 	hud = "Maple Hill · school",
-	tip = "Bramble the owl can't move while you look at it. Watch it and take turns!",
+	tip = "Bramble the owl still guards these halls.",
 	reviewTab = "SHIFT REVIEW · MAPLE HILL SCHOOL",
 	quote = table.freeze({ line = '"The halls have never been so shiny!"', by = "— Maple Hill School, Front Desk" }),
 	monster = "bramble",

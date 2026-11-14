@@ -174,7 +174,7 @@ function VM.copy(
 				},
 				{
 					title = "03 / WATCH YOUR NOISE",
-					body = "Monsters hear vacuums and dropped cargo. Put things down carefully. Bulky things need both hands, and your vacuum goes on your back while you carry. Empty hands let you run faster.",
+					body = "Shh! Noise wakes things up. Put things down carefully. Bulky things need both hands, and your vacuum goes on your back while you carry. Empty hands let you run faster.",
 				},
 				{
 					title = "04 / CLOCK OFF",

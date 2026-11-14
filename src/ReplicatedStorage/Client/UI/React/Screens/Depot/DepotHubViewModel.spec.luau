@@ -15,7 +15,9 @@ return function()
 				monsterNeutral(section.body)
 			end
 			local sections = VM.copy("guide").sections
-			expect(string.find(sections[3].body, "Monsters hear vacuums and dropped cargo.", 1, true)).to.equal(1)
+			-- Lore and tiny tips only (owner 11-14): never how a monster finds you.
+			expect(string.find(sections[3].body, "Shh! Noise wakes things up.", 1, true)).to.equal(1)
+			expect(string.find(sections[3].body, "hear", 1, true)).to.equal(nil)
 			expect(string.find(sections[4].body, "and faster monsters.", 1, true) ~= nil).to.equal(true)
 		end)
 

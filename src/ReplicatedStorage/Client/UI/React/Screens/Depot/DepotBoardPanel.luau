@@ -106,12 +106,12 @@ local MONSTERS: { [string]: Monster } = {
 	harlow = {
 		image = UIAssets.toonPhotos.managerPortrait,
 		title = "THE MANAGER",
-		line = "Hears vacuums and things you drop",
+		line = "Still thinks he's the boss",
 	},
 	bramble = {
 		image = UIAssets.toonIcons[BRAMBLE_PORTRAIT],
 		title = "BRAMBLE THE OWL",
-		line = "Stops when you look at it",
+		line = "The school's old owl mascot",
 	},
 }
 
