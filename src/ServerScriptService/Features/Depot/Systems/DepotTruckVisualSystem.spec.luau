@@ -236,10 +236,11 @@ return function()
 			expect((deckPoint(bed, shell.Position) - Vector3.new(0, 3.65, 0.3)).Magnitude < 1e-3).to.equal(true)
 			expect(shell.CanCollide).to.equal(false)
 			expect(shell.Anchored).to.equal(true)
-			expect(#shell:GetChildren()).to.equal(0)
+			-- v4: the shell carries only the old company's sign; the band has no side line any more.
+			expect(#shell:GetChildren()).to.equal(1)
+			expect(shell:FindFirstChildWhichIsA("SurfaceGui").Name).to.equal("LoreSign")
 			local band = art:FindFirstChild(Constants.BAND_PIECE)
-			expect(#band:GetChildren()).to.equal(2)
-			expect(band:FindFirstChildWhichIsA("SurfaceGui")).to.be.ok()
+			expect(band:FindFirstChildWhichIsA("SurfaceGui")).to.equal(nil)
 			expect(CollectionService:HasTag(art:FindFirstChild("ScannerLight"), DepotConstants.SCANNER_TAG)).to.equal(
 				true
 			)
