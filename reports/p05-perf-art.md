@@ -192,6 +192,34 @@ it down to like 10k tris". Answers:
   and the back of the head) would make 10k cleaner: about 1-2 h per character plus checks. One skin (Bubble Buddy)
   gets a play test on the chosen level before any swap.
 
+### D1 shipped: the 10k level in both places (the owner to save both)
+
+Owner pick: "Honestly the 10k one looks good!" The page showed plain 10k at that level; I built the uneven per-part
+budget I had recommended. It has the same count and is visibly smoother on the hands and head outline (Pippa's final
+sheet shows plain and uneven side by side).
+
+| Employee | Before | After | Budget (triangles per part) |
+|---|---|---|---|
+| Pippa | 83,200 | 9,899 | head 2,300, face plate 1,200, ears and hands 650, feet 450, upper torso 1,000, lower torso 300, limbs 200 |
+| Prickles | 125,604 | 10,198 | head 2,300, face plate 1,200, flower 550, hard hat 500, hands 450, feet 400, torso 750/400, limbs 300-400 |
+| Cappy | 138,760 | 52,791 | head 2,300, face plate 1,200, cap 900, hoodie 1,100 / sleeves 800 and 1,600, sneakers 600, hidden body 150-200 |
+
+- Cappy's hair (owner-edited), earbuds (owner fix), skinned shorts, socks and waist piece are untouched: about 38k on
+  their own. Cutting them is a separate job, and only if the owner wants it.
+- Uploaded to Icey Labs, owner verified: 8 models (`reports/p05-decimation-assets.json`).
+- Swapped into both places' templates with `design/production-art/character-decimation/decimate_swap.luau`: 61 parts
+  each; old ids in `PreDecimateMeshId`.
+- **Incident, fixed:** `MeshPart:ApplyMesh` resets `TextureID`. It cleared the palette texture on 58 of the 61 parts,
+  first in the Lobby, then in Shift. The Lobby play-check missed it because skins set their palettes at spawn. The
+  Shift before/after diff caught it. Fixed in both places: the mesh-blind fingerprint now equals the pre-swap one
+  (Pippa 52eb3556, Cappy 04d171ff, Prickles a4a2abeb), so only the meshes changed. The committed script now carries
+  `TextureID` over and undoes itself unless that fingerprint is unchanged.
+- Play-check (Lobby, all 13 employee x skin looks as stand-ins): frozen mid walk, crouch walk and emote, every outfit
+  and accessory fits, nothing pokes through or detaches, and the inventory cards draw the lighter models. Hide: Pippa
+  and Prickles entered a real training-map desk (server: hidden), but your own character is invisible while hiding
+  (LocalTransparencyModifier 1). Seeing it needs a second client: worth one look in the owner's play-check. Every part
+  keeps its original size (about 0.01 studs), so furniture fit is unchanged. Captures: notes `d1-10k-lobby-check-*.jpg`.
+
 ## 4. Truck redo (`p1-truck-lore`): v4 is in both places (owner to save both), ready for the owner's play-check
 
 Shipped (2026-11-13). Owner: T1 "fine", T2 pass, plus one fix: "move wheels to side for back wheels? The top of

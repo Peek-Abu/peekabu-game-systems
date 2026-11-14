@@ -1,0 +1,16 @@
+{
+ "group": 189923277,
+ "uploaded": "2026-11-13",
+ "level": "10k, uneven per-part budget (owner pick 10k)",
+ "models": {
+  "Pippa body (v13)": 121831375393658,
+  "Prickles body (v4)": 137010044011782,
+  "Prickles Flower": 119997776729942,
+  "Prickles HardHat": 137899872075531,
+  "Cappy body (v6)": 129334512397399,
+  "Cappy Cap": 101043745487395,
+  "Cappy Hoodie": 138632442766031,
+  "Cappy Sneakers": 134776856534115
+ },
+ "untouched": ["Cappy earbuds", "Cappy hair", "Cappy Shorts_ConnectedSkinned", "Cappy socks", "Cappy VisibleWaist"]
+}
