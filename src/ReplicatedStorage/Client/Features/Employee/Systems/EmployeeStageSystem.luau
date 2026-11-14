@@ -39,6 +39,7 @@ local EmoteVfxConstants = require(ReplicatedStorage.Client.Features.Emote.Data.E
 local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
 local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePreviewSystem)
 local EmployeeStageFormulas = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeStageFormulas)
+local ToonSpinViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSpinViewModel)
 
 -- Far above the map, so nothing of a place's art is in view.
 local ORIGIN = Vector3.new(0, 4000, 0)
@@ -70,8 +71,8 @@ export type Spec = {
 export type Stage = {
 	-- The UI window (pixels from the screen's top-left) the model shows in.
 	place: (rect: EmployeeStageFormulas.Rect) -> (),
-	-- Turns the model and its platform round their upright axis (degrees, positive = the front to the screen's
-	-- right; ToonSpinViewModel), from where they first stood.
+	-- Turns the model (never its platform) round the upright axis through its own root (degrees, positive = the front
+	-- to the screen's right; ToonSpinViewModel), from where it first stood.
 	turn: (degrees: number) -> (),
 	release: () -> (),
 }
@@ -212,7 +213,8 @@ function EmployeeStageSystem.show(spec: Spec): Stage?
 		platform.Parent = folder
 	end
 	local modelHome = spec.model:GetPivot()
-	local platformHome = if platform ~= nil then platform:GetPivot() else nil
+	local rootPart = spec.model:FindFirstChild("HumanoidRootPart")
+	local root = if rootPart ~= nil and rootPart:IsA("BasePart") then rootPart.Position else ORIGIN
 	local yaw = math.rad(YAW)
 	local front = CFrame.lookAt(ORIGIN, ORIGIN + Vector3.new(math.sin(yaw), 0, -math.cos(yaw)))
 	-- The box in the stage's facing: every corner turned, then boxed again.
@@ -324,13 +326,8 @@ function EmployeeStageSystem.show(spec: Spec): Stage?
 			window = rect
 		end,
 		turn = function(degrees)
-			if released then
-				return
-			end
-			local spin = CFrame.new(ORIGIN) * CFrame.Angles(0, math.rad(degrees), 0) * CFrame.new(-ORIGIN)
-			spec.model:PivotTo(spin * modelHome)
-			if platform ~= nil and platformHome ~= nil then
-				platform:PivotTo(spin * platformHome)
+			if not released then
+				spec.model:PivotTo(ToonSpinViewModel.turn(modelHome, root, degrees))
 			end
 		end,
 		release = function()

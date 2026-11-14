@@ -4,10 +4,15 @@
 	vacuums in the shop and inventory previews yourself). The model turns with a mouse or finger drag across its
 	frame, keeps coasting a little after a flick and slows to a stop, and turns while a controller stick is pushed.
 	`angle` is the model's yaw in degrees (positive = the front turns to the screen's right), kept within one turn.
-	Pure: every call returns a new state. ToonViewport reads the input and applies the angle.
+	Pure: every call returns a new state. ToonViewport reads the input and turns the model (never the camera or the
+	platform) by the angle about its own root (`turn`), with the camera fitted once to `around`.
 
 	@class ToonSpinViewModel
 ]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local EmployeePoseFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeePoseFormulas)
 
 local ToonSpinViewModel = {}
 
@@ -32,6 +37,32 @@ local MIN_COAST = 5
 
 local function wrap(angle: number): number
 	return (angle + 180) % 360 - 180
+end
+
+--[=[
+	The box a camera fits so a model turning round the upright axis through `root` stays whole and centred at every
+	angle (owner, 2026-11-14: the model must turn about its own centre, never drift off-centre): square round the axis,
+	as wide as the box's furthest corner from it, the same height.
+]=]
+function ToonSpinViewModel.around(bounds: EmployeePoseFormulas.Bounds, root: Vector3): EmployeePoseFormulas.Bounds
+	local reach = 0
+	for _, x in { bounds.min.X, bounds.max.X } do
+		for _, z in { bounds.min.Z, bounds.max.Z } do
+			reach = math.max(reach, Vector2.new(x - root.X, z - root.Z).Magnitude)
+		end
+	end
+	return {
+		min = Vector3.new(root.X - reach, bounds.min.Y, root.Z - reach),
+		max = Vector3.new(root.X + reach, bounds.max.Y, root.Z + reach),
+	}
+end
+
+--[=[
+	`home` (a model's pivot at rest) turned `degrees` round the upright axis through `root`.
+]=]
+function ToonSpinViewModel.turn(home: CFrame, root: Vector3, degrees: number): CFrame
+	local axis = Vector3.new(root.X, 0, root.Z)
+	return CFrame.new(axis) * CFrame.Angles(0, math.rad(degrees), 0) * CFrame.new(-axis) * home
 end
 
 function ToonSpinViewModel.new(): State

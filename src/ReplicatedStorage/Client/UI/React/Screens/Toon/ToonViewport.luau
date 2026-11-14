@@ -24,8 +24,11 @@
 	canister on its own (VacuumPreviewSystem.alone); `turn` swings the camera round (180 = from behind, to see a
 	vacuum on the back).
 	`spin` lets the player turn the model round (owner, 2026-11-14): drag it with the mouse (either button) or a finger,
-	flick it to coast, or push the controller's right stick (ToonSpinViewModel). The viewport turns its camera and light
-	together, so the model reads as turning in place; an emote hero turns on the stage (EmployeeStageSystem `turn`).
+	flick it to coast, or push the controller's right stick (ToonSpinViewModel). Only the model turns, about the upright
+	axis through its own root; the camera, the light and the platform stay still (owner, 2026-11-14: the first version
+	orbited the camera round the model's box, so the model drifted off-centre and the platform seemed to swing). The
+	camera is fitted once to a box that holds the model at every angle, centred on its root (ToonSpinViewModel.around),
+	so it never moves while the model turns; an emote hero turns on the stage (EmployeeStageSystem `turn`).
 	The angle starts at the front for each new item and is kept through a colour style change.
 	`dim` darkens it (a locked item). With no art for the employee in the place it stays blank, then shows the loud error
 	tile (PortraitError, timing in PortraitViewModel.missing). Exempt (needs a renderer); story in ToonViewport.story.
@@ -293,6 +296,16 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 		local bounds =
 			EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(model, PortraitViewModel.parts(props.framing)))
+		-- A spinning model turns about its own root: the camera and platform centre there, on a box it never leaves.
+		local root: Vector3? = nil
+		if props.spin == true and bounds ~= nil then
+			local rootPart = model:FindFirstChild("HumanoidRootPart")
+			local at = if rootPart ~= nil and rootPart:IsA("BasePart")
+				then rootPart.Position
+				else (bounds.min + bounds.max) / 2
+			root = at
+			bounds = ToonSpinViewModel.around(bounds, at)
+		end
 		local emote = if moving then props.emote else nil
 		if emote ~= nil and bounds ~= nil then
 			local height = bounds.max.Y - bounds.min.Y
@@ -356,34 +369,31 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			end
 		end
 		local camera = Instance.new("Camera")
-		local baseLight = PortraitViewModel.lighting(props.tone or "light").direction
-		-- The camera's turn round the model: the caller's, plus the player's spin.
-		local function turnNow(): number
-			return (props.turn or 0) + spinState.current.angle
-		end
 		local function fit()
 			if bounds ~= nil then
-				local view = PortraitViewModel.camera(bounds, props.framing, aspectOf(frame), turnNow())
+				local view = PortraitViewModel.camera(bounds, props.framing, aspectOf(frame), props.turn)
 				camera.FieldOfView = view.fov
 				camera.CFrame = view.cframe
 			end
 		end
-		-- The light swings round with the camera, so the side facing the player stays lit as the model turns.
-		local function light()
-			frame.LightDirection = CFrame.Angles(0, -math.rad(spinState.current.angle), 0):VectorToWorldSpace(baseLight)
-		end
 		fit()
-		light()
+		-- The player's spin turns the model shown here (and the stage's), never the camera or the platform.
+		local spun: Model = model
+		local home = spun:GetPivot()
 		local onStage = stageTurn
-		applySpin.current = function(angle: number)
-			fit()
-			light()
-			if onStage ~= nil then
-				onStage(angle)
+		local axis = root
+		if axis ~= nil then
+			local spinAxis: Vector3 = axis
+			local function apply(angle: number)
+				spun:PivotTo(ToonSpinViewModel.turn(home, spinAxis, angle))
+				if onStage ~= nil then
+					onStage(angle)
+				end
 			end
-		end
-		if onStage ~= nil then
-			onStage(spinState.current.angle)
+			applySpin.current = apply
+			if spinState.current.angle ~= 0 then
+				apply(spinState.current.angle)
+			end
 		end
 		camera.Parent = frame
 		frame.CurrentCamera = camera
@@ -436,7 +446,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 					local grown = if seen ~= nil then PortraitViewModel.grow(fitted, seen) else nil
 					if grown ~= nil then
 						bounds = grown
-						target = PortraitViewModel.camera(grown, props.framing, aspectOf(frame), turnNow()).cframe
+						target = PortraitViewModel.camera(grown, props.framing, aspectOf(frame), props.turn).cframe
 					end
 				end
 				if target ~= nil then

@@ -68,4 +68,57 @@ return function()
 			expect(state.angle >= -180 and state.angle < 180).to.equal(true)
 		end)
 	end)
+
+	describe("around", function()
+		-- A figure whose box reaches further right than left of its root (a held lasso).
+		local box = { min = Vector3.new(-1, 0, -0.5), max = Vector3.new(3, 5, 0.5) }
+		local root = Vector3.new(0, 2, 0)
+
+		it("centres the box on the root, so the turning model stays in the middle of the frame", function()
+			local wide = VM.around(box, root)
+			local centre = (wide.min + wide.max) / 2
+			expect(centre.X).to.be.near(0, 1e-6)
+			expect(centre.Z).to.be.near(0, 1e-6)
+		end)
+
+		it("holds every corner of the model at any angle, and keeps its height", function()
+			local wide = VM.around(box, root)
+			for degrees = 0, 350, 10 do
+				local spin = VM.turn(CFrame.identity, root, degrees)
+				for _, x in { box.min.X, box.max.X } do
+					for _, z in { box.min.Z, box.max.Z } do
+						local p = spin * Vector3.new(x, 0, z)
+						expect(p.X >= wide.min.X - 1e-6 and p.X <= wide.max.X + 1e-6).to.equal(true)
+						expect(p.Z >= wide.min.Z - 1e-6 and p.Z <= wide.max.Z + 1e-6).to.equal(true)
+					end
+				end
+			end
+			expect(wide.min.Y).to.equal(0)
+			expect(wide.max.Y).to.equal(5)
+		end)
+	end)
+
+	describe("turn", function()
+		it("turns a model about its own upright axis, leaving the root where it stands", function()
+			local home = CFrame.new(4, 2, -3)
+			local root = Vector3.new(4, 2, -3)
+			local turned = VM.turn(home, root, 90)
+			expect(turned.Position:FuzzyEq(home.Position, 1e-5)).to.equal(true)
+			expect(turned.UpVector:FuzzyEq(Vector3.yAxis, 1e-5)).to.equal(true)
+		end)
+
+		it(
+			"turns the front to the screen's right for a positive angle (the camera looks along +Z at the front)",
+			function()
+				local turned = VM.turn(CFrame.identity, Vector3.zero, 30)
+				-- The front faces -Z; seen from -Z, screen right is world -X.
+				expect(turned.LookVector.X < 0).to.equal(true)
+			end
+		)
+
+		it("is the home frame at 0", function()
+			local home = CFrame.new(1, 2, 3) * CFrame.Angles(0, 0.4, 0)
+			expect(VM.turn(home, Vector3.new(1, 0, 3), 0):FuzzyEq(home, 1e-6)).to.equal(true)
+		end)
+	end)
 end
