@@ -14,13 +14,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local PortraitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitViewModel)
+local DepotRankChartViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotRankChartViewModel)
 
 local e = React.createElement
 
 -- The camera's field of view, degrees: narrow, so the thin badge reads flat like a sticker.
 local FIELD_OF_VIEW = 30
--- Room left around the badge, as a share of its height.
-local MARGIN = 0.06
 
 export type DepotRankBadgeProps = {
 	rank: number,
@@ -63,15 +62,23 @@ local function DepotRankBadge(props: DepotRankBadgeProps): React.ReactNode
 		end
 		copy:PivotTo(CFrame.identity)
 		local centre, extent = copy:GetBoundingBox()
-		-- The icon is on the badge's -Z face (the side against the wearer's chest faces +Z).
-		local reach = math.max(extent.Y, extent.X) * (0.5 + MARGIN) / math.tan(math.rad(FIELD_OF_VIEW / 2))
 		local camera = Instance.new("Camera")
 		camera.FieldOfView = FIELD_OF_VIEW
-		camera.CFrame = CFrame.lookAt(centre.Position - Vector3.new(0, 0, reach), centre.Position)
+		-- Fitted to the badge's real box and the frame's shape (DepotRankChartViewModel.badgeDistance), again whenever
+		-- the frame is resized. The icon is on the badge's -Z face (the side against the wearer's chest faces +Z).
+		local function fit()
+			local frameSize = window.AbsoluteSize
+			local aspect = if frameSize.X > 0 and frameSize.Y > 0 then frameSize.X / frameSize.Y else 0.5
+			local reach = DepotRankChartViewModel.badgeDistance(extent, aspect, FIELD_OF_VIEW)
+			camera.CFrame = CFrame.lookAt(centre.Position - Vector3.new(0, 0, reach), centre.Position)
+		end
+		fit()
 		copy.Parent = window
 		camera.Parent = window
 		window.CurrentCamera = camera
+		local resized = window:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 		return function()
+			resized:Disconnect()
 			copy:Destroy()
 			camera:Destroy()
 		end

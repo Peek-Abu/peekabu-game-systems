@@ -102,6 +102,56 @@ return function()
 		end)
 	end)
 
+	describe("badgeDistance (owner 2026-11-14: Boss and Big Boss were cut at the sides)", function()
+		-- Every corner of a `size` box centred on the origin is inside a camera `distance` back along -Z looking +Z.
+		local function inside(size, aspect, fov, distance)
+			local tanV = math.tan(math.rad(fov) / 2)
+			local tanH = tanV * aspect
+			for _, x in { -size.X / 2, size.X / 2 } do
+				for _, y in { -size.Y / 2, size.Y / 2 } do
+					for _, z in { -size.Z / 2, size.Z / 2 } do
+						local depth = distance + z
+						if math.abs(x) > depth * tanH + 1e-6 or math.abs(y) > depth * tanV + 1e-6 then
+							return false
+						end
+					end
+				end
+			end
+			return true
+		end
+
+		it("fits a wide badge (Big Boss's bow) in a tall, narrow step frame", function()
+			local size = Vector3.new(0.356, 0.640, 0.078)
+			local distance = VM.badgeDistance(size, 70 / 150, 30)
+			expect(inside(size, 70 / 150, 30, distance)).to.equal(true)
+		end)
+
+		it("fits every rank's badge in the step frame and the NEXT RANK card frame", function()
+			local sizes = {
+				Vector3.new(0.280, 0.635, 0.051),
+				Vector3.new(0.299, 0.640, 0.050),
+				Vector3.new(0.297, 0.640, 0.050),
+				Vector3.new(0.305, 0.643, 0.050),
+				Vector3.new(0.330, 0.642, 0.077),
+				Vector3.new(0.364, 0.645, 0.076),
+				Vector3.new(0.356, 0.640, 0.078),
+			}
+			for _, aspect in { 70 / 150, 26 / 56, 170 / 360, 66 / 140 } do
+				for _, size in sizes do
+					expect(inside(size, aspect, 30, VM.badgeDistance(size, aspect, 30))).to.equal(true)
+				end
+			end
+		end)
+
+		it("leaves a little room around the badge, but not much", function()
+			local size = Vector3.new(0.3, 0.64, 0.05)
+			local distance = VM.badgeDistance(size, 2, 30)
+			local tight = (size.Y / 2) / math.tan(math.rad(15)) + size.Z / 2
+			expect(distance > tight).to.equal(true)
+			expect(distance < tight * 1.25).to.equal(true)
+		end)
+	end)
+
 	describe("fit", function()
 		it("scales the chart to the screen, never past full size", function()
 			expect(VM.fit(Vector2.new(4000, 3000), false)).to.equal(1)

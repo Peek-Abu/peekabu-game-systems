@@ -127,6 +127,22 @@ function VM.chart(xp: number?): View
 	}
 end
 
+-- Room around a badge in its frame: the fitted view is this much larger than the badge.
+local BADGE_MARGIN = 1.08
+
+--[=[
+	How far back (studs) a camera with vertical field of view `fov` (degrees) stands from the centre of a badge of
+	`size` (its bounding box; the camera looks along +Z at the badge's -Z face) so the whole badge fits a frame `aspect`
+	wide per unit high: its height against the vertical view, its width against the horizontal one (a tall, narrow step
+	frame is limited by the width: the wide Boss and Big Boss badges were cut at the sides when only the height was
+	fitted), and its near face in front of the centre. With a small margin.
+]=]
+function VM.badgeDistance(size: Vector3, aspect: number, fov: number): number
+	local tanV = math.tan(math.rad(fov) / 2) / BADGE_MARGIN
+	local tanH = tanV * (if aspect > 0 then aspect else 1)
+	return math.max((size.Y / 2) / tanV, (size.X / 2) / tanH) + size.Z / 2
+end
+
 -- The scale that fits the chart in the screen (90% of it), never above 1.
 function VM.fit(viewport: Vector2, phone: boolean): number
 	local size = if phone then PHONE_SIZE else SIZE
