@@ -251,8 +251,28 @@ Only `r2-L1` (monster colours: yes) was saved in the db; the rest came as these 
   - Bramble with only his head turned;
   - the employee in each rank pose.
 
+**Studio slot 2026-11-14 (Shift, about 30 minutes, Edit then Play), page v6:**
+- Edit:
+  - Bramble: the round-2 body, with only `Neck` turned (Y -18 instead of 18) so the head faces the camera.
+  - Pippa in the seven kit poses from `EmployeePoseRegistry.get("Pippa")`: shy, wave, proud, point, coachCheer, cheer, victory. These are now on the ladder (Cleaner = proud, Big Boss = victory) and in a strip on the page.
+- Play, step 1:
+  - The yellow arrows were the hub chevron trail (`TrainingTrailSystem` Beams in `workspace.TrainingGuide`, re-enabled every frame). They were removed for the shot by unparenting the folder on my client.
+  - The faded truck on the left was the depot's occlusion fade; the shot holds `LocalTransparencyModifier` at 0 on every depot part.
+- Play, step 2:
+  - The hub has no vacuum `Tool`: `VacuumServiceClient.selected()` needs the Tool, which a run gives.
+  - So I walked onto the Training pad. It started a real training run, and a Studio MCP mouse hold gave the game's own vacuum pose.
+  - A cloned GloomCreep sits under the nozzle, with two temp lights (the training map is flashlight-dark).
+  - The vacuum aims along the camera's yaw (`VacuumLookSystem`), so the shot is framed from the front-side.
+- Not done:
+  - Step 3, the real hide. Pressing C and `ProximityPrompt:InputHoldBegin` on HideDesk1's reach prompt in the training run gave no `HideSpotId`. The run probably locks hiding until its hide stop, so it needs a run played up to that stop.
+  - The Manager facing the camera. A clone's mask face (FacePlate SurfaceAppearance) is blank in both Edit and Play; only the live Manager NPC shows it. The front-facing shot needs the real Manager in a shift run.
+- Cleanup:
+  - Edit temps were deleted before Play. Play was stopped (its changes thrown away).
+  - Shift ended in Edit with Lighting at 0 / 0.5 / -0.7, workspace children unchanged and no P075 scripts. RunTests and DevAutoPick were never set.
+  - Audio was muted on the client during Play. Nothing was saved.
+
 ## Next
-1. A Studio slot for the re-poses above. Swap them into the mock and republish the review page.
+1. A Studio slot for step 3 (real hide) and the Manager facing the camera. Both need a real run.
 2. Read the owner's picks. Build only the YES items. Each build:
    - states its module placement first;
    - is spec-first;
