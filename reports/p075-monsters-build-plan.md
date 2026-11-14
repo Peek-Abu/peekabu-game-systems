@@ -146,3 +146,20 @@ saying, so this is **Q2**.
 - **Q1:** Do in-shift first-catch tips count as "menus"? If yes, "Bramble got you!" with no hint.
 - **Q2:** Safety Sam on the School with Bramble, or Office only?
 - **Q3:** B5 (close camera) was left unanswered: drop it, or ask again?
+
+## Status (2026-11-14)
+- **Batch 1 pushed:** 95e03499 (S7 chase 30, B1 vacuum isn't watching, B3 footstep proximity gate) and 8f1f21cd
+  (lore-only menu and board words; first-catch tips untouched until Q1).
+  - B3 is not audible yet. p05-sound wires its owner-picked "Bramble steps A" set with
+    `proximity = { silentBeyond = 18, loudVolume = 1.6, quickPitch = 1.12 }` and `sounds.footsteps = "bramble"`.
+- **Batch 2 pushed:** de4b6c28 (B4 perch).
+  - New module: `OccupantPerchRules`.
+  - Perch spots: every locker, trophy cases and the gym hoop (`OfficeKitRules.isPerch`). There is no stage art in the
+    School kit, so no stage perch.
+  - Not built yet: the perch pose, the drop animation and the drop thump. He stands on top in his idle pose and drops
+    without a sound. These are new assets that need the owner's OK before an Icey Labs upload.
+- **Checked:** lint, format and types are clean locally.
+- **Not checked yet:**
+  - The specs: they run only in Studio (suite).
+  - Real play: Shift place, a 2-client School run. Waiting on a Studio slot from the coordinator.
+- **Held:** Batch 3, Safety Sam (D1 and its timing are with the owner).
