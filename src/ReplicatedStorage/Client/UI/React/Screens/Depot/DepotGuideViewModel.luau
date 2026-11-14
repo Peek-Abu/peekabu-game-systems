@@ -38,8 +38,8 @@ export type Monster = {
 	-- The card's colour: a kit hue, or a colour of its own (Bramble's moss green).
 	hue: UIToonConstants.Hue,
 	colour: Color3?,
-	-- The name band's text colour.
-	nameColour: Color3,
+	-- The name band's text gradient (the kit's display type takes a meaning, not a colour).
+	nameMeaning: UIToonConstants.Meaning,
 	-- The graded backdrop photo and the outlined cut-out that breaks the card's top (nil on the coming-soon card).
 	photo: string,
 	cut: string?,
@@ -105,7 +105,7 @@ function VM.monsters(): { Monster }
 			place = "THE OFFICE",
 			lore = { "He never went home.", "He still checks every desk." },
 			hue = "coral",
-			nameColour = Color3.fromHex("FFE066"),
+			nameMeaning = "gold",
 			photo = photos.guideManagerBack,
 			cut = photos.guideManagerCut,
 			soon = false,
@@ -116,7 +116,7 @@ function VM.monsters(): { Monster }
 			lore = { "Maple Hill's old owl mascot.", "He is very, very shy." },
 			hue = "mint",
 			colour = Color3.fromHex("5E9E2E"),
-			nameColour = Color3.fromHex("FFB066"),
+			nameMeaning = "white",
 			photo = photos.guideBrambleBack,
 			cut = photos.guideBrambleCut,
 			soon = false,
@@ -126,7 +126,7 @@ function VM.monsters(): { Monster }
 			place = "A NEW PLACE",
 			lore = { "Someone new is moving in.", "Keep your flashlight close." },
 			hue = "night",
-			nameColour = Color3.new(1, 1, 1),
+			nameMeaning = "white",
 			photo = photos.guideSoonBack,
 			soon = true,
 		},

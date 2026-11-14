@@ -266,15 +266,16 @@ local function DepotHubScreen(
 		-- training (only where the hub has a Training pad) sits under the HOW TO PLAY cards.
 		local inset = if phone then 16 else 32
 		children.guide = e("Frame", {
-			Position = UDim2.fromOffset(inset, headerHeight + (if phone then 14 else 28)),
-			Size = UDim2.new(1, -2 * inset, 1, -headerHeight - (if phone then 26 else 56)),
+			-- Clear of the Gloom goo dripping from the header's foot.
+			Position = UDim2.fromOffset(inset, headerHeight + (if phone then 26 else 52)),
+			Size = UDim2.new(1, -2 * inset, 1, -headerHeight - (if phone then 38 else 80)),
 			BackgroundTransparency = 1,
 		}, {
 			panel = e(DepotGuidePanel, {
 				tab = tab,
 				phone = phone,
 				width = width - 2 * inset,
-				height = height - headerHeight - (if phone then 26 else 56),
+				height = height - headerHeight - (if phone then 38 else 80),
 				onTab = setTab,
 				control = control,
 				training = if TrainingHubSystem.offered()

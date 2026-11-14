@@ -29,7 +29,6 @@ local e = React.createElement
 
 local INK = UIToonConstants.COLOR.ink
 local WHITE = Color3.new(1, 1, 1)
-local LILAC = Color3.fromHex("C9A6FF")
 local SOFT = Color3.fromHex("C4B5F0")
 local YELLOW = Color3.fromHex("FFE066")
 local GLOW = Color3.fromHex("B79CFF")
@@ -108,7 +107,7 @@ local function card(view: VM.View, l: Layout): { [string]: React.ReactNode }
 	nodes.cardTitle = e(ToonText, {
 		text = view.card.title,
 		textSize = l.text.title,
-		color = if view.top then YELLOW else LILAC,
+		meaning = if view.top then "gold" else "grape",
 		position = UDim2.fromOffset(c.x + pad, c.y + pad),
 		size = UDim2.fromOffset(c.w - l.cardBadge.w - pad, l.text.title + 6),
 		fit = true,

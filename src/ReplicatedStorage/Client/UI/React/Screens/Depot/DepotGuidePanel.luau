@@ -88,10 +88,24 @@ local function stepCards(props: DepotGuidePanelProps, top: number, height: numbe
 	local gap = if phone then 10 else 24
 	local width = (props.width - 3 * gap) / 4
 	local inset = if phone then 6 else 14
-	local photoHeight = math.min(width * 1.2, height * 0.62)
 	local titleSize = if phone then 15 else 34
 	local lineSize = if phone then 12 else 24
+	local hintSize = if phone then 12 else 18
 	local numberSize = if phone then 34 else 76
+	-- The words under the photo: the title, two lines of the step's line and two of the vacuum hint, with the gaps
+	-- and the card's lip; the photo takes what is left (never taller than its 592x720 shot).
+	local words = (if phone then 6 else 22)
+		+ titleSize
+		+ (if phone then 4 else 14)
+		+ lineSize * 2
+		+ 10
+		+ hintSize * 2
+		+ 6
+		+ inset * 2
+		+ numberSize * 0.3
+		+ UIToonConstants.DEPTH.lip
+		+ UIToonConstants.DEPTH.drop
+	local photoHeight = math.min(width * 1.2, height - words)
 	local nodes: Nodes = {}
 	for index, step in VM.steps(props.control) do
 		local x = (index - 1) * (width + gap)
@@ -160,14 +174,17 @@ local function stepCards(props: DepotGuidePanelProps, top: number, height: numbe
 			nodes[`stepHint{index}`] = e(ToonText, {
 				text = hint,
 				font = "body",
-				textSize = if phone then 12 else 18,
+				textSize = hintSize,
 				color = UIToonConstants.shade("grape").hi,
 				align = "center",
 				alignY = "top",
 				wrapped = true,
 				fit = true,
-				position = UDim2.fromOffset(x + inset, textTop + titleSize + lineSize * 2 + (if phone then 14 else 34)),
-				size = UDim2.fromOffset(width - 2 * inset, (if phone then 12 else 18) * 2 + 6),
+				position = UDim2.fromOffset(
+					x + inset,
+					textTop + titleSize + (if phone then 4 else 14) + lineSize * 2 + 10
+				),
+				size = UDim2.fromOffset(width - 2 * inset, hintSize * 2 + 6),
 				zIndex = 4,
 			})
 		end
@@ -301,7 +318,7 @@ local function monsterCards(props: DepotGuidePanelProps, top: number, height: nu
 				name = e(ToonText, {
 					text = monster.name,
 					textSize = nameSize,
-					color = monster.nameColour,
+					meaning = monster.nameMeaning,
 					align = "center",
 					alignY = "center",
 					fit = true,
@@ -359,7 +376,7 @@ local function DepotGuidePanel(props: DepotGuidePanelProps): React.ReactNode
 		})
 	end
 	local top = tabHeight + (if phone then 10 else 26)
-	local trainingHeight = if props.training ~= nil and props.tab == "play" then (if phone then 40 else 72) else 0
+	local trainingHeight = if props.training ~= nil and props.tab == "play" then (if phone then 48 else 88) else 0
 	local height = props.height - top - trainingHeight
 	local cards = if props.tab == "play" then stepCards(props, top, height) else monsterCards(props, top, height)
 	for key, node in cards do
