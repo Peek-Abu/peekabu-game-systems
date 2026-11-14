@@ -4,7 +4,7 @@
 	crew's shift), the travel card (hidden under it), the player's published rank, their Credits (the `credits` balance),
 	their weekly timecard on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
-	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the clipboard is a CLIPBOARD tile under SHOP and the invite row sits under the Tonight card (owner 11-08, layout A; no clipboard before training is done, DepotHubViewModel.clipboardShown); the calendar tile is the one daily button: PUNCH IN! (pulsing) until today's punch, and it opens the Timecard
+	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the clipboard is a CLIPBOARD tile under SHOP and the invite row sits under the Tonight card (owner 11-08, layout A; no clipboard before training is done, DepotHubViewModel.clipboardShown); the calendar tile is the one daily button: PUNCH IN! with a "!" until today's punch (a tap punches), then the time to tomorrow's (a tap opens the Timecard)
 	(owner 2026-11-14; the old empty daily gift streak stays in saves, unused). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
 	DepotHubViewModel (off a truck, the small Find a truck tab instead of the Next shift card, hidden while a prompt is up).
 
@@ -101,6 +101,7 @@ local function DepotHub(): React.ReactNode
 	local phone = scale.layout == "phone"
 	local showClipboard = VM.clipboardShown(TrainingRules.isNew(training))
 	local status = TimecardRules.status(timecard, now)
+	local daily = VM.daily(status.canPunch, now, phone)
 	-- The invite row under the Tonight card (design px; phone: under the right column).
 	local socialAt = if phone then UDim2.new(1, -234, 0, 288) else UDim2.new(1, -520, 0, 364)
 	local socialSize = if phone then UDim2.fromOffset(220, 34) else UDim2.fromOffset(336, 48)
@@ -147,7 +148,7 @@ local function DepotHub(): React.ReactNode
 				userId = player.UserId,
 				profile = VM.profile(player.DisplayName, rank),
 				credits = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
-				gift = VM.daily(status.canPunch, now, phone),
+				gift = daily,
 				tonight = VM.tonight(boardContract(), picked),
 				cta = nil,
 				findTruck = VM.findTruck(pad ~= nil, promptUp),
@@ -166,9 +167,14 @@ local function DepotHub(): React.ReactNode
 				onSettings = function()
 					SceneStack.push(VM.scene("settings"))
 				end,
-				-- The calendar is the punch-in (owner 2026-11-14): it opens the Timecard.
+				-- The calendar is the punch-in (owner 2026-11-14): a tap punches while today is free (the stamp moment
+				-- opens the Timecard to show it), else opens the Timecard.
 				onGift = function()
-					Company.open("timecard")
+					if daily.tap == "punch" then
+						TimecardService:punch()
+					else
+						Company.open("timecard")
+					end
 				end,
 				onGo = openBoard,
 				onClipboard = if showClipboard

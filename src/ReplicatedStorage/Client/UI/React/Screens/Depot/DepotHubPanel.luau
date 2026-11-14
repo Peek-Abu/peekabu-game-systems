@@ -7,7 +7,8 @@
 	- under it the menu tiles (JOBS, INVENTORY, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
 	  grid on phone, clear of the thumbstick);
 	- top-right: the Credits counter (the coin render overlapping a gold number) and the calendar tile, the one daily button
-	  (PUNCH IN!, mint and pulsing until today's punch, else the time to tomorrow's; it opens the Timecard); on desktop the Tonight card (tonight's building photo, the Manager breaking its
+	  (PUNCH IN! with a "!" until today's punch, and a tap punches in; else the time to tomorrow's, and it opens the
+	  Timecard); on desktop the Tonight card (tonight's building photo, the Manager breaking its
 	  edge), which opens the Jobs board;
 	- bottom: off a truck, a small "Find a truck!" tab (bottom-right; phone bottom-centre), hidden while a prompt is up
 	  (owner 11-11: the full Next shift card got in the way); the full card is the queue pad's own (DepotPad) aboard.
@@ -31,7 +32,6 @@ local ToonBar = require(Toon.ToonBar)
 local ToonButton = require(Toon.ToonButton)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
-local ToonPulse = require(Toon.ToonPulse)
 local ToonSparkle = require(Toon.ToonSparkle)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonSurface = require(Toon.ToonSurface)
@@ -59,7 +59,7 @@ export type DepotHubPanelProps = {
 	onInventory: () -> (),
 	onGuide: () -> (),
 	onSettings: () -> (),
-	-- The calendar tile: opens the Timecard (the hub's one daily button).
+	-- The calendar tile: punches in while today is free, else opens the Timecard (the hub's one daily button).
 	onGift: () -> (),
 	-- The SHOP tile under the gift.
 	onShop: () -> (),
@@ -271,29 +271,22 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			},
 			zIndex = 4,
 		}),
-		-- The calendar: the hub's one daily button (owner 2026-11-14). While today's punch is free it is mint, says
-		-- PUNCH IN! and pulses in a mint glow with bubbles (ToonPulse); it opens the Timecard.
-		gift = e(ToonPulse, {
-			active = gift.ready,
+		-- The calendar: the hub's one daily button (owner 2026-11-14). It never pulses: while today's punch is free it
+		-- wears a "!" on its corner and a tap punches in; after, it counts down to tomorrow's punch and opens the Timecard.
+		gift = e(ToonButton, {
+			variant = "grape",
+			layout = "tile",
+			icon = "daily",
+			text = gift.text,
+			textSize = if phone then 13 else 22,
+			badge = if gift.ready then "!" else nil,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.fromOffset(0, if phone then 62 else 118),
 			size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
-			reach = if phone then 12 else 22,
-			children = {
-				tile = e(ToonButton, {
-					variant = if gift.ready then "primary" else "grape",
-					layout = "tile",
-					icon = "daily",
-					text = gift.text,
-					textSize = if phone then 13 else 22,
-					badge = if gift.ready then "!" else nil,
-					size = UDim2.fromScale(1, 1),
-					small = phone,
-					radius = if phone then 16 else 24,
-					sound = "confirm",
-					onActivated = props.onGift,
-				}),
-			},
+			small = phone,
+			radius = if phone then 16 else 24,
+			sound = "confirm",
+			onActivated = props.onGift,
 		}),
 		-- Tagged, so the after-training tour can point at the Shop (TrainingSpotlightSystem).
 		shop = e("Frame", {

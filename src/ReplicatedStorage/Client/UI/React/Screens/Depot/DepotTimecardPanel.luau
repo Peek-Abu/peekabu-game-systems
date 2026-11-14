@@ -23,7 +23,7 @@ local ToonText = require(Toon.ToonText)
 local ToonBar = require(Toon.ToonBar)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
-local ToonPulse = require(Toon.ToonPulse)
+local ToonHighlight = require(Toon.ToonHighlight)
 local UIToonConstants = require(Toon.UIToonConstants)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
@@ -204,12 +204,12 @@ local function timecardFace(props: Props): { [string]: React.ReactNode }
 			BorderSizePixel = 0,
 			ZIndex = 2,
 		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) }),
-		-- While today's punch is free the button pulses in a mint glow with bubbles (owner 2026-11-14).
-		punch = e(ToonPulse, {
+		-- While today's punch is free the button stays still and only its border gently pulses gold (owner
+		-- 2026-11-14), however the Timecard was opened.
+		punch = e(ToonHighlight, {
 			active = status.canPunch and props.pending ~= true,
 			position = UDim2.fromOffset(20, 262),
 			size = UDim2.fromOffset(290, 56),
-			reach = 16,
 			zIndex = 3,
 			children = {
 				button = e(ToonButton, {

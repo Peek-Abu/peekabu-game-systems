@@ -82,24 +82,24 @@ return function()
 		end)
 	end)
 
-	describe("pulse", function()
-		it("breathes the scale a little and the glow a lot over one period, back where it started", function()
-			local period = MOTION.pulsePeriod
-			local lowScale, highScale, lowGlow, highGlow = math.huge, -math.huge, math.huge, -math.huge
-			for step = 0, 63 do
-				local p = VM.pulse(step * period / 64)
-				lowScale = math.min(lowScale, p.scale)
-				highScale = math.max(highScale, p.scale)
-				lowGlow = math.min(lowGlow, p.glow)
-				highGlow = math.max(highGlow, p.glow)
+	describe("highlight", function()
+		it(
+			"only breathes a border: strong, soft, strong again over one period (owner 2026-11-14: no whole-button pulse)",
+			function()
+				local period = MOTION.highlightPeriod
+				local low, high = math.huge, -math.huge
+				for step = 0, 63 do
+					local ring = VM.highlight(step * period / 64)
+					low = math.min(low, ring)
+					high = math.max(high, ring)
+				end
+				-- ring is a UIStroke Transparency: always visible, clearly stronger at the start of each period
+				expect(low <= 0.2).to.equal(true)
+				expect(high >= 0.6 and high <= 0.8).to.equal(true)
+				expect(math.abs(VM.highlight(0) - VM.highlight(period)) < 1e-6).to.equal(true)
+				-- Reduced Motion holds the clock at its end: the border stays at its strongest
+				expect(math.abs(VM.highlight(period) - low) < 1e-6).to.equal(true)
 			end
-			expect(lowScale).to.equal(1)
-			expect(highScale > 1.05 and highScale <= 1.08).to.equal(true)
-			-- glow is an ImageTransparency: always visible, clearly brighter at the peak
-			expect(highGlow <= 0.75).to.equal(true)
-			expect(lowGlow <= 0.2).to.equal(true)
-			local a, b = VM.pulse(0), VM.pulse(period)
-			expect(math.abs(a.scale - b.scale) < 1e-6).to.equal(true)
-		end)
+		)
 	end)
 end

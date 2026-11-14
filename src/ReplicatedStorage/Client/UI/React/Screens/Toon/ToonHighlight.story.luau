@@ -1,8 +1,8 @@
 --!strict
 --[=[
-	ToonPulse.story: a PUNCH IN! button asking to be pressed (Active) or resting. In Studio's edit mode (UI Labs).
+	ToonHighlight.story: a still PUNCH IN! button whose border gently pulses (Active), or resting. In Studio's edit mode (UI Labs).
 
-	@class ToonPulse.story
+	@class ToonHighlight.story
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +12,7 @@ local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local UILabs = require(ReplicatedStorage.DevPackages.UILabs)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
-local ToonPulse = require(Toon.ToonPulse)
+local ToonHighlight = require(Toon.ToonHighlight)
 
 local e = React.createElement
 
@@ -25,7 +25,7 @@ return UILabs.CreateReactStory({
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Color3.fromHex("2B1856"),
 	}, {
-		pulse = e(ToonPulse, {
+		highlight = e(ToonHighlight, {
 			active = props.controls.Active == true,
 			position = UDim2.fromOffset(160, 120),
 			size = UDim2.fromOffset(290, 56),

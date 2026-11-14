@@ -24,19 +24,18 @@ return function()
 			expect(#VM.profile("Abcdefghijklmnopqrstuvwxyz", nil).name <= 14).to.equal(true)
 		end)
 
-		it(
-			"makes the calendar tile today's PUNCH IN!, else counts down to tomorrow's punch (owner 2026-11-14)",
-			function()
-				local now = 20000 * 86400 + 3600
-				local ready = VM.daily(true, now, false)
-				expect(ready.ready).to.equal(true)
-				expect(ready.text).to.equal("PUNCH IN!")
-				expect(VM.daily(true, now, true).text).to.equal("PUNCH")
-				local waiting = VM.daily(false, now, false)
-				expect(waiting.ready).to.equal(false)
-				expect(waiting.text).to.equal("23:00:00")
-			end
-		)
+		it("makes the calendar PUNCH IN! (a tap punches), else tomorrow's countdown (owner 2026-11-14)", function()
+			local now = 20000 * 86400 + 3600
+			local ready = VM.daily(true, now, false)
+			expect(ready.ready).to.equal(true)
+			expect(ready.text).to.equal("PUNCH IN!")
+			expect(ready.tap).to.equal("punch")
+			expect(VM.daily(true, now, true).text).to.equal("PUNCH")
+			local waiting = VM.daily(false, now, false)
+			expect(waiting.ready).to.equal(false)
+			expect(waiting.text).to.equal("23:00:00")
+			expect(waiting.tap).to.equal("open")
+		end)
 
 		it("has no Company Equipment page any more (the Inventory's Vacuums tab replaced it)", function()
 			expect(table.find(VM.PAGES, "gear")).never.to.be.ok()
