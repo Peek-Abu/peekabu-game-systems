@@ -58,7 +58,32 @@ local VM = {
 	SIZE = SIZE,
 	PHONE_SIZE = PHONE_SIZE,
 	DEFAULT_TAB = DEFAULT_TAB,
+	-- The step photos' source size (px) and where a short frame keeps them (0 = the top rows, 1 = the bottom):
+	-- near the top, so a short card on a small screen still shows the employee's head.
+	STEP_PHOTO = Vector2.new(592, 720),
+	STEP_FOCUS = 0.25,
 }
+
+--[=[
+	The part of a `source`-sized photo (offset and size, px) a `frame`-shaped picture shows when it fills the frame:
+	a wider frame keeps the full width and cuts rows around `focusY` (0..1 down the photo); a narrower one keeps the
+	full height and cuts columns from the middle.
+]=]
+function VM.crop(source: Vector2, frame: Vector2, focusY: number): (Vector2, Vector2)
+	if frame.X <= 0 or frame.Y <= 0 then
+		return Vector2.zero, source
+	end
+	local frameAspect = frame.X / frame.Y
+	local sourceAspect = source.X / source.Y
+	if math.abs(frameAspect - sourceAspect) < 1e-6 then
+		return Vector2.zero, source
+	elseif frameAspect > sourceAspect then
+		local rows = source.X / frameAspect
+		return Vector2.new(0, (source.Y - rows) * math.clamp(focusY, 0, 1)), Vector2.new(source.X, rows)
+	end
+	local columns = source.Y * frameAspect
+	return Vector2.new((source.X - columns) / 2, 0), Vector2.new(columns, source.Y)
+end
 
 function VM.tabs(selected: Tab): { TabView }
 	return {

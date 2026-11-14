@@ -61,7 +61,10 @@ local function photo(
 	stroke: number,
 	radius: number,
 	zIndex: number,
-	children: Nodes?
+	children: Nodes?,
+	-- The photo's source size: when given, the picture is cut to the frame keeping rows near the top
+	-- (DepotGuideViewModel.crop) instead of the engine's centred crop.
+	source: Vector2?
 ): React.ReactNode
 	local nodes: Nodes = {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, radius) }),
@@ -72,12 +75,18 @@ local function photo(
 			nodes[key] = node
 		end
 	end
+	local offset, rect = Vector2.zero, Vector2.zero
+	if source ~= nil then
+		offset, rect = VM.crop(source, Vector2.new(size.X.Offset, size.Y.Offset), VM.STEP_FOCUS)
+	end
 	return e("ImageLabel", {
 		Position = position,
 		Size = size,
 		BackgroundColor3 = UIToonConstants.shade("night").lo,
 		Image = id,
-		ScaleType = Enum.ScaleType.Crop,
+		ScaleType = if source ~= nil then Enum.ScaleType.Stretch else Enum.ScaleType.Crop,
+		ImageRectOffset = offset,
+		ImageRectSize = rect,
 		ClipsDescendants = true,
 		ZIndex = zIndex,
 	}, nodes)
@@ -126,7 +135,9 @@ local function stepCards(props: DepotGuidePanelProps, top: number, height: numbe
 			UDim2.fromOffset(width - 2 * inset, photoHeight),
 			if phone then 3 else 5,
 			if phone then 8 else 16,
-			3
+			3,
+			nil,
+			VM.STEP_PHOTO
 		)
 		nodes[`stepNumber{index}`] = e(ToonSurface, {
 			hue = "gold",
