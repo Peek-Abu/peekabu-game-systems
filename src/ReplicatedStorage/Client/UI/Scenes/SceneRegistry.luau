@@ -65,6 +65,10 @@ export type SceneDef = {
 	screens: { SceneScreen },
 	suppress: SuppressionRecord?,
 	hud: ("visible" | "hidden")?,
+	-- Draws over the whole screen: the scenes beneath it are hidden while it is on the stack (they stay mounted,
+	-- keeping their state). For a screen whose backdrop can move onto the 3D preview stage (an emote hero), where a
+	-- screen beneath would otherwise show through. Default false: suspended scenes still show beneath.
+	covers: boolean?,
 	-- A key that toggles this scene (UIServiceClient binds it). Two scenes may not share one.
 	toggleKey: Enum.KeyCode?,
 }

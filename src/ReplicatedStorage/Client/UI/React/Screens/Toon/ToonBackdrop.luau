@@ -5,6 +5,7 @@
 	rays behind the hero, and a vignette on the edges. `see` lets the world show through the top (0 = opaque), and
 	`blur` blurs the world behind while the backdrop is up (a BlurEffect on the camera, removed on unmount). The
 	stripes drift slowly and the rays turn (both still under Roblox's Reduce Motion setting).
+	A screen covered by a full-screen scene (ToonCoveredContext) never draws on the stage's wall.
 	While the 3D preview stage is up (EmployeeStageSystem.wall), everything but the children is drawn on the stage's
 	backdrop wall too (opaque, no blur), and once the stage is live (EmployeeStageSystem.live: its camera is held) only
 	there: the stage shows in the screen's middle with the same backdrop round it, and never the world in between.
@@ -22,6 +23,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local EmployeeStageSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeStageSystem)
+local ToonCoveredContext = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonCoveredContext)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonGoo = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonGoo)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
@@ -74,10 +76,14 @@ local RAYS_SECONDS = 48
 local GOO_SCALE = 1.3
 
 local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
-	local wall = ReactCharm.useAtom(EmployeeStageSystem.wall)
+	local covered = React.useContext(ToonCoveredContext.Context)
+	local stageWall = ReactCharm.useAtom(EmployeeStageSystem.wall)
+	-- A covered screen stays off the wall: only the screen on top may draw there.
+	local wall = if covered then nil else stageWall
 	local staged = ReactCharm.useAtom(EmployeeStageSystem.live) and wall ~= nil
 	-- On the stage's wall the world behind is the stage itself: no blur, and nothing see-through.
-	local blur = props.blur == true and not staged
+	-- A covered screen adds no blur either (the one on top has its own; a second would blur the stage).
+	local blur = props.blur == true and not staged and not covered
 	-- The backdrop's width in pixels, for the goo run along its top edge.
 	local width, setWidth = React.useState(0)
 	-- Two looping 0 -> 1 clocks (Reduced Motion holds them still).

@@ -30,6 +30,7 @@ return function()
 	ensure("StackSpec.C")
 	ensureDef({ name = "StackSpec.Hiding", screens = {}, hud = "hidden" })
 	ensureDef({ name = "StackSpec.Showing", screens = {}, hud = "visible" })
+	ensureDef({ name = "StackSpec.Covering", screens = {}, covers = true })
 
 	local noop = function()
 		return nil
@@ -203,6 +204,23 @@ return function()
 			SceneStack.push("StackSpec.Hiding")
 			SceneStack.pop()
 			expect(SceneStack.hudHidden()).to.equal(false)
+		end)
+	end)
+
+	describe("coveredIn", function()
+		it("hides every scene beneath one that covers the screen, and nothing else", function()
+			local stack = { "StackSpec.A", "StackSpec.B", "StackSpec.Covering", "StackSpec.C" }
+			expect(SceneStack.coveredIn(stack, "StackSpec.A")).to.equal(true)
+			expect(SceneStack.coveredIn(stack, "StackSpec.B")).to.equal(true)
+			-- The covering scene itself, and anything above it, still shows.
+			expect(SceneStack.coveredIn(stack, "StackSpec.Covering")).to.equal(false)
+			expect(SceneStack.coveredIn(stack, "StackSpec.C")).to.equal(false)
+		end)
+
+		it("hides nothing when no scene covers (suspended scenes still show beneath, as before)", function()
+			local stack = { "StackSpec.A", "StackSpec.B" }
+			expect(SceneStack.coveredIn(stack, "StackSpec.A")).to.equal(false)
+			expect(SceneStack.coveredIn({}, "StackSpec.A")).to.equal(false)
 		end)
 	end)
 

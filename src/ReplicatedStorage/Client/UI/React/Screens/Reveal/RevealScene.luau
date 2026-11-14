@@ -27,6 +27,9 @@ if not SceneRegistry.has(VM.SCENE) then
 		},
 		suppress = { mouse = true },
 		hud = "hidden",
+		-- The reveal fills the screen: the Shop (or any screen) beneath never shows through, even while an emote
+		-- hero moves the backdrop onto the 3D stage (owner play-check 11-14: two characters showed).
+		covers = true,
 	})
 end
 

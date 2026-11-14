@@ -9,7 +9,8 @@
 	renders it. The screen list comes from the specced `SceneStack.screensFor`, keyed by scene + screen
 	key so React RECONCILES across stack changes instead of the old game's destroy-all-and-rebuild. Stack
 	order becomes ZIndex — the top scene's screens draw over suspended ones beneath (which stay mounted,
-	preserving their state).
+	preserving their state). A scene beneath one that covers the whole screen (SceneDef.covers,
+	SceneStack.coveredIn) is hidden, still mounted.
 
 	Presentational shell over the specced selection; exempt from spec-first (needs a renderer). Only the
 	`Panel` and `Wheel` layers are hosted (the Wheel layer for the emote and chat wheels) — Overlay gets a SceneHost when a scene actually targets it
@@ -30,6 +31,7 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local UIRenderCounters = require(ReplicatedStorage.Client.UI.UIRenderCounters)
+local ToonCoveredContext = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonCoveredContext)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -71,8 +73,12 @@ local function SceneHost(props: SceneHostProps): React.ReactNode
 	for index, entry in hosted do
 		-- Each screen fills the layer, keyed by scene+screen so React reconciles; ZIndex = stack position
 		-- so the top scene draws over suspended ones (which stay mounted, keeping their state).
+		local covered = SceneStack.coveredIn(stack, entry.scene)
 		local wrapped: { [string]: React.ReactNode } = {
-			screen = e(entry.screen.component),
+			-- Told whether it is covered, so its backdrop stays off the 3D preview stage's wall.
+			screen = e(ToonCoveredContext.Context.Provider, { value = covered }, {
+				screen = e(entry.screen.component),
+			}),
 		}
 		if entry.scene ~= topScene then
 			-- Visually preserved, input-inert: an `Active` Frame sinks input rather than passing it
@@ -89,6 +95,8 @@ local function SceneHost(props: SceneHostProps): React.ReactNode
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 			ZIndex = index,
+			-- Beneath a scene that covers the screen: hidden, still mounted.
+			Visible = not covered,
 		}, wrapped)
 	end
 

@@ -171,6 +171,27 @@ function SceneStack.hudHiddenIn(stack: { string }): boolean
 end
 
 --[=[
+	Whether scene `name` is hidden in `stack` because a scene above it covers the whole screen
+	(SceneDef.covers). The covering scene itself and anything above it still show. Pure.
+	@param stack { string } -- an ordered list of scene names
+	@param name string -- a scene on the stack
+	@return boolean
+]=]
+function SceneStack.coveredIn(stack: { string }, name: string): boolean
+	local at = table.find(stack, name)
+	if at == nil then
+		return false
+	end
+	for index = at + 1, #stack do
+		local def = SceneRegistry.get(stack[index])
+		if def ~= nil and def.covers == true then
+			return true
+		end
+	end
+	return false
+end
+
+--[=[
 	Collects the screens targeting `layer` across the whole stack, in stack order (bottom → top), each
 	tagged with its scene. A layer view (SceneHost) renders this list — keyed by scene + screen key — so
 	the top scene's screens draw last (on top) and React reconciles instead of rebuilding. Pure over the
