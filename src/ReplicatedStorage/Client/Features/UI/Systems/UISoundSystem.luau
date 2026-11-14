@@ -7,6 +7,7 @@
 	- Hold prompts (every ProximityPrompt the local player holds with a HoldDuration: searching a desk, clocking out,
 	  starting overtime, hiding): the wind-up from hold-begin, stretched to fill the hold (PlaybackSpeed = 1 /
 	  HoldDuration), stopped on release; on completion the done sound, or the CTA for the clock out.
+	- Every scene / menu opening (UIStore.sceneStack grows) plays the open (UISoundFormulas.stackTier).
 	- Every UI sound is kept warm while this client runs (one silent, never-played Sound each, preloaded): they are the
 	  sounds heard most, and a cold one lands late.
 	Nothing plays outside a running game (a UI Labs story renders PaperButton in edit mode).
@@ -23,12 +24,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 
+local Charm = require(ReplicatedStorage.Packages.Charm)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
+local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 
 type Tier = UISoundFormulas.Tier
 
@@ -159,6 +162,15 @@ function UISoundSystem.start()
 		triggered:Disconnect()
 		releaseHold(0)
 	end)
+	-- Every menu / scene opening plays the open (SceneStack pushes grow the stack).
+	table.insert(
+		stoppers,
+		Charm.subscribe(UIStore.sceneStack, function(stack: { string }, previous: { string }?)
+			if UISoundFormulas.stackTier(if previous ~= nil then #previous else 0, #stack) == "open" then
+				shotTier("open")
+			end
+		end)
+	)
 end
 
 function UISoundSystem.stop()

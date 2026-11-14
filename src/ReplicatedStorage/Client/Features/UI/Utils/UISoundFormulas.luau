@@ -8,7 +8,7 @@
 	@class UISoundFormulas
 ]=]
 
-export type Tier = "hover" | "click" | "confirm" | "back" | "error" | "cta" | "hold" | "done"
+export type Tier = "hover" | "click" | "confirm" | "back" | "error" | "cta" | "hold" | "done" | "open" | "purchase"
 
 -- The PaperButton looks whose default is the confirm (the rest default to the click).
 local CONFIRMS: { [string]: boolean } = { go = true, primary = true, danger = true }
@@ -62,6 +62,21 @@ function UISoundFormulas.doneTier(kind: string?, ctaKinds: { string }): Tier
 		return "cta"
 	end
 	return "done"
+end
+
+--[=[
+	What a change of the scene stack plays: the open when a scene is pushed (the stack grows from `before` to `after`
+	scenes), else nothing (closing is the back / close button's own sound, and Escape stays quiet).
+]=]
+function UISoundFormulas.stackTier(before: number, after: number): Tier?
+	return if after > before then "open" else nil
+end
+
+--[=[
+	What a shop buy's answer plays: the purchase for a buy that went through (an empty reason), the error for a refusal.
+]=]
+function UISoundFormulas.buyTier(reason: string): Tier
+	return if reason == "" then "purchase" else "error"
 end
 
 return UISoundFormulas

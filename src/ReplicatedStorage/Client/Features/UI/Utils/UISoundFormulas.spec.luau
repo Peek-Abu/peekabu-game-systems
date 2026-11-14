@@ -60,4 +60,28 @@ return function()
 			expect(UISoundFormulas.doneTier(nil, cta)).to.equal("done")
 		end)
 	end)
+
+	describe("scenes", function()
+		it("plays the open when a scene is pushed (the stack grows)", function()
+			expect(UISoundFormulas.stackTier(0, 1)).to.equal("open")
+			expect(UISoundFormulas.stackTier(1, 2)).to.equal("open")
+		end)
+
+		it("plays nothing when the stack shrinks or stays (back / close buttons play their own)", function()
+			expect(UISoundFormulas.stackTier(2, 1)).to.equal(nil)
+			expect(UISoundFormulas.stackTier(1, 0)).to.equal(nil)
+			expect(UISoundFormulas.stackTier(1, 1)).to.equal(nil)
+		end)
+	end)
+
+	describe("buying", function()
+		it("plays the purchase when a buy goes through (an empty reason)", function()
+			expect(UISoundFormulas.buyTier("")).to.equal("purchase")
+		end)
+
+		it("plays the error when a buy is refused", function()
+			expect(UISoundFormulas.buyTier("short")).to.equal("error")
+			expect(UISoundFormulas.buyTier("owned")).to.equal("error")
+		end)
+	end)
 end

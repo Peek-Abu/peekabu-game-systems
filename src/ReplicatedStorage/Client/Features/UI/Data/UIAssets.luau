@@ -297,13 +297,20 @@ UIAssets.cctv = table.freeze({
 -- clip + a pizz F chord). Played by UISoundSystem by tier (UISoundFormulas.Tier -> TIERS).
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	uiHover = { assetId = "rbxassetid://125412787340819", group = "UI", volume = 0.7, maxConcurrent = 2 },
-	uiClick = { assetId = "rbxassetid://122165734026820", group = "UI", volume = 0.9, maxConcurrent = 2 },
+	-- Click and back +2 dB (owner play-check 11-14: "I dont really hear sounds... clicking shop menu in hub"): the
+	-- quietest presses sat 8 dB under the hub radio.
+	uiClick = { assetId = "rbxassetid://122165734026820", group = "UI", volume = 1.1, maxConcurrent = 2 },
 	uiConfirm = { assetId = "rbxassetid://83738970696959", group = "UI", volume = 0.55, maxConcurrent = 2 },
-	uiBack = { assetId = "rbxassetid://130280445606800", group = "UI", volume = 0.9, maxConcurrent = 2 },
+	uiBack = { assetId = "rbxassetid://130280445606800", group = "UI", volume = 1.1, maxConcurrent = 2 },
 	uiError = { assetId = "rbxassetid://139831732223870", group = "UI", volume = 0.9, maxConcurrent = 2 },
 	uiCta = { assetId = "rbxassetid://78569365251759", group = "UI", volume = 1, maxConcurrent = 1 },
 	uiPromptHold = { assetId = "rbxassetid://105267179969138", group = "UI", volume = 1, maxConcurrent = 1 },
 	uiPromptDone = { assetId = "rbxassetid://134811176097827", group = "UI", volume = 0.6, maxConcurrent = 2 },
+	-- Creator Store picks (the owner's sound route test, 2026-11-14: the library on every card), played in place:
+	-- a scene / menu opening (Roblox GUI - Swipe, the "panel open" pick) and a shop buy that went through (Roblox GUI -
+	-- Purchase, the "shop buy" pick). Volumes put them at about -24 and -19 dB (the UI band; the buy's peak under -1).
+	uiOpen = { assetId = "rbxassetid://17208405682", group = "UI", volume = 2.7, maxConcurrent = 1 },
+	uiPurchase = { assetId = "rbxassetid://17208380755", group = "UI", volume = 2, maxConcurrent = 1 },
 }
 for id, def in SOUNDS do
 	if not SoundRegistry.has(id) then
@@ -322,6 +329,8 @@ local TIERS: { [string]: string } = {
 	cta = "uiCta",
 	hold = "uiPromptHold",
 	done = "uiPromptDone",
+	open = "uiOpen",
+	purchase = "uiPurchase",
 }
 UIAssets.soundTiers = table.freeze(TIERS)
 

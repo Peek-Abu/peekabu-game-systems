@@ -21,6 +21,8 @@ local ShopRequestRules = require(Shop.Rules.ShopRequestRules)
 local ShopRotationUtils = require(Shop.Utils.ShopRotationUtils)
 local ShopTypes = require(Shop.Data.ShopTypes)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
+local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
+local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local ShopConstants = require(Shop.Data.ShopConstants)
 
@@ -101,6 +103,8 @@ local ShopServiceClient: ShopServiceClient = {
 			stoppers,
 			ShopEvents.packets.BuyResult.listen(function(data: { offer: string, reason: string })
 				ShopStore.setResult({ offer = data.offer, reason = data.reason })
+				-- The buy's answer is heard: the purchase when it went through, the error when it was refused.
+				UISoundSystem.play(UISoundFormulas.buyTier(data.reason))
 			end)
 		)
 	end,

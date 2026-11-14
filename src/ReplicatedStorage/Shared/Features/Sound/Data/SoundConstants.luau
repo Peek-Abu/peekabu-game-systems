@@ -14,7 +14,8 @@ local groups: { SoundTypes.SoundGroupName } = { "Music", "SFX", "UI", "Ambient" 
 local defaultVolumes: { [SoundTypes.SoundGroupName]: number } = {
 	Music = 0.5,
 	SFX = 1,
-	UI = 0.8,
+	-- 1 (was 0.8, owner play-check 11-14: hub UI sounds were hard to hear under the radio).
+	UI = 1,
 	Ambient = 0.7,
 }
 
