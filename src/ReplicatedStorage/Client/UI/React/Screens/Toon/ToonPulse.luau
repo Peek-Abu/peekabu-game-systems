@@ -75,7 +75,7 @@ local function Glowing(props: ToonPulseProps): React.ReactNode
 		}, body),
 		bubbles = e(ToonSparkle, {
 			spots = {
-				{ position = UDim2.new(0, -4, 0, 6), size = 26 },
+				{ position = UDim2.fromOffset(-4, 6), size = 26 },
 				{ position = UDim2.new(1, 4, 0, -2), size = 20 },
 				{ position = UDim2.new(1, -2, 1, -10), size = 24 },
 			},
