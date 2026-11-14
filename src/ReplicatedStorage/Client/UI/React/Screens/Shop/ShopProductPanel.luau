@@ -390,6 +390,8 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 				spin = true,
 				-- An emote's page loops it on its employee.
 				emote = card.emote,
+				-- An idle's page plays it on its employee in the Classic skin (the page's line says "Idle only (no skin)").
+				idle = card.idle,
 				framing = "full",
 				platform = { top = shade.base, side = shade.lo },
 				size = UDim2.fromScale(1, 0.96),

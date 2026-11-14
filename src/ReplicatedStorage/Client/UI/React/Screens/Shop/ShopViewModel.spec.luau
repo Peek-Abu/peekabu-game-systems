@@ -219,7 +219,43 @@ return function()
 				-- A bundle's card is checked by its hero item.
 				local item = CosmeticRegistry.get(ShopRegistry.get(card.id).items[1])
 				expect(item.employee == nil or item.employee == "Cappy").to.equal(true)
+				-- Vacuum skins have their own filter (owner, 2026-11-13).
+				expect(item.kind).never.to.equal("vacuum")
 			end
+		end)
+
+		it("has a Vacuums filter right after All, before the employees, showing only vacuum skins", function()
+			local filters = VM.skinFilters({ "Pippa", "Cappy", "Prickles" })
+			expect(filters[1].text).to.equal("All")
+			expect(filters[1].value).to.equal(nil)
+			expect(filters[2].text).to.equal("Vacuums")
+			expect(filters[2].value).to.equal(VM.VACUUMS)
+			expect(filters[3].text).to.equal("Pippa")
+			expect(filters[3].value).to.equal("Pippa")
+			expect(#filters).to.equal(5)
+			local vacuums = VM.skins(owner(), rich, VM.VACUUMS)
+			expect(#vacuums > 0).to.equal(true)
+			for _, card in vacuums do
+				expect(card.kind).to.equal("vacuum")
+			end
+		end)
+	end)
+
+	describe("idles", function()
+		it("plays an idle on its employee in the Classic skin, never the skin it came from", function()
+			for _, id in { "Pippa.BubbleBuddyIdle", "Cappy.PJIdle", "Prickles.SheriffIdle" } do
+				local card = VM.card(ShopRegistry.get(id), owner(), rich)
+				expect(card.idle).to.equal(CosmeticRegistry.keyOf(id))
+				expect(card.skinKey).to.equal(nil)
+				expect(card.employee).to.equal(CosmeticRegistry.get(id).employee)
+			end
+			expect(VM.card(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), rich).idle).to.equal(nil)
+		end)
+
+		it("says plainly that an idle comes without the skin", function()
+			local view = VM.product(ShopRegistry.get("Prickles.SheriffIdle"), owner(), rich)
+			expect(view.line).to.equal("Idle only (no skin) for Prickles · cosmetic only")
+			expect(#view.inside).to.equal(1)
 		end)
 	end)
 

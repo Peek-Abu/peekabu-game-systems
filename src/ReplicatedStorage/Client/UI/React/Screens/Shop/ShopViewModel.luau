@@ -75,7 +75,13 @@ export type OfferCard = {
 	vacuum: string?,
 	-- An emote (Cosmetic id): its page loops the emote on its employee.
 	emote: string?,
+	-- An idle (the item's key after the dot): it plays on its employee in the Classic skin, never the skin it came
+	-- from, so nobody thinks they are buying the skin (owner, 2026-11-13).
+	idle: string?,
 }
+
+-- One Skins-tab filter: its words and what it keeps (nil = everything).
+export type SkinFilter = { text: string, value: string? }
 
 export type Button = {
 	text: string,
@@ -229,6 +235,7 @@ function VM.card(listed: Offer, owns: Owns, balances: Balances): OfferCard
 		skinKey = if item ~= nil and item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
 		vacuum = if item ~= nil and item.kind == "vacuum" then item.id else nil,
 		emote = if item ~= nil and item.kind == "emote" then item.id else nil,
+		idle = if item ~= nil and item.kind == "idle" and bundle == nil then CosmeticRegistry.keyOf(item.id) else nil,
 	}
 end
 
@@ -410,9 +417,11 @@ function VM.product(listed: Offer, owns: Owns, balances: Balances): Product
 		elseif item ~= nil and item.employee ~= nil then ` for {item.employee}`
 		elseif item ~= nil and item.kind == "vacuum" then " for every employee"
 		else ""
+	-- An idle is said plainly: it is shown on the Classic skin and comes without any skin.
 	local what = if bundle ~= nil
 		then `Bundle{who}`
 		elseif item ~= nil and item.kind == "employee" then "A new employee"
+		elseif item ~= nil and item.kind == "idle" then `Idle only (no skin){who}`
 		elseif item ~= nil then `{KIND_WORD[item.kind]}{who}`
 		else ""
 	local profile = if item ~= nil and item.kind == "employee" then EmployeeProfileRegistry.get(item.id) else nil
@@ -473,17 +482,33 @@ function VM.hires(owns: Owns, balances: Balances): { OfferCard }
 	return cards
 end
 
--- Every offer except employees (they are on the Hire tab, the pick screen and the Crew tab), filtered to one employee's
--- items and the shared ones; what you can buy first (by rarity, highest first), what you own last.
-function VM.skins(owns: Owns, balances: Balances, employee: string?): { OfferCard }
+-- The Skins tab's Vacuums filter value.
+VM.VACUUMS = "vacuums"
+
+-- The Skins tab's filters: All, then Vacuums, then one per employee (owner, 2026-11-13: vacuums right after All).
+function VM.skinFilters(employees: { string }): { SkinFilter }
+	local filters: { SkinFilter } = { { text = "All", value = nil }, { text = "Vacuums", value = VM.VACUUMS } }
+	for _, name in employees do
+		table.insert(filters, { text = name, value = name })
+	end
+	return filters
+end
+
+--[=[
+	Every offer except employees (they are on the Hire tab, the pick screen and the Crew tab): all of them, only the
+	vacuum skins (`VM.VACUUMS`), or one employee's items and the shared ones (not the vacuums, which have their own
+	filter); what you can buy first (by rarity, highest first), what you own last.
+]=]
+function VM.skins(owns: Owns, balances: Balances, filter: string?): { OfferCard }
 	local cards: { OfferCard } = {}
 	for _, offer in ShopRegistry.all() do
 		local item = main(offer)
-		if
-			item ~= nil
-			and item.kind ~= "employee"
-			and (employee == nil or item.employee == nil or item.employee == employee)
-		then
+		local keep = if item == nil or item.kind == "employee"
+			then false
+			elseif filter == nil then true
+			elseif filter == VM.VACUUMS then item.kind == "vacuum"
+			else item.kind ~= "vacuum" and (item.employee == nil or item.employee == filter)
+		if keep then
 			table.insert(cards, VM.card(offer, owns, balances))
 		end
 	end

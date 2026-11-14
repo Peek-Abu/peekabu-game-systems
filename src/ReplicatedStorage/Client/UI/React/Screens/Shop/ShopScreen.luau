@@ -119,6 +119,8 @@ local function art(card: VM.OfferCard, live: boolean?): React.ReactNode
 		employee = if vacuum ~= nil then nil else card.employee,
 		vacuum = if vacuum ~= nil then CosmeticRegistry.keyOf(vacuum) else nil,
 		skin = card.skinKey,
+		-- An idle's card plays it (live) on its employee in the Classic skin.
+		idle = card.idle,
 		framing = "full",
 		live = live,
 		size = UDim2.fromScale(1, 1),
@@ -653,15 +655,11 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 		}
-		local options: { string } = { "All" }
-		for _, name in EMPLOYEES do
-			table.insert(options, name)
-		end
-		for index, name in options do
-			local value: string? = if name == "All" then nil else name
-			chips[name] = e(ToonButton, {
+		for index, option in VM.skinFilters(EMPLOYEES) do
+			local value = option.value
+			chips[option.text] = e(ToonButton, {
 				variant = "grape",
-				text = name,
+				text = option.text,
 				textSize = size,
 				selected = filter == value,
 				receded = filter ~= value,
