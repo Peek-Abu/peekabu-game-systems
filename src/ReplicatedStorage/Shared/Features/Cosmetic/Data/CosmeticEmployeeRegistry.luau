@@ -188,8 +188,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		price = 500,
 		lore = "Pippa blows one giant bubble and floats away inside it. Pop!",
 	},
-	-- Bubble Buddy's idle as its own item (owner, 2026-11-13): her paws on the duck ring the Bubble Buddy outfit wears,
-	-- so it fits that skin only until the duck ring is a prop every skin can show.
+	-- Bubble Buddy's idle as its own item (owner, 2026-11-13): her paws on a duck ring at her waist. On a skin without
+	-- the ring, the DuckRingWaist emote prop stands in (EmotePropRegistry), so it fits every Pippa skin.
 	{
 		id = "Pippa.BubbleBuddyIdle",
 		kind = "idle",
@@ -198,7 +198,6 @@ local ITEMS: { CosmeticTypes.Item } = {
 		rarity = "epic",
 		source = "gleam",
 		price = 220,
-		fits = { "Pippa.BubbleBuddy" },
 		lore = "Pippa floats in her duck ring, ready for a splash.",
 	},
 
