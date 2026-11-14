@@ -101,3 +101,23 @@ The owner said the spin "spins the WHOLE PLATFORM" and that the item drifted off
   - Banner bursts: deals -75% and -78%, today's -10%, bundles -30%.
   - Bell Jester's Locker page shows the shop page parts plus its source and chance, and Back works.
 - **From that check (`8d0298a2`):** the current carousel dot is now ink (gold vanished on the gold banner), and a long slide name ("BUBBLE BUDDY BUNDLE") shrinks to one line instead of wrapping over its line (`ShopCarouselViewModel.nameSize`, specced). These two have not been play-checked.
+
+## Round 4 (2026-11-14): no zoom while looking at an item (`9cf844de`)
+The owner still saw a "zoom out". It was the grow-to-fit from round 3: the camera eased out evenly as the showcase idle's props swung, 1.3 to 2 studs in my own check.
+- **Fix:** a spinning preview's camera is fitted ONCE. It covers the model at rest plus everywhere its clips and props reach at any angle (`ToonSpinViewModel.reach`), and a spinning hero never grows to fit.
+- **Reach data:** reach is data, measured in Studio. I played each employee's idle, fidget and select reaction, and each Legendary showcase idle and fidget, through, kept the furthest any visible part or prop got from the root, and added 5%. It is stored as `EmployeeRegistry` `previewReach` / `showcaseReach`. A spec requires it for every employee and every skin with a showcase idle. `EmployeePreviewSystem.reachOf` picks the clip that actually plays, so an idle item on the Classic skin uses its clip's reach. The coast is specced to never overshoot.
+- **Measured reach (studs from the root, before the margin):**
+  | Look | Radius | Top | Bottom |
+  |---|---|---|---|
+  | Pippa | 1.95 | 4.53 | -1.15 |
+  | Bubble Buddy | 2.03 | 4.26 | -1.41 |
+  | Cappy | 1.64 | 2.83 | -1.12 |
+  | PJ | 1.97 | 2.87 | -1.33 |
+  | Prickles | 2.02 | 3.38 | -1.10 |
+  | Sheriff | 2.46 (the lasso) | 3.35 | -1.30 |
+- **Verified in a Lobby Play.** A per-frame tracker ran from 1.5 s after the page opened, through flicks, drags and about 20 s of idle:
+  - Bubble Buddy: 1,896 frames.
+  - Sheriff: 1,511 frames.
+  - PJ Cappy: 1,439 frames.
+  - On all three the camera moved 0.0000, the distance and centring held exactly, and no corner of any part or prop left the frame.
+- **Rule for new Legendary skins:** a skin with a showcase idle needs its measured `showcaseReach`. The spec fails without it. Measure with the reach probe (it plays the idle, fidget and select reaction in a hidden ViewportFrame and keeps the furthest of every visible part and prop).
