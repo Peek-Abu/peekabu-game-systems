@@ -123,7 +123,49 @@ menus that would gain most from the same treatment. Every shot follows `game-ui-
 - `photos/` holds the cut-outs and backdrops.
 
 ## Owner's answers
-_pending (read `picks` on the review page)_
+**Round 1** (db `picks`, `r1-*`, partial):
+- Y1 (two tabs) YES.
+- Y2 (four cards in a row) YES.
+- R3 (SOON card) YES, with the note "Just spice up that card too!".
+
+**Owner notes via the coordinator (2026-11-13):**
+- How to play showed the same picture 4 times.
+- The 4-point star/shine is banned (the kit replaced it with soap bubbles, `470f20f9`).
+- Card 4 overflowed the panel.
+- Monster cards gave too much info: the owner wants lore and at most a tiny hint, never mechanics or escape.
+- Both mocks looked drab.
+- "What about other mocks?"
+
+## Round 2 (2026-11-13), same review page, questions `r2-*`
+- **Stars:** no 4-point star anywhere. Rewards use `fx_bubbles.png`; light panels use violet bubble rings.
+- **How to play:** four different stand-in captures (posed Play shots still to come), and card 4 is inside the panel.
+- **Guide header:** gold, per the kit's colour-per-screen rule.
+- **Monsters tab:**
+  - Player-facing name **THE MANAGER** (the lore doc's rule), not Harlow.
+  - Lore only: "He never went home. He still checks every desk at night." / "Maple Hill's old owl mascot. He is very,
+    very shy."
+  - No rules or escape tips.
+  - Each monster has his own colour backdrop (coral / moss) and the cut-out breaks the card. SOON is a narrow
+    silhouette card.
+- **New mocks:**
+  - Rank chart: a staircase of lanyard-coloured pillars, photos on reached ranks, "?" ahead, YOU lifted.
+  - Clipboard TIMECARD: Pippa at the hub time clock. TODAY'S JOB: a job photo.
+  - Ride card: the truck breaking out of a photo strip.
+  - All three use stand-in pictures (existing renders and older captures), tagged on the page.
+- **Red-flag pass:**
+  - Removed ✓ and ● glyphs (now drawn).
+  - Un-mirrored the truck (its lettering read backwards).
+  - Swapped the Pippa salute render (the owner flagged its hands clipping) for the cheer render.
+  - Moved the place chips out from under the cut-outs.
+- **Files:** `mock2.html`, `r2/` renders and `photos/` in the notes folder.
+- **Skill profile updated:** the stars ban and soap bubbles in the profile, plus a taste-log entry for this round.
+
+**Still needed:**
+- Studio time for the real pictures:
+  - Shift Edit: the rank line-up in lanyards, and the truck in the yard at night.
+  - Shift Play: the 4 How-to-play shots.
+  - Lobby Edit: Pippa at the time clock.
+- The SOON card still needs the "spice" the owner asked for in round 1.
 
 ## Next
 1. A Play slot for the four How-to-play step photos. Swap them into the mock and republish the review page.
