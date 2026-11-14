@@ -101,6 +101,8 @@ local PROP_WALL_HEIGHT: { [string]: number } = {
 -- A desk-top prop's marker sits at its desk's centre (and yaw); the prop stands on the desktop at
 -- DESK_PLANT_OFFSET in the desk's frame (front is local -Z).
 local PROP_DESK_TOP: { [string]: boolean } = { deskPlant = true }
+-- Tall props a perch kind (Bramble, B4) may sit on top of, besides every locker (OfficeKitRules.isPerch).
+local PERCH_ART: { [string]: boolean } = { trophyCase = true, basketballHoop = true }
 -- The proxy size of furniture restyled by a marker's `art` override: the template's BaseSize (KIT_MAP), so the proxy
 -- follows the art instead of Uniform fit shrinking it to the slate-tuned kind size. No entry for the desk (it keeps
 -- DESK_SIZE for hide space), the locker (a single locker; the kit's is a bank) or the chair (decor-placed).
@@ -251,6 +253,7 @@ return table.freeze({
 	PROP_SIZES = table.freeze(PROP_SIZES),
 	PROP_WALL_HEIGHT = table.freeze(PROP_WALL_HEIGHT),
 	PROP_DESK_TOP = table.freeze(PROP_DESK_TOP),
+	PERCH_ART = table.freeze(PERCH_ART),
 	-- A prop shorter than this lies flat on the floor (a rug): it takes no floor space in the overlap tests.
 	FLAT_PROP_HEIGHT = 0.5,
 	-- On the left of the desk's front half, in the clear band between the mug (z -1.85) and the folder or paper stack

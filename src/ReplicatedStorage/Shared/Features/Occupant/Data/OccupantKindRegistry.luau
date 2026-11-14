@@ -40,6 +40,8 @@ export type FreezeTwist = {
 	headTurn: boolean,
 	headSwapSeconds: number,
 	trail: boolean,
+	-- Unseen a while, it moves onto a high perch (OccupantPerchRules; B4, owner 11-14).
+	perch: boolean,
 }
 
 -- The player-facing words a run with this kind uses (kid reading level): its name in a sentence ("Caught by <caughtBy>")
@@ -147,6 +149,7 @@ local BRAMBLE: Kind = {
 		headTurn = true,
 		headSwapSeconds = OccupantConstants.HEAD_SWAP_SECONDS,
 		trail = true,
+		perch = true,
 	},
 	words = { caughtBy = "Bramble", catchTip = "firstCatchBramble", overtimeTip = "overtimeBramble" },
 	-- No voice: Bramble never speaks (none of Harlow's lines, no barks).
@@ -256,6 +259,15 @@ end
 function OccupantKindRegistry.freezes(id: string): boolean
 	local kind = OccupantKindRegistry.get(id)
 	return kind ~= nil and kind.freeze ~= nil
+end
+
+--[=[
+	Whether kind `id` perches (its freeze twist's `perch`; false for an unknown id or a kind with no freeze twist).
+]=]
+function OccupantKindRegistry.perches(id: string): boolean
+	local kind = OccupantKindRegistry.get(id)
+	local twist = if kind ~= nil then kind.freeze else nil
+	return twist ~= nil and twist.perch
 end
 
 --[=[

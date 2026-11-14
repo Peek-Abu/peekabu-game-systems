@@ -10,7 +10,18 @@
 -- them, on the shift's break, standing over a catch, working at a desk (his routine, or sitting at the desk someone
 -- hides under: `sitIn`), staring at a hiding spot, or stopped dead with his head turned to something he half noticed
 -- (`alert`: the head turn, behaviours design §10.2).
-export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "catch" | "work" | "stare" | "alert"
+export type Mode =
+	"patrol"
+	| "investigate"
+	| "chase"
+	| "search"
+	| "rest"
+	| "catch"
+	| "work"
+	| "stare"
+	| "alert"
+	-- A perch kind (Bramble, B4 owner 11-14) up on a high spot it moved to unseen (OccupantPerchRules).
+	| "perch"
 
 -- Where he is inside a mode (published as an attribute; the client's typing, face and gestures follow it):
 -- work: walking to the desk, typing, the ambush (stopped dead, head swivelled); a sit-in also tips his head down under
@@ -85,6 +96,22 @@ export type Effect =
 	| { kind: "door", spotId: string, open: boolean }
 	-- Stuck where no path starts: lifted to this route point (OccupantStuckRules).
 	| { kind: "unstick", position: Vector3 }
+	-- Up onto a perch's top, unseen, facing `facing`; and back down to a floor point (OccupantPerchRules).
+	| { kind: "perch", top: Vector3, facing: Vector3 }
+	| { kind: "drop", position: Vector3 }
+
+-- A high spot a perch kind may sit on (a tagged OccupantConstants.PERCH_TAG part on a tall prop): its id and the
+-- centre of its top face.
+export type Perch = {
+	id: string,
+	top: Vector3,
+}
+
+-- A perch this think: whether any crew camera sees its top right now (OccupantWatchSystem).
+export type PerchView = {
+	perch: Perch,
+	seen: boolean,
+}
 
 -- How the director paces him (from the shift and the crew).
 export type Pacing = {
@@ -193,6 +220,11 @@ export type Mind = {
 	stuckFrom: Vector3?,
 	stuckAt: number?,
 	stuckCount: number?,
+	-- The perch he sits on (mode "perch") and since when, and the earliest time he may perch again
+	-- (OccupantPerchRules; absent = any time).
+	perch: Perch?,
+	perchedAt: number?,
+	perchReadyAt: number?,
 }
 
 -- One crew member as the service saw them this think; `clear` is the line-of-sight ray's verdict.
@@ -258,6 +290,10 @@ export type Senses = {
 	blocks: Blocks?,
 	-- A freeze kind just unfroze: the UserId its head held (OccupantHeadRules.lunge), who becomes its chase target.
 	lunge: number?,
+	-- A perch kind (OccupantPerchRules): every perch on the map and whether a crew camera sees it, and when a crew
+	-- member last watched him (absent: never this run). Absent for kinds that never perch.
+	perches: { PerchView }?,
+	watchedAt: number?,
 }
 
 -- What the catch rule needs about a would-be catch.

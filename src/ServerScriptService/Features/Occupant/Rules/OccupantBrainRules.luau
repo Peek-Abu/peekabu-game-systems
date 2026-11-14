@@ -43,7 +43,9 @@
 	door, no catch, and every clock that times what he is doing is paused (frozen time never counts toward a give-up);
 	he still remembers whom he sees. After it unfreezes, no catch for FREEZE_CATCH_BLOCK (`Senses.unfrozenAt`): a grab
 	becomes a run at them, and on the think it unfreezes the kid its head held becomes his chase target (`Senses.lunge`:
-	"when nobody watches, it lunges at that kid"). Harlow's senses carry none of these, so none of this touches him.
+	"when nobody watches, it lunges at that kid"). A perch kind (Bramble, `Senses.perches`) unseen a while also moves up
+	onto a high perch near the crew and sits still there until OccupantPerchRules drops it (mode "perch"; the break
+	drops it too). Harlow's senses carry none of these, so none of this touches him.
 
 	The line-of-sight ray is the caller's (OccupantServiceServer): each Glimpse says whether it was clear.
 	Pure: nothing here yields or touches an Instance; it never changes the mind it is given. Times are
@@ -60,6 +62,7 @@ local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Dat
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantDirectorRules = require(OccupantServer.Rules.OccupantDirectorRules)
+local OccupantPerchRules = require(OccupantServer.Rules.OccupantPerchRules)
 local OccupantStareRules = require(OccupantServer.Rules.OccupantStareRules)
 local OccupantStuckRules = require(OccupantServer.Rules.OccupantStuckRules)
 local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
@@ -98,6 +101,8 @@ function OccupantBrainRules.newMind(routeIndex: number, routeStep: number, now: 
 		nextSteerAt = now + M.within(OccupantConstants.STEER_FIRST, value),
 		menace = 0,
 		sitIns = 0,
+		-- A perch kind's first perch waits as long as any later one needs him unseen (OccupantPerchRules).
+		perchReadyAt = now + OccupantConstants.PERCH_UNSEEN_SECONDS,
 	}
 end
 
@@ -337,6 +342,14 @@ local function think(mind: Mind, senses: Senses): Step
 			nextMind.steer = nil
 			cue = "resting"
 		end
+		-- Off a perch first.
+		local perch = mind.perch
+		if mind.mode == "perch" and perch ~= nil then
+			nextMind.perch = nil
+			nextMind.perchedAt = nil
+			local floor = OccupantPerchRules.floorFor(perch, senses)
+			return M.addEffect({ mind = nextMind, intent = IDLE, cue = cue }, { kind = "drop", position = floor })
+		end
 		if M.flat(senses.position, senses.restPoint) <= OccupantConstants.REACHED_DISTANCE then
 			return { mind = nextMind, intent = IDLE, cue = cue }
 		end
@@ -356,6 +369,11 @@ local function think(mind: Mind, senses: Senses): Step
 		end
 	elseif mind.mode == "rest" then
 		current = M.enter(mind, "patrol", now)
+	end
+
+	-- Up on a perch: still, whoever he sees, until the perch rules drop him.
+	if current.mode == "perch" then
+		return OccupantPerchRules.think(current, senses)
 	end
 
 	local seen = M.visible(current, senses)
@@ -470,6 +488,12 @@ local function think(mind: Mind, senses: Senses): Step
 		nextMind.steer = nil
 		local cue: Cue? = if current.mode == "investigate" then nil else "curious"
 		return { mind = nextMind, intent = { kind = "goTo", position = heard, run = false }, cue = cue }
+	end
+
+	-- A perch kind unseen a while, nobody near: up onto a high spot near the crew.
+	local perching = OccupantPerchRules.begin(current, senses)
+	if perching ~= nil then
+		return perching
 	end
 
 	if current.mode == "investigate" or current.mode == "search" then

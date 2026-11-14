@@ -22,7 +22,18 @@ local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.
 local OccupantSeatSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantSeatSystem)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 
-local counters = { sits = 0, stands = 0, stares = 0, seen = 0, holds = 0, catches = 0, doors = 0, unsticks = 0 }
+local counters = {
+	sits = 0,
+	stands = 0,
+	stares = 0,
+	seen = 0,
+	holds = 0,
+	catches = 0,
+	doors = 0,
+	unsticks = 0,
+	perches = 0,
+	drops = 0,
+}
 
 local OccupantEffectSystem = {}
 
@@ -48,6 +59,12 @@ function OccupantEffectSystem.apply(
 			HideServiceServer:setDoor(effect.spotId, effect.open)
 		elseif effect.kind == "unstick" then
 			counters.unsticks += 1
+			OccupantSeatSystem.unstick(rig, effect.position)
+		elseif effect.kind == "perch" then
+			counters.perches += 1
+			OccupantSeatSystem.perch(rig, effect.top, effect.facing)
+		elseif effect.kind == "drop" then
+			counters.drops += 1
 			OccupantSeatSystem.unstick(rig, effect.position)
 		else
 			local player = Players:GetPlayerByUserId(effect.userId)

@@ -43,6 +43,7 @@ return function()
 		it("has no freeze twist", function()
 			expect(harlow.freeze).to.equal(nil)
 			expect(OccupantKindRegistry.freezes("harlow")).to.equal(false)
+			expect(OccupantKindRegistry.perches("harlow")).to.equal(false)
 		end)
 
 		it("is the default kind", function()
@@ -84,6 +85,10 @@ return function()
 			expect(bramble.freeze.headSwapSeconds).to.equal(OccupantConstants.HEAD_SWAP_SECONDS)
 			expect(bramble.freeze.headTurn).to.equal(true)
 			expect(bramble.freeze.trail).to.equal(true)
+			-- B4 (owner 11-14): unseen a while, it moves up onto a high perch.
+			expect(bramble.freeze.perch).to.equal(true)
+			expect(OccupantKindRegistry.perches("bramble")).to.equal(true)
+			expect(OccupantKindRegistry.perches("nobody")).to.equal(false)
 		end)
 	end)
 

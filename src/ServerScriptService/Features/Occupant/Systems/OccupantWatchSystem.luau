@@ -202,6 +202,40 @@ local function inView(report: Report, points: { Vector3 }): boolean
 	return false
 end
 
+--[=[
+	Every perch on the map (OccupantConstants.PERCH_TAG parts in the Workspace; its top is the part's position) and
+	whether any crew camera sees it right now: a fresh camera report (anyone's, hidden or not) with the top in its look
+	cone and range and a clear ray to it (B4, OccupantPerchRules: he only goes up where nobody can see). Empty when
+	this system is not watching `rig`.
+]=]
+function OccupantWatchSystem.perches(rig: Rig): { OccupantTypes.PerchView }
+	local views: { OccupantTypes.PerchView } = {}
+	if watchedModel ~= rig.model then
+		return views
+	end
+	local now = os.clock()
+	local params = sightParams(rig)
+	for _, instance in CollectionService:GetTagged(OccupantConstants.PERCH_TAG) do
+		if not instance:IsA("BasePart") or not instance:IsDescendantOf(Workspace) then
+			continue
+		end
+		local top = instance.Position
+		local seen = false
+		for _, report in reports do
+			if
+				OccupantWatchRules.fresh(report, now)
+				and inView(report, { top })
+				and clearLine(report.position, top, params)
+			then
+				seen = true
+				break
+			end
+		end
+		table.insert(views, { perch = { id = instance:GetFullName(), top = top }, seen = seen })
+	end
+	return views
+end
+
 -- Whether `player` watches the rig now: the cheap checks, then the rays.
 local function watches(
 	player: Player,

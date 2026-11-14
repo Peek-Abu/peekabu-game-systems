@@ -676,4 +676,17 @@ return table.freeze({
 	FEATHER_MAX = 60,
 	FEATHER_INTERVAL = 0.2,
 	FEATHER_COLOR = Color3.fromRGB(92, 168, 84),
+	-- The perch (B4, owner 11-14; OccupantPerchRules): the tag on a tall prop's perch part (OfficeBuildSystem). Unseen
+	-- PERCH_UNSEEN_SECONDS and nobody within PERCH_CREW_MIN studs, he moves (unseen) onto the unseen perch nearest a
+	-- crew member but at least PERCH_NEAR (and at most PERCH_FAR) from them. He drops to the nearest route point when
+	-- someone watched him there and looked away, someone comes within PERCH_DROP_RANGE, or after PERCH_HOLD_MAX
+	-- seconds; then not again for PERCH_COOLDOWN.
+	PERCH_TAG = "OccupantPerch",
+	PERCH_UNSEEN_SECONDS = 15,
+	PERCH_CREW_MIN = 40,
+	PERCH_NEAR = 16,
+	PERCH_FAR = 45,
+	PERCH_DROP_RANGE = 10,
+	PERCH_HOLD_MAX = 20,
+	PERCH_COOLDOWN = 30,
 })

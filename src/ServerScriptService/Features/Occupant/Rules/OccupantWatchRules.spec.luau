@@ -392,6 +392,10 @@ return function()
 			local catching = table.clone(mind)
 			catching.mode = "catch"
 			expect(W.lunge(catching, senses({ players = { kid(7, 120) }, lunge = 7 }))).to.equal(catching)
+			-- On a perch he drops first (OccupantPerchRules); he never lunges off the top of the lockers.
+			local perched = table.clone(mind)
+			perched.mode = "perch"
+			expect(W.lunge(perched, senses({ players = { kid(7, 120) }, lunge = 7 }))).to.equal(perched)
 		end)
 
 		it("never goes for a kid who is hidden, in grace, or not in his senses (out, or caught)", function()

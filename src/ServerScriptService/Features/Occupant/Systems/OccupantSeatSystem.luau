@@ -224,6 +224,30 @@ function OccupantSeatSystem.plant(rig: Rig, frame: CFrame)
 end
 
 --[=[
+	Puts him at once (he is unseen) standing on a perch's `top`, held there (anchored), turned toward `facing` (B4,
+	OccupantPerchRules). The drop is `unstick` to a floor point.
+]=]
+function OccupantSeatSystem.perch(rig: Rig, top: Vector3, facing: Vector3)
+	local body = bodyOf(rig)
+	body.token += 1
+	body.seat = nil
+	stopSitting(body, 0)
+	local running = body.tween
+	if running ~= nil then
+		running:Cancel()
+		body.tween = nil
+	end
+	local height = rig.humanoid.HipHeight + rig.root.Size.Y / 2
+	local at = top + Vector3.new(0, height, 0)
+	local toward = Vector3.new(facing.X, at.Y, facing.Z)
+	rig.root.Anchored = true
+	rig.root.AssemblyLinearVelocity = Vector3.zero
+	rig.root.CFrame = if (toward - at).Magnitude > 1e-3
+		then CFrame.lookAt(at, toward)
+		else CFrame.new(at) * rig.root.CFrame.Rotation
+end
+
+--[=[
 	Lifts him, let go, onto the floor point `point` (a route point, where a path exists), keeping his heading: the last
 	resort when he is stuck where no path starts (OccupantStuckRules).
 ]=]

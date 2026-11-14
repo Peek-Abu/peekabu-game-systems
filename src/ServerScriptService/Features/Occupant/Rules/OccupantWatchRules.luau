@@ -246,7 +246,14 @@ end
 ]=]
 function OccupantWatchRules.lunge(mind: Mind, senses: Senses): Mind
 	local userId = senses.lunge
-	if userId == nil or senses.frozen == true or mind.mode == "catch" or mind.seated == true then
+	-- Never off a perch: the perch rules drop him first (OccupantPerchRules).
+	if
+		userId == nil
+		or senses.frozen == true
+		or mind.mode == "catch"
+		or mind.mode == "perch"
+		or mind.seated == true
+	then
 		return mind
 	end
 	if mind.mode == "chase" and mind.target == userId then

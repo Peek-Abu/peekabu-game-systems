@@ -82,6 +82,45 @@ return function()
 			expect(mind.since).to.equal(5)
 			expect(next(mind.grace)).to.equal(nil)
 		end)
+
+		it("may not perch until PERCH_UNSEEN_SECONDS into the run", function()
+			local mind = OccupantBrainRules.newMind(3, -1, 5)
+			expect(mind.perchReadyAt).to.equal(5 + OccupantConstants.PERCH_UNSEEN_SECONDS)
+		end)
+	end)
+
+	describe("the perch (a perch kind, B4)", function()
+		local TOP = Vector3.new(120, 9, 100)
+		local KID = Vector3.new(120, 3, 130)
+		local function perchSenses(extra)
+			local value = {
+				players = { { userId = 7, position = KID, clear = false } },
+				perches = { { perch = { id = "lockers", top = TOP }, seen = false } },
+			}
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return senses(value)
+		end
+
+		it("goes up onto an unseen perch near the crew when nobody has watched him a while", function()
+			local step = OccupantBrainRules.step(fresh(), perchSenses())
+			expect(step.mind.mode).to.equal("perch")
+			expect(step.intent.kind).to.equal("idle")
+		end)
+
+		it("never perches for a kind with no perches (Harlow)", function()
+			local step = OccupantBrainRules.step(fresh(), perchSenses({ perches = nil }))
+			expect(step.mind.mode).to.equal("patrol")
+		end)
+
+		it("stays up there, still, even with a kid in sight, until the perch rules drop him", function()
+			local up = OccupantBrainRules.step(fresh(), perchSenses()).mind
+			local seen = { { userId = 7, position = KID, clear = true } }
+			local step = OccupantBrainRules.step(up, perchSenses({ now = 101, players = seen }))
+			expect(step.mind.mode).to.equal("perch")
+			expect(step.intent.kind).to.equal("idle")
+		end)
 	end)
 
 	describe("patrol", function()

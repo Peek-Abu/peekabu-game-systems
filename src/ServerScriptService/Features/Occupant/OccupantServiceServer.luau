@@ -330,6 +330,11 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		senses.unfrozenAt = freeze.unfrozenAt
 		-- Just unfrozen: the kid its head held becomes its chase target (OccupantWatchRules.lunge).
 		senses.lunge = OccupantWatchSystem.takeLunge(current.model)
+		-- A perch kind (B4): the map's perches, which a crew camera sees, and when he was last watched.
+		if OccupantKindRegistry.perches(currentKind) then
+			senses.perches = OccupantWatchSystem.perches(current)
+			senses.watchedAt = freeze.lastWatchedAt
+		end
 	end
 	local force = pendingForce
 	if force ~= nil then

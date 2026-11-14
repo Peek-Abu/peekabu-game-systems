@@ -33,6 +33,7 @@ local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
@@ -41,6 +42,7 @@ local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
+local OfficeKitRules = require(OfficeServer.Rules.OfficeKitRules)
 local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 
 -- Desk dressing was laid out on a 5x3 top; its spots move with the real top (the props keep their size).
@@ -235,6 +237,30 @@ local function artOnly(
 	end
 end
 
+-- How far above the proxy's top the perch point sits, so a camera ray to it never ends inside the prop's top face.
+local PERCH_LIFT = 0.5
+
+--[=[
+	Tags a perch point on top of `proxy` (B4, OfficeKitRules.isPerch): an invisible, anchored, non-colliding,
+	non-queried part PERCH_LIFT over the centre of its top face, tagged OccupantConstants.PERCH_TAG
+	(OccupantWatchSystem.perches reads it). A child of the proxy, so it goes with it. OfficeBuildSystem tags its lockers
+	and shelves through OfficeDecorSystem.perchOn.
+]=]
+local function perchOn(proxy: BasePart)
+	local perch = Instance.new("Part")
+	perch.Name = "Perch"
+	perch.Size = Vector3.one
+	perch.Transparency = 1
+	perch.Anchored = true
+	perch.CanCollide = false
+	perch.CanQuery = false
+	perch.CanTouch = false
+	perch.CastShadow = false
+	perch.CFrame = proxy.CFrame * CFrame.new(0, proxy.Size.Y / 2 + PERCH_LIFT, 0)
+	CollectionService:AddTag(perch, OccupantConstants.PERCH_TAG)
+	perch.Parent = proxy
+end
+
 -- An art-only dressing prop: a `prop` marker names its template (`art`) and is sized by PROP_SIZES.
 local function propAt(
 	marker: OfficeTypes.Marker,
@@ -273,6 +299,9 @@ local function propAt(
 	root:SetAttribute("OfficeMarkerId", marker.id)
 	if wallHeight ~= nil then
 		root:SetAttribute("ArtWallMounted", true)
+	end
+	if OfficeKitRules.isPerch(marker) then
+		perchOn(root)
 	end
 	local visual, attached =
 		OfficeArtKeyUtils.attachFirst(art, root, "furniture", OfficeArtKeyUtils.candidates(key, nil, roomType))
@@ -399,6 +428,9 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 end
 
 local OfficeDecorSystem = {}
+
+-- The perch point on top of a perch proxy (see the local `perchOn`), for OfficeBuildSystem's lockers and shelves.
+OfficeDecorSystem.perchOn = perchOn
 
 --[=[
 	Builds one lit EXIT sign (the kit's `exitSign` art for `roomType`, a neon fallback reading EXIT on both faces, and

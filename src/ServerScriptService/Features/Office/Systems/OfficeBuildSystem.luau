@@ -42,6 +42,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeKitRules = require(OfficeServer.Rules.OfficeKitRules)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
@@ -113,6 +114,7 @@ end
 local TruckVisual = require(ServerScriptService.Features.Depot.Systems.DepotTruckVisualSystem)
 local DeskVisual = require(script.Parent.OfficeDeskVisualSystem)
 local Shell = require(script.Parent.OfficeShellVisualSystem)
+local OfficeDecorSystem = require(script.Parent.OfficeDecorSystem)
 
 local OfficeBuildSystem = {}
 
@@ -229,6 +231,9 @@ function OfficeBuildSystem.build(
 			end
 			part:SetAttribute("OfficeMarkerId", marker.id)
 			part:SetAttribute("ArtWallMounted", true)
+			if OfficeKitRules.isPerch(marker) then
+				OfficeDecorSystem.perchOn(part)
+			end
 			interactable(part, CargoConstants.SEARCH_KIND, false)
 			-- A desk is a hiding spot too: under it (Hide). Lockers are not (their open and closed states).
 			if isDesk then
@@ -264,6 +269,9 @@ function OfficeBuildSystem.build(
 			part.CanQuery = part.CanCollide
 			part.CanTouch = false
 			part:SetAttribute("OfficeMarkerId", marker.id)
+			if OfficeKitRules.isPerch(marker) then
+				OfficeDecorSystem.perchOn(part)
+			end
 			-- Shelves and counters back onto a wall (ArtVisualSystem pushes their art to the proxy's back face); a plant
 			-- and a free-standing board keep their art centred.
 			if marker.kind == "shelf" or marker.kind == "counter" then

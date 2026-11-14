@@ -318,4 +318,21 @@ return function()
 		local fine = OfficeKitRules.check(kit)
 		expect(fine).to.equal(true)
 	end)
+
+	describe("isPerch (B4, a perch kind's high spots)", function()
+		it("is every locker and the tall props named in PERCH_ART", function()
+			expect(OfficeKitRules.isPerch({ kind = "locker", x = 0, z = 0 })).to.equal(true)
+			expect(OfficeKitRules.isPerch({ kind = "shelf", x = 0, z = 0, art = "trophyCase" })).to.equal(true)
+			expect(OfficeKitRules.isPerch({ kind = "prop", x = 0, z = 0, art = "basketballHoop" })).to.equal(true)
+			for art in Constants.PERCH_ART do
+				expect(OfficeKitRules.isPerch({ kind = "prop", x = 0, z = 0, art = art })).to.equal(true)
+			end
+		end)
+
+		it("is nothing else: a desk, a plain shelf, a low prop", function()
+			expect(OfficeKitRules.isPerch({ kind = "desk", x = 0, z = 0 })).to.equal(false)
+			expect(OfficeKitRules.isPerch({ kind = "shelf", x = 0, z = 0 })).to.equal(false)
+			expect(OfficeKitRules.isPerch({ kind = "prop", x = 0, z = 0, art = "rug" })).to.equal(false)
+		end)
+	end)
 end

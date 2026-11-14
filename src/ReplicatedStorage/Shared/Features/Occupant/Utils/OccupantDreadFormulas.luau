@@ -98,7 +98,8 @@ local HUNTING: { [string]: boolean } = { search = true, stare = true, chase = tr
 -- Modes in which he goes about his business unaware, or only follows a noise: walking to it (investigate) or his head
 -- turned to it or to someone else (alert, behaviours design §10.2). A noise is not a hunt (owner's play, 2026-10-24):
 -- only near, until he turns on you (`onMe`) or sees you and chases.
-local UNAWARE: { [string]: boolean } = { patrol = true, work = true, investigate = true, alert = true }
+-- Up on a perch (Bramble, B4) he sits still: unaware too.
+local UNAWARE: { [string]: boolean } = { patrol = true, work = true, investigate = true, alert = true, perch = true }
 
 -- The slow turns' phases (behaviours design §11.2), standing (alert) or seated (work).
 local SLOW_PHASES: { [string]: boolean } = { slowTurn = true, staring = true }

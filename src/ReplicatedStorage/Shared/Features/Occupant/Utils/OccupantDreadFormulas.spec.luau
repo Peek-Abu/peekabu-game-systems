@@ -69,6 +69,8 @@ return function()
 		it("is near while he walks or works unaware, and nothing on his break", function()
 			expect(OccupantDreadFormulas.stage(input({ mode = "patrol" }))).to.equal("near")
 			expect(OccupantDreadFormulas.stage(input({ mode = "work", phase = "type" }))).to.equal("near")
+			-- Up on a perch (Bramble, B4): still, unaware of you until he drops.
+			expect(OccupantDreadFormulas.stage(input({ mode = "perch" }))).to.equal("near")
 			expect(OccupantDreadFormulas.stage(input({ mode = "rest" }))).to.equal("none")
 			local modeless = input()
 			modeless.mode = nil

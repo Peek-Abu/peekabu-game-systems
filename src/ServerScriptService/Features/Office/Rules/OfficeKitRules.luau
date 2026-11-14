@@ -366,4 +366,17 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 	return #errors == 0, errors
 end
 
+--[=[
+	Whether `marker`'s furniture is a perch (B4, owner 11-14): a high spot a perch kind (Bramble) may sit on. Every
+	locker, and the tall props named in OfficeConstants.PERCH_ART (the trophy case, the basketball hoop). The build
+	tags a perch point on its top (OfficeBuildSystem.perchOn).
+]=]
+function OfficeKitRules.isPerch(marker: KitMarker): boolean
+	if marker.kind == "locker" then
+		return true
+	end
+	local art = marker.art
+	return art ~= nil and OfficeConstants.PERCH_ART[art] == true
+end
+
 return OfficeKitRules
