@@ -41,13 +41,13 @@ return function()
 			return math.floor((1 - robux / (gleam * bestRate)) * 100 + 0.5)
 		end
 
-		it("is 72% and 69% at the owner's R$ 449 and R$ 499 (2,400 Gleam = R$ 1,598)", function()
-			expect(DealRules.offPercent("pickLegendary", 449)).to.equal(72)
-			expect(DealRules.offPercent("pickNewHire", 499)).to.equal(69)
+		it("is 53% and 50% at the owner's R$ 749 and R$ 799 (2,400 Gleam = R$ 1,598)", function()
+			expect(DealRules.offPercent("pickLegendary", 749)).to.equal(53)
+			expect(DealRules.offPercent("pickNewHire", 799)).to.equal(50)
 		end)
 
 		it("follows whatever Robux price is shown, from today's catalogue", function()
-			for _, robux in { 299, 449, 499, 799 } do
+			for _, robux in { 299, 449, 749, 799 } do
 				expect(DealRules.offPercent("pickLegendary", robux)).to.equal(expected("pickLegendary", robux))
 				expect(DealRules.offPercent("pickNewHire", robux)).to.equal(expected("pickNewHire", robux))
 			end

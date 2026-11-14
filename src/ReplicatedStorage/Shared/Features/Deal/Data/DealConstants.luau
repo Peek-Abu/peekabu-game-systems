@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	DealConstants: the one-time deals (owner 11-09): Robux developer products a player buys once per account, then
-	picks what they get. Pick a Legendary (449 R$): one Legendary skin bundle for an employee they have hired, plus
-	500 Gleam. Pick a New Hire (499 R$): hire Cappy or Prickles now, with that employee's Legendary skin bundle.
+	picks what they get. Pick a Legendary (749 R$): one Legendary skin bundle for an employee they have hired, plus
+	500 Gleam. Pick a New Hire (799 R$): hire Cappy or Prickles now, with that employee's Legendary skin bundle.
 	Nothing is random: the player always chooses. Static data (spec-exempt).
 
 	@class DealConstants
@@ -38,9 +38,9 @@ local DEALS: { [string]: Deal } = {
 		id = "pickLegendary",
 		productKey = "dealPickLegendary",
 		productId = LEGENDARY_PRODUCT,
-		robux = 449,
+		robux = 749,
 		gleam = 500,
-		-- A Legendary bundle (1,900) + 500 Gleam = 2,400 Gleam = R$ 1,598 at the best pack: R$ 449 is 72% off
+		-- A Legendary bundle (1,900) + 500 Gleam = 2,400 Gleam = R$ 1,598 at the best pack: R$ 749 is 53% off
 		-- (DealRules.offPercent works it out from the price shown).
 		name = "Pick a Legendary",
 		line = "Pick any Legendary skin + its emote, stickers and idle. Plus 500 Gleam!",
@@ -51,9 +51,9 @@ local DEALS: { [string]: Deal } = {
 		id = "pickNewHire",
 		productKey = "dealPickNewHire",
 		productId = NEW_HIRE_PRODUCT,
-		robux = 499,
+		robux = 799,
 		gleam = 0,
-		-- A hire (5,000 Credits = 500 Gleam) + a Legendary bundle (1,900) = 2,400 Gleam = R$ 1,598: R$ 499 is 69% off.
+		-- A hire (5,000 Credits = 500 Gleam) + a Legendary bundle (1,900) = 2,400 Gleam = R$ 1,598: R$ 799 is 50% off.
 		name = "Pick a New Hire",
 		line = "Hire a new employee now + their Legendary skin, emote, stickers and idle!",
 		chooseTitle = "PICK YOUR NEW HIRE!",
