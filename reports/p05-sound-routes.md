@@ -64,3 +64,28 @@ The owner picks the route on the page (or with a note). The next rounds use that
   Medium). Takes are in `ab/`, with the spectrogram grid at `ab/spec_grid.png`.
 - Mixes: `build/ab_mix.py`, output in `abmix/`. Library downloads (anonymous asset delivery, partner ids) are in `lib/`.
 - The GPU was used for about 4 minutes. ComfyUI is stopped and `gpu.lock` is removed.
+
+## The owner's route pick (2026-11-14)
+
+The owner picked the **Creator Store library on all four cards**:
+- panel open: A, Roblox GUI - Swipe `17208405682`;
+- tutorial pop-up: B, Roblox GUI - Notification High `17208361335` + Roblox_UI_Cute_Pop `15675055424`, played
+  together;
+- Rare shop buy: A, Roblox GUI - Purchase `17208380755`;
+- hide in: B, PSE Ninja Robe Swish `9125715516` + Body Fall Wood 2 `9113481839`.
+
+So UI and reward cues go library-first. They play in place, so there's nothing to upload. Some cues are a pair the
+code plays together. The in-house sounds the owner already liked (hide in/out, tumble, glass, truck, Bramble steps,
+the two hub tracks) still need the upload OK. MOSS wasn't needed.
+
+**Library round:** https://claude.ai/artifact/WuAiY17bzCHmkAXZFAMpkD. It has 23 cards and 67 options, and picks save
+as `lib-01` to `lib-23`.
+- **UI:** panel close, tab switch, tutorial next, training finished, notice toast, refused toast, work-order tick,
+  work-order done, equip, claim gift, reveal build-up, ARRIVED stamp, wheel open, slider tick, card tap, the search
+  and overtime hold sounds, teammate ping and quota tick.
+- **Rewards:** hire and rank up, plus shop buy and locker open as rarity ladders. Each ladder is a base sound plus a
+  sparkle pair that grows by tier.
+
+Every option is a Roblox, ProSoundEffects or APM partner sound, verified free. No id serves two moments. Previews
+have their leading silence trimmed (code sets the same start offset) and are loudness-matched per cue type. The ids,
+names and preview builds are in `E:/AudioTools/work/p05-sound/build/lib_page.py`.
