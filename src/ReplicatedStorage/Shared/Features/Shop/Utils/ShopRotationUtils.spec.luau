@@ -72,6 +72,18 @@ return function()
 		expect(#ShopRotationUtils.flags(offer("C", "picks", nil, nil), NOON)).to.equal(0)
 	end)
 
+	it("lists the rest of the featured pool after today's banner, in turn order, for the banner carousel", function()
+		local pool = { offer("a", "featured"), offer("b", "featured"), offer("c", "featured"), offer("p", "picks") }
+		local live = ShopRotationUtils.live(pool, NOON)
+		local order = { "a", "b", "c" }
+		local first = table.find(order, live.featured.id)
+		local expected = {}
+		for step = 1, 2 do
+			table.insert(expected, order[(first - 1 + step) % 3 + 1])
+		end
+		expect(ids(live.more)).to.equal(table.concat(expected, ","))
+	end)
+
 	it("copes with an empty catalogue", function()
 		local live = ShopRotationUtils.live({}, NOON)
 		expect(live.featured).to.equal(nil)

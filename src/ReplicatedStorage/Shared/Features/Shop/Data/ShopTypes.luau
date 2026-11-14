@@ -34,6 +34,8 @@ export type Offer = {
 
 export type LiveShop = {
 	featured: Offer?,
+	-- The rest of the featured pool, in turn order after today's (the banner carousel's other slides).
+	more: { Offer },
 	picks: { Offer },
 	-- When Today's picks next change (unix seconds).
 	nextRotation: number,

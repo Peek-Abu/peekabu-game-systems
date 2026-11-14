@@ -2,7 +2,7 @@
 --[=[
 	ShopRotationUtils: which offers the Shop shows at a UTC time, the same on every server: the day number (counted
 	from the rotation hour) seeds the choice, so the Featured banner takes turns through the featured pool and Today's
-	picks are a shuffled handful of the picks pool. Event offers count only inside their dates. Pure.
+	picks are a shuffled handful of the picks pool. `more` lists the rest of the featured pool for the banner carousel. Event offers count only inside their dates. Pure.
 
 	@class ShopRotationUtils
 ]=]
@@ -67,7 +67,13 @@ function ShopRotationUtils.live(offers: { Offer }, now: number): ShopTypes.LiveS
 			end
 		end
 	end
-	local featured = if #featuredPool > 0 then featuredPool[day % #featuredPool + 1] else nil
+	local featuredAt = if #featuredPool > 0 then day % #featuredPool + 1 else 0
+	local featured = featuredPool[featuredAt]
+	-- The rest of the featured pool, in turn order after today's (the banner carousel's other slides).
+	local more: { Offer } = {}
+	for step = 1, #featuredPool - 1 do
+		table.insert(more, featuredPool[(featuredAt - 1 + step) % #featuredPool + 1])
+	end
 	-- Shuffle the picks pool with the day's seed, then take the first PICKS.
 	local nextNumber = generator(day)
 	for index = #picksPool, 2, -1 do
@@ -80,6 +86,7 @@ function ShopRotationUtils.live(offers: { Offer }, now: number): ShopTypes.LiveS
 	end
 	return {
 		featured = featured,
+		more = more,
 		picks = picks,
 		nextRotation = (day + 1) * ShopConstants.DAY + ShopConstants.ROTATION_HOUR_UTC * 3600,
 	}

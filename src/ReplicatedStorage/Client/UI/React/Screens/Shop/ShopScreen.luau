@@ -50,6 +50,7 @@ local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
 local ShopRarityLookViewModel = require(script.Parent.ShopRarityLookViewModel)
+local CarouselVM = require(script.Parent.ShopCarouselViewModel)
 local ToonBurst = require(Toon.ToonBurst)
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
@@ -409,8 +410,38 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local dealPrices = ReactCharm.useAtom(DealStore.robux)
 	-- Which thing the Featured banner spot shows: the offered one-time deals first, then today's banner.
 	local slot, setSlot = React.useState(1)
+	-- The banner carousel (ShopCarouselViewModel): when its slide last changed, and whether the player picked it.
+	local picked, setPicked = React.useState(false)
+	local slideChanged = React.useRef(os.clock())
+	local function pickSlide(index: number)
+		slideChanged.current = os.clock()
+		setPicked(true)
+		setSlot(index)
+	end
 	local passKeys = MarketplaceRegistry.passKeys()
 	local tab, setTab = React.useState(props.tab or "featured")
+	-- The carousel moves on by itself while the Featured tab is up with no product page open.
+	local carouselDeps: { unknown } = { slot, picked, tab, storeProduct ~= nil }
+	React.useEffect(function(): () -> ()
+		if tab ~= "featured" or storeProduct ~= nil then
+			return function() end
+		end
+		local alive = true
+		task.spawn(function()
+			while alive do
+				task.wait(0.25)
+				if alive and CarouselVM.due(os.clock() - slideChanged.current, picked) then
+					alive = false
+					slideChanged.current = os.clock()
+					setPicked(false)
+					setSlot(slot + 1)
+				end
+			end
+		end)
+		return function()
+			alive = false
+		end
+	end, carouselDeps)
 	local filter, setFilter = React.useState(function(): string?
 		return nil
 	end)
@@ -815,17 +846,26 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		-- On a phone the Gleam row is left to the Gleam tab: the banner and the picks take the whole height.
 		local topHeight = if phone then content.height else math.floor(content.height * 0.64)
 		local nodes: Nodes = {}
-		local featured = live.featured
 		local dealIds: { DealConstants.DealId } = if preview ~= nil then {} else DealRules.offeredList(deals, owns)
-		local spots = #dealIds + (if featured ~= nil then 1 else 0)
-		local spot = ((slot - 1) % math.max(1, spots)) + 1
-		local onNext = if spots > 1
+		local slides = CarouselVM.slides(dealIds, live)
+		local spot = CarouselVM.at(slot, #slides)
+		local slide = slides[spot]
+		-- The item a featured slide shows (today's banner or another from the featured pool).
+		local noOffer: typeof(live.featured) = nil
+		local shown = noOffer
+		local today = false
+		if slide ~= nil and slide.kind == "today" then
+			shown, today = slide.offer, true
+		elseif slide ~= nil and slide.kind == "more" then
+			shown = slide.offer
+		end
+		local onNext = if #slides > 1
 			then function()
-				setSlot(spot + 1)
+				pickSlide(spot + 1)
 			end
 			else nil
-		local dealId = dealIds[spot]
-		if dealId ~= nil then
+		if slide ~= nil and slide.kind == "deal" then
+			local dealId = slide.deal
 			nodes.banner = e(DealBanner, {
 				banner = DealViewModel.banner(dealId, DealServiceClient:productReady(dealId), dealPrices[dealId]),
 				phone = phone,
@@ -837,8 +877,8 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				end,
 				onNext = onNext,
 			})
-		elseif featured ~= nil then
-			local product = VM.product(featured, owns, balances)
+		elseif shown ~= nil then
+			local product = VM.product(shown, owns, balances)
 			local card = product.card
 			local nameSize = math.floor(layout.headingSize * (if phone then 1 else 1.4))
 			local priced: Nodes = {
@@ -862,7 +902,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					ZIndex = 2,
 				}, { model = art(card) }),
 				ribbon = e(ToonFlag, {
-					text = "Today's banner",
+					text = if today then "Today's banner" else "Featured",
 					hue = "mint",
 					tilt = -5,
 					textSize = if phone then 13 else 24,
@@ -898,7 +938,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					position = UDim2.new(0, if phone then 12 else 28, 1, -(if phone then 40 else 84)),
 					size = UDim2.new(0.46, 0, 0, if phone then 44 else 90),
 					onActivated = function()
-						open(featured.id)
+						open(shown.id)
 					end,
 					zIndex = 4,
 				}),
@@ -915,15 +955,17 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 						zIndex = 6,
 					})
 					else nil,
-				timer = e(ToonPill, {
-					text = `Changes in {VM.timer(live.nextRotation - now)}`,
-					hue = "night",
-					textSize = size - 4,
-					anchor = Vector2.new(0, 1),
-					position = UDim2.new(0, if phone then 12 else 28, 1, -(if phone then 10 else 24)),
-					size = UDim2.fromOffset(if phone then 150 else 260, if phone then 24 else 44),
-					zIndex = 4,
-				}),
+				timer = if today
+					then e(ToonPill, {
+						text = `Changes in {VM.timer(live.nextRotation - now)}`,
+						hue = "night",
+						textSize = size - 4,
+						anchor = Vector2.new(0, 1),
+						position = UDim2.new(0, if phone then 12 else 28, 1, -(if phone then 10 else 24)),
+						size = UDim2.fromOffset(if phone then 150 else 260, if phone then 24 else 44),
+						zIndex = 4,
+					})
+					else nil,
 			}
 			nodes.banner = e("Frame", {
 				Size = UDim2.fromOffset(bannerWidth, topHeight),
@@ -937,6 +979,50 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					children = bannerFace,
 				}),
 			})
+		end
+		-- The carousel's dots: one per slide (the current one gold), tap to jump. They sit in the text column under the
+		-- item's line, never over its art (owner: nothing covers an item preview).
+		if #slides > 1 then
+			local hit = if phone then 24 else 36
+			local dot = if phone then 12 else 16
+			local dots: Nodes = {
+				layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				}),
+			}
+			for index = 1, #slides do
+				dots[`dot{index}`] = e("TextButton", {
+					Text = "",
+					AutoButtonColor = false,
+					BackgroundTransparency = 1,
+					Size = UDim2.fromOffset(hit, hit),
+					LayoutOrder = index,
+					[React.Event.Activated] = function()
+						pickSlide(index)
+					end,
+				}, {
+					dot = e("Frame", {
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5),
+						Size = UDim2.fromOffset(dot, dot),
+						BackgroundColor3 = if index == spot then UIToonConstants.shade("gold").base else COLOR.white,
+						BorderSizePixel = 0,
+					}, {
+						corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+						stroke = e("UIStroke", { Color = COLOR.ink, Thickness = if phone then 2 else 3 }),
+					}),
+				})
+			end
+			local nameSize = math.floor(layout.headingSize * (if phone then 1 else 1.4))
+			local pad = if phone then 12 else 28
+			nodes.dots = e("Frame", {
+				Position = UDim2.fromOffset(pad - (hit - dot) / 2, (if phone then 40 else 84) + nameSize + size + 28),
+				Size = UDim2.fromOffset(hit * #slides, hit),
+				BackgroundTransparency = 1,
+				ZIndex = 8,
+			}, dots)
 		end
 		-- Today's picks: 3 x 2.
 		local picksX = bannerWidth + gap + 10
