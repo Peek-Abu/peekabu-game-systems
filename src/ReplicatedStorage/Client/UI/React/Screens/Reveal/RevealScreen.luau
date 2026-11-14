@@ -3,11 +3,12 @@
 	RevealScreen: "you got it!" after a purchase, a grant or the first-join pick (concepts:
 	characters/ui/character-ui/frames4/reveal-leg.jpg and reveal-hire.jpg). On a ToonBackdrop in the rarity's colour
 	(rays from Rare, stripes from Epic, confetti for Legendary): the title popping in ("LEGENDARY!"), a ribbon ("New
-	skin for Pippa"), the item LIVE on a raised platform with its name plate, "You also got" tiles, and the buttons
-	(Wear it! / Later, or Nice!). A hire shows the ID card stamped HIRED!, the ability card and Start! or Equip!.
-	Reads CosmeticRevealStore.current (one at a time); a button moves the queue on, and Wear it! / Equip! send the
-	change through CosmeticServiceClient. Values are RevealViewModel's. Exempt (wires stores; story in
-	RevealScreen.story).
+	skin for Pippa"), the item LIVE on a raised platform with its name plate, and the buttons (the main one's words fit
+	the item: Wear it!, Use it!, Add to wheel!, Use stickers!; Later, or Nice!). A buy with more than one item shows a
+	"YOU GOT" tile for each: tapping one puts it in front with its own button, the screen stays open after using one,
+	and Done leaves. A hire shows the ID card stamped HIRED!, the ability card and Start! or Equip!. Reads
+	CosmeticRevealStore.current (one at a time); a button moves the queue on, and the main button sends the changes
+	through CosmeticServiceClient. Values are RevealViewModel's. Exempt (wires stores; story in RevealScreen.story).
 
 	@class RevealScreen
 ]=]
@@ -140,9 +141,13 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local pop, setPop = React.useState(noScale)
 
 	local key = if reveal ~= nil then table.concat(reveal.ids, ",") else ""
-	-- The colour style picked to wear, for the reveal it was picked on (a new reveal starts at style 1).
+	-- Which item is in front (a buy with more than one), for the reveal it was tapped on (a new reveal starts at 1).
+	local focused, setFocused = React.useState({ key = "", focus = 1 })
+	local focus = if focused.key == key then focused.focus else 1
+	-- The colour style picked to wear, for the item it was picked on (a new one starts at style 1).
+	local styleKey = `{key}#{focus}`
 	local picked, setPicked = React.useState({ key = "", style = 1 })
-	local style = if picked.key == key then picked.style else 1
+	local style = if picked.key == styleKey then picked.style else 1
 	-- The opening, replayed for each reveal: a white flash fading, the character popping in, a bright sweep.
 	local flash = useToonPlay(0.5, 0, key)
 	local hero = useToonPlay(0.55, 0.15, key)
@@ -166,7 +171,10 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	if reveal == nil then
 		return nil
 	end
-	local view = VM.view(reveal)
+	local function owns(id: string): boolean
+		return CosmeticRules.owns(entitlements, id)
+	end
+	local view = VM.view(reveal, { loadout = loadout, owns = owns, focus = focus })
 	local viewport = props.viewport or liveViewport
 	local phone = if props.phone ~= nil then props.phone else livePhone
 	local scale = PaperHudScaleViewModel.scale(viewport, if phone then "phone" else "desktop")
@@ -180,13 +188,19 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local bottom = if tint ~= nil then tint.dark else shade.lo
 
 	local function finish(equip: boolean)
-		local change = VM.wear(view, style)
-		if props.reveal == nil then
-			if equip and change ~= nil then
+		if props.reveal ~= nil then
+			return
+		end
+		if equip then
+			for _, change in VM.wear(view, style) do
 				CosmeticServiceClient:requestEquip(change)
 			end
-			CosmeticRevealStore.next()
+			-- A buy with more than one item stays open: the player can use the other items, then Done.
+			if view.stays then
+				return
+			end
 		end
+		CosmeticRevealStore.next()
 	end
 
 	local titleSize = if phone then 50 else 130
@@ -268,7 +282,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			style = style,
 			live = true,
 			-- A hire, and every new skin (owner, 2026-10-29), plays its reveal once, then its idle.
-			reveal = tryOn == nil and (view.kind == "hire" or view.skinKey ~= nil),
+			reveal = tryOn == nil and (view.kind == "hire" or view.skinKey ~= nil) and focus == 1,
 			framing = "full",
 			-- A hire stands on their own colour; an item on its rarity's.
 			platform = { top = if tint ~= nil then tint.body else shade.base, side = bottom },
@@ -403,7 +417,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				}),
 			})
 		end
-	elseif #view.alsoGot > 0 then
+	elseif view.multi then
 		local tile = if phone then 44 else 96
 		local tiles: Nodes = {
 			list = e("UIListLayout", {
@@ -412,38 +426,44 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 		}
-		for index, extra in view.alsoGot do
-			local stage: Nodes = {
+		for index, extra in view.items do
+			local stage: { [string]: React.ReactNode } = {
 				art = if extra.kind == "Sticker pack"
 					then e(ToonIcon, {
 						icon = "stickers",
 						position = UDim2.fromScale(0.08, 0.08),
 						size = UDim2.fromScale(0.84, 0.84),
 					})
-					else e(
-						ToonViewport,
-						{ employee = view.employee, framing = "bust", size = UDim2.fromScale(1, 1) }
-					),
+					else e(ToonViewport, {
+						employee = view.employee,
+						skin = extra.skinKey,
+						framing = "bust",
+						size = UDim2.fromScale(1, 1),
+					}),
 			}
 			local label = if phone then 11 else 18
-			-- The tile, its kind under it (inside, the word was squeezed out).
+			-- The tile is a button (tap it to put that item in front); its kind under it, and "on" once it is on
+			-- (never over the picture).
 			tiles[extra.id] = e("Frame", {
 				Size = UDim2.fromOffset(tile + 20, tile + label + 10),
 				BackgroundTransparency = 1,
 				LayoutOrder = index,
 			}, {
-				tile = e(ToonSurface, {
-					hue = "gold",
-					small = true,
-					radius = 14,
+				tile = e(ToonButton, {
+					variant = "secondary",
+					selected = extra.selected,
+					content = stage,
 					position = UDim2.fromOffset(10, 0),
 					size = UDim2.fromOffset(tile, tile),
-					children = stage,
+					radius = 14,
+					onActivated = function()
+						setFocused({ key = key, focus = index })
+					end,
 				}),
 				kind = e(ToonText, {
-					text = extra.kind,
+					text = if extra.done then `{extra.kind}: on` else extra.kind,
 					textSize = label,
-					meaning = "grape",
+					meaning = if extra.done then "mint" else "grape",
 					anchor = Vector2.new(0.5, 0),
 					position = UDim2.new(0.5, 0, 0, tile + 4),
 					size = UDim2.new(1, 0, 0, label + 4),
@@ -454,7 +474,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		end
 		local face: Nodes = {
 			title = e(ToonText, {
-				text = "YOU ALSO GOT",
+				text = "YOU GOT",
 				textSize = size + 6,
 				meaning = "grape",
 				position = UDim2.fromOffset(18, 12),
@@ -485,6 +505,8 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	nodes.primary = e(ToonButton, {
 		variant = "primary",
 		text = view.primary,
+		-- Already on, or nothing to put on while the screen stays open: greyed (Done leaves).
+		disabled = view.done or (view.stays and #view.changes == 0),
 		textSize = if phone then 22 else 46,
 		sound = "cta",
 		anchor = Vector2.new(1, 1),
@@ -521,7 +543,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				size = UDim2.fromOffset(chipWidth, chipHeight),
 				zIndex = 6,
 				onActivated = function()
-					setPicked({ key = key, style = index })
+					setPicked({ key = styleKey, style = index })
 				end,
 			})
 		end
@@ -536,7 +558,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	if view.later then
 		nodes.later = e(ToonButton, {
 			variant = "secondary",
-			text = "Later",
+			text = view.leave,
 			textSize = if phone then 18 else 36,
 			sound = "back",
 			anchor = Vector2.new(1, 1),
