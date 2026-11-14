@@ -273,22 +273,34 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				return if alpha <= 0 then 0.01 else ToonMotionViewModel.pop(alpha)
 			end),
 		}),
-		model = e(ToonViewport, {
-			-- A new vacuum is shown on you, from behind.
-			employee = if tryOn == nil then view.employee else nil,
-			outfit = tryOn,
-			turn = if tryOn ~= nil then 150 else nil,
-			skin = view.skinKey,
-			style = style,
-			live = true,
-			-- A hire, and every new skin (owner, 2026-10-29), plays its reveal once, then its idle.
-			reveal = tryOn == nil and (view.kind == "hire" or view.skinKey ~= nil) and focus == 1,
-			framing = "full",
-			-- A hire stands on their own colour; an item on its rarity's.
-			platform = { top = if tint ~= nil then tint.body else shade.base, side = bottom },
-			size = UDim2.fromScale(1, 0.85),
-			zIndex = 3,
-		}),
+		-- A sticker pack shows its stickers; anything else the model.
+		model = if view.stickers
+			then e(ToonIcon, {
+				icon = "stickers",
+				anchor = Vector2.new(0.5, 0.5),
+				position = UDim2.fromScale(0.5, 0.42),
+				size = UDim2.fromScale(0.8, 0.5),
+				zIndex = 3,
+			})
+			else e(ToonViewport, {
+				-- A new vacuum is shown on you, from behind.
+				employee = if tryOn == nil then view.employee else nil,
+				outfit = tryOn,
+				turn = if tryOn ~= nil then 150 else nil,
+				skin = view.skinKey,
+				style = style,
+				live = true,
+				-- An idle plays as itself, an emote loops.
+				idle = view.idle,
+				emote = view.emote,
+				-- A hire, and every new skin (owner, 2026-10-29), plays its reveal once, then its idle.
+				reveal = tryOn == nil and (view.kind == "hire" or view.skinKey ~= nil) and focus == 1,
+				framing = "full",
+				-- A hire stands on their own colour; an item on its rarity's.
+				platform = { top = if tint ~= nil then tint.body else shade.base, side = bottom },
+				size = UDim2.fromScale(1, 0.85),
+				zIndex = 3,
+			}),
 		plate = e(ToonSurface, {
 			hue = "grape",
 			radius = 22,
@@ -445,7 +457,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			-- The tile is a button (tap it to put that item in front); its kind under it, and "on" once it is on
 			-- (never over the picture).
 			tiles[extra.id] = e("Frame", {
-				Size = UDim2.fromOffset(tile + 20, tile + label + 10),
+				Size = UDim2.fromOffset(tile + 20, tile + DEPTH.drop + label + 10),
 				BackgroundTransparency = 1,
 				LayoutOrder = index,
 			}, {
@@ -465,7 +477,8 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 					textSize = label,
 					meaning = if extra.done then "mint" else "grape",
 					anchor = Vector2.new(0.5, 0),
-					position = UDim2.new(0.5, 0, 0, tile + 4),
+					-- Under the tile's hard drop, so the drop never covers the word.
+					position = UDim2.new(0.5, 0, 0, tile + DEPTH.drop + 4),
 					size = UDim2.new(1, 0, 0, label + 4),
 					align = "center",
 					fit = true,
@@ -482,8 +495,9 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				fit = true,
 			}),
 			row = e("Frame", {
-				Position = UDim2.fromOffset(18, size + 30),
-				Size = UDim2.new(1, -36, 0, tile + (if phone then 22 else 34)),
+				-- Clear of the title, with room for the picked tile's ring.
+				Position = UDim2.fromOffset(18, size + 40),
+				Size = UDim2.new(1, -36, 0, tile + DEPTH.drop + (if phone then 22 else 34)),
 				BackgroundTransparency = 1,
 			}, tiles),
 		}
@@ -493,7 +507,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			radius = 22,
 			anchor = Vector2.new(0, 1),
 			position = UDim2.new(0, margin, 1, -(if phone then 12 else 50)),
-			size = UDim2.fromOffset(leftWidth, size + tile + (if phone then 60 else 100)),
+			size = UDim2.fromOffset(leftWidth, size + tile + DEPTH.drop + (if phone then 76 else 120)),
 			zIndex = 4,
 			children = face,
 		})

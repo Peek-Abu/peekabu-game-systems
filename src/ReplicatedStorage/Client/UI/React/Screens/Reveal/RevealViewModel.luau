@@ -68,6 +68,11 @@ export type View = {
 	skinKey: string?,
 	-- A vacuum (Cosmetic id): shown on the player's own employee (CosmeticOutfitRules.tryOn), from behind.
 	vacuum: string?,
+	-- An idle plays as itself (its key, on the skin it fits when it fits only some), an emote loops (its id), and a
+	-- sticker pack shows its stickers instead of an employee.
+	idle: string?,
+	emote: string?,
+	stickers: boolean,
 	-- A buy with more than one item: every item, a tile each (empty for a single item).
 	items: { Tile },
 	multi: boolean,
@@ -271,6 +276,7 @@ function VM.view(reveal: Reveal, given: Context?): View
 			ribbon = "Something new",
 			name = reveal.ids[1] or "",
 			employee = "Pippa",
+			stickers = false,
 			items = {},
 			multi = false,
 			effects = effectsOf("default"),
@@ -294,6 +300,7 @@ function VM.view(reveal: Reveal, given: Context?): View
 			ribbon = "Welcome to the night crew",
 			name = item.name,
 			employee = item.id,
+			stickers = false,
 			items = {},
 			multi = false,
 			effects = { rays = true, stripes = false, sparkles = true, confetti = true, goo = false, foil = true },
@@ -363,8 +370,16 @@ function VM.view(reveal: Reveal, given: Context?): View
 		ribbon = ribbon,
 		name = item.name,
 		employee = employee,
-		skinKey = if item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
+		skinKey = if item.kind == "skin"
+			then CosmeticRegistry.keyOf(item.id)
+			elseif item.kind == "idle" and item.fits ~= nil and item.fits[1] ~= nil then CosmeticRegistry.keyOf(
+				item.fits[1]
+			)
+			else nil,
 		vacuum = if item.kind == "vacuum" then item.id else nil,
+		idle = if item.kind == "idle" then CosmeticRegistry.keyOf(item.id) else nil,
+		emote = if item.kind == "emote" then item.id else nil,
+		stickers = item.kind == "stickerPack",
 		items = items,
 		multi = multi,
 		effects = effectsOf(item.rarity),
