@@ -11,8 +11,9 @@
 	rest first (OccupantClearanceSystem: the room, the chair, the hider's fade). The slow turns (behaviours design §11:
 	`slowSwivel`, `whip`) carry one turn fraction across both gestures and aim it from his lower body each step
 	(OccupantGestureFormulas.turnPose: the waist leads, the smile comes round last); as the server snaps his body round
-	in the jerk, the aimed yaw unwinds, so the head stays on the player while the body catches up. Visual only: the
-	server's own copy of him never bends.
+	in the jerk, the aimed yaw unwinds, so the head stays on the player while the body catches up. A perch kind's perch
+	crouch and its drop (B4) also bend the R15 limb joints (hips, knees, ankles, shoulders) where the rig has them. Visual
+	only: the server's own copy of him never bends (it only lowers his root for the crouch, OccupantSeatSystem).
 
 	Spec-exempt shell (Motor6Ds, RunService); the poses and their easing are the specced OccupantGestureFormulas.
 
@@ -38,7 +39,11 @@ type Body = {
 	turned: number,
 	turnedAt: number,
 	joints: { [string]: Motor6D },
+	-- Every POSED joint, torso and lower body found (`complete`), and every limb joint too (`limbs`); when it last
+	-- looked.
 	complete: boolean,
+	limbs: boolean,
+	scannedAt: number,
 	gesture: string,
 	since: number,
 	-- The offsets shown when the gesture changed (the blend starts from them), and the last ones shown.
@@ -63,7 +68,20 @@ type Exit = {
 
 export type OccupantGestureState = { bodies: number, joints: number, written: number, gestures: { [string]: number } }
 
+-- The joints every rig must have, and the R15 limb joints a pose may bend too (a perch kind's perch and drop): a rig
+-- without one simply never bends it. Until every one is found the rig is rescanned, at most every RESCAN_SECONDS.
 local POSED = { "Neck", "Waist", "Root" }
+local LIMBS = {
+	"LeftHip",
+	"RightHip",
+	"LeftKnee",
+	"RightKnee",
+	"LeftAnkle",
+	"RightAnkle",
+	"LeftShoulder",
+	"RightShoulder",
+}
+local RESCAN_SECONDS = 1
 -- The joint the draw-back moves (his whole body, along his root's back), laid before the clip's own root motion.
 local ROOT = "Root"
 -- The gestures he makes seated: his chair goes back and forth with the draw-back.
@@ -77,15 +95,22 @@ local counters: { [string]: number } = {}
 -- Finds his posed joints and his torso (again until all have streamed in: a model arrives part by part).
 local function scan(body: Body)
 	local joints: { [string]: Motor6D } = {}
-	local found = 0
+	local found, limbs = 0, 0
 	for _, item in body.model:GetDescendants() do
-		if item:IsA("Motor6D") and table.find(POSED, item.Name) ~= nil then
-			joints[item.Name] = item
-			found += 1
+		if item:IsA("Motor6D") then
+			if table.find(POSED, item.Name) ~= nil then
+				joints[item.Name] = item
+				found += 1
+			elseif table.find(LIMBS, item.Name) ~= nil then
+				joints[item.Name] = item
+				limbs += 1
+			end
 		end
 	end
 	body.joints = joints
 	body.complete = found >= #POSED
+	body.limbs = limbs >= #LIMBS
+	body.scannedAt = os.clock()
 	local torso = body.model:FindFirstChild("UpperTorso")
 	body.torso = if torso ~= nil and torso:IsA("BasePart") then torso else nil
 	local lower = body.model:FindFirstChild("LowerTorso")
@@ -95,7 +120,11 @@ end
 local function bodyOf(model: Model): Body
 	local existing = bodies[model]
 	if existing ~= nil then
-		if not existing.complete or existing.torso == nil or existing.lower == nil then
+		-- Incomplete: looked at again every step. A rig missing only a limb joint (or one still streaming in): now and
+		-- then, not every step.
+		local partial = not existing.complete or existing.torso == nil or existing.lower == nil
+		local limbsDue = not existing.limbs and os.clock() - existing.scannedAt >= RESCAN_SECONDS
+		if partial or limbsDue then
 			scan(existing)
 		end
 		return existing
@@ -108,6 +137,8 @@ local function bodyOf(model: Model): Body
 		turnedAt = os.clock(),
 		joints = {},
 		complete = false,
+		limbs = false,
+		scannedAt = 0,
 		gesture = "",
 		since = os.clock(),
 		from = {},

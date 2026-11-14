@@ -159,6 +159,79 @@ return function()
 		end)
 	end)
 
+	describe("the perch and the drop (B4: a perch kind)", function()
+		it("crouches on a perch, and shows the drop while landing", function()
+			expect(OccupantGestureFormulas.gestureFor("perch", nil, false, false, false)).to.equal("perch")
+			expect(OccupantGestureFormulas.gestureFor("patrol", nil, false, false, false, nil, true)).to.equal("drop")
+			expect(OccupantGestureFormulas.gestureFor("rest", nil, false, false, false, nil, true)).to.equal("drop")
+			expect(OccupantGestureFormulas.gestureFor("patrol", nil, false, false, false, nil, false)).to.equal("")
+		end)
+
+		it("bends only standard R15 joint names, both sides alike, the feet kept flat", function()
+			local names = {
+				Neck = true,
+				Waist = true,
+				LeftHip = true,
+				RightHip = true,
+				LeftKnee = true,
+				RightKnee = true,
+				LeftAnkle = true,
+				RightAnkle = true,
+				LeftShoulder = true,
+				RightShoulder = true,
+			}
+			local poses = { C.GESTURES.perch.joints }
+			for _, key in C.GESTURES.drop.keys do
+				table.insert(poses, key.joints)
+			end
+			for _, joints in poses do
+				for name in joints do
+					expect(names[name]).to.equal(true)
+				end
+				local hip, knee, ankle = joints.LeftHip, joints.LeftKnee, joints.LeftAnkle
+				if hip ~= nil then
+					expect(joints.RightHip.X).to.equal(hip.X)
+					expect(joints.RightKnee.X).to.equal(knee.X)
+					expect(hip.X + knee.X + ankle.X).to.be.near(0, 1e-6)
+				end
+			end
+		end)
+
+		it("starts the drop from the perch crouch and ends it at rest", function()
+			local keys = C.GESTURES.drop.keys
+			expect(keys[1].at).to.equal(0)
+			expect(keys[1].joints).to.equal(C.GESTURES.perch.joints)
+			expect(next(keys[#keys].joints)).to.equal(nil)
+			expect(keys[#keys].at).to.equal(1)
+			expect(C.GESTURES.drop.seconds).to.be.near(C.DROP_SECONDS, 1e-6)
+		end)
+
+		it("legDrop: how far a crouch lowers the hips", function()
+			expect(OccupantGestureFormulas.legDrop(1, 1, 0, 0)).to.be.near(0)
+			-- Thigh straight forward, shin straight back down: the thigh's whole length.
+			expect(OccupantGestureFormulas.legDrop(1, 1, 90, -90)).to.be.near(1)
+			local expected = 0.65 * (1 - math.cos(math.rad(55))) + 0.65 * (1 - math.cos(math.rad(-35)))
+			expect(OccupantGestureFormulas.legDrop(0.65, 0.65, 55, -90)).to.be.near(expected)
+		end)
+
+		it("crouchDrop reads the left hip and knee of a pose", function()
+			local joints = { LeftHip = Vector3.new(90, 0, 0), LeftKnee = Vector3.new(-90, 0, 0) }
+			expect(OccupantGestureFormulas.crouchDrop(1, 1, joints)).to.be.near(1)
+			expect(OccupantGestureFormulas.crouchDrop(1, 1, {})).to.be.near(0)
+		end)
+
+		it("jointAt follows a keyed path the way along does", function()
+			local keys = C.GESTURES.drop.keys
+			expect(OccupantGestureFormulas.jointAt(keys, 0, "LeftHip")).to.equal(C.GESTURES.perch.joints.LeftHip)
+			expect(OccupantGestureFormulas.jointAt(keys, 1, "LeftHip")).to.equal(Vector3.zero)
+			expect(OccupantGestureFormulas.jointAt(keys, 2, "LeftHip")).to.equal(Vector3.zero)
+			local offsets = OccupantGestureFormulas.along(keys, 0.5)
+			local hip = OccupantGestureFormulas.jointAt(keys, 0.5, "LeftHip")
+			local x = offsets.LeftHip:ToEulerAnglesXYZ()
+			expect(math.deg(x)).to.be.near(hip.X, 1e-3)
+		end)
+	end)
+
 	describe("yawTo", function()
 		it("is 0 straight ahead and turns toward a target to the side or behind", function()
 			local torso = CFrame.new()

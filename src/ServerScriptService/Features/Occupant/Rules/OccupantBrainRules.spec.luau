@@ -123,6 +123,18 @@ return function()
 			expect(step.mind.mode).to.equal("perch")
 			expect(step.intent.kind).to.equal("idle")
 		end)
+
+		it("drops off the perch when the break starts, marked as just dropped", function()
+			local up = OccupantBrainRules.step(fresh(), perchSenses()).mind
+			local step = OccupantBrainRules.step(up, perchSenses({ now = 102, resting = true }))
+			expect(step.mind.mode).to.equal("rest")
+			expect(step.mind.droppedAt).to.equal(102)
+			local dropped = false
+			for _, effect in step.effects or {} do
+				dropped = dropped or effect.kind == "drop"
+			end
+			expect(dropped).to.equal(true)
+		end)
 	end)
 
 	describe("patrol", function()

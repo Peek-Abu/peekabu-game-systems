@@ -190,3 +190,36 @@ saying, so this is **Q2**.
    - Look at him and he stays still. Look away and he drops to the floor.
    - He also drops after 20 s, or if you walk within 10 studs.
 4. **B3:** his steps are silent far away and suddenly loud and quick within about 18 studs (p05-sound's set).
+
+## Perch pose, drop and thump (owner OK 2026-11-14: "bramble should get a perch and drop as well as thump soudn!")
+
+**Built (no new modules, no animation upload):**
+
+- **Perch pose.** A procedural owl crouch (gesture `perch`, `OccupantConstants.GESTURES`): hips forward, knees folded back,
+  ankles keeping the feet flat (hip + knee + ankle = 0), a forward lean, the head up and cocked, the wings half open. It
+  uses only standard R15 joint names, so any R15 rig takes it; a joint the rig lacks is skipped. `OccupantGestureSystem`
+  now also bends the R15 limb joints (it rescans a rig missing one at most once a second). The server lowers the root by
+  the crouch's leg drop (`OccupantGestureFormulas.crouchDrop`, from the rig's own hip, knee and ankle joints), so the
+  feet stay on the top.
+- **Drop.** The brain marks `Mind.droppedAt` (both drop paths: `OccupantPerchRules.think` and the break). The view shows
+  the keyed `drop` gesture for `DROP_SECONDS` (0.9 s): from the crouch, a leap (legs tucked, wings high), the squash on
+  landing, held, then the rise. `OccupantSeatSystem.drop` moves the anchored root on the same beats: a 1.5-stud hop and
+  an accelerating fall to the floor point over 0.42 s (`OccupantPerchRules.fallAt`). It follows the gesture's legs
+  (`OccupantGestureFormulas.jointAt`) so the feet stay on the floor, then lets go.
+- **Thump.** A new kind sound slot `thump` (Bramble: `brambleThump`, Harlow: none). `OccupantWarningSystem` plays it from
+  Bramble's head on the frame its mode leaves "perch" (`OccupantTellRules.dropped`). The file opens with the hop and the
+  fall and lands 0.42 s in (`OccupantAssets.THUMP_HIT` = `DROP_FALL_SECONDS`). Its id stays **PENDING** (silent) until
+  the owner picks a take and the coordinator OKs the Icey Labs upload.
+- **Thump review page:** https://claude.ai/artifact/Nz9XJjYYuwvszTeW5s6Pry (3 in-house takes from the 11-12 Bramble
+  stems; picks go to db collection `picks`, doc `thump-01`). All three pass the sfx gates, the named-source gate (the
+  thump is the loudest part) and the cutoff gate.
+
+**Not verified yet:**
+- The joint bend directions on Bramble's actual rig: the signs assume R15 joint frames with no rotation. This needs a
+  Studio look at a perched Bramble, and a flip of any limb that bends the wrong way.
+- The TestEZ suite for the new specs: Studio only.
+
+**Play-check (joins the 2-player Bramble checklist):**
+1. Perch: Bramble crouches on top of a locker, trophy case or hoop with its feet on the top (not sunk in, not floating), leaning out, head cocked toward you.
+2. Drop: when you walk close (within 10 studs) or look away after spotting it, it hops off, falls fast and squashes on landing, feet on the floor, then stands and walks on.
+3. Thump (after the upload): the hop/flutter starts as it leaves the top and the THUMP lands as its feet hit the floor, heard from around 50 studs, quiet beyond.

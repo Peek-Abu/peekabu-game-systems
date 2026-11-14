@@ -85,6 +85,8 @@ export type Sounds = {
 	powerDown: string?,
 	-- A freeze kind moving again.
 	unfreeze: string?,
+	-- A perch kind landing off its perch (the drop).
+	thump: string?,
 	footsteps: string?,
 }
 
@@ -132,6 +134,7 @@ local HARLOW: Kind = {
 		grab = "harlowGrab",
 		powerDown = "harlowPowerDown",
 		unfreeze = nil,
+		thump = nil,
 		footsteps = "harlow",
 	},
 	catchStyle = "sequence",
@@ -170,6 +173,7 @@ local BRAMBLE: Kind = {
 		grab = nil,
 		powerDown = nil,
 		unfreeze = "brambleUnfreeze",
+		thump = "brambleThump",
 		footsteps = "bramble",
 	},
 	-- Owner 11-13: "just do a sound and take a life": no freeze, camera, lights out or knockdown.

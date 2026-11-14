@@ -347,6 +347,7 @@ local function think(mind: Mind, senses: Senses): Step
 		if mind.mode == "perch" and perch ~= nil then
 			nextMind.perch = nil
 			nextMind.perchedAt = nil
+			nextMind.droppedAt = now
 			local floor = OccupantPerchRules.floorFor(perch, senses)
 			return M.addEffect({ mind = nextMind, intent = IDLE, cue = cue }, { kind = "drop", position = floor })
 		end

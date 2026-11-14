@@ -230,6 +230,16 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		volume = 0.35,
 		rollOffMaxDistance = 30,
 	},
+	-- Bramble drops off a perch (B4; positional, from its head, played as it leaves the top): the hop and the fall,
+	-- then the landing THUMP_HIT seconds in, as the drop's fall ends. In-house, pending the owner's pick and the upload
+	-- (silent until then).
+	brambleThump = {
+		assetId = PENDING,
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.9,
+		rollOffMaxDistance = 50,
+	},
 }
 
 -- The chase music's stems (OccupantChaseMusicSystem): `base` plays the whole chase, `near` fades in as he closes. The
@@ -355,6 +365,8 @@ return table.freeze({
 	SWIVEL = table.freeze(SWIVEL),
 	-- Where catchFired's stamp hits, in seconds from its start (fired_F1.mix.json hit_at_s).
 	FIRED_HIT = 0.322,
+	-- Where brambleThump lands, in seconds from its start: the drop's fall (OccupantConstants.DROP_FALL_SECONDS).
+	THUMP_HIT = 0.42,
 	GIBBERISH = table.freeze(GIBBERISH),
 	IMAGES = table.freeze(IMAGES),
 	ANIMATIONS = table.freeze(ANIMATIONS),

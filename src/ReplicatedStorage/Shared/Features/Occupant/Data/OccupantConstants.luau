@@ -92,6 +92,58 @@ local PEEK_FOLD: { [string]: Vector3 } =
 local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
 	table.freeze({ Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, -90) })
 
+-- A perch kind's perch and drop (B4, owner 11-14: "bramble should get a perch and drop"), on the standard R15 joint
+-- names only, so any R15 rig takes them (a joint the rig lacks is skipped). Hip X > 0 swings the thigh forward, knee
+-- X < 0 folds the shin back, and the ankle undoes both so the feet stay flat (hip + knee + ankle = 0); the server
+-- lowers the root by the crouch's leg drop (OccupantGestureFormulas.crouchDrop), so the feet stay on the top.
+-- Perched: a deep owl crouch, leaning out over the edge, head up and cocked at the crew, wings half open.
+local PERCH_CROUCH: { [string]: Vector3 } = table.freeze({
+	Waist = Vector3.new(-24, 0, 0),
+	Neck = Vector3.new(26, 0, 14),
+	LeftHip = Vector3.new(60, 0, 0),
+	RightHip = Vector3.new(60, 0, 0),
+	LeftKnee = Vector3.new(-95, 0, 0),
+	RightKnee = Vector3.new(-95, 0, 0),
+	LeftAnkle = Vector3.new(35, 0, 0),
+	RightAnkle = Vector3.new(35, 0, 0),
+	LeftShoulder = Vector3.new(0, 0, -28),
+	RightShoulder = Vector3.new(0, 0, 28),
+})
+-- The drop: off the top with the legs tucked and the wings spread high, then a squash on landing.
+local DROP_LEAP: { [string]: Vector3 } = table.freeze({
+	Waist = Vector3.new(-12, 0, 0),
+	Neck = Vector3.new(12, 0, 0),
+	LeftHip = Vector3.new(45, 0, 0),
+	RightHip = Vector3.new(45, 0, 0),
+	LeftKnee = Vector3.new(-75, 0, 0),
+	RightKnee = Vector3.new(-75, 0, 0),
+	LeftAnkle = Vector3.new(30, 0, 0),
+	RightAnkle = Vector3.new(30, 0, 0),
+	LeftShoulder = Vector3.new(0, 0, -75),
+	RightShoulder = Vector3.new(0, 0, 75),
+})
+local DROP_SQUASH: { [string]: Vector3 } = table.freeze({
+	Waist = Vector3.new(-34, 0, 0),
+	Neck = Vector3.new(30, 0, 0),
+	LeftHip = Vector3.new(70, 0, 0),
+	RightHip = Vector3.new(70, 0, 0),
+	LeftKnee = Vector3.new(-110, 0, 0),
+	RightKnee = Vector3.new(-110, 0, 0),
+	LeftAnkle = Vector3.new(40, 0, 0),
+	RightAnkle = Vector3.new(40, 0, 0),
+	LeftShoulder = Vector3.new(0, 0, -40),
+	RightShoulder = Vector3.new(0, 0, 40),
+})
+-- The drop's beats (seconds): the fall from the top to the floor point (with a DROP_HOP studs hop up off it), the
+-- squash held on landing, and the rise back to standing. DROP_SECONDS is all three: the drop gesture's length.
+local DROP_FALL_SECONDS = 0.42
+local DROP_SQUASH_SECONDS = 0.18
+local DROP_RISE_SECONDS = 0.3
+local DROP_SECONDS = DROP_FALL_SECONDS + DROP_SQUASH_SECONDS + DROP_RISE_SECONDS
+local DROP_LANDED = DROP_FALL_SECONDS / DROP_SECONDS
+local DROP_SQUASHED = (DROP_FALL_SECONDS + 0.06) / DROP_SECONDS
+local DROP_RISING = (DROP_FALL_SECONDS + DROP_SQUASH_SECONDS) / DROP_SECONDS
+
 -- The slow head turn and the whip that finishes one in a hurry (behaviours design §11): their seconds, shared with the
 -- brain's timing below.
 local SLOW_TURN_SECONDS = 2.0
@@ -131,6 +183,22 @@ local GESTURES: { [string]: Gesture } = {
 		keys = { key(0.25, 2.8, REST), key(0.7, 2.8, UNDER_FOLD), key(1, 0.5, UNDER_FOLD) },
 		exit = { key(0.3, 2.8, UNDER_FOLD), key(0.8, 2.8, REST), key(1, 0, REST) },
 		exitSeconds = 1,
+	},
+	-- A perch kind up on a perch (mode "perch"): it settles into the crouch.
+	perch = { seconds = 0.3, joints = PERCH_CROUCH },
+	-- Its drop (DROP_SECONDS from when it left the perch): from the crouch, the leap (tucked, wings high) through the
+	-- fall, the squash as it lands, held, then the rise to standing. The server moves the root along the same beats.
+	drop = {
+		seconds = DROP_SECONDS,
+		joints = REST,
+		keys = {
+			key(0, 0, PERCH_CROUCH),
+			key(0.12, 0, DROP_LEAP),
+			key(DROP_LANDED, 0, DROP_LEAP),
+			key(DROP_SQUASHED, 0, DROP_SQUASH),
+			key(DROP_RISING, 0, DROP_SQUASH),
+			key(1, 0, REST),
+		},
 	},
 }
 
@@ -689,4 +757,10 @@ return table.freeze({
 	PERCH_DROP_RANGE = 10,
 	PERCH_HOLD_MAX = 20,
 	PERCH_COOLDOWN = 30,
+	-- The drop's beats (see GESTURES.drop): the fall, the squash, the rise, all of them, and the hop up off the top.
+	DROP_FALL_SECONDS = DROP_FALL_SECONDS,
+	DROP_SQUASH_SECONDS = DROP_SQUASH_SECONDS,
+	DROP_RISE_SECONDS = DROP_RISE_SECONDS,
+	DROP_SECONDS = DROP_SECONDS,
+	DROP_HOP = 1.5,
 })

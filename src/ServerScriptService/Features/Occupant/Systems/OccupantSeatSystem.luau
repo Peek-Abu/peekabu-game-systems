@@ -15,6 +15,8 @@
 	  clip: at once.
 	- `plant`: anchored and slid onto a frame (staring at a spot, perfectly still); `release` lets go.
 	- `unstick`: let go and lifted onto a route point (stuck where no path starts: OccupantStuckRules).
+	- `perch` / `drop`: a perch kind put (unseen) on a perch's top, crouched, and its hop, fall, squash and rise back
+	  down to a floor point (B4, OccupantPerchRules).
 	- `look`: turning him while he looks around on arriving somewhere (investigate, search), per frame.
 	- `jerk`: his body snapping round to his already-turned head as a slow turn ends in a chase (behaviours design
 	  §11.4: OccupantTurnRules.jerkYaw over JERK_SECONDS from when his root is free), per frame.
@@ -26,6 +28,7 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local TweenService = game:GetService("TweenService")
 
@@ -35,7 +38,9 @@ local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.O
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
+local OccupantGestureFormulas = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantGestureFormulas)
 local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
+local OccupantPerchRules = require(ServerScriptService.Features.Occupant.Rules.OccupantPerchRules)
 local OccupantTurnRules = require(ServerScriptService.Features.Occupant.Rules.OccupantTurnRules)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
 local OccupantDeskUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantDeskUtils)
@@ -125,6 +130,26 @@ local function letGo(rig: Rig, body: Body)
 	pcall(function()
 		rig.root:SetNetworkOwner(nil)
 	end)
+end
+
+-- His leg's two lengths (studs): hip to knee and knee to ankle, from the left leg's joints (0, 0 for a rig without
+-- them, which then never comes down for a crouch).
+local function legOf(rig: Rig): (number, number)
+	local hip = rig.model:FindFirstChild("LeftHip", true)
+	local knee = rig.model:FindFirstChild("LeftKnee", true)
+	local ankle = rig.model:FindFirstChild("LeftAnkle", true)
+	if hip == nil or knee == nil or ankle == nil then
+		return 0, 0
+	end
+	if not hip:IsA("Motor6D") or not knee:IsA("Motor6D") or not ankle:IsA("Motor6D") then
+		return 0, 0
+	end
+	return (knee.C0.Position - hip.C1.Position).Magnitude, (ankle.C0.Position - knee.C1.Position).Magnitude
+end
+
+-- How far his root stands above the floor.
+local function standHeight(rig: Rig): number
+	return rig.humanoid.HipHeight + rig.root.Size.Y / 2
 end
 
 local function stopSitting(body: Body, fade: number)
@@ -237,14 +262,77 @@ function OccupantSeatSystem.perch(rig: Rig, top: Vector3, facing: Vector3)
 		running:Cancel()
 		body.tween = nil
 	end
-	local height = rig.humanoid.HipHeight + rig.root.Size.Y / 2
-	local at = top + Vector3.new(0, height, 0)
+	-- Lowered by the crouch's leg drop, so the perch gesture's bent legs keep his feet on the top.
+	local thigh, shin = legOf(rig)
+	local crouch = OccupantGestureFormulas.crouchDrop(thigh, shin, OccupantConstants.GESTURES.perch.joints)
+	local at = top + Vector3.new(0, standHeight(rig) - crouch, 0)
 	local toward = Vector3.new(facing.X, at.Y, facing.Z)
 	rig.root.Anchored = true
 	rig.root.AssemblyLinearVelocity = Vector3.zero
 	rig.root.CFrame = if (toward - at).Magnitude > 1e-3
 		then CFrame.lookAt(at, toward)
 		else CFrame.new(at) * rig.root.CFrame.Rotation
+end
+
+--[=[
+	The drop off a perch (B4): from where he crouches on the top, a hop and a fall onto the floor point `point` over
+	DROP_FALL_SECONDS (OccupantPerchRules.fallAt), the squash held, the rise to standing, then let go. His root stays
+	anchored throughout and follows the drop gesture's legs (OccupantGestureFormulas.jointAt), lowered by their leg drop
+	at every moment, so the feet that every client bends stay on the floor once he lands. A newer call stops it.
+]=]
+function OccupantSeatSystem.drop(rig: Rig, point: Vector3)
+	local body = bodyOf(rig)
+	body.token += 1
+	local token = body.token
+	body.seat = nil
+	stopSitting(body, 0)
+	showClipboard(rig, body, true)
+	local running = body.tween
+	if running ~= nil then
+		running:Cancel()
+		body.tween = nil
+	end
+	local keys = OccupantConstants.GESTURES.drop.keys or {}
+	local thigh, shin = legOf(rig)
+	local function legDrop(t: number): number
+		return OccupantGestureFormulas.crouchDrop(thigh, shin, {
+			LeftHip = OccupantGestureFormulas.jointAt(keys, t, "LeftHip"),
+			LeftKnee = OccupantGestureFormulas.jointAt(keys, t, "LeftKnee"),
+		})
+	end
+	local rotation = rig.root.CFrame.Rotation
+	-- Where he would stand, were he not crouched: the path runs between standing heights; the legs come off it.
+	local from = rig.root.Position + Vector3.new(0, legDrop(0), 0)
+	local to = point + Vector3.new(0, standHeight(rig), 0)
+	rig.root.Anchored = true
+	rig.root.AssemblyLinearVelocity = Vector3.zero
+	local started = os.clock()
+	local connection: RBXScriptConnection? = nil
+	connection = RunService.Heartbeat:Connect(function()
+		local elapsed = os.clock() - started
+		if body.token ~= token or rig.model.Parent == nil then
+			if connection ~= nil then
+				connection:Disconnect()
+			end
+			return
+		end
+		if elapsed >= OccupantConstants.DROP_SECONDS then
+			if connection ~= nil then
+				connection:Disconnect()
+			end
+			rig.root.CFrame = CFrame.new(to) * rotation
+			letGo(rig, body)
+			return
+		end
+		local path = OccupantPerchRules.fallAt(
+			from,
+			to,
+			elapsed / OccupantConstants.DROP_FALL_SECONDS,
+			OccupantConstants.DROP_HOP
+		)
+		local down = legDrop(elapsed / OccupantConstants.DROP_SECONDS)
+		rig.root.CFrame = CFrame.new(path - Vector3.new(0, down, 0)) * rotation
+	end)
 end
 
 --[=[

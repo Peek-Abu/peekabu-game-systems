@@ -225,6 +225,8 @@ export type Mind = {
 	perch: Perch?,
 	perchedAt: number?,
 	perchReadyAt: number?,
+	-- When he last dropped off a perch (the drop gesture shows for DROP_SECONDS from it; absent: never).
+	droppedAt: number?,
 }
 
 -- One crew member as the service saw them this think; `clear` is the line-of-sight ray's verdict.

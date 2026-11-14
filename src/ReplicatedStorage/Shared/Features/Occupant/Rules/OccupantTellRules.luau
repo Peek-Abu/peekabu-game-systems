@@ -66,7 +66,8 @@ function OccupantTellRules.view(mind: OccupantTypes.Mind, now: number): View
 			swivelling,
 			mind.sitIn == true,
 			mind.spot ~= nil,
-			mind.spot ~= nil and (mind.spot.side or 0) > 0
+			mind.spot ~= nil and (mind.spot.side or 0) > 0,
+			mind.droppedAt ~= nil and now - mind.droppedAt < OccupantConstants.DROP_SECONDS
 		),
 		gestureTarget = if swivelling then mind.point else nil,
 		tilt = mind.mode == "catch" and now - mind.since < OccupantConstants.SNAP_SECONDS + 0.5,
@@ -181,6 +182,14 @@ end
 ]=]
 function OccupantTellRules.unfroze(before: boolean?, after: boolean): boolean
 	return before == true and not after
+end
+
+--[=[
+	Whether a perch kind just left its perch (its mode was "perch" and is now another): its drop, and the thump as it
+	lands (OccupantWarningSystem, DROP_FALL_SECONDS later). A rig that went away (`after` nil) never lands.
+]=]
+function OccupantTellRules.dropped(before: string?, after: string?): boolean
+	return before == "perch" and after ~= nil and after ~= "perch"
 end
 
 --[=[

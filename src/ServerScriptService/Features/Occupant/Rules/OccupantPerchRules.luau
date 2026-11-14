@@ -80,6 +80,17 @@ function OccupantPerchRules.floorFor(perch: Perch, senses: Senses): Vector3
 	return best
 end
 
+--[=[
+	Where the drop puts him `t` (0..1, clamped) of the way from `from` (on the perch) to `to` (the floor point): an even
+	pace across the floor, a `hop` studs hop up off the top, and a fall that gets faster and faster.
+]=]
+function OccupantPerchRules.fallAt(from: Vector3, to: Vector3, t: number, hop: number): Vector3
+	local x = math.clamp(t, 0, 1)
+	local across = from:Lerp(to, x)
+	local height = from.Y + (to.Y - from.Y) * x * x + hop * 4 * x * (1 - x) * (1 - x)
+	return Vector3.new(across.X, height, across.Z)
+end
+
 function OccupantPerchRules.ready(mind: Mind, senses: Senses): boolean
 	local now = senses.now
 	if senses.perches == nil or not READY_MODES[mind.mode] or mind.seated == true or mind.planted == true then
@@ -161,6 +172,7 @@ function OccupantPerchRules.think(mind: Mind, senses: Senses): Step
 	nextMind.perch = nil
 	nextMind.perchedAt = nil
 	nextMind.perchReadyAt = now + OccupantConstants.PERCH_COOLDOWN
+	nextMind.droppedAt = now
 	local floor = if perch ~= nil then OccupantPerchRules.floorFor(perch, senses) else senses.position
 	return M.addEffect({ mind = nextMind, intent = M.IDLE }, { kind = "drop", position = floor })
 end

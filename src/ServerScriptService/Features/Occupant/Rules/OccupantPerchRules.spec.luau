@@ -148,6 +148,7 @@ return function()
 			expect(step.mind.mode).to.equal("patrol")
 			expect(step.mind.perch).to.equal(nil)
 			expect(step.mind.perchReadyAt).to.equal(106 + C.PERCH_COOLDOWN)
+			expect(step.mind.droppedAt).to.equal(106)
 			expect(effectOf(step, "drop").position).to.equal(Vector3.new(30, 0, 4))
 		end)
 
@@ -163,6 +164,31 @@ return function()
 			local timeout = OccupantPerchRules.think(perched(), senses({ now = 100 + C.PERCH_HOLD_MAX }))
 			expect(timeout.mind.mode).to.equal("patrol")
 			expect(effectOf(timeout, "drop")).to.be.ok()
+		end)
+	end)
+
+	describe("fallAt (the drop's path)", function()
+		local FROM = Vector3.new(0, 10, 0)
+		local TO = Vector3.new(8, 2, 0)
+
+		it("starts on the perch and ends on the floor point", function()
+			expect((OccupantPerchRules.fallAt(FROM, TO, 0, 1.5) - FROM).Magnitude < 1e-6).to.equal(true)
+			expect((OccupantPerchRules.fallAt(FROM, TO, 1, 1.5) - TO).Magnitude < 1e-6).to.equal(true)
+			expect((OccupantPerchRules.fallAt(FROM, TO, 2, 1.5) - TO).Magnitude < 1e-6).to.equal(true)
+		end)
+
+		it("hops up off the top first, then falls faster and faster", function()
+			local early = OccupantPerchRules.fallAt(FROM, TO, 0.15, 1.5)
+			expect(early.Y > FROM.Y).to.equal(true)
+			local a = OccupantPerchRules.fallAt(FROM, TO, 0.6, 1.5).Y - OccupantPerchRules.fallAt(FROM, TO, 0.7, 1.5).Y
+			local b = OccupantPerchRules.fallAt(FROM, TO, 0.85, 1.5).Y
+				- OccupantPerchRules.fallAt(FROM, TO, 0.95, 1.5).Y
+			expect(b > a).to.equal(true)
+		end)
+
+		it("crosses the floor at an even pace", function()
+			local half = OccupantPerchRules.fallAt(FROM, TO, 0.5, 1.5)
+			expect(math.abs(half.X - 4) < 1e-6).to.equal(true)
 		end)
 	end)
 end

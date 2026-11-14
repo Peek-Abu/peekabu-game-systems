@@ -211,6 +211,7 @@ return function()
 			"grab",
 			"powerDown",
 			"unfreeze",
+			"thump",
 		}
 
 		it("keeps every one of Harlow's sounds where it was", function()
@@ -228,6 +229,7 @@ return function()
 			expect(sounds.grab).to.equal("harlowGrab")
 			expect(sounds.powerDown).to.equal("harlowPowerDown")
 			expect(sounds.unfreeze).to.equal(nil)
+			expect(sounds.thump).to.equal(nil)
 			expect(sounds.footsteps).to.equal("harlow")
 		end)
 
@@ -255,6 +257,13 @@ return function()
 				expect(OccupantAssets.SOUNDS[id]).to.be.ok()
 				expect(string.match(OccupantAssets.SOUNDS[id].assetId, "^rbxassetid://%d+$")).to.be.ok()
 			end
+		end)
+
+		it("gives Bramble its own landing thump for the drop off a perch", function()
+			expect(OccupantKindRegistry.soundsOf("bramble").thump).to.equal("brambleThump")
+			expect(OccupantAssets.SOUNDS.brambleThump).to.be.ok()
+			-- It lands as the drop's fall ends.
+			expect(OccupantAssets.THUMP_HIT).to.be.near(OccupantConstants.DROP_FALL_SECONDS, 1e-6)
 		end)
 
 		it("names only OccupantAssets sounds", function()

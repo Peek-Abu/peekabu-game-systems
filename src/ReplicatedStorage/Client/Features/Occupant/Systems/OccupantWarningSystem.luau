@@ -20,7 +20,8 @@
 	alone (OccupantFaceLightSystem). Reads only
 	replicated state. Each of his sounds is the rig's kind's (OccupantKindRegistry.soundsOf: Bramble has none of Harlow's,
 	so for it this plays only the reveal and its unfreeze puff: a freeze kind's own `unfreeze` sound from its head on
-	the frame it starts moving again, OccupantTellRules.unfroze). Pending sounds are skipped silently and counted.
+	the frame it starts moving again, OccupantTellRules.unfroze, and a perch kind's `thump` off a perch as its mode
+	leaves "perch", OccupantTellRules.dropped). Pending sounds are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantTellRules.
 
@@ -62,6 +63,9 @@ local lastPhase = ""
 -- Whether the rig was frozen last frame (nil before it is first seen), and which rig that was.
 local lastFrozen: boolean? = nil
 local frozenRig: Model? = nil
+-- The rig's mode last frame, for the drop's thump (and which rig it was).
+local dropMode: string? = nil
+local dropRig: Model? = nil
 local lastMode: string? = nil
 local stage: string = "none"
 local nextClick = 0
@@ -81,6 +85,7 @@ local counters = {
 	creakCuts = 0,
 	cracks = 0,
 	unfreezes = 0,
+	thumps = 0,
 	pending = 0,
 }
 
@@ -289,6 +294,27 @@ local function unfreezeSound()
 	lastFrozen = frozen
 end
 
+-- Every frame: a perch kind's thump off its perch (its kind's `thump` sound, from its head, so it falls with it), on
+-- the frame its mode leaves "perch". The file opens with the hop and the fall and lands DROP_FALL_SECONDS in, as the
+-- drop's fall ends (OccupantAssets.THUMP_HIT).
+local function dropSound()
+	local model, head = harlow()
+	if model ~= dropRig then
+		dropRig = model
+		dropMode = nil
+	end
+	local value = if model ~= nil then model:GetAttribute(OccupantConstants.MODE_ATTRIBUTE) else nil
+	local mode = if type(value) == "string" then value else nil
+	if model ~= nil and head ~= nil and OccupantTellRules.dropped(dropMode, mode) then
+		local thump = OccupantKindRegistry.soundsOf(OccupantKindRegistry.kindOf(model)).thump
+		if thump ~= nil then
+			counters.thumps += 1
+			play(thump, { at = head })
+		end
+	end
+	dropMode = mode
+end
+
 local OccupantWarningSystem = {}
 
 function OccupantWarningSystem.start()
@@ -299,6 +325,7 @@ function OccupantWarningSystem.start()
 	connection = RunService.Heartbeat:Connect(function(deltaTime: number)
 		turnSounds()
 		unfreezeSound()
+		dropSound()
 		elapsed += deltaTime
 		if elapsed >= OccupantConstants.TELL_INTERVAL then
 			elapsed = 0
@@ -318,6 +345,8 @@ function OccupantWarningSystem.stop()
 	turnPhase = ""
 	lastFrozen = nil
 	frozenRig = nil
+	dropMode = nil
+	dropRig = nil
 	setReveal(nil, false)
 	lastPhase = ""
 	lastMode = nil

@@ -7,6 +7,9 @@
 	- "swivel": the head turns on the long neck to the ambush point (`yawTo` aims it, from the UpperTorso);
 	- "peek": the stare's check, bending down to look under the furniture;
 	- "under": the sit-in, his head tipping down beside his knees, upside down, under the desk;
+	- "perch": a perch kind's owl crouch up on a perch, and "drop" its keyed leap, squash and rise off one (B4);
+	  `legDrop` / `crouchDrop` say how far a crouch lowers the hips and `jointAt` follows one joint along a keyed path,
+	  so the server keeps the feet on the top and on the floor;
 	- "" lets go.
 
 	`pose` is a gesture's joint offsets, `progress` its eased settle (quad out) over its seconds (GESTURE_RELEASE for
@@ -42,9 +45,17 @@ function OccupantGestureFormulas.gestureFor(
 	swivelling: boolean,
 	sitIn: boolean,
 	stared: boolean,
-	mirrored: boolean?
+	mirrored: boolean?,
+	landing: boolean?
 ): string
 	local peek = if mirrored == true then "peekMirror" else "peek"
+	-- A perch kind up on a perch, and dropping off one (B4).
+	if mode == "perch" then
+		return "perch"
+	end
+	if landing == true then
+		return "drop"
+	end
 	if swivelling then
 		-- The slow turns (behaviours design §11): slowly through the turn and the stare, a whip through the jerk.
 		if phase == "slowTurn" or phase == "staring" then
@@ -144,6 +155,50 @@ function OccupantGestureFormulas.along(
 		previousAt = key.at
 	end
 	return rotations(previous.joints), previous.back
+end
+
+--[=[
+	One joint's rotation (degrees) `t` (0..1) of the way along `keys`, from rest: the same smoothstepped path `along`
+	takes (a joint a key leaves out is at rest there). The server follows the drop's legs with it.
+]=]
+function OccupantGestureFormulas.jointAt(keys: { OccupantConstants.GestureKey }, t: number, joint: string): Vector3
+	local previous: Vector3 = Vector3.zero
+	local previousAt = 0
+	for _, key in keys do
+		local value: Vector3 = key.joints[joint] or Vector3.zero
+		if t <= key.at then
+			local span = key.at - previousAt
+			local alpha = smooth(if span > 0 then (t - previousAt) / span else 1)
+			return previous:Lerp(value, alpha)
+		end
+		previous = value
+		previousAt = key.at
+	end
+	return previous
+end
+
+--[=[
+	How far (studs) a leg of a `thigh` and a `shin` (hip to knee, knee to ankle), hanging straight at rest, lowers the
+	hip when the hip swings the thigh `hip` degrees forward and the knee folds the shin `knee` degrees (negative: back).
+]=]
+function OccupantGestureFormulas.legDrop(thigh: number, shin: number, hip: number, knee: number): number
+	return thigh * (1 - math.cos(math.rad(hip))) + shin * (1 - math.cos(math.rad(hip + knee)))
+end
+
+--[=[
+	The leg drop of a pose (its LeftHip and LeftKnee; the poses bend both legs alike): how far the root comes down so
+	the feet stay where they stood.
+]=]
+function OccupantGestureFormulas.crouchDrop(thigh: number, shin: number, joints: { [string]: Vector3 }): number
+	-- (The table's type says every key is there; a pose may leave either out.)
+	local hip: Vector3? = joints.LeftHip
+	local knee: Vector3? = joints.LeftKnee
+	return OccupantGestureFormulas.legDrop(
+		thigh,
+		shin,
+		if hip ~= nil then hip.X else 0,
+		if knee ~= nil then knee.X else 0
+	)
 end
 
 --[=[

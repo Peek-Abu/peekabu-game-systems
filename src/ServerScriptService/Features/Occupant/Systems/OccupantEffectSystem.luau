@@ -65,7 +65,7 @@ function OccupantEffectSystem.apply(
 			OccupantSeatSystem.perch(rig, effect.top, effect.facing)
 		elseif effect.kind == "drop" then
 			counters.drops += 1
-			OccupantSeatSystem.unstick(rig, effect.position)
+			OccupantSeatSystem.drop(rig, effect.position)
 		else
 			local player = Players:GetPlayerByUserId(effect.userId)
 			if player == nil then
