@@ -450,6 +450,8 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 		then e(LockerItemPanel, {
 			item = viewed,
 			page = VM.itemPage(activeLocker, viewed),
+			owns = props.owns,
+			gleam = props.balances.gleam,
 			layout = layout,
 			onBack = function()
 				LockerStore.view(nil)

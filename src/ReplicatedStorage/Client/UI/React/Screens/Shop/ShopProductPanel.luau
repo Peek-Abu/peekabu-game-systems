@@ -6,8 +6,10 @@
 	skin with real styles), a row per item inside (its kind, name and own price "alone 400"; on an employee's hire
 	page, their ability card and five stats instead), and the big buy
 	button (the price with any crossed-out price, short or not, or Owned), with a refused buy's words under it. Right: the item LIVE on a
-	raised platform in its rarity's colour. All of it is ShopViewModel.product; nothing is per item. Presentational
-	(exempt; story in ShopScreen.story).
+	raised platform in its rarity's colour. All of it is ShopViewModel.product; nothing is per item. A Locker item's page
+	(LockerItemPanel) is this same page with a `foot`: where the item comes from and its chance each open, under the
+	lore, and the Locker's own button (and Back) in place of the buy button. Presentational (exempt; story in
+	ShopScreen.story).
 
 	@class ShopProductPanel
 ]=]
@@ -47,6 +49,17 @@ export type ShopProductPanelProps = {
 	onBuy: () -> (),
 	-- Short on Gleam: open the Gleam tab.
 	onGetMore: () -> (),
+	-- A Locker item's page: its source, chance and own buttons in place of the buy button.
+	foot: Foot?,
+}
+
+export type Foot = {
+	from: string,
+	chance: string?,
+	-- The main button: the direct buy, Get more Gleam, or Back.
+	button: { kind: "buy" | "getGleam" | "back", text: string, onActivated: () -> () },
+	-- A small Back above the main button (when the main one is not already Back).
+	onBack: (() -> ())?,
 }
 
 local function text(value: string, size: number, x: number, y: number, width: number, color: Color3?): React.ReactNode
@@ -238,6 +251,17 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 		children = quote,
 	})
 	y += quoteHeight + DEPTH.drop + 10
+	local foot = props.foot
+	if foot ~= nil then
+		body.from = text(foot.from, size, pad, y - bodyTop, inner)
+		y += size + 8
+		local chance = foot.chance
+		if chance ~= nil then
+			body.chance = text(chance, size - 2, pad, y - bodyTop, inner, UIToonConstants.shade("steel").lo)
+			y += size + 8
+		end
+		y += 6
+	end
 	local style = if picked.id == card.id then picked.style else 1
 	if product.styles.visible then
 		body.styles = e(ToonText, {
@@ -274,7 +298,18 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	local buttonHeight = if phone then 46 else 96
 	local listGap = if phone then 34 else 70
 	-- The body's window: from under the item's line down to the buy button.
-	local window = math.max(0, layout.content.height - DEPTH.drop - bodyTop - buttonHeight - listGap)
+	-- A Locker page's small Back above its main button takes room from the body too.
+	local backHeight = if phone then 30 else 54
+	local footBack = foot ~= nil and foot.onBack ~= nil and foot.button.kind ~= "back"
+	local window = math.max(
+		0,
+		layout.content.height
+			- DEPTH.drop
+			- bodyTop
+			- buttonHeight
+			- listGap
+			- (if footBack then backHeight + 10 else 0)
+	)
 	if #product.stats > 0 then
 		-- The hire rows get the room left under the lore, or enough for the ability card and readable stats when the
 		-- screen is shorter (the body scrolls).
@@ -347,6 +382,32 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			end
 		end,
 	})
+	if foot ~= nil then
+		local main = foot.button
+		face.buy = e(ToonButton, {
+			variant = if main.kind == "buy" then "primary" elseif main.kind == "getGleam" then "gleam" else "secondary",
+			text = main.text,
+			textSize = if phone then 18 else 34,
+			sound = if main.kind == "buy" then "cta" else nil,
+			anchor = Vector2.new(0, 1),
+			position = UDim2.new(0, pad, 1, -(if phone then 22 else 48)),
+			size = UDim2.fromOffset(inner, buttonHeight),
+			onActivated = main.onActivated,
+		})
+		local onBack = foot.onBack
+		if footBack and onBack ~= nil then
+			face.back = e(ToonButton, {
+				variant = "secondary",
+				text = "Back",
+				textSize = if phone then 14 else 24,
+				small = true,
+				anchor = Vector2.new(0, 1),
+				position = UDim2.new(0, pad, 1, -((if phone then 22 else 48) + buttonHeight + 10)),
+				size = UDim2.fromOffset(if phone then 90 else 160, backHeight),
+				onActivated = onBack,
+			})
+		end
+	end
 	if props.note ~= nil then
 		face.note = e(ToonText, {
 			text = props.note,

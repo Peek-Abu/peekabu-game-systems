@@ -466,6 +466,20 @@ function VM.product(listed: Offer, owns: Owns, balances: Balances): Product
 	}
 end
 
+--[=[
+	The page parts (VM.product) for any one cosmetic item, sold in the Shop or not (owner, 2026-11-14: a Locker item's
+	page uses the same parts as the Shop's: rarity, line, lore, styles). It is described as a view-only offer of that one
+	item that is never sold; the caller shows its own button instead of `button`. nil for an unknown id.
+]=]
+function VM.itemProduct(id: string, owns: Owns, balances: Balances): Product?
+	local item = CosmeticRegistry.get(id)
+	if item == nil then
+		return nil
+	end
+	local viewOnly: Offer = { id = item.id, items = { item.id }, currency = "gleam", price = 0, pool = "picks" }
+	return VM.product(viewOnly, owns, { gleam = balances.gleam, credits = balances.credits })
+end
+
 -- The Hire tab: every employee for sale (a new hire shows up by itself), cheapest first, the ones already hired last.
 function VM.hires(owns: Owns, balances: Balances): { OfferCard }
 	local cards: { OfferCard } = {}
