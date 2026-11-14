@@ -5,8 +5,8 @@
 	the title ("LEGENDARY!"), the ribbon ("New skin for Pippa"), the item to show in 3D, and the buttons. The main
 	button's words fit what you got (owner 11-14): Wear it! for a skin, Use it! for an idle or a vacuum, Add to wheel!
 	for an emote (the first empty wheel slot), Use stickers! for a sticker pack (its stickers into the sticker slots);
-	once it is on it says so (Wearing it!, On your wheel!, ...), and an idle that only fits another skin says Wear the
-	skin first!. A new skin with colour styles shows a chip per style first, to pick which one to wear. Nice!
+	once it is on it says so (Wearing it!, On your wheel!, ...). An idle plays on the skin the player wears (Classic by
+	default, never forced onto its Legendary skin; every idle fits every skin of its employee). A new skin with colour styles shows a chip per style first, to pick which one to wear. Nice!
 	otherwise. A buy with more than one item (a bundle, a deal) shows every item as a tile: tap one to put it in front
 	with its own button; the screen stays open after you use something and leaves only on Done (a single item closes
 	on its button, Later leaves it). An employee is a hire: "YOU'RE HIRED!", their ID card and ability, Start! after
@@ -68,8 +68,8 @@ export type View = {
 	skinKey: string?,
 	-- A vacuum (Cosmetic id): shown on the player's own employee (CosmeticOutfitRules.tryOn), from behind.
 	vacuum: string?,
-	-- An idle plays as itself (its key, on the skin it fits when it fits only some), an emote loops (its id), and a
-	-- sticker pack shows its stickers instead of an employee.
+	-- An idle plays as itself (its key, on the skin the player wears), an emote loops (its id), and a sticker pack
+	-- shows its stickers instead of an employee.
 	idle: string?,
 	emote: string?,
 	stickers: boolean,
@@ -131,7 +131,6 @@ local DONE_WORD: { [CosmeticTypes.Kind]: string? } = {
 	stickerPack = "Stickers on!",
 	vacuum = "Using it!",
 }
-local SKIN_FIRST = "Wear the skin first!"
 
 local VM = { SCENE = "reveal" }
 
@@ -239,10 +238,18 @@ local function useOf(item: CosmeticTypes.Item, context: Context): ({ CosmeticTyp
 		return { change }, false, use
 	elseif reason == "no change" then
 		return {}, true, DONE_WORD[item.kind] or ""
-	elseif reason == "not with this skin" then
-		return {}, false, SKIN_FIRST
 	end
 	return {}, false, "Nice!"
+end
+
+-- The key of the skin the player wears on `employee`; nil for the employee's free skin (Classic).
+local function wornSkinKey(context: Context, employee: string): string?
+	local skin = CosmeticRules.lookFor(context.loadout, employee, context.owns).skin
+	local item = CosmeticRegistry.get(skin)
+	if item == nil or item.source == "default" then
+		return nil
+	end
+	return CosmeticRegistry.keyOf(skin)
 end
 
 local function everything(): boolean
@@ -372,9 +379,7 @@ function VM.view(reveal: Reveal, given: Context?): View
 		employee = employee,
 		skinKey = if item.kind == "skin"
 			then CosmeticRegistry.keyOf(item.id)
-			elseif item.kind == "idle" and item.fits ~= nil and item.fits[1] ~= nil then CosmeticRegistry.keyOf(
-				item.fits[1]
-			)
+			elseif item.kind == "idle" then wornSkinKey(context, employee)
 			else nil,
 		vacuum = if item.kind == "vacuum" then item.id else nil,
 		idle = if item.kind == "idle" then CosmeticRegistry.keyOf(item.id) else nil,

@@ -136,17 +136,17 @@ return function()
 			expect(vacuum.primary).to.equal("Using it!")
 		end)
 
-		it("asks for the skin first when an idle only fits a skin you are not wearing", function()
-			local view = VM.view({ ids = { "Pippa.BubbleBuddyIdle" }, source = "shop" }, context())
-			expect(view.primary).to.equal("Wear the skin first!")
-			expect(#view.changes).to.equal(0)
-			local wearing = VM.view(
+		it("says Use it! for an idle whatever skin is on (every idle fits every skin of its employee)", function()
+			local classic = VM.view({ ids = { "Pippa.BubbleBuddyIdle" }, source = "shop" }, context())
+			expect(classic.primary).to.equal("Use it!")
+			expect(classic.changes[1].kind).to.equal("idle")
+			local other = VM.view(
 				{ ids = { "Pippa.BubbleBuddyIdle" }, source = "shop" },
 				context(function(loadout)
-					loadout.looks.Pippa = pippaLook("Pippa.BubbleBuddy")
+					loadout.looks.Pippa = pippaLook("Pippa.GloomTouched")
 				end)
 			)
-			expect(wearing.primary).to.equal("Use it!")
+			expect(other.primary).to.equal("Use it!")
 		end)
 
 		it("offers Later for something new to use, and just a thank-you when nothing can be used", function()
@@ -164,18 +164,27 @@ return function()
 	end)
 
 	describe("the item in front plays as itself", function()
-		it("plays an idle on the skin it fits, and loops an emote", function()
-			local idle = VM.view({ ids = { "Pippa.BubbleBuddyIdle" }, source = "shop" })
-			expect(idle.idle).to.equal("BubbleBuddyIdle")
-			expect(idle.skinKey).to.equal("BubbleBuddy")
-			-- An idle for every skin plays on the employee's own skin.
-			local shared = VM.view({ ids = { "Cappy.PJIdle" }, source = "shop" })
-			expect(shared.idle).to.equal("PJIdle")
-			expect(shared.skinKey).to.equal(nil)
-			local emote = VM.view({ ids = { "Pippa.Bubbles" }, source = "shop" })
-			expect(emote.emote).to.equal("Pippa.Bubbles")
-			expect(emote.idle).to.equal(nil)
-		end)
+		it(
+			"plays an idle on the skin you wear (Classic by default, never its Legendary skin), and loops an emote",
+			function()
+				local idle = VM.view({ ids = { "Pippa.BubbleBuddyIdle" }, source = "shop" }, context())
+				expect(idle.idle).to.equal("BubbleBuddyIdle")
+				expect(idle.skinKey).to.equal(nil)
+				local wearing = VM.view(
+					{ ids = { "Pippa.BubbleBuddyIdle" }, source = "shop" },
+					context(function(loadout)
+						loadout.looks.Pippa = pippaLook("Pippa.GloomTouched")
+					end)
+				)
+				expect(wearing.skinKey).to.equal("GloomTouched")
+				local shared = VM.view({ ids = { "Cappy.PJIdle" }, source = "shop" })
+				expect(shared.idle).to.equal("PJIdle")
+				expect(shared.skinKey).to.equal(nil)
+				local emote = VM.view({ ids = { "Pippa.Bubbles" }, source = "shop" })
+				expect(emote.emote).to.equal("Pippa.Bubbles")
+				expect(emote.idle).to.equal(nil)
+			end
+		)
 
 		it("shows a sticker pack as its stickers, not an employee", function()
 			expect(VM.view({ ids = { "CozyPack" }, source = "shop" }).stickers).to.equal(true)
