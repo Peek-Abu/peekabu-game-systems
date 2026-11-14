@@ -146,6 +146,7 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 		local soon = tab.soon == true
 		nodes[`tab{index}`] = e(ToonButton, {
 			variant = if soon then "secondary" else if selected then "gleam" else "grape",
+			sound = "tab",
 			text = tab.text,
 			icon = tab.icon,
 			textSize = tabText,

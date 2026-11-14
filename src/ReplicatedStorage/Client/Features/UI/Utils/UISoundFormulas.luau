@@ -8,7 +8,18 @@
 	@class UISoundFormulas
 ]=]
 
-export type Tier = "hover" | "click" | "confirm" | "back" | "error" | "cta" | "hold" | "done" | "open" | "purchase"
+export type Tier =
+	"hover"
+	| "click"
+	| "confirm"
+	| "back"
+	| "error"
+	| "cta"
+	| "hold"
+	| "done"
+	| "open"
+	| "purchase"
+	| "tab"
 
 -- The PaperButton looks whose default is the confirm (the rest default to the click).
 local CONFIRMS: { [string]: boolean } = { go = true, primary = true, danger = true }

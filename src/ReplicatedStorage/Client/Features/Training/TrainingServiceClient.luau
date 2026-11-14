@@ -41,6 +41,8 @@ local TrainingHubSystem = require(ReplicatedStorage.Client.Features.Training.Sys
 local TrainingSpotlightSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSpotlightSystem)
 local TrainingTrailSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingTrailSystem)
 local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
+local TrainingAssets = require(ReplicatedStorage.Client.Features.Training.Data.TrainingAssets)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local TrainingFinish = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingFinish)
 local TrainingGuideHud = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingGuideHud)
@@ -212,7 +214,7 @@ export type TrainingServiceClient = {
 }
 
 local TrainingServiceClient: TrainingServiceClient = {
-	dependencies = { "StateSyncServiceClient", "UIServiceClient" },
+	dependencies = { "StateSyncServiceClient", "UIServiceClient", "SoundServiceClient" },
 
 	init = function(_self)
 		if not HudRegistry.has("trainingGuide") then
@@ -254,6 +256,8 @@ local TrainingServiceClient: TrainingServiceClient = {
 			stoppers,
 			TrainingEvents.packets.Finish.listen(function(gleam: number)
 				TrainingCoachStore.finished(gleam)
+				-- The finish screen's fanfare (2D, the Reward bus).
+				SoundServiceClient:playOneShot(TrainingAssets.FINISH)
 			end)
 		)
 		table.insert(

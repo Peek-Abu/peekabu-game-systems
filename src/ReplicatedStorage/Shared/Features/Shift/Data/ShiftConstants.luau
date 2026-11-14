@@ -38,6 +38,14 @@ local TOAST_STYLES: { [string]: ToastTypes.ToastStyle } = {
 		font = Enum.Font.Oswald,
 		sound = "shiftStamp",
 	},
+	-- A neutral notice (drawn like any sticky note), with its own sound.
+	notice = {
+		background = Color3.fromRGB(255, 226, 102),
+		text = Color3.fromRGB(46, 38, 20),
+		accent = Color3.fromRGB(232, 160, 40),
+		font = Enum.Font.PermanentMarker,
+		sound = "shiftNoticeToast",
+	},
 	slip = {
 		background = Color3.fromRGB(255, 228, 92),
 		text = Color3.fromRGB(36, 33, 28),
@@ -239,6 +247,7 @@ return table.freeze({
 	-- Toast styles (registered by both Shift services at load) and how long a stamp stays up.
 	TOAST_STICKY = "sticky",
 	TOAST_STAMP = "stamp",
+	TOAST_NOTICE = "notice",
 	TOAST_SLIP = "slip",
 	TOAST_SLIP_JACKPOT = "slipJackpot",
 	TOAST_STYLES = table.freeze(TOAST_STYLES),

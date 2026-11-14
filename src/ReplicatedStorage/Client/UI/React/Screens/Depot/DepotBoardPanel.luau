@@ -187,6 +187,7 @@ local function desktop(props: DepotBoardPanelProps): Nodes
 		local key: Tab = tab.key
 		nodes[`tab_{key}`] = e(ToonButton, {
 			variant = if key == "contracts" then "gleam" else "secondary",
+			sound = "tab",
 			text = tab.label,
 			textSize = 28,
 			selected = key == "contracts",

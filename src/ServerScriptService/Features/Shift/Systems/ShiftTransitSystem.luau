@@ -216,7 +216,10 @@ function ShiftTransitSystem.new(options: Options): ShiftTransitSystem
 			publish()
 			local current = crewId
 			if current ~= nil and data == current and #tracker:unready(current) > 0 then
-				ToastServiceServer:send(player, { text = ShiftConstants.TRANSIT_WAIT_TEXT, duration = 4 })
+				ToastServiceServer:send(
+					player,
+					{ text = ShiftConstants.TRANSIT_WAIT_TEXT, duration = 4, style = ShiftConstants.TOAST_NOTICE }
+				)
 			end
 			check()
 		end,

@@ -243,7 +243,7 @@ local function pinResultCard(player: Player, payload: QueueTypes.QueuePayload)
 	task.spawn(function()
 		if DepotBuildSystem.pinCard(player, current.resultBoard, attributes) then
 			cardsPinned += 1
-			ToastServiceServer:send(player, { text = DepotConstants.RETURN_TEXT, duration = 6 })
+			ToastServiceServer:send(player, { text = DepotConstants.RETURN_TEXT, duration = 6, style = "notice" })
 		end
 	end)
 end

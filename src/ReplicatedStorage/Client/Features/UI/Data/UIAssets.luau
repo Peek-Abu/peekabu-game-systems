@@ -311,6 +311,9 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- Purchase, the "shop buy" pick). Volumes put them at about -24 and -19 dB (the UI band; the buy's peak under -1).
 	uiOpen = { assetId = "rbxassetid://17208405682", group = "UI", volume = 2.7, maxConcurrent = 1 },
 	uiPurchase = { assetId = "rbxassetid://17208380755", group = "UI", volume = 2, maxConcurrent = 1 },
+	-- Switching tabs (menu bar, board tabs, shop filter chips): Roblox_UI_Paper_Swipe (15675037413), the owner's
+	-- library-round pick B (2026-11-14), lighter than a click (about -23 dB).
+	uiTab = { assetId = "rbxassetid://15675037413", group = "UI", volume = 1.5, maxConcurrent = 2 },
 }
 for id, def in SOUNDS do
 	if not SoundRegistry.has(id) then
@@ -331,6 +334,7 @@ local TIERS: { [string]: string } = {
 	done = "uiPromptDone",
 	open = "uiOpen",
 	purchase = "uiPurchase",
+	tab = "uiTab",
 }
 UIAssets.soundTiers = table.freeze(TIERS)
 

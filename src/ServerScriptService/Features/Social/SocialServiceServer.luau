@@ -74,7 +74,7 @@ local defaults: Hooks = {
 	toast = function(userId, text)
 		local player = Players:GetPlayerByUserId(userId)
 		if player ~= nil then
-			ToastServiceServer:send(player, { text = text, duration = 4 })
+			ToastServiceServer:send(player, { text = text, duration = 4, style = "notice" })
 		end
 	end,
 	clock = os.time,

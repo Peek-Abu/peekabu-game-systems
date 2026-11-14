@@ -63,6 +63,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The toast styles' sounds (ShiftConstants.TOAST_STYLES): a paper rustle and a rubber stamp.
 	shiftStickyNote = { assetId = "rbxassetid://99429190384090", group = "UI", volume = 0.6 },
 	shiftStamp = { assetId = "rbxassetid://121483921177102", group = "UI", volume = 0.9 },
+	-- The neutral "notice" toast (an invite, waiting for the crew, the result card pinned, a social perk):
+	-- Roblox_UI_Tonal_Stinger (Creator Store 15675043410), the owner's library-round pick C (2026-11-14), played in place
+	-- at about -24 dB. "Can't do that" refusals stay silent (the owner said none to their options).
+	shiftNoticeToast = { assetId = "rbxassetid://15675043410", group = "UI", volume = 0.46 },
 }
 
 local CUE_SOUNDS: { [string]: string } = {

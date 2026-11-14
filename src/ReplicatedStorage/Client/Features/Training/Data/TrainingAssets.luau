@@ -36,6 +36,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	},
 	-- "Essential (sting)", APM Music on the Creator Store (9042046037): a warm, calm sting with a piano finish.
 	trainingRelief = { assetId = "rbxassetid://9042046037", group = "SFX", bus = "Stings", volume = 0.7 },
+	-- The "you finished training" screen: "Cartoon Fanfare (C)", APM Music on the Creator Store (1840120056), the owner's
+	-- library-round pick B (2026-11-14), played in place. Its file opens on ~0.5 s of silence (no start offset exists),
+	-- so the fanfare lands just after the screen. About -18 dB, a reward sting.
+	trainingFinish = { assetId = "rbxassetid://1840120056", group = "SFX", bus = "Reward", volume = 2.7 },
 }
 
 for id, def in SOUNDS do
@@ -49,6 +53,7 @@ return table.freeze({
 	CREAK = "trainingDoorCreak",
 	SLAM = "trainingDoorSlam",
 	RELIEF = "trainingRelief",
+	FINISH = "trainingFinish",
 	-- The coach's wave at the hub's Training pad (TrainingCoachSystem): wave v2, forearm-led from a bent elbow
 	-- (owner 11-11), generic for every employee (design/animations/coach, Icey Labs, uploaded with the owner's OK
 	-- 2026-11-11).

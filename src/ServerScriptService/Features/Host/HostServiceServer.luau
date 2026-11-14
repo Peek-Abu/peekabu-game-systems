@@ -184,7 +184,10 @@ local function onJoined(player: Player)
 		local inviter = Players:GetPlayerByUserId(inviterId)
 		local pad = if inviter ~= nil then QueueServiceServer:padOf(inviter) else nil
 		if inviter ~= nil and pad ~= nil and isHeld(pad) and player.Parent == Players then
-			ToastServiceServer:send(player, { text = string.format(HostConstants.TEXT.invited, inviter.DisplayName) })
+			ToastServiceServer:send(
+				player,
+				{ text = string.format(HostConstants.TEXT.invited, inviter.DisplayName), style = "notice" }
+			)
 		end
 	end)
 end

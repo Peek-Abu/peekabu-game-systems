@@ -697,6 +697,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			local value = option.value
 			chips[option.text] = e(ToonButton, {
 				variant = "grape",
+				sound = "tab",
 				text = option.text,
 				textSize = size,
 				selected = filter == value,
