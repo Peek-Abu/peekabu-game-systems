@@ -7,7 +7,8 @@
 	  an image. The pose is the employee's `context` pose (EmployeePoseRules; default "crew").
 	- `live = true` (the hero): the model in a WorldModel with its idle loop playing (the skin's own showcase idle when
 	  it has one). Past the live cap (two at once) it quietly shows the static copy instead.
-	- `emote` (a Cosmetic emote id, live only): the hero loops that emote on the 3D preview stage instead
+	- `emote` (a Cosmetic emote id, live only; not while its screen is covered, ToonCoveredContext): the hero loops
+	  that emote on the 3D preview stage instead
 	  (EmployeeStageSystem; owner, 2026-10-29: a ViewportFrame draws no particles, so its effects would not show): the
 	  viewport stays empty and the stage's camera puts the model in this frame's place on the screen.
 	  A live hero's props follow its clip's markers (EmotePropSystem): a skin's showcase idle holds them out.
@@ -51,6 +52,7 @@ local EmoteEffectSystem = require(ReplicatedStorage.Client.Features.Emote.System
 local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
 local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
 local EmployeeStageSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeStageSystem)
+local ToonCoveredContext = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonCoveredContext)
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
 local EmployeePoseRegistry = require(EmployeeShared.Data.EmployeePoseRegistry)
 local EmployeePoseRules = require(EmployeeShared.Rules.EmployeePoseRules)
@@ -231,6 +233,9 @@ end
 type Hero = { model: Model, who: string, skin: string?, idle: string? }
 
 local function ToonViewport(props: ToonViewportProps): React.ReactNode
+	-- On a screen covered by a full-screen scene (ToonCoveredContext), an emote hero lets go of the 3D stage, so the
+	-- screen on top can have it (one stage at a time); it takes it back when uncovered.
+	local covered = React.useContext(ToonCoveredContext.Context)
 	local noFrame: ViewportFrame? = nil
 	local frame, setFrame = React.useState(noFrame)
 	local shown, setShown = React.useState(true)
@@ -281,7 +286,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		props.framing,
 		platformKey,
 		props.turn or 0,
-		props.emote or "",
+		if covered then "" else props.emote or "",
 		props.reveal == true,
 		props.idle or "",
 	}
@@ -306,7 +311,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			root = at
 			bounds = ToonSpinViewModel.around(bounds, at)
 		end
-		local emote = if moving then props.emote else nil
+		local emote = if moving and not covered then props.emote else nil
 		if emote ~= nil and bounds ~= nil then
 			local height = bounds.max.Y - bounds.min.Y
 			bounds = { min = bounds.min, max = bounds.max + Vector3.new(0, height * EMOTE_HEADROOM, 0) }
