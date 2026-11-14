@@ -15,7 +15,9 @@ return function()
 	end)
 
 	it("has Bramble's own first-catch and overtime tips, which never name Mr. Harlow", function()
-		expect(TipRegistry.text("firstCatchBramble")).to.equal("Bramble got you! Keep watching it, or hide!")
+		expect(TipRegistry.text("firstCatchBramble")).to.equal(
+			"Bramble got you! The old school owl wants everyone to stay after school."
+		)
 		for _, id in { "firstCatchBramble", "overtimeBramble" } do
 			local text = TipRegistry.text(id)
 			expect(type(text)).to.equal("string")
@@ -25,10 +27,19 @@ return function()
 		end
 	end)
 
-	it("keeps Mr. Harlow's tips as they were", function()
+	it("tells a first catch only lore, never how a monster works or how to get away (owner Q1, 11-14)", function()
 		expect(TipRegistry.text("firstCatch")).to.equal(
-			"Mr. Harlow got you! Hide under a desk when you hear him coming."
+			"Mr. Harlow got you! He never went home, and he still thinks he's the boss."
 		)
+		for _, id in { "firstCatch", "firstCatchBramble" } do
+			local text = string.lower(TipRegistry.text(id))
+			for _, how in { "hide", "watch", "look at", "run", "quiet", "desk", "freeze", "keep" } do
+				expect(string.find(text, how, 1, true)).to.equal(nil)
+			end
+		end
+	end)
+
+	it("keeps Mr. Harlow's overtime tip as it was", function()
 		expect(TipRegistry.text("overtime")).to.equal(
 			"Overtime! Sign the sheet in the truck: treasures pay more, but Mr. Harlow gets faster."
 		)

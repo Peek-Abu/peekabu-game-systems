@@ -228,3 +228,9 @@ saying, so this is **Q2**.
 `rbxassetid://97041946735842` (owner and audio type checked on the economy API), wired into `brambleThump`. Rig check on
 Shift: the perch head now looks down (it stared at the ceiling) and the wing lifts are smaller (2de045ac); suite
 6676/6676.
+
+**Q1 answered "yes!" (2026-11-14): first-catch tips are lore only.** `firstCatch`: "Mr. Harlow got you! He never went home,
+and he still thinks he's the boss." `firstCatchBramble`: "Bramble got you! The old school owl wants everyone to stay
+after school." A spec bars how-to words (hide, watch, look at, run, quiet, desk, freeze, keep) from both. Owner approved
+the perch poses. Still flagged, unchanged: the overtime tips ("... gets faster"), Inventory "Monsters hear you less.",
+transit "Hide from the monsters!".

@@ -17,10 +17,12 @@ local SettingRegistry = require(ReplicatedStorage.Shared.Features.Setting.Data.S
 local SETTING = "tips"
 
 local TEXT: { [string]: string } = {
-	firstCatch = "Mr. Harlow got you! Hide under a desk when you hear him coming.",
+	-- The first-catch tips are lore only (owner Q1, 2026-11-14): never how a monster works or how to get away from it,
+	-- which players learn by playing.
+	firstCatch = "Mr. Harlow got you! He never went home, and he still thinks he's the boss.",
 	overtime = "Overtime! Sign the sheet in the truck: treasures pay more, but Mr. Harlow gets faster.",
 	-- Bramble's (a School run's monster; OccupantKindRegistry words pick a kind's tip ids).
-	firstCatchBramble = "Bramble got you! Keep watching it, or hide!",
+	firstCatchBramble = "Bramble got you! The old school owl wants everyone to stay after school.",
 	overtimeBramble = "Overtime! Sign the sheet in the truck: treasures pay more, but Bramble gets faster.",
 	firstAbility = "Nice! Your power needs a little time to charge before you can use it again.",
 }
