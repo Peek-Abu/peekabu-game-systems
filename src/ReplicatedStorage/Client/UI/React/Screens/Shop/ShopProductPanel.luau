@@ -5,7 +5,7 @@
 	(a chip per colour style: pressing one shows that style on the 3D preview, so you see it before buying; only for a
 	skin with real styles), a row per item inside (its kind, name and own price "alone 400"; on an employee's hire
 	page, their ability card and five stats instead), and the big buy
-	button (the price, Owned, or "Need 300 more"), with a refused buy's words under it. Right: the item LIVE on a
+	button (the price with any crossed-out price, short or not, or Owned), with a refused buy's words under it. Right: the item LIVE on a
 	raised platform in its rarity's colour. All of it is ShopViewModel.product; nothing is per item. Presentational
 	(exempt; story in ShopScreen.story).
 
@@ -311,7 +311,7 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 
 	local button = product.button
 	local content: Nodes? = nil
-	if button.kind == "buy" then
+	if button.kind == "buy" or button.kind == "short" then
 		local priced: Nodes = {
 			price = e(ToonPrice, {
 				currency = button.currency,

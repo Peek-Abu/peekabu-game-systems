@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShopStore: the Shop's client state: which product page is open (`product`, nil = the Shop's front) and the last
-	buy result from the server (`result`, from ShopEvents.BuyResult) so the page can say "Need 300 more" or that it
+	buy result from the server (`result`, from ShopEvents.BuyResult) so the page can say "Not enough yet!" or that it
 	is already owned. Opening another page clears the old result. `passInfo` holds each game pass's price and icon as
 	Roblox reported them (ShopServiceClient fetches them), by MarketplaceRegistry key; `bundleInfo` the same for each Gleam
 	bundle's developer product (its Robux price and icon), by bundle key. `tab` is the tab the Shop opens on next (`openTab`, the hub's Lost & Found lockers).

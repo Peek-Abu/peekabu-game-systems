@@ -2,8 +2,9 @@
 --[=[
 	ShopViewModel: everything the Shop screens show, from the offers (ShopRegistry / today's ShopRotationUtils.live),
 	the catalogue and what the player owns and has: offer cards (name, "Skin · Pippa", price, owned / affordable /
-	too dear), the buy button (Buy / Owned / "Need 300 more" / "Use 30 Gleam" when Gleam pays the rest of a Credits
-	price), the Yes/No question before spending, where to come back to after buying Gleam (returnTo, bestBundle), the product page
+	too dear), the buy button (the price with any crossed-out price, short or not; Owned; "Use 30 Gleam" when Gleam pays the rest
+	of a Credits price; short, it names the smallest Gleam pack that covers the rest, which the page opens straight
+	away), the Yes/No question before spending, where to come back to after buying Gleam (returnTo, bestBundle), the product page
 	(lore, styles, what's inside with each extra's own price, an employee's ability and five display stats), the Skins tab list, the Gleam bundles, the Passes cards
 	(every registered game pass: its words from ShopConstants.PASS_COPY, its price and icon as Roblox reported them,
 	Owned once bought), the countdowns, and a refused buy in kid words. Nothing here is per item: a new offer shows up by itself.
@@ -94,6 +95,9 @@ export type Button = {
 	was: string?,
 	-- "topup": the Gleam for the rest. "short": the Gleam balance it needs (the price, or the rest of a Credits price).
 	gleam: number?,
+	-- "short": the Gleam pack to open (VM.bestBundle of what is missing; owner 11-14: no "Need 300 more" line, a press
+	-- opens Roblox's purchase prompt for it and comes back to the item).
+	pack: string?,
 }
 
 export type Inside = { id: string, name: string, kind: string, alone: string? }
@@ -296,14 +300,18 @@ function VM.button(listed: Offer, owns: Owns, balances: Balances): Button
 				gleam = plan.gleam,
 			}
 		end
+		local gleam = gleamNeeded(offer, balances)
+		local canPay = offer.currency == "gleam" or plan ~= nil
 		return {
-			text = `Need {ToonStyleViewModel.grouped(missing)} more`,
-			-- Leads to the Gleam tab, and back here once there is enough.
-			enabled = offer.currency == "gleam" or plan ~= nil,
+			-- The price, as if they could buy it: the press opens the Gleam pack, then comes back here.
+			text = price,
+			enabled = canPay,
 			kind = "short",
 			currency = offer.currency,
 			price = price,
-			gleam = gleamNeeded(offer, balances),
+			was = if offer.was ~= nil then ToonStyleViewModel.grouped(offer.was) else nil,
+			gleam = gleam,
+			pack = if canPay then VM.bestBundle(gleam - balances.gleam) else nil,
 		}
 	end
 	return {

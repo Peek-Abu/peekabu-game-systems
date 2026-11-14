@@ -605,12 +605,18 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			onBuy = function()
 				setConfirming(true)
 			end,
+			-- Short: the Gleam tab with the smallest pack that covers it, and Roblox's purchase prompt for that pack
+			-- straight away; once the Gleam lands the Shop goes back to the item with its question up.
 			onGetMore = function()
 				local back = VM.returnTo(offer, owns, balances, tab)
+				local pack = product.button.pack
 				setTab("gleam")
 				if preview == nil then
 					ShopStore.close()
 					ShopStore.setReturn(back)
+					if pack ~= nil then
+						MarketplaceServiceClient:promptProduct(pack)
+					end
 				end
 			end,
 		})
