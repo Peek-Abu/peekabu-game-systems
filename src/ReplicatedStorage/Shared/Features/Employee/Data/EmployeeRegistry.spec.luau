@@ -325,6 +325,24 @@ return function()
 	end)
 
 	describe("showcase idle", function()
+		it("measures how far every preview clip reaches, so a spinning preview's camera is fitted once", function()
+			local function sane(reach)
+				expect(reach).to.be.ok()
+				expect(reach.radius > 0).to.equal(true)
+				expect(reach.top > 0).to.equal(true)
+				expect(reach.bottom <= 0).to.equal(true)
+			end
+			for _, name in EmployeeRegistry.names() do
+				local def = EmployeeRegistry.get(name)
+				sane(def.previewReach)
+				for _, skin in def.skins do
+					if skin.showcaseIdle ~= nil then
+						sane(skin.showcaseReach)
+					end
+				end
+			end
+		end)
+
 		it("names only looped clips the animation registry knows", function()
 			for _, name in EmployeeRegistry.names() do
 				for _, skin in EmployeeRegistry.get(name).skins do

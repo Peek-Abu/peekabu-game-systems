@@ -57,6 +57,31 @@ function ToonSpinViewModel.around(bounds: EmployeePoseFormulas.Bounds, root: Vec
 	}
 end
 
+-- How far a preview's clips can carry the model and its props round its root (EmployeePreviewSystem.reachOf): the
+-- furthest sideways, and the highest and lowest (studs from the root).
+export type Reach = { radius: number, top: number, bottom: number }
+
+--[=[
+	The box a spinning preview's camera is fitted to ONCE (owner, 2026-11-14: no zoom while you look at an item): the
+	model at rest round its root (`around`), grown to everywhere its clips and props reach at any angle (`reach`,
+	measured over the whole idle, fidget and menu reaction). It never shrinks below the rest pose.
+]=]
+function ToonSpinViewModel.reach(
+	bounds: EmployeePoseFormulas.Bounds,
+	root: Vector3,
+	reach: Reach?
+): EmployeePoseFormulas.Bounds
+	local rest = ToonSpinViewModel.around(bounds, root)
+	if reach == nil then
+		return rest
+	end
+	local r = math.max(rest.max.X - root.X, reach.radius)
+	return {
+		min = Vector3.new(root.X - r, math.min(rest.min.Y, root.Y + reach.bottom), root.Z - r),
+		max = Vector3.new(root.X + r, math.max(rest.max.Y, root.Y + reach.top), root.Z + r),
+	}
+end
+
 --[=[
 	`home` (a model's pivot at rest) turned `degrees` round the upright axis through `root`.
 ]=]

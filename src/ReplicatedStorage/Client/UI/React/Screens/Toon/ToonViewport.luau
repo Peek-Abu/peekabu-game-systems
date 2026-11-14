@@ -29,7 +29,10 @@
 	axis through its own root; the camera, the light and the platform stay still (owner, 2026-11-14: the first version
 	orbited the camera round the model's box, so the model drifted off-centre and the platform seemed to swing). The
 	camera is fitted once to a box that holds the model at every angle, centred on its root (ToonSpinViewModel.around),
-	so it never moves while the model turns; an emote hero turns on the stage (EmployeeStageSystem `turn`).
+	so it never moves while the model turns. That box also takes in everywhere the hero's clips and props reach
+	(measured per clip, EmployeePreviewSystem.reachOf), and a spinning hero never grows to fit: the camera holds still for
+	as long as you look at the item (owner, 2026-11-14: no zoom). An emote hero turns on the stage (EmployeeStageSystem
+	`turn`).
 	The angle starts at the front for each new item and is kept through a colour style change.
 	`dim` darkens it (a locked item). With no art for the employee in the place it stays blank, then shows the loud error
 	tile (PortraitError, timing in PortraitViewModel.missing). Exempt (needs a renderer); story in ToonViewport.story.
@@ -45,6 +48,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local React = require(ReplicatedStorage.Packages.React)
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
@@ -301,7 +305,8 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 		local bounds =
 			EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(model, PortraitViewModel.parts(props.framing)))
-		-- A spinning model turns about its own root: the camera and platform centre there, on a box it never leaves.
+		-- A spinning model turns about its own root: the camera and platform centre there, on a box fitted ONCE to
+		-- everywhere its clips and props reach (EmployeePreviewSystem.reachOf, measured), so the camera never refits.
 		local root: Vector3? = nil
 		if props.spin == true and bounds ~= nil then
 			local rootPart = model:FindFirstChild("HumanoidRootPart")
@@ -309,7 +314,16 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 				then rootPart.Position
 				else (bounds.min + bounds.max) / 2
 			root = at
-			bounds = ToonSpinViewModel.around(bounds, at)
+			local outfit = props.outfit
+			local reach = if outfit ~= nil
+				then EmployeePreviewSystem.reachOf(outfit.employee, CosmeticRegistry.keyOf(outfit.look.skin))
+				elseif props.employee ~= nil then EmployeePreviewSystem.reachOf(
+					props.employee,
+					props.skin,
+					props.idle
+				)
+				else nil
+			bounds = ToonSpinViewModel.reach(bounds, at, reach)
 		end
 		local emote = if moving and not covered then props.emote else nil
 		if emote ~= nil and bounds ~= nil then
@@ -438,7 +452,8 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		-- A live full figure moves out of its rest-pose box (a reveal's raised arm or hop, an idle's ears): keep
 		-- measuring it and ease the camera out to take in all of it, never in (owner, 2026-11-12: never cut off).
 		local growing: RBXScriptConnection? = nil
-		if moving and props.framing == "full" and bounds ~= nil then
+		-- (Not a spinning hero: its camera was fitted once to its measured reach and holds; owner, 2026-11-14.)
+		if moving and props.framing == "full" and bounds ~= nil and root == nil then
 			local live: Model = model
 			local target: CFrame? = nil
 			local since = 0
@@ -448,12 +463,6 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 				if since >= GROW_EVERY and fitted ~= nil then
 					since = 0
 					local seen = EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(live, nil))
-					-- A spinning model is measured as the box round its root too, so a prop it swings out (a Legendary's
-					-- showcase idle holds one) widens the view evenly and never pulls the camera off-centre.
-					local spinAxis = root
-					if seen ~= nil and spinAxis ~= nil then
-						seen = ToonSpinViewModel.around(seen, spinAxis)
-					end
 					local grown = if seen ~= nil then PortraitViewModel.grow(fitted, seen) else nil
 					if grown ~= nil then
 						bounds = grown

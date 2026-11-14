@@ -309,6 +309,25 @@ function EmployeePreviewSystem.idleOf(employee: string, skin: string?, idle: str
 end
 
 --[=[
+	How far the clip a preview plays (idleOf) carries the model and its props round its root, over the whole idle, its
+	fidget and the menu reaction (measured in Studio; EmployeeRegistry `showcaseReach` / `previewReach`): a spinning
+	preview's camera is fitted to it once and never refits (owner, 2026-11-14: no zoom while you look at an item).
+]=]
+function EmployeePreviewSystem.reachOf(employee: string, skin: string?, idle: string?): EmployeeRegistry.PreviewReach?
+	local def = EmployeeRegistry.get(employee)
+	if def == nil then
+		return nil
+	end
+	local clip = EmployeeSkinRules.idleOf(def, skin, idle)
+	for _, look in def.skins do
+		if clip ~= nil and look.showcaseIdle == clip and look.showcaseReach ~= nil then
+			return look.showcaseReach
+		end
+	end
+	return def.previewReach
+end
+
+--[=[
 	The animation registry key of the fidget a preview plays, the one that belongs to its idle (EmployeeSkinRules
 	`fidgetOf`: a skin's own over its showcase idle, else the employee's); nil when there is none.
 ]=]

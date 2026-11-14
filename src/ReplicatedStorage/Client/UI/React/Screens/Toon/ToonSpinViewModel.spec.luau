@@ -20,6 +20,19 @@ return function()
 	end)
 
 	describe("release", function()
+		it("never swings back past where the flick left it (no overshoot)", function()
+			local state = VM.release(VM.drag(VM.new(), 100, 200, 0.05))
+			local turned = 0
+			for _ = 1, 100 do
+				local nextState = VM.step(state, 1 / 60, 0)
+				local delta = (nextState.angle - state.angle + 180) % 360 - 180
+				expect(delta >= 0).to.equal(true)
+				turned += delta
+				state = nextState
+			end
+			expect(turned > 0).to.equal(true)
+		end)
+
 		it("coasts after a flick and slows to a stop", function()
 			local state = VM.release(VM.drag(VM.new(), 100, 200, 0.05))
 			expect(state.velocity > 0).to.equal(true)
@@ -97,24 +110,25 @@ return function()
 			expect(wide.max.Y).to.equal(5)
 		end)
 
-		it(
-			"keeps the camera centred when a turning model's props reach out (a growing box stays on the root)",
-			function()
-				local PortraitViewModel = require(script.Parent.Parent.Portrait.PortraitViewModel)
-				local fitted = VM.around(box, root)
-				-- A Legendary's showcase prop held far out to one side, after a quarter turn.
-				local seen = { min = Vector3.new(-1, 0, -0.5), max = Vector3.new(1, 5, 4) }
-				local raw = PortraitViewModel.grow(fitted, seen)
-				local rawCentre = (raw.min + raw.max) / 2
-				-- Growing by the raw box drifts off the root (the bug the owner saw on Legendary skins).
-				expect(math.abs(rawCentre.Z) > 0.1).to.equal(true)
-				local grown = PortraitViewModel.grow(fitted, VM.around(seen, root))
-				local centre = (grown.min + grown.max) / 2
-				expect(centre.X).to.be.near(0, 1e-6)
-				expect(centre.Z).to.be.near(0, 1e-6)
-				expect(grown.max.Z >= 4).to.equal(true)
-			end
-		)
+		it("fits once to the furthest any clip reaches round the root, so the camera never refits", function()
+			local reach = { radius = 4, top = 4, bottom = -2.5 }
+			local fitted = VM.reach(box, root, reach)
+			local centre = (fitted.min + fitted.max) / 2
+			expect(centre.X).to.be.near(0, 1e-6)
+			expect(centre.Z).to.be.near(0, 1e-6)
+			expect(fitted.max.X).to.be.near(4, 1e-6)
+			expect(fitted.max.Y).to.be.near(root.Y + 4, 1e-6)
+			expect(fitted.min.Y).to.be.near(root.Y - 2.5, 1e-6)
+		end)
+
+		it("never fits smaller than the model at rest", function()
+			local tiny = { radius = 0.1, top = 0.1, bottom = -0.1 }
+			local fitted = VM.reach(box, root, tiny)
+			local rest = VM.around(box, root)
+			expect(fitted.min:FuzzyEq(rest.min, 1e-6)).to.equal(true)
+			expect(fitted.max:FuzzyEq(rest.max, 1e-6)).to.equal(true)
+			expect(VM.reach(box, root, nil).max:FuzzyEq(rest.max, 1e-6)).to.equal(true)
+		end)
 	end)
 
 	describe("turn", function()

@@ -44,6 +44,14 @@ export type StyleDef = {
 	swatch: { Color3 },
 }
 
+--[=[
+	How far a preview's clips carry the model and its props round its root, in studs at the template's size: the
+	furthest sideways, and the highest and lowest from the root. Measured in Studio by playing every clip a preview
+	can play (the idle, its fidget, the menu reaction) through and keeping the furthest of every part and prop, plus a
+	small margin; a spinning preview's camera is fitted to it once (EmployeePreviewSystem.reachOf).
+]=]
+export type PreviewReach = { radius: number, top: number, bottom: number }
+
 export type SkinDef = {
 	-- Its key in the employee's `skins`.
 	name: string,
@@ -79,6 +87,8 @@ export type SkinDef = {
 	-- An AnimationRegistry key: the skin's own rare fidget over its showcase idle (AnimationFidgetSystem). A skin with a
 	-- showcase idle and no fidget of its own never fidgets: the employee's fidget would not fit its idle.
 	showcaseFidget: string?,
+	-- How far its showcase idle, fidget and the menu reaction reach (PreviewReach); required with a showcase idle.
+	showcaseReach: PreviewReach?,
 	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this skin is unlocked. nil = the
 	-- employee's hireReveal, worn in this skin (owner, 2026-10-29: every skin purchase gets a reveal, the Legendaries'
 	-- too for now; a skin may get its own later, e.g. the registered pippabubblebuddyreveal).
@@ -156,6 +166,8 @@ export type EmployeeDef = {
 	idles: { [string]: string }?,
 	-- Its own idle/walk/run; nil = the stock locomotion.
 	locomotion: LocomotionDef?,
+	-- How far its own idle, fidget and the menu reaction reach in a preview (PreviewReach).
+	previewReach: PreviewReach?,
 	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this employee is hired (and for a skin
 	-- with no unlockReveal of its own). nil = no reveal: the idle only.
 	hireReveal: string?,
@@ -243,6 +255,8 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				-- Her own idle and fidget (owner pick 2026-11-03): paws on the duck ring at her waist; the fidget blows a
 				-- few bubbles.
 				showcaseIdle = "pippabubblebuddyidle",
+				-- Measured in Studio 2026-11-14 over the idle, its fidget and the menu reaction, +5% (PreviewReach).
+				showcaseReach = { radius = 2.13, top = 4.47, bottom = -1.48 },
 				showcaseFidget = "pippabubblebuddyfidget",
 				styles = {
 					{
@@ -268,6 +282,8 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 		},
 		defaultSkin = "Default",
 		idles = { BubbleBuddyIdle = "BubbleBuddy" },
+		-- Measured in Studio 2026-11-14 over the idle, its fidget and the menu reaction, +5% (PreviewReach).
+		previewReach = { radius = 2.05, top = 4.76, bottom = -1.21 },
 		-- Company vest and static PippaLanyard removed: all employees wear the client-fitted v4 lanyard + v6 rank badge
 		-- driven by the player's general rank (EmployeeLanyardSystem; gates/7f_badges_v6_info_front_icon_back.md).
 		uniform = {},
@@ -396,6 +412,8 @@ EMPLOYEES.Cappy = {
 			accessories = {},
 			outfit = "CappyPJ",
 			showcaseIdle = "cappypjidle",
+			-- Measured in Studio 2026-11-14 over the idle, its fidget and the menu reaction, +5% (PreviewReach).
+			showcaseReach = { radius = 2.07, top = 3.01, bottom = -1.4 },
 			showcaseFidget = "cappypjfidget",
 			styles = {
 				{
@@ -418,6 +436,8 @@ EMPLOYEES.Cappy = {
 	},
 	defaultSkin = "Default",
 	idles = { PJIdle = "PJ" },
+	-- Measured in Studio 2026-11-14 over the idle, its fidget and the menu reaction, +5% (PreviewReach).
+	previewReach = { radius = 1.72, top = 2.97, bottom = -1.18 },
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
 	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32, "cappyfidget"),
@@ -486,6 +506,8 @@ EMPLOYEES.Prickles = {
 			accessories = {},
 			outfit = "PricklesSheriff",
 			showcaseIdle = "pricklessheriffidle",
+			-- Measured in Studio 2026-11-14 over the idle, its fidget and the menu reaction, +5% (PreviewReach).
+			showcaseReach = { radius = 2.58, top = 3.52, bottom = -1.37 },
 			showcaseFidget = "pricklessherifffidget",
 			styles = {
 				{
@@ -511,6 +533,8 @@ EMPLOYEES.Prickles = {
 	},
 	defaultSkin = "Default",
 	idles = { SheriffIdle = "Sheriff" },
+	-- Measured in Studio 2026-11-14 over the idle, its fidget and the menu reaction, +5% (PreviewReach).
+	previewReach = { radius = 2.12, top = 3.55, bottom = -1.16 },
 	uniform = {},
 	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34, "pricklesfidget"),
 }

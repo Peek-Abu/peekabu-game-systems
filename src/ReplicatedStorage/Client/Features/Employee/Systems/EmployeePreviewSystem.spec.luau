@@ -358,6 +358,24 @@ return function()
 		expect(EmployeePreviewSystem.idleOf("Pippa", "NoSuchSkin")).to.equal("pippaidle")
 	end)
 
+	it(
+		"names how far the clip a preview plays reaches: the showcase idle's on any skin, else the employee's",
+		function()
+			local EmployeeRegistry =
+				require(game:GetService("ReplicatedStorage").Shared.Features.Employee.Data.EmployeeRegistry)
+			local pippa = EmployeeRegistry.get("Pippa")
+			expect(EmployeePreviewSystem.reachOf("Pippa", "BubbleBuddy")).to.equal(
+				pippa.skins.BubbleBuddy.showcaseReach
+			)
+			-- The Bubble Buddy idle item plays the same clip on the Classic skin.
+			expect(EmployeePreviewSystem.reachOf("Pippa", nil, "BubbleBuddyIdle")).to.equal(
+				pippa.skins.BubbleBuddy.showcaseReach
+			)
+			expect(EmployeePreviewSystem.reachOf("Pippa", "Default")).to.equal(pippa.previewReach)
+			expect(EmployeePreviewSystem.reachOf("Nobody")).never.to.be.ok()
+		end
+	)
+
 	it("reveals every skin with the employee's hire reveal, worn in that skin (no skin has its own yet)", function()
 		-- the Legendaries too, for now (owner, 2026-10-29)
 		expect(EmployeePreviewSystem.revealOf("Pippa", "BubbleBuddy")).to.equal("pippahirereveal")
