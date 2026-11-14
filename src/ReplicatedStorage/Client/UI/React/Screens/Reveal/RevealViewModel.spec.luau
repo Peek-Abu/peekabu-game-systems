@@ -89,25 +89,38 @@ return function()
 			expect(VM.view({ ids = { "Pippa.Bubbles" }, source = "shop" }, context()).primary).to.equal("Add to wheel!")
 		end)
 
-		it("says Use stickers! for a sticker pack, and puts each of its stickers in a slot", function()
+		it("opens the sticker spots for a sticker pack, so you pick where each sticker goes", function()
 			local view = VM.view({ ids = { "CozyPack" }, source = "shop" }, context())
 			expect(view.primary).to.equal("Use stickers!")
-			local changes = VM.wear(view, 1)
-			expect(#changes).to.equal(4)
-			for slot, change in changes do
-				expect(change.kind).to.equal("sticker")
-				expect(change.slot).to.equal(slot)
-			end
+			-- Nothing is put on by itself (owner 11-14: stickers are not on or off).
+			expect(#VM.wear(view, 1)).to.equal(0)
+			expect(view.opens.tab).to.equal("wheel")
+			expect(view.opens.employee).to.equal(nil)
+			expect(view.opens.item).to.equal("CozyPack")
 		end)
 
-		it("adds an emote to the first empty wheel slot (the last one when the wheel is full)", function()
-			local fresh = VM.view({ ids = { "Pippa.Bubbles" }, source = "shop" }, context())
-			expect(fresh.changes[1].kind).to.equal("emote")
-			expect(fresh.changes[1].employee).to.equal("Pippa")
-			-- With no saved look Pippa's free emote sits in slot 1.
-			expect(fresh.changes[1].slot).to.equal(2)
-			expect(VM.wheelSlot({ "a", "", "c", "" })).to.equal(2)
-			expect(VM.wheelSlot({ "a", "b", "c", "d" })).to.equal(CosmeticConstants.WHEEL_SLOTS)
+		it("opens the emote wheel for an emote, so you pick its slot", function()
+			local view = VM.view({ ids = { "Pippa.Bubbles" }, source = "shop" }, context())
+			expect(view.primary).to.equal("Add to wheel!")
+			expect(#view.changes).to.equal(0)
+			expect(view.opens.employee).to.equal("Pippa")
+			expect(view.opens.tab).to.equal("emotes")
+			expect(view.opens.item).to.equal("Pippa.Bubbles")
+		end)
+
+		it("never greys out a wheel or sticker item: you can always move it", function()
+			local wheel = VM.view(
+				{ ids = { "Pippa.Bubbles" }, source = "shop" },
+				context(function(loadout)
+					loadout.looks.Pippa = pippaLook(nil, nil, { "Pippa.Wave", "Pippa.Bubbles", "", "" })
+				end)
+			)
+			expect(wheel.primary).to.equal("Add to wheel!")
+			expect(wheel.done).to.equal(false)
+			expect(wheel.opens ~= nil).to.equal(true)
+			-- A skin, an idle or a vacuum never opens a picker.
+			expect(VM.view({ ids = { "Pippa.GloomTouched" }, source = "shop" }, context()).opens).to.equal(nil)
+			expect(VM.view({ ids = { "Cappy.PJIdle" }, source = "shop" }, context()).opens).to.equal(nil)
 		end)
 
 		it("says it is already on once it is (and sends nothing)", function()
@@ -120,13 +133,6 @@ return function()
 			expect(worn.primary).to.equal("Wearing it!")
 			expect(worn.done).to.equal(true)
 			expect(#worn.changes).to.equal(0)
-			local wheel = VM.view(
-				{ ids = { "Pippa.Bubbles" }, source = "shop" },
-				context(function(loadout)
-					loadout.looks.Pippa = pippaLook(nil, nil, { "Pippa.Wave", "Pippa.Bubbles", "", "" })
-				end)
-			)
-			expect(wheel.primary).to.equal("On your wheel!")
 			local vacuum = VM.view(
 				{ ids = { "Vacuum.BrassBellows" }, source = "shop" },
 				context(function(loadout)
@@ -134,6 +140,13 @@ return function()
 				end)
 			)
 			expect(vacuum.primary).to.equal("Using it!")
+		end)
+
+		it("stays open while you pick a spot, then Done leaves", function()
+			local view = VM.view({ ids = { "Pippa.Bubbles" }, source = "shop" }, context())
+			expect(view.stays).to.equal(true)
+			expect(view.later).to.equal(true)
+			expect(view.leave).to.equal("Done")
 		end)
 
 		it("says Use it! for an idle whatever skin is on (every idle fits every skin of its employee)", function()
@@ -232,15 +245,16 @@ return function()
 			expect(worn.later).to.equal(true)
 		end)
 
-		it("marks each tile that is already on", function()
+		it("marks a worn skin's tile as on, never an emote's or a sticker pack's", function()
 			local view = VM.view(
 				{ ids = BUNDLE, source = "shop" },
 				context(function(loadout)
-					loadout.looks.Pippa = pippaLook(nil, nil, { "Pippa.Wave", "Pippa.Bubbles", "", "" })
+					loadout.looks.Pippa = pippaLook("Pippa.BubbleBuddy", nil, { "Pippa.Wave", "Pippa.Bubbles", "", "" })
 				end)
 			)
-			expect(view.items[1].done).to.equal(false)
-			expect(view.items[2].done).to.equal(true)
+			expect(view.items[1].done).to.equal(true)
+			expect(view.items[2].done).to.equal(false)
+			expect(view.items[3].done).to.equal(false)
 		end)
 
 		it("a single item closes on its button, as before", function()

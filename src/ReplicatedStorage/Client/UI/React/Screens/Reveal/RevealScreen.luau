@@ -6,7 +6,8 @@
 	skin for Pippa"), the item LIVE on a raised platform with its name plate, and the buttons (the main one's words fit
 	the item: Wear it!, Use it!, Add to wheel!, Use stickers!; Later, or Nice!). A buy with more than one item shows a
 	"YOU GOT" tile for each: tapping one puts it in front with its own button, the screen stays open after using one,
-	and Done leaves. A hire shows the ID card stamped HIRED!, the ability card and Start! or Equip!. Reads
+	and Done leaves. An emote's Add to wheel! and a sticker pack's Use stickers! open the Inventory over it at that
+	item's picker (UIStore.inventoryAt); closing the Inventory comes back here. A hire shows the ID card stamped HIRED!, the ability card and Start! or Equip!. Reads
 	CosmeticRevealStore.current (one at a time); a button moves the queue on, and the main button sends the changes
 	through CosmeticServiceClient. Values are RevealViewModel's. Exempt (wires stores; story in RevealScreen.story).
 
@@ -23,6 +24,8 @@ local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.C
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local CosmeticRevealStore = require(ReplicatedStorage.Client.Features.Cosmetic.State.CosmeticRevealStore)
+local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
+local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
 local ToonButton = require(Toon.ToonButton)
@@ -189,6 +192,13 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 
 	local function finish(equip: boolean)
 		if props.reveal ~= nil then
+			return
+		end
+		local opens = view.opens
+		if equip and opens ~= nil then
+			-- An emote or a sticker pack: the Inventory's own picker opens over the reveal; closing it comes back here.
+			UIStore.inventoryAt(opens)
+			SceneStack.push(InventoryViewModel.SCENE)
 			return
 		end
 		if equip then
@@ -520,7 +530,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		variant = "primary",
 		text = view.primary,
 		-- Already on, or nothing to put on while the screen stays open: greyed (Done leaves).
-		disabled = view.done or (view.stays and #view.changes == 0),
+		disabled = view.done or (view.stays and #view.changes == 0 and view.opens == nil),
 		textSize = if phone then 22 else 46,
 		sound = "cta",
 		anchor = Vector2.new(1, 1),

@@ -27,9 +27,17 @@ local sceneStack = Charm.atom({} :: { string }) -- type the atom's empty initial
 -- the engine's Modal button while it is true, which is what frees a cursor locked by first person or shift lock.
 local mouseFreed = Charm.atom(false)
 
+-- Where the Inventory opens next (the reveal's "Add to wheel!" / "Use stickers!"): an employee's page on a page tab
+-- with an item picked, or (no employee) the top-level "wheel" tab. The Inventory scene reads it once as it opens and
+-- clears it, so a plain open still starts on the Crew tab.
+export type InventoryAt = { employee: string?, tab: string, item: string? }
+local noTarget: InventoryAt? = nil
+local inventoryAt = Charm.atom(noTarget)
+
 local UIStore = {
 	sceneStack = sceneStack,
 	mouseFreed = mouseFreed,
+	inventoryAt = inventoryAt,
 }
 
 return UIStore
