@@ -6,8 +6,8 @@
 	  breaking the card, the player's name, the Clearance Level star, the rank name on desktop and the XP bar);
 	- under it the menu tiles (JOBS, INVENTORY, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
 	  grid on phone, clear of the thumbstick);
-	- top-right: the Credits counter (the coin render overlapping a gold number) and the daily gift (OPEN! with a badge,
-	  else the time to the next day); on desktop the Tonight card (tonight's building photo, the Manager breaking its
+	- top-right: the Credits counter (the coin render overlapping a gold number) and the calendar tile, the one daily button
+	  (PUNCH IN!, mint and pulsing until today's punch, else the time to tomorrow's; it opens the Timecard); on desktop the Tonight card (tonight's building photo, the Manager breaking its
 	  edge), which opens the Jobs board;
 	- bottom: off a truck, a small "Find a truck!" tab (bottom-right; phone bottom-centre), hidden while a prompt is up
 	  (owner 11-11: the full Next shift card got in the way); the full card is the queue pad's own (DepotPad) aboard.
@@ -59,13 +59,13 @@ export type DepotHubPanelProps = {
 	onInventory: () -> (),
 	onGuide: () -> (),
 	onSettings: () -> (),
+	-- The calendar tile: opens the Timecard (the hub's one daily button).
 	onGift: () -> (),
 	-- The SHOP tile under the gift.
 	onShop: () -> (),
 	onGo: () -> (),
-	-- The Company Clipboard's tile under SHOP (owner 11-08, layout A; DepotHubViewModel.clipboardShown), its "!" while
-	-- today's punch is still free, and what it opens. No tile without `onClipboard`.
-	clipboardBadge: boolean?,
+	-- The Company Clipboard's tile under SHOP (owner 11-08, layout A; DepotHubViewModel.clipboardShown) and what it
+	-- opens. No tile without `onClipboard`.
 	onClipboard: (() -> ())?,
 }
 
@@ -225,28 +225,20 @@ local function clipboardTile(props: DepotHubPanelProps): React.ReactNode
 		return nil
 	end
 	local phone = props.phone
-	local tile = DepotHubViewModel.clipboardTile(props.clipboardBadge == true, phone)
-	-- While today's punch is free the tile pulses in a mint glow with bubbles (ToonPulse) and says PUNCH IN!.
-	return e(ToonPulse, {
-		active = tile.pulse,
+	return e(ToonButton, {
+		variant = "lilac",
+		layout = "tile",
+		icon = "clock",
+		-- The phone tile is 66 px: a short word that fits at a readable size. The daily call to punch in is the calendar
+		-- tile's (one obvious daily button, owner 2026-11-14).
+		text = if phone then "CARD" else "CLIPBOARD",
+		textSize = if phone then 13 else 20,
 		anchor = Vector2.new(1, 0),
 		position = UDim2.fromOffset(0, if phone then 214 else 424),
 		size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
-		reach = if phone then 12 else 22,
-		children = {
-			tile = e(ToonButton, {
-				variant = if tile.pulse then "primary" else "lilac",
-				layout = "tile",
-				icon = "clock",
-				text = tile.text,
-				textSize = if phone then 13 else 20,
-				badge = if tile.pulse then "!" else nil,
-				size = UDim2.fromScale(1, 1),
-				small = phone,
-				radius = if phone then 16 else 24,
-				onActivated = onOpen,
-			}),
-		},
+		small = phone,
+		radius = if phone then 16 else 24,
+		onActivated = onOpen,
 	})
 end
 
@@ -279,21 +271,29 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			},
 			zIndex = 4,
 		}),
-		gift = e(ToonButton, {
-			variant = "grape",
-			layout = "tile",
-			icon = "daily",
-			text = gift.text,
-			textSize = if phone then 13 else 24,
-			badge = if gift.ready then "!" else nil,
-			selected = gift.ready,
+		-- The calendar: the hub's one daily button (owner 2026-11-14). While today's punch is free it is mint, says
+		-- PUNCH IN! and pulses in a mint glow with bubbles (ToonPulse); it opens the Timecard.
+		gift = e(ToonPulse, {
+			active = gift.ready,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.fromOffset(0, if phone then 62 else 118),
 			size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
-			small = phone,
-			radius = if phone then 16 else 24,
-			sound = "confirm",
-			onActivated = props.onGift,
+			reach = if phone then 12 else 22,
+			children = {
+				tile = e(ToonButton, {
+					variant = if gift.ready then "primary" else "grape",
+					layout = "tile",
+					icon = "daily",
+					text = gift.text,
+					textSize = if phone then 13 else 22,
+					badge = if gift.ready then "!" else nil,
+					size = UDim2.fromScale(1, 1),
+					small = phone,
+					radius = if phone then 16 else 24,
+					sound = "confirm",
+					onActivated = props.onGift,
+				}),
+			},
 		}),
 		-- Tagged, so the after-training tour can point at the Shop (TrainingSpotlightSystem).
 		shop = e("Frame", {

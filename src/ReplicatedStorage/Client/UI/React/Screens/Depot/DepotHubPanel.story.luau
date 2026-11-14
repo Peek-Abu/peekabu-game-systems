@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotHubPanel.story: the V1 hub HUD at the desktop design (1920x1080) or the phone design (844x390), idle or aboard a
-	truck (the Next shift card's two states), with the gift ready or counting down. In Studio's edit mode (UI Labs).
+	truck (the Next shift card's two states), with today's punch free (the calendar pulsing PUNCH IN!) or done. In Studio's edit mode (UI Labs).
 
 	@class DepotHubPanel.story
 ]=]
@@ -39,12 +39,11 @@ return UILabs.CreateReactStory({
 		held = false,
 	}, 1, { [2] = "Biscuit" }, 2, 100, phone)
 	local now = 20000 * 86400 + 3600
-	local daily = if controls.GiftReady then { lastDay = 19999, streak = 2 } else { lastDay = 20000, streak = 3 }
 	local hub = e(DepotHubPanel, {
 		phone = phone,
 		profile = DepotHubViewModel.profile("Pippa", { xp = controls.Xp, prevXp = controls.Xp }),
 		credits = "1,240",
-		gift = DepotHubViewModel.gift(daily, now),
+		gift = DepotHubViewModel.daily(controls.GiftReady == true, now, phone),
 		tonight = DepotHubViewModel.tonight("harlow-finch-1"),
 		cta = DepotPadViewModel.cta(if controls.Aboard then pad else nil, 2),
 		newJobs = true,

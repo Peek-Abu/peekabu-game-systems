@@ -2,9 +2,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
-local DailyRewardConstants = require(ReplicatedStorage.Shared.Features.DailyReward.Data.DailyRewardConstants)
-local DailyRewardRules = require(ReplicatedStorage.Shared.Features.DailyReward.Rules.DailyRewardRules)
-local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local TipRegistry = require(ReplicatedStorage.Shared.Features.Tip.Data.TipRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
@@ -33,29 +30,18 @@ function VM.profile(name: string, rank: { xp: number, prevXp: number }?): Profil
 	}
 end
 
--- The daily gift tile: OPEN! while today's reward is claimable, else the time to the next day (h:mm:ss).
-function VM.gift(state: PlayerDataTypes.DailyReward, now: number): GiftView
-	local offset = DailyRewardConstants.DAY_OFFSET_HOURS
-	local today = DailyRewardRules.dayOf(now, offset)
-	local status = DailyRewardRules.status(state, today, DailyRewardConstants.CYCLE_LENGTH)
-	if status.claimable then
-		return { ready = true, text = "OPEN!" }
+-- The calendar tile (top right) is the hub's one daily button (owner 2026-11-14: the empty daily gift merged into the
+-- punch-in): PUNCH IN! while today's punch is free (the phone tile is 66 px: PUNCH), else the time to tomorrow's
+-- punch (h:mm:ss, UTC days like the Timecard). It opens the Timecard.
+function VM.daily(canPunch: boolean, now: number, phone: boolean): GiftView
+	if canPunch then
+		return { ready = true, text = if phone then "PUNCH" else "PUNCH IN!" }
 	end
-	local left = math.max(0, math.ceil(SECONDS_PER_DAY - (now + offset * 3600) % SECONDS_PER_DAY))
+	local left = math.max(0, math.ceil(SECONDS_PER_DAY - now % SECONDS_PER_DAY))
 	return {
 		ready = false,
 		text = string.format("%d:%02d:%02d", left // 3600, (left % 3600) // 60, left % 60),
 	}
-end
-
--- The Company Clipboard tile: while today's punch is free it says PUNCH IN! and pulses (owner 2026-11-14: it must
--- obviously ask to be clicked); after it, it is the plain CLIPBOARD. The phone tile is 66 px, so its words are short.
-export type ClipboardTileView = { text: string, pulse: boolean }
-function VM.clipboardTile(canPunch: boolean, phone: boolean): ClipboardTileView
-	if canPunch then
-		return { text = if phone then "PUNCH" else "PUNCH IN!", pulse = true }
-	end
-	return { text = if phone then "CARD" else "CLIPBOARD", pulse = false }
 end
 
 -- The hub page's header title.

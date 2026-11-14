@@ -4,8 +4,8 @@
 	takes the server's cards (DepotEvents.Card) into DepotStore and moves the card on as its time runs out.
 	The board's prompt (DepotEvents.Board) opens the contract board scene (DepotScene, registered at require):
 	pushing it twice is a no-op, and once the scene leaves the stack (CLOSE or Escape) the store's board is cleared.
-	The hub HUD (DepotHub: profile, Credits, daily gift, Tonight, the menu tiles and
-	the Next shift card) claims its gift through DailyRewardServiceClient. The truck queue pad card (DepotPad, with GO!
+	The hub HUD (DepotHub: profile, Credits, the calendar PUNCH IN! tile, Tonight, the menu tiles and
+	the Next shift card); the calendar opens the Timecard. The truck queue pad card (DepotPad, with GO!
 	to depart now) replaces Queue's placeholder pad widget, which init hides
 	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds;
 	the trucks' scanner arches flash on each bank (DepotTruckScannerSystem), and an empty hub bay shows a ghost truck
@@ -48,7 +48,6 @@ local DepotDriveBySystem = require(ReplicatedStorage.Client.Features.Depot.Syste
 local SocialServiceClient = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
-local DailyRewardServiceClient = require(ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local DepotCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard)
 local DepotPad = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPad)
@@ -121,18 +120,12 @@ local DepotServiceClient: DepotServiceClient = {
 		"SocialServiceClient",
 		"MarketplaceServiceClient",
 		"StateSyncServiceClient",
-		"DailyRewardServiceClient",
 	},
 
 	init = function(_self)
 		if not HudRegistry.has("depotHub") then
-			-- The hub HUD's daily gift claims through the daily reward service (the server decides).
 			HudRegistry.register("depotHub", function()
-				return React.createElement(DepotHub, {
-					onClaimGift = function()
-						DailyRewardServiceClient:claim()
-					end,
-				})
+				return React.createElement(DepotHub)
 			end, DepotConstants.HUD_ORDER - 2)
 		end
 		if not HudRegistry.has(HUD_KEY) then

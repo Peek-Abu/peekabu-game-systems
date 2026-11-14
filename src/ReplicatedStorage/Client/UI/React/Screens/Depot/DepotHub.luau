@@ -2,10 +2,10 @@
 --[=[
 	DepotHub: the depot hub's HUD widget (registered by DepotServiceClient). Reads the shift snapshot (never shown over a
 	crew's shift), the travel card (hidden under it), the player's published rank, their Credits (the `credits` balance),
-	the daily reward slice on the server clock, the contract board's contract and whether they are aboard a truck,
+	their weekly timecard on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
-	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the clipboard is a CLIPBOARD tile under SHOP and the invite row sits under the Tonight card (owner 11-08, layout A; no clipboard before training is done, DepotHubViewModel.clipboardShown); the gift asks to claim (`onClaimGift`, from the service: components
-	never talk to the server). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
+	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the clipboard is a CLIPBOARD tile under SHOP and the invite row sits under the Tonight card (owner 11-08, layout A; no clipboard before training is done, DepotHubViewModel.clipboardShown); the calendar tile is the one daily button: PUNCH IN! (pulsing) until today's punch, and it opens the Timecard
+	(owner 2026-11-14; the old empty daily gift streak stays in saves, unused). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
 	DepotHubViewModel (off a truck, the small Find a truck tab instead of the Next shift card, hidden while a prompt is up).
 
 	@class DepotHub
@@ -51,10 +51,6 @@ local SocialPerksPanel = require(ReplicatedStorage.Client.UI.React.Screens.Socia
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 
-export type DepotHubProps = {
-	onClaimGift: () -> (),
-}
-
 -- The contract the depot's board shows (its shell carries the id), or nil before the board has streamed in.
 local function boardContract(): string?
 	for _, shell in CollectionService:GetTagged(DepotConstants.BILLBOARD_TAGS.contract) do
@@ -71,12 +67,11 @@ local function openBoard()
 	SceneStack.push(DepotConstants.BOARD_SCENE)
 end
 
-local function DepotHub(props: DepotHubProps): React.ReactNode
+local function DepotHub(): React.ReactNode
 	local snapshot = ReactCharm.useAtom(ShiftStore.snapshot)
 	local card = ReactCharm.useAtom(DepotStore.card)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
-	local daily = ReactCharm.useAtom(StateSyncClientStore.dailyReward)
 	local queue = ReactCharm.useAtom(QueueStore.snapshot)
 	local hosts = ReactCharm.useAtom(HostStore.snapshot)
 	local world = ReactCharm.useAtom(StateSyncClientStore.world)
@@ -152,7 +147,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				userId = player.UserId,
 				profile = VM.profile(player.DisplayName, rank),
 				credits = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
-				gift = VM.gift(daily, now),
+				gift = VM.daily(status.canPunch, now, phone),
 				tonight = VM.tonight(boardContract(), picked),
 				cta = nil,
 				findTruck = VM.findTruck(pad ~= nil, promptUp),
@@ -171,9 +166,11 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				onSettings = function()
 					SceneStack.push(VM.scene("settings"))
 				end,
-				onGift = props.onClaimGift,
+				-- The calendar is the punch-in (owner 2026-11-14): it opens the Timecard.
+				onGift = function()
+					Company.open("timecard")
+				end,
 				onGo = openBoard,
-				clipboardBadge = status.canPunch,
 				onClipboard = if showClipboard
 					then function()
 						Company.open(nil)

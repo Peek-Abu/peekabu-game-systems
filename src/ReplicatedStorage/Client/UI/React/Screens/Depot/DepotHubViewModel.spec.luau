@@ -24,16 +24,19 @@ return function()
 			expect(#VM.profile("Abcdefghijklmnopqrstuvwxyz", nil).name <= 14).to.equal(true)
 		end)
 
-		it("lights the daily gift when today's reward is claimable, else counts down to the next day", function()
-			local day = 20000
-			local now = day * 86400 + 3600
-			local ready = VM.gift({ lastDay = day - 1, streak = 3 }, now)
-			expect(ready.ready).to.equal(true)
-			expect(ready.text).to.equal("OPEN!")
-			local waiting = VM.gift({ lastDay = day, streak = 3 }, now)
-			expect(waiting.ready).to.equal(false)
-			expect(waiting.text).to.equal("23:00:00")
-		end)
+		it(
+			"makes the calendar tile today's PUNCH IN!, else counts down to tomorrow's punch (owner 2026-11-14)",
+			function()
+				local now = 20000 * 86400 + 3600
+				local ready = VM.daily(true, now, false)
+				expect(ready.ready).to.equal(true)
+				expect(ready.text).to.equal("PUNCH IN!")
+				expect(VM.daily(true, now, true).text).to.equal("PUNCH")
+				local waiting = VM.daily(false, now, false)
+				expect(waiting.ready).to.equal(false)
+				expect(waiting.text).to.equal("23:00:00")
+			end
+		)
 
 		it("has no Company Equipment page any more (the Inventory's Vacuums tab replaced it)", function()
 			expect(table.find(VM.PAGES, "gear")).never.to.be.ok()
@@ -42,17 +45,6 @@ return function()
 		it("titles the hub pages for the V1 menus", function()
 			expect(VM.pageTitle("guide")).to.equal("GUIDE")
 			expect(VM.pageTitle("settings")).to.equal("SETTINGS")
-		end)
-
-		it("makes the clipboard tile ask to be pressed while today's punch is free", function()
-			local free = VM.clipboardTile(true, false)
-			expect(free.text).to.equal("PUNCH IN!")
-			expect(free.pulse).to.equal(true)
-			expect(VM.clipboardTile(true, true).text).to.equal("PUNCH")
-			local done = VM.clipboardTile(false, false)
-			expect(done.text).to.equal("CLIPBOARD")
-			expect(done.pulse).to.equal(false)
-			expect(VM.clipboardTile(false, true).text).to.equal("CARD")
 		end)
 
 		it("gives each page its own header colour (owner pick 2026-11-13: Guide gold, Settings night)", function()
