@@ -21,11 +21,15 @@ return function()
 		-- prop markers), skipped on her own skin, which already wears it at the waist.
 		local idle = Registry.get("pippabubblebuddyidle")
 		expect(idle).to.be.ok()
-		expect(table.concat(idle.props, ",")).to.equal("DuckRingWaist")
+		expect(#idle.props).to.equal(0)
+		expect(table.concat(idle.steady, ",")).to.equal("DuckRingWaist")
 		expect(idle.idle).to.equal(true)
-		expect(idle.wholeClip).to.equal(true)
-		expect(idle.unlessWorn).to.equal("DuckRing")
+		expect(idle.standIn.prop).to.equal("DuckRingWaist")
+		expect(idle.standIn.worn).to.equal("DuckRing")
 		local fidget = Registry.get("pippabubblebuddyfidget")
+		-- The fidget plays over the idle: it keeps the waist ring out too.
+		expect(table.concat(fidget.steady, ",")).to.equal("DuckRingWaist")
+		expect(fidget.standIn.worn).to.equal("DuckRing")
 		expect(fidget).to.be.ok()
 		expect(table.find(fidget.props, "BubbleWand")).to.be.ok()
 		expect(fidget.idle).never.to.be.ok()
@@ -39,7 +43,7 @@ return function()
 
 	it("lists unique, non-empty prop names", function()
 		for _, entry in Registry.entries do
-			expect(#entry.props > 0).to.equal(true)
+			expect(#entry.props > 0 or #(entry.steady or {}) > 0).to.equal(true)
 			local seen = {}
 			for _, prop in entry.props do
 				expect(type(prop)).to.equal("string")

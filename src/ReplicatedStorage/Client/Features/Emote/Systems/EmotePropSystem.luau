@@ -233,6 +233,8 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 			local released = false
 			local props: { string } = {}
 			local swaps: { string } = {}
+			-- The owning clip's props out for its whole length (EmotePropRegistry `steady`).
+			local steady: { string } = {}
 			-- PROP_SHOW / PROP_HIDE overrides for this clip, by prop name (unset: shown with the window if in `props`).
 			local overrides: { [string]: boolean } = {}
 			local visible = false
@@ -309,6 +311,11 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 					paint(EmployeeConstants.PROPS_FOLDER, name, shown)
 					paint(EmployeeConstants.EMOTE_MOUNTED_FOLDER, name, shown)
 				end
+				local held = owner ~= nil and not wasBlocked
+				for _, name in steady do
+					paint(EmployeeConstants.PROPS_FOLDER, name, held)
+					paint(EmployeeConstants.EMOTE_MOUNTED_FOLDER, name, held)
+				end
 			end
 
 			local function setVisible(value: boolean)
@@ -328,6 +335,7 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				table.clear(ownerCleanups)
 				owner = nil
 				idleOwner = false
+				steady = {}
 				table.clear(overrides)
 				setVisible(false)
 				unmount()
@@ -341,19 +349,41 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				if entry == nil or released then
 					return
 				end
-				-- A skin that wears the prop at its holster shows it already: this clip brings nothing out.
-				local worn = entry.unlessWorn
-				local holster = if worn ~= nil then character:FindFirstChild(EmployeeConstants.HOLSTER_FOLDER) else nil
-				if worn ~= nil and holster ~= nil and holster:FindFirstChild(worn) ~= nil then
+				-- A stand-in for a prop this skin wears at its holster stays away: the skin shows its own.
+				local standIn = entry.standIn
+				local holster = if standIn ~= nil
+					then character:FindFirstChild(EmployeeConstants.HOLSTER_FOLDER)
+					else nil
+				local skipped = if standIn ~= nil
+						and holster ~= nil
+						and holster:FindFirstChild(standIn.worn) ~= nil
+					then standIn.prop
+					else nil
+				local function keep(names: { string }): { string }
+					local kept: { string } = {}
+					for _, name in names do
+						if name ~= skipped then
+							table.insert(kept, name)
+						end
+					end
+					return kept
+				end
+				local entryProps = keep(entry.props)
+				local entrySteady = keep(entry.steady or {})
+				local entrySwaps = entry.swaps or {}
+				-- Nothing left to bring out on this skin: the clip leaves the props as they are.
+				if #entryProps == 0 and #entrySteady == 0 and #entrySwaps == 0 then
 					return
 				end
 				disown()
 				owner = track
 				idleOwner = entry.idle == true
-				props = entry.props
-				swaps = entry.swaps or {}
+				props = entryProps
+				swaps = entrySwaps
+				steady = entrySteady
 				mount(props)
 				mount(swaps)
+				mount(steady)
 				for _, spec in
 					{
 						{ marker = EmoteConstants.PROP_SHOW, shown = true },
@@ -409,8 +439,7 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				local show = track.timeOfKeyframe(EmoteConstants.PROPS_SHOW)
 				local stow = track.timeOfKeyframe(EmoteConstants.PROPS_STOW)
 				local now = track.timePosition()
-				local inWindow = entry.wholeClip == true
-					or (show ~= nil and now >= show and (stow == nil or now < stow))
+				local inWindow = show ~= nil and now >= show and (stow == nil or now < stow)
 				setVisible(track.isPlaying() and inWindow == true)
 			end
 
@@ -420,7 +449,7 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				table.insert(
 					cleanups,
 					onTick(function()
-						if idleOwner and visible and isBlocked() ~= wasBlocked then
+						if idleOwner and (visible or #steady > 0) and isBlocked() ~= wasBlocked then
 							apply()
 						end
 					end)
@@ -431,7 +460,12 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 			local added = character.DescendantAdded:Connect(function(descendant: Instance)
 				local name = descendant.Name
 				if
-					descendant:IsA("BasePart") and (table.find(props, name) ~= nil or table.find(swaps, name) ~= nil)
+					descendant:IsA("BasePart")
+					and (
+						table.find(props, name) ~= nil
+						or table.find(swaps, name) ~= nil
+						or table.find(steady, name) ~= nil
+					)
 				then
 					-- The skin's own prop replaces this client's mounted copy.
 					local folder = mountedFolder

@@ -24,11 +24,12 @@ export type Entry = {
 	-- in menus and in a shift, and put away while something blocks them in the world (vacuuming, carrying, hiding,
 	-- knocked out; EmotePropSystem.forWorld). Moving stops the idle, which puts them away anyway.
 	idle: boolean?,
-	-- Its props are out for the whole clip, from its first frame (a clip with no PropsShow marker).
-	wholeClip: boolean?,
-	-- A skin that wears this prop at its holster (EmployeeConstants.HOLSTER_FOLDER) already shows it: the clip brings
-	-- nothing out on that skin.
-	unlessWorn: string?,
+	-- Props out for the whole clip, from its first frame, not just between PropsShow and PropsStow (a clip with no
+	-- markers, or one that keeps a prop out under its window props).
+	steady: { string }?,
+	-- A prop template (`prop`) standing in for a prop some skins wear at their holster (`worn`): on a skin that wears
+	-- it, the stand-in stays away (the skin shows its own).
+	standIn: { prop: string, worn: string }?,
 }
 
 local entries: { [string]: Entry } = {
@@ -41,9 +42,19 @@ local entries: { [string]: Entry } = {
 	-- Bubble Buddy's idle on any Pippa skin (owner, 2026-11-13: the Legendary idles are their own items): her paws rest
 	-- on a duck ring at her waist, so a skin without one gets the DuckRingWaist template (the outfit's duck ring on a
 	-- LowerTorso joint at its holster offset) for the whole loop. Her own skin wears the ring already: nothing comes out.
-	pippabubblebuddyidle = { props = { "DuckRingWaist" }, idle = true, wholeClip = true, unlessWorn = "DuckRing" },
-	-- Bubble Buddy's fidget: the wand out between its PropsShow and PropsStow (the fidget owns the wand).
-	pippabubblebuddyfidget = { props = { "BubbleWand" } },
+	pippabubblebuddyidle = {
+		props = {},
+		steady = { "DuckRingWaist" },
+		idle = true,
+		standIn = { prop = "DuckRingWaist", worn = "DuckRing" },
+	},
+	-- Bubble Buddy's fidget: the wand out between its PropsShow and PropsStow (the fidget owns the wand), and the waist
+	-- duck ring kept out all through it on a skin without one (it plays over her idle).
+	pippabubblebuddyfidget = {
+		props = { "BubbleWand" },
+		steady = { "DuckRingWaist" },
+		standIn = { prop = "DuckRingWaist", worn = "DuckRing" },
+	},
 	-- Cappy's hire reveal: his phone (an emote prop template, so every skin has it), PropsShow f1 to PropsStow f58.
 	cappyhirereveal = { props = { "Phone" } },
 	-- Cappy's Spot It! ability (both cuts): the same phone, PropsShow f12 to PropsStow f95.
@@ -70,6 +81,14 @@ local entries: { [string]: Entry } = {
 }
 for _, entry in entries do
 	table.freeze(entry.props)
+	local steady = entry.steady
+	if steady ~= nil then
+		table.freeze(steady)
+	end
+	local standIn = entry.standIn
+	if standIn ~= nil then
+		table.freeze(standIn)
+	end
 	local swaps = entry.swaps
 	if swaps ~= nil then
 		table.freeze(swaps)
