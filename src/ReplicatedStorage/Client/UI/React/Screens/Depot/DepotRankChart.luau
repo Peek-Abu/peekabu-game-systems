@@ -57,7 +57,8 @@ local DESKTOP: Layout = {
 	cardBadge = { w = 170, h = 360 },
 	text = { title = 30, rank = 44, body = 24, get = 21 },
 	bar = 34,
-	stairs = { x = 550, floor = 818, width = 112, gap = 12, base = 120, step = 46 },
+	-- The staircase ends ~50 px inside the panel, so Big Boss's figure and YOU! pill keep clear of the right edge.
+	stairs = { x = 540, floor = 818, width = 108, gap = 12, base = 120, step = 46 },
 	stepText = { name = 22, longName = 19, level = 16 },
 	badge = Vector2.new(70, 150),
 	portrait = Vector2.new(210, 250),
@@ -72,7 +73,7 @@ local PHONE: Layout = {
 	cardBadge = { w = 66, h = 140 },
 	text = { title = 15, rank = 22, body = 13, get = 12 },
 	bar = 16,
-	stairs = { x = 262, floor = 326, width = 58, gap = 7, base = 74, step = 20 },
+	stairs = { x = 262, floor = 326, width = 56, gap = 7, base = 74, step = 20 },
 	stepText = { name = 13, longName = 12, level = 12 },
 	badge = Vector2.new(26, 56),
 	portrait = Vector2.new(96, 112),
