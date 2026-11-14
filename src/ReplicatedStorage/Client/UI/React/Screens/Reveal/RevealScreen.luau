@@ -6,8 +6,8 @@
 	skin for Pippa"), the item LIVE on a raised platform with its name plate, and the buttons (the main one's words fit
 	the item: Wear it!, Use it!, Add to wheel!, Use stickers!; Later, or Nice!). A buy with more than one item shows a
 	"YOU GOT" tile for each: tapping one puts it in front with its own button, the screen stays open after using one,
-	and Done leaves. An emote's Add to wheel! and a sticker pack's Use stickers! open the Inventory over it at that
-	item's picker (UIStore.inventoryAt); closing the Inventory comes back here. A hire shows the ID card stamped HIRED!, the ability card and Start! or Equip!. Reads
+	and Done leaves. An emote's Add to wheel! and a sticker pack's Use stickers! open a small picker over the reveal
+	(RevealSlotPicker: the emote's wheel, or the pack's stickers and your spots); closing it leaves you on the reveal. A hire shows the ID card stamped HIRED!, the ability card and Start! or Equip!. Reads
 	CosmeticRevealStore.current (one at a time); a button moves the queue on, and the main button sends the changes
 	through CosmeticServiceClient. Values are RevealViewModel's. Exempt (wires stores; story in RevealScreen.story).
 
@@ -21,11 +21,10 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
 local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
+local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local CosmeticRevealStore = require(ReplicatedStorage.Client.Features.Cosmetic.State.CosmeticRevealStore)
-local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
-local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
 local ToonButton = require(Toon.ToonButton)
@@ -45,6 +44,7 @@ local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
 local VM = require(script.Parent.RevealViewModel)
+local RevealSlotPicker = require(script.Parent.RevealSlotPicker)
 
 local e = React.createElement
 
@@ -150,6 +150,8 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	-- The colour style picked to wear, for the item it was picked on (a new one starts at style 1).
 	local styleKey = `{key}#{focus}`
 	local picked, setPicked = React.useState({ key = "", style = 1 })
+	-- The small picker open over the reveal, for the item it was opened on.
+	local picking, setPicking = React.useState("")
 	local style = if picked.key == styleKey then picked.style else 1
 	-- The opening, replayed for each reveal: a white flash fading, the character popping in, a bright sweep.
 	local flash = useToonPlay(0.5, 0, key)
@@ -194,11 +196,9 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		if props.reveal ~= nil then
 			return
 		end
-		local opens = view.opens
-		if equip and opens ~= nil then
-			-- An emote or a sticker pack: the Inventory's own picker opens over the reveal; closing it comes back here.
-			UIStore.inventoryAt(opens)
-			SceneStack.push(InventoryViewModel.SCENE)
+		if equip and view.picker ~= nil then
+			-- An emote or a sticker pack: the small picker opens over the reveal.
+			setPicking(styleKey)
 			return
 		end
 		if equip then
@@ -530,7 +530,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		variant = "primary",
 		text = view.primary,
 		-- Already on, or nothing to put on while the screen stays open: greyed (Done leaves).
-		disabled = view.done or (view.stays and #view.changes == 0 and view.opens == nil),
+		disabled = view.done or (view.stays and #view.changes == 0 and view.picker == nil),
 		textSize = if phone then 22 else 46,
 		sound = "cta",
 		anchor = Vector2.new(1, 1),
@@ -591,6 +591,35 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			zIndex = 6,
 			onActivated = function()
 				finish(false)
+			end,
+		})
+	end
+
+	-- The small picker over the reveal (an emote's wheel, or a sticker pack's spots).
+	local picker: VM.Picker? = view.picker
+	local itemId = reveal.ids[focus]
+	if picker ~= nil and picking == styleKey and itemId ~= nil then
+		local kind: VM.Picker = picker
+		local context = { loadout = loadout, owns = owns, focus = focus }
+		local function put(change: CosmeticTypes.Change)
+			if props.reveal == nil then
+				CosmeticServiceClient:requestEquip(change)
+			end
+		end
+		nodes.picker = e(RevealSlotPicker, {
+			phone = phone,
+			picker = kind,
+			name = view.name,
+			wheel = if kind == "wheel" then VM.wheel(itemId, context) else nil,
+			stickers = if kind == "stickers" then VM.stickers(itemId, context) else nil,
+			onWheel = function(slot: number)
+				put(VM.wheelChange(itemId, slot))
+			end,
+			onSticker = function(id: string, slot: number)
+				put(VM.stickerChange(id, slot))
+			end,
+			onClose = function()
+				setPicking("")
 			end,
 		})
 	end

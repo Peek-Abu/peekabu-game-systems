@@ -5,7 +5,9 @@
 	the title ("LEGENDARY!"), the ribbon ("New skin for Pippa"), the item to show in 3D, and the buttons. The main
 	button's words fit what you got (owner 11-14): Wear it! for a skin, Use it! for an idle or a vacuum; once it is on
 	it says so (Wearing it!, Using it!). A spot item is never on or off (owner 11-14): Add to wheel! (an emote) and Use
-	stickers! (a sticker pack) open the Inventory's own picker to choose the spot, and closing it comes back here. An idle plays on the skin the player wears (Classic by
+	stickers! (a sticker pack) open a small picker on the reveal to choose the spot (owner 11-14: never a whole new
+	menu): the emote's wheel (`wheel`; taking a filled slot asks first, `swapQuestion`) or the pack's stickers and your
+	sticker spots (`stickers`). The picker's slots are the Inventory's own (InventoryViewModel.detail and .chat). An idle plays on the skin the player wears (Classic by
 	default, never forced onto its Legendary skin; every idle fits every skin of its employee). A new skin with colour styles shows a chip per style first, to pick which one to wear. Nice!
 	otherwise. A buy with more than one item (a bundle, a deal) shows every item as a tile: tap one to put it in front
 	with its own button; the screen stays open after you use something and leaves only on Done (a single item closes
@@ -24,7 +26,7 @@ local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.Co
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
-local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
+local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 
 export type Reveal = {
@@ -45,7 +47,8 @@ export type Effects = {
 	foil: boolean,
 }
 
-type InventoryAt = UIStore.InventoryAt
+-- Which small picker the main button opens on the reveal: an emote's wheel, or a sticker pack's spots.
+export type Picker = "wheel" | "stickers"
 
 -- One colour style's chip: a short name and its colours (the fur, then the outfit).
 export type StyleChip = { name: string, swatch: { Color3 } }
@@ -88,8 +91,8 @@ export type View = {
 	-- The screen stays open after the primary button (a buy with more than one item, or a picker that comes back
 	-- here); it leaves on `leave`.
 	stays: boolean,
-	-- An emote or a sticker pack: where the main button opens the Inventory to pick its spot (UIStore.inventoryAt).
-	opens: InventoryAt?,
+	-- An emote or a sticker pack: the small picker the main button opens over the reveal to choose its spot.
+	picker: Picker?,
 	-- A new skin's colour styles, a chip each (name and colours): pick which one Wear it! puts on. Empty otherwise.
 	styles: { StyleChip },
 	-- The second button and its words: "Later" (a single item), "Done" (a buy with more than one).
@@ -142,10 +145,7 @@ local VM = { SCENE = "reveal" }
 -- and the words.
 -- A slot item opens its picker instead (owner 11-14: stickers and the emote wheel are not on or off; you choose the
 -- spot): an emote its employee's wheel, a sticker pack the Inventory's sticker spots.
-local function useOf(
-	item: CosmeticTypes.Item,
-	context: Context
-): ({ CosmeticTypes.Change }, boolean, string, InventoryAt?)
+local function useOf(item: CosmeticTypes.Item, context: Context): ({ CosmeticTypes.Change }, boolean, string, Picker?)
 	local loadout, owns = context.loadout, context.owns
 	local employee = item.employee or CosmeticConstants.DEFAULT_EMPLOYEE
 	local use = USE_WORD[item.kind]
@@ -153,9 +153,9 @@ local function useOf(
 		return {}, false, "Nice!", nil
 	end
 	if item.kind == "stickerPack" then
-		return {}, false, use, { employee = nil, tab = "wheel", item = item.id }
+		return {}, false, use, "stickers"
 	elseif item.kind == "emote" then
-		return {}, false, use, { employee = employee, tab = "emotes", item = item.id }
+		return {}, false, use, "wheel"
 	end
 	local change: CosmeticTypes.Change
 	if item.kind == "skin" then
@@ -299,13 +299,13 @@ function VM.view(reveal: Reveal, given: Context?): View
 	local changes: { CosmeticTypes.Change } = {}
 	local done = false
 	local primary = "Nice!"
-	local opens: InventoryAt? = nil
+	local picker: Picker? = nil
 	if not duplicate then
-		changes, done, primary, opens = useOf(item, context)
+		changes, done, primary, picker = useOf(item, context)
 	end
 	local usable = #changes > 0
 	-- Open while a picker is up (it comes back here), and for a buy with more than one item.
-	local stays = multi or opens ~= nil
+	local stays = multi or picker ~= nil
 	local styles: { StyleChip } = {}
 	if item.kind == "skin" and not duplicate then
 		for _, style in EmployeeSkinRules.stylesFor(item.employee, CosmeticRegistry.keyOf(item.id)) do
@@ -334,7 +334,7 @@ function VM.view(reveal: Reveal, given: Context?): View
 		changes = changes,
 		done = done,
 		stays = stays,
-		opens = opens,
+		picker = picker,
 		-- Something already on greys the main button, so Later is the way out.
 		later = stays or usable or done,
 		leave = if stays then "Done" else "Later",
@@ -360,6 +360,54 @@ function VM.wear(view: View, style: number): { CosmeticTypes.Change }
 		end
 	end
 	return result
+end
+
+--[=[
+	The small emote picker's wheel for `emoteId` on its employee: the Inventory's own wheel slots (what is in each,
+	`mine` = this emote's slot).
+]=]
+function VM.wheel(emoteId: string, context: Context): { InventoryViewModel.WheelSlot }
+	local item = CosmeticRegistry.get(emoteId)
+	if item == nil then
+		return {}
+	end
+	return InventoryViewModel.detail(item, context.loadout, context.owns).wheel or {}
+end
+
+--[=[
+	The question before putting `name` in a slot that holds another emote; nil for an empty slot or its own.
+]=]
+function VM.swapQuestion(slot: InventoryViewModel.WheelSlot, name: string): string?
+	if slot.empty or slot.mine then
+		return nil
+	end
+	return `Swap {slot.name} for {name}?`
+end
+
+function VM.wheelChange(emoteId: string, slot: number): CosmeticTypes.Change
+	local item = CosmeticRegistry.get(emoteId)
+	local employee = if item ~= nil and item.employee ~= nil then item.employee else CosmeticConstants.DEFAULT_EMPLOYEE
+	return { kind = "emote", employee = employee, slot = slot, id = emoteId }
+end
+
+export type StickerPick = { slots: { InventoryViewModel.StickerSlot }, stickers: { InventoryViewModel.Sticker } }
+
+--[=[
+	The small sticker picker for pack `packId`: your sticker spots and the pack's own stickers (the Inventory's chat view).
+]=]
+function VM.stickers(packId: string, context: Context): StickerPick
+	local chat = InventoryViewModel.chat(context.loadout, context.owns)
+	local stickers: { InventoryViewModel.Sticker } = {}
+	for _, pack in chat.packs do
+		if pack.id == packId then
+			stickers = pack.stickers
+		end
+	end
+	return { slots = chat.slots, stickers = stickers }
+end
+
+function VM.stickerChange(stickerId: string, slot: number): CosmeticTypes.Change
+	return { kind = "sticker", slot = slot, id = stickerId }
 end
 
 return VM
