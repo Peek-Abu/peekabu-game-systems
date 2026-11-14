@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CoffeeEvents: the ByteNet packet contract for Coffee for the crew. The client asks to buy a coffee with Gleam (the
-	"250 Gleam" choice); the server checks the price and the balance itself (CoffeeRules.affords / payGleam). The
+	"150 Gleam" choice); the server checks the price and the balance itself (CoffeeRules.affords / payGleam). The
 	Robux path is Roblox's purchase prompt, the PA and refusals are server toasts, and the badge reads the
 	CoffeeConstants.WORLD_ENTRY world entry, so nothing else is sent.
 

@@ -5,7 +5,7 @@
 	CoffeeConstants.WORLD_ENTRY world entry (whose coffee runs and how long it has left, CoffeeRules.badge). With no
 	coffee running it offers "2x PAY" (CoffeeRules.offered); while one runs it shows the gold countdown badge. Either
 	press opens CoffeeChoice: the Robux price (Roblox's purchase prompt; at start it asks Roblox for the product's
-	live price, into CoffeeStore.robux, so the button shows what the prompt charges) or "250 Gleam" (CoffeeEvents.BuyGleam; the server
+	live price, into CoffeeStore.robux, so the button shows what the prompt charges) or "150 Gleam" (CoffeeEvents.BuyGleam; the server
 	checks the balance). Buying while coffee runs adds 30 minutes. The PA line, the countdown and the doubled pay are
 	the server's.
 

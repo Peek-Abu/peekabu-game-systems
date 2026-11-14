@@ -2,7 +2,7 @@
 --[=[
 	CoffeeChoice: how to pay for Coffee for the crew (owner 11-10). A small cream panel under the coffee button (phone:
 	under it at the top right) with the grape title band and its X, the line "2x pay for 30 minutes", and two buttons:
-	the Robux price (lilac; Roblox's purchase prompt) and "250" with the Gleam coin (gleam). The hub's coffee machine shows it centred with its own line. Presentational (exempt; the
+	the Robux price (lilac; Roblox's purchase prompt) and "150" with the Gleam coin (gleam). The hub's coffee machine shows it centred with its own line. Presentational (exempt; the
 	Gleam buy is the server's, checked by the specced CoffeeRules.payGleam).
 
 	@class CoffeeChoice
@@ -27,7 +27,7 @@ export type CoffeeChoiceProps = {
 	robuxText: string,
 	onGleam: () -> (),
 	onClose: () -> (),
-	-- The player has under 250 Gleam (CoffeeRules.affords): the Gleam button greys out (a press plays the error
+	-- The player has under 150 Gleam (CoffeeRules.affords): the Gleam button greys out (a press plays the error
 	-- sound) and the line says so (CoffeeRules.shortLine). The server checks again either way.
 	short: boolean,
 	shortLine: string,
