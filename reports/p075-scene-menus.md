@@ -201,8 +201,58 @@ line-up and the truck at night were skipped to free Shift for p075-monsters.
 - Studio time for the remaining pictures: Shift Edit for the rank line-up in lanyards and the truck at night.
 - The SOON card still needs the "spice" the owner asked for in round 1.
 
+## Round 3 (2026-11-14), same review page (v5), questions `r3-*`
+
+**Owner's round-2 notes, in short:**
+- How to play: step 1 shows yellow training arrows; the vacuum (step 2) and Prickles (step 3) are posed wrong.
+- Monsters: the Manager is not facing the camera. The coming-soon card is stretched. No danger icon. Bramble: turn only his head to the camera.
+- Ranks: what are these characters? Use the rank lanyard icon. Show a Big Boss view. What is given on rank-ups and level-ups? A rank-based pose could feed the ladder. Shifts don't move you up, levels do, so "3 more shifts" is misleading.
+
+Only `r2-L1` (monster colours: yes) was saved in the db; the rest came as these notes.
+
+**What a rank-up gives (read from the code):**
+- A level and a rank are the same thing: 7 levels, one rank each (`RankRegistry`). There are no level-ups in between.
+- XP thresholds: 0 / 75 / 300 / 800 / 1,800 / 3,400 / 5,200.
+- XP per shift (`RankConstants.XP`):
+  - 10 for working the shift and 15 for meeting the contract;
+  - 1 for each item you load (up to 10);
+  - 5 for overtime loot, 5 for clocking out uncaught, and 5 more if the whole crew clocks out;
+  - all of it doubled when a friend is in the crew.
+  - A normal shift is about 30-50 XP.
+- What a rank gives:
+  - the lanyard colour, plus the v6 badge (its shape and back icon change by rank: NEW!, broom, sponge, vacuum, clipboard, keys, #1 mug);
+  - the rank name on the ID card;
+  - a Roblox badge for ranks 2-7 (`BadgeConstants` `rank-2`..`rank-7`);
+  - the RANK UP! sticker on the results card (`RankSlip`).
+- Nothing else: no currency, no items, no power. After Big Boss nothing yet; the Clearance Level track is not built.
+- A rank pose is already half built: `EmployeePoseRegistry` profile context `byLevel = {1 shy, 2 wave, 3 proud}`, chosen by `EmployeePoseRules`.
+  - Proposal (`r3-R2`): one pose per rank, all existing kit poses. In order: shy, wave, proud, point, coachCheer, cheer, victory.
+  - Used on the profile card, crew and seat portraits, and the ladder.
+
+**Changes in the mocks (`mock3.html`, renders in `r3/`):**
+- Monster cards:
+  - DANGER drops removed.
+  - Three equal cards. The coming-soon card has goo drips from the top edge, a big "?" and COMING SOON caution tape.
+  - Manager line shortened to "He never went home. He still checks every desk."
+- Rank chart:
+  - The NEXT RANK card has the next badge breaking its corner, an XP bar (560 / 800 XP) and a "You get" list.
+  - The staircase shows each rank's real v6 badge-back render, LEVEL n and XP.
+  - Only YOU stands on your step.
+  - New Big Boss view: all steps lit, you on gold, TOP RANK.
+  - The badge renders are cut from `characters/identity/lanyards/v6/review_v6.png` (rembg isnet with holes filled).
+- Red-flag check: no 4-point star or sparkle anywhere (the rewards use soap bubbles; the Big Boss glow is plain rays), and nothing covers an item viewport (these screens have none).
+
+**Still waiting for a Studio slot (asked the coordinator):**
+- Shift Play:
+  - step 1 from an angle without the training arrows;
+  - steps 2 and 3 with a test character really vacuuming and hiding (the vacuum is IK with no clips; the hide pose is `HidePoseSystem`).
+- Edit:
+  - the Manager facing the camera;
+  - Bramble with only his head turned;
+  - the employee in each rank pose.
+
 ## Next
-1. A Play slot for the four How-to-play step photos. Swap them into the mock and republish the review page.
+1. A Studio slot for the re-poses above. Swap them into the mock and republish the review page.
 2. Read the owner's picks. Build only the YES items. Each build:
    - states its module placement first;
    - is spec-first;
