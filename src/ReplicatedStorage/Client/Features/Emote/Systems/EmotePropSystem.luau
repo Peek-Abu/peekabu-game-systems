@@ -339,6 +339,12 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				if entry == nil or released then
 					return
 				end
+				-- A skin that wears the prop at its holster shows it already: this clip brings nothing out.
+				local worn = entry.unlessWorn
+				local holster = if worn ~= nil then character:FindFirstChild(EmployeeConstants.HOLSTER_FOLDER) else nil
+				if worn ~= nil and holster ~= nil and holster:FindFirstChild(worn) ~= nil then
+					return
+				end
 				disown()
 				owner = track
 				idleOwner = entry.idle == true
@@ -392,7 +398,8 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				local show = track.timeOfKeyframe(EmoteConstants.PROPS_SHOW)
 				local stow = track.timeOfKeyframe(EmoteConstants.PROPS_STOW)
 				local now = track.timePosition()
-				local inWindow = show ~= nil and now >= show and (stow == nil or now < stow)
+				local inWindow = entry.wholeClip == true
+					or (show ~= nil and now >= show and (stow == nil or now < stow))
 				setVisible(track.isPlaying() and inWindow == true)
 			end
 

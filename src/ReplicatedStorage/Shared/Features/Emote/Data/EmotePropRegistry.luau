@@ -24,6 +24,11 @@ export type Entry = {
 	-- in menus and in a shift, and put away while something blocks them in the world (vacuuming, carrying, hiding,
 	-- knocked out; EmotePropSystem.forWorld). Moving stops the idle, which puts them away anyway.
 	idle: boolean?,
+	-- Its props are out for the whole clip, from its first frame (a clip with no PropsShow marker).
+	wholeClip: boolean?,
+	-- A skin that wears this prop at its holster (EmployeeConstants.HOLSTER_FOLDER) already shows it: the clip brings
+	-- nothing out on that skin.
+	unlessWorn: string?,
 }
 
 local entries: { [string]: Entry } = {
@@ -33,8 +38,11 @@ local entries: { [string]: Entry } = {
 	-- PJ Cappy's showcase idle: the pillow out from the first frame, for as long as the loop plays (the mug is Cocoa
 	-- Sip's). His pillow slip is not here: it plays over the idle, which keeps the pillow out.
 	cappypjidle = { props = { "Pillow" }, idle = true },
-	-- Bubble Buddy's fidget: the wand out between its PropsShow and PropsStow (her idle holds the worn duck ring and
-	-- brings out nothing, so the fidget owns the wand).
+	-- Bubble Buddy's idle on any Pippa skin (owner, 2026-11-13: the Legendary idles are their own items): her paws rest
+	-- on a duck ring at her waist, so a skin without one gets the DuckRingWaist template (the outfit's duck ring on a
+	-- LowerTorso joint at its holster offset) for the whole loop. Her own skin wears the ring already: nothing comes out.
+	pippabubblebuddyidle = { props = { "DuckRingWaist" }, idle = true, wholeClip = true, unlessWorn = "DuckRing" },
+	-- Bubble Buddy's fidget: the wand out between its PropsShow and PropsStow (the fidget owns the wand).
 	pippabubblebuddyfidget = { props = { "BubbleWand" } },
 	-- Cappy's hire reveal: his phone (an emote prop template, so every skin has it), PropsShow f1 to PropsStow f58.
 	cappyhirereveal = { props = { "Phone" } },

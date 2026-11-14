@@ -16,8 +16,15 @@ return function()
 		expect(table.find(Registry.get("cappypjidle").props, "Cocoa")).never.to.be.ok()
 	end)
 
-	it("brings Bubble Buddy's wand out only in her fidget: her idle holds the worn duck ring, no props", function()
-		expect(Registry.get("pippabubblebuddyidle")).to.equal(nil)
+	it("brings Bubble Buddy's wand out only in her fidget, and a waist duck ring in her idle on other skins", function()
+		-- Her idle on any Pippa skin (owner, 2026-11-13): the waist duck ring, out for the whole loop (the clip has no
+		-- prop markers), skipped on her own skin, which already wears it at the waist.
+		local idle = Registry.get("pippabubblebuddyidle")
+		expect(idle).to.be.ok()
+		expect(table.concat(idle.props, ",")).to.equal("DuckRingWaist")
+		expect(idle.idle).to.equal(true)
+		expect(idle.wholeClip).to.equal(true)
+		expect(idle.unlessWorn).to.equal("DuckRing")
 		local fidget = Registry.get("pippabubblebuddyfidget")
 		expect(fidget).to.be.ok()
 		expect(table.find(fidget.props, "BubbleWand")).to.be.ok()

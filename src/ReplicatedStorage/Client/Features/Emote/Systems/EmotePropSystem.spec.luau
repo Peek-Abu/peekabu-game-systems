@@ -10,7 +10,13 @@ return function()
 	local LASSO = "rbxassetid://222"
 	local OTHER = "rbxassetid://333"
 	local IDLE = "rbxassetid://444"
-	local KEYS = { [BUBBLES] = "emote:Pippa.Bubbles", [LASSO] = "emote:Prickles.Lasso", [IDLE] = "pricklessheriffidle" }
+	local DUCK = "rbxassetid://555"
+	local KEYS = {
+		[BUBBLES] = "emote:Pippa.Bubbles",
+		[LASSO] = "emote:Prickles.Lasso",
+		[IDLE] = "pricklessheriffidle",
+		[DUCK] = "pippabubblebuddyidle",
+	}
 
 	local function makeCharacter()
 		local model = Instance.new("Model")
@@ -435,6 +441,71 @@ return function()
 			model:Destroy()
 		end)
 	end)
+	describe("a whole-clip idle prop at the waist", function()
+		-- The waist duck ring template: on a LowerTorso joint, as the place's DuckRingWaist is.
+		local function duckTemplate()
+			local part = Instance.new("Part")
+			part.Name = "DuckRingWaist"
+			part.Size = Vector3.new(1, 1, 1)
+			local joint = Instance.new("Motor6D")
+			joint.Name = "DuckRingWaist"
+			joint:SetAttribute(EmployeeConstants.PROP_HAND_ATTRIBUTE, "LowerTorso")
+			joint.Part1 = part
+			joint.Parent = part
+			return { DuckRingWaist = part }
+		end
+		local function withTorso(model)
+			local torso = Instance.new("Part")
+			torso.Name = "LowerTorso"
+			torso.Anchored = true
+			torso.Parent = model
+			return model
+		end
+
+		it("mounts the ring at the waist and shows it from the clip's start, with no markers", function()
+			local model = withTorso(bareCharacter())
+			local source = fakeSource()
+			local props = system(source, duckTemplate())
+			local release = props.track(model)
+			local fake = fakeTrack(DUCK, 0, {})
+			source.play(fake)
+			local ring = mounted(model, "DuckRingWaist")
+			expect(ring).to.be.ok()
+			expect(ring.Transparency).to.equal(0)
+			expect(ring:FindFirstChildOfClass("Motor6D").Part0).to.equal(model.LowerTorso)
+			fake.stop()
+			expect(mounted(model, "DuckRingWaist")).never.to.be.ok()
+			release()
+			model:Destroy()
+		end)
+
+		it("shows it at once for a late joiner, mid-loop", function()
+			local model = withTorso(bareCharacter())
+			local source = fakeSource({ fakeTrack(DUCK, 2.5, {}) })
+			local props = system(source, duckTemplate())
+			local release = props.track(model)
+			expect(mounted(model, "DuckRingWaist").Transparency).to.equal(0)
+			release()
+			model:Destroy()
+		end)
+
+		it("brings nothing out on a skin that wears the ring at its waist, and leaves the worn ring alone", function()
+			local model, _, worn = makeCharacter()
+			withTorso(model)
+			local source = fakeSource()
+			local props = system(source, duckTemplate())
+			local release = props.track(model)
+			local fake = fakeTrack(DUCK, 0, {})
+			source.play(fake)
+			expect(mounted(model, "DuckRingWaist")).never.to.be.ok()
+			expect(worn.DuckRing.Transparency).to.equal(0)
+			fake.stop()
+			expect(worn.DuckRing.Transparency).to.equal(0)
+			release()
+			model:Destroy()
+		end)
+	end)
+
 	describe("the emote's own props (any skin)", function()
 		it(
 			"mounts the emote's prop when the skin has none, shows it in the window and removes it when the track stops",
