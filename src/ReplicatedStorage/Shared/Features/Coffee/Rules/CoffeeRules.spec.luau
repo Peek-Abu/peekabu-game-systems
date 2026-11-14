@@ -183,8 +183,8 @@ return function()
 		end)
 
 		it("costs less in Gleam than the same Robux at the best Gleam pack", function()
-			-- 250 Gleam at the best pack (R$ 999 for 1,500) is about R$ 167: the Robux price stays the better deal.
-			expect(CoffeeConstants.ROBUX_PRICE).to.equal(149)
+			-- 250 Gleam at the best pack (R$ 999 for 1,500) is about R$ 167: the Robux price (R$ 99, owner 11-14) stays the better deal.
+			expect(CoffeeConstants.ROBUX_PRICE).to.equal(99)
 			expect(CoffeeConstants.ROBUX_PRICE < CoffeeConstants.GLEAM_PRICE * 999 / 1500).to.equal(true)
 		end)
 
@@ -196,7 +196,7 @@ return function()
 	describe("robuxText", function()
 		it("shows Roblox's live price, or the known price until Roblox answers", function()
 			expect(CoffeeRules.robuxText(179)).to.equal("179 R$")
-			expect(CoffeeRules.robuxText(nil)).to.equal("149 R$")
+			expect(CoffeeRules.robuxText(nil)).to.equal("99 R$")
 		end)
 	end)
 
