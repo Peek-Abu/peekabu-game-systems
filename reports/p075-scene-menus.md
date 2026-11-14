@@ -271,8 +271,17 @@ Only `r2-L1` (monster colours: yes) was saved in the db; the rest came as these 
   - Shift ended in Edit with Lighting at 0 / 0.5 / -0.7, workspace children unchanged and no P075 scripts. RunTests and DevAutoPick were never set.
   - Audio was muted on the client during Play. Nothing was saved.
 
+**Second Studio slot 2026-11-14 (Shift Play), page v7:**
+- Step 3:
+  - In a training run (started from the Training pad), my test employee stood at HideDesk1's reach point and a Studio MCP key press of C put her in (`HideSpotId` desk.3). This is the game's own knee-hug pose.
+  - The first hide ended on the cramp timer. The second capture is the one used.
+  - The earlier refusal was not a training lock; `HideRules.canEnter` has none.
+- The Manager:
+  - The live NPC (`TrainingMap.Shift["The Manager"]`) waits in the staff room behind StaffDoor until the escape stop. The camera went inside the room, and his Calm mask face renders on the live model.
+  - Cut out with rembg, with the baseboard and floor masked off.
+- Cleanup: Play stopped; Edit clean (Lighting 0 / 0.5 / -0.7, no P075 objects, RunTests and DevAutoPick unset). Audio was muted. Nothing was saved.
+
 ## Next
-1. A Studio slot for step 3 (real hide) and the Manager facing the camera. Both need a real run.
 2. Read the owner's picks. Build only the YES items. Each build:
    - states its module placement first;
    - is spec-first;
