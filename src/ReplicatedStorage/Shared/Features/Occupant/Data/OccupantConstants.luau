@@ -96,20 +96,22 @@ local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
 -- names only, so any R15 rig takes them (a joint the rig lacks is skipped). Hip X > 0 swings the thigh forward, knee
 -- X < 0 folds the shin back, and the ankle undoes both so the feet stay flat (hip + knee + ankle = 0); the server
 -- lowers the root by the crouch's leg drop (OccupantGestureFormulas.crouchDrop), so the feet stay on the top.
--- Perched: a deep owl crouch, leaning out over the edge, head up and cocked at the crew, wings half open.
+-- Perched: a deep owl crouch, leaning out over the edge, head tipped down and cocked at the crew below, wings half
+-- open. (Checked on Bramble's rig 11-14: a raised neck had it staring at the ceiling.)
 local PERCH_CROUCH: { [string]: Vector3 } = table.freeze({
 	Waist = Vector3.new(-24, 0, 0),
-	Neck = Vector3.new(26, 0, 14),
+	Neck = Vector3.new(-6, 0, 16),
 	LeftHip = Vector3.new(60, 0, 0),
 	RightHip = Vector3.new(60, 0, 0),
 	LeftKnee = Vector3.new(-95, 0, 0),
 	RightKnee = Vector3.new(-95, 0, 0),
 	LeftAnkle = Vector3.new(35, 0, 0),
 	RightAnkle = Vector3.new(35, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -28),
-	RightShoulder = Vector3.new(0, 0, 28),
+	LeftShoulder = Vector3.new(0, 0, -20),
+	RightShoulder = Vector3.new(0, 0, 20),
 })
--- The drop: off the top with the legs tucked and the wings spread high, then a squash on landing.
+-- The drop: off the top with the legs tucked and the wings spread high, then a squash on landing. (Bramble's bind pose
+-- already holds its wings out, so the wing lifts stay small: at 75 they crossed behind its head.)
 local DROP_LEAP: { [string]: Vector3 } = table.freeze({
 	Waist = Vector3.new(-12, 0, 0),
 	Neck = Vector3.new(12, 0, 0),
@@ -119,8 +121,8 @@ local DROP_LEAP: { [string]: Vector3 } = table.freeze({
 	RightKnee = Vector3.new(-75, 0, 0),
 	LeftAnkle = Vector3.new(30, 0, 0),
 	RightAnkle = Vector3.new(30, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -75),
-	RightShoulder = Vector3.new(0, 0, 75),
+	LeftShoulder = Vector3.new(0, 0, -40),
+	RightShoulder = Vector3.new(0, 0, 40),
 })
 local DROP_SQUASH: { [string]: Vector3 } = table.freeze({
 	Waist = Vector3.new(-34, 0, 0),
@@ -131,8 +133,8 @@ local DROP_SQUASH: { [string]: Vector3 } = table.freeze({
 	RightKnee = Vector3.new(-110, 0, 0),
 	LeftAnkle = Vector3.new(40, 0, 0),
 	RightAnkle = Vector3.new(40, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -40),
-	RightShoulder = Vector3.new(0, 0, 40),
+	LeftShoulder = Vector3.new(0, 0, -25),
+	RightShoulder = Vector3.new(0, 0, 25),
 })
 -- The drop's beats (seconds): the fall from the top to the floor point (with a DROP_HOP studs hop up off it), the
 -- squash held on landing, and the rise back to standing. DROP_SECONDS is all three: the drop gesture's length.
