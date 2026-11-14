@@ -252,7 +252,9 @@ local function RevealSlotPicker(props: RevealSlotPickerProps): React.ReactNode
 	}, {
 		-- The dim: the reveal stays visible behind it, and it takes the clicks the panel does not.
 		dim = e("TextButton", {
-			Size = UDim2.fromScale(1, 1),
+			-- Past every edge of the scaled frame, so the strip above it (the top bar's room) is dimmed too.
+			Position = UDim2.fromOffset(-400, -400),
+			Size = UDim2.new(1, 800, 1, 800),
 			BackgroundColor3 = COLOR.ink,
 			BackgroundTransparency = 0.45,
 			BorderSizePixel = 0,
