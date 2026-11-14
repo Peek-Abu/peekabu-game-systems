@@ -226,6 +226,19 @@ UIAssets.toonPhotos = table.freeze({
 	-- Today's coral Pippa cheering, both arms up, on the empty award card (owner 2026-11-13: the old salute pressed her
 	-- hand into her head; decal 102894946805091).
 	pippaCheerCut = "rbxassetid://89228375154099",
+	-- The GUIDE page (p075 scene menus, owner yes 2026-11-14; DepotGuideViewModel): four real posed Studio Play shots
+	-- for HOW TO PLAY (592x720, the place-card grade) and the MONSTERS cards' graded backdrops and outlined cut-outs
+	-- (the live Manager facing the camera, Bramble's head turned). Icey Labs, owner OK 2026-11-14; each id is the Image
+	-- under the uploaded decal named beside it (upload.log in the p075 notes folder).
+	guideHopOn = "rbxassetid://134935606275101", -- decal 106143816706920
+	guideVacuum = "rbxassetid://90108017151840", -- decal 134684012238364
+	guideHide = "rbxassetid://93863428782398", -- decal 127988143607985
+	guideLoadUp = "rbxassetid://135811094128961", -- decal 89585096801660
+	guideManagerBack = "rbxassetid://91345355678790", -- decal 99766470767209
+	guideManagerCut = "rbxassetid://118067372604187", -- decal 108126864461604
+	guideBrambleBack = "rbxassetid://93014438530395", -- decal 85093706450462
+	guideBrambleCut = "rbxassetid://131353849368499", -- decal 100407953750316
+	guideSoonBack = "rbxassetid://129093281003077", -- decal 95751654599901
 })
 
 -- Chat-wheel sticker art by CosmeticRegistry sticker id (2026-11-03, owner picks; style C, waist up): 512 px

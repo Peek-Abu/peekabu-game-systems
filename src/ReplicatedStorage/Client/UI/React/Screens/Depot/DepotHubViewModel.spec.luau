@@ -1,35 +1,6 @@
 local VM = require(script.Parent.DepotHubViewModel)
 local RankFormulas = require(game:GetService("ReplicatedStorage").Shared.Features.Rank.Utils.RankFormulas)
 return function()
-	-- Inside the spec function: TestEZ gives `expect` only to the function it runs.
-	local function monsterNeutral(text)
-		for _, word in { "manager", "harlow", "bramble", "boss" } do
-			expect(string.find(string.lower(text), word, 1, true)).to.equal(nil)
-		end
-	end
-
-	describe("guide words", function()
-		it("talks about monsters, not one map's monster, in the field guide", function()
-			for _, section in VM.copy("guide").sections do
-				monsterNeutral(section.title)
-				monsterNeutral(section.body)
-			end
-			local sections = VM.copy("guide").sections
-			-- Lore and tiny tips only (owner 11-14): never how a monster finds you.
-			expect(string.find(sections[3].body, "Shh! Noise wakes things up.", 1, true)).to.equal(1)
-			expect(string.find(sections[3].body, "hear", 1, true)).to.equal(nil)
-			expect(string.find(sections[4].body, "and faster monsters.", 1, true) ~= nil).to.equal(true)
-		end)
-
-		it("draws the noise section with the Quiet render, not Harlow's face", function()
-			expect(VM.sectionIcons("guide")[3]).to.equal("statQuiet")
-			for _, icon in VM.sectionIcons("guide") do
-				expect(icon).never.to.equal("managerHunt")
-				expect(icon).never.to.equal("managerCalm")
-			end
-		end)
-	end)
-
 	describe("hub HUD (V1)", function()
 		it("names the profile card in caps with the level, the rank and the XP to the next level", function()
 			local progress = RankFormulas.progress(45)
@@ -64,11 +35,6 @@ return function()
 			expect(waiting.text).to.equal("23:00:00")
 		end)
 
-		it("gives each guide section its render, one per section", function()
-			expect(#VM.sectionIcons("guide")).to.equal(#VM.copy("guide").sections)
-			expect(VM.sectionIcons("guide")[1]).to.equal("truck")
-		end)
-
 		it("has no Company Equipment page any more (the Inventory's Vacuums tab replaced it)", function()
 			expect(table.find(VM.PAGES, "gear")).never.to.be.ok()
 		end)
@@ -101,7 +67,7 @@ return function()
 	end)
 
 	describe("hub", function()
-		it("fits the guide header and scroll body in portrait and short landscape", function()
+		it("fits the settings header and scroll body in portrait and short landscape", function()
 			for _, viewport in { Vector2.new(390, 844), Vector2.new(844, 390), Vector2.new(1366, 768) } do
 				local layout = VM.panelLayout(viewport, viewport.X < 900)
 				expect(layout.width <= viewport.X - 32).to.equal(true)
@@ -114,26 +80,6 @@ return function()
 		it("stacks narrow settings while keeping wide headers compact", function()
 			expect(VM.panelLayout(Vector2.new(390, 844), true).compact).to.equal(true)
 			expect(VM.panelLayout(Vector2.new(844, 390), true).compact).to.equal(false)
-		end)
-		it("teaches that Gloom counts on the spot, with no dust bag to carry and no empty action", function()
-			for _, page in { "guide" } do
-				local copy = VM.copy(page)
-				local text = ""
-				for _, section in copy.sections do
-					text ..= string.lower(section.title .. " " .. section.body) .. " "
-				end
-				expect(string.find(text, "gloom", 1, true) ~= nil).to.equal(true)
-				expect(string.find(text, "bank dust bags", 1, true)).to.equal(nil)
-				expect(string.find(text, "produce dust bags", 1, true)).to.equal(nil)
-				expect(string.find(text, "empty your vacuum", 1, true)).to.equal(nil)
-				expect(string.find(text, "stops collecting", 1, true)).to.equal(nil)
-				expect(string.find(text, "empty at the truck", 1, true)).to.equal(nil)
-			end
-		end)
-		it("includes a supplied live control legend without assuming a key", function()
-			expect(
-				string.find(VM.copy("guide", "Hold R2 to clean.").sections[2].body, "Hold R2 to clean.", 1, true) ~= nil
-			).to.equal(true)
 		end)
 		it("does not put shortcuts over running or results crew", function()
 			expect(VM.visible({ phase = "running", crew = { 1 } }, 1)).to.equal(false)

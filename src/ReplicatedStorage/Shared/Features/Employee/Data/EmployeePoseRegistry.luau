@@ -25,12 +25,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 
--- Where a portrait is shown: the hub's profile card, a crew roster or truck seat, the rehire notice, the results'
--- featured award; the training coach, one per kind of line (go this way, careful, cheer, shh, hide); the training
--- finish screen's victory.
+-- Where a portrait is shown: the hub's profile card, a crew roster or truck seat, the rank chart's step (`ladder`),
+-- the rehire notice, the results' featured award; the training coach, one per kind of line (go this way, careful,
+-- cheer, shh, hide); the training finish screen's victory.
 export type PortraitContext =
 	"profile"
 	| "crew"
+	| "ladder"
 	| "caught"
 	| "award"
 	| "coachPoint"
@@ -68,6 +69,7 @@ export type PortraitSet = {
 local CONTEXTS: { PortraitContext } = {
 	"profile",
 	"crew",
+	"ladder",
 	"caught",
 	"award",
 	"coachPoint",
@@ -227,11 +229,25 @@ local KIT_POSES: { [string]: PoseDef } = {
 	}),
 }
 
+-- A new pose at every rank (p075, owner yes 2026-11-14): the hub's profile card, the crew pictures and the rank
+-- chart all show the player's employee in their rank's pose, so ranking up visibly changes how you stand. One table,
+-- shared, so the three never disagree; a rank added later inherits the pose below it (EmployeePoseRules).
+local RANK_POSES: { [number]: string } = table.freeze({
+	[1] = "shy",
+	[2] = "wave",
+	[3] = "proud",
+	[4] = "point",
+	[5] = "coachCheer",
+	[6] = "cheer",
+	[7] = "victory",
+})
+
 local KIT_SET: PortraitSet = {
 	poses = KIT_POSES,
 	contexts = {
-		profile = { pose = "wave", byLevel = { [1] = "shy", [2] = "wave", [3] = "proud" } },
-		crew = { pose = "stand" },
+		profile = { pose = "wave", byLevel = RANK_POSES },
+		crew = { pose = "stand", byLevel = RANK_POSES },
+		ladder = { pose = "proud", byLevel = RANK_POSES },
 		caught = { pose = "scared" },
 		award = { pose = "cheer", byGrade = { A = "cheer", B = "wave", C = "slump" } },
 		coachPoint = { pose = "point" },
@@ -245,6 +261,7 @@ local KIT_SET: PortraitSet = {
 
 local EmployeePoseRegistry = {
 	CONTEXTS = CONTEXTS,
+	RANK_POSES = RANK_POSES,
 	-- Top-level children of a character a portrait leaves out: equipment, not the look (Tools always go too).
 	STRIP = table.freeze({ "VacuumBackpack" }),
 	mirror = mirror,

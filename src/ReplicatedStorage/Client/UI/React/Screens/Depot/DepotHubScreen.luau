@@ -2,14 +2,13 @@
 --[=[
 	DepotHubScreen: the hub's GUIDE, VACUUMS (the company equipment page, the Inventory's Vacuums tab) and SETTINGS in the V1 kit: a cream modal
 	popping in with its header in the page's colour (DepotHubViewModel.pageHue) (the page's render breaking the corner, Gloom drips from the header's foot, the
-	coral close) over a scrolling body. Guide and Locker are honest briefing pages, a card per section with its
-	render; Settings are the persisted, validated base settings (a ToonSlider per percentage setting, its value on a
+	coral close). The Guide is DepotGuidePanel (HOW TO PLAY photo steps and MONSTERS cards, p075 scene menus) on a
+	wider sheet (DepotGuideViewModel.layout); Settings, over a scrolling body, are the persisted, validated base settings (a ToonSlider per percentage setting, its value on a
 	pill; an ON/OFF button per switch such as Tips; RESTORE DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout in HUD design px, laid out against the virtual
 	viewport and drawn at the game's one UI scale (PaperHudScaleViewModel, inside PaperHudFrame), so the sheet keeps
 	the same share of the screen as the hub on a small laptop and on a 4K monitor.
 ]=]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 local React = require(ReplicatedStorage.Packages.React)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
@@ -22,10 +21,8 @@ local SettingServiceClient = require(ReplicatedStorage.Client.Features.Setting.S
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
-local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
 local ToonSlider = require(Toon.ToonSlider)
-local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
 local COLOR = UIToonConstants.COLOR
@@ -37,6 +34,8 @@ local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
 local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleViewModel)
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local VM = require(script.Parent.DepotHubViewModel)
+local DepotGuidePanel = require(script.Parent.DepotGuidePanel)
+local GuideVM = require(script.Parent.DepotGuideViewModel)
 local e = React.createElement
 -- A settings row's value: a percentage (a slider) or a switch (a toggle button).
 type RowValue = number | boolean
@@ -223,6 +222,12 @@ local function DepotHubScreen(
 		PaperHudScaleViewModel.virtual(viewport - Vector2.new(0, PaperHudScaleViewModel.topShift(scale)), scale)
 	local layout = VM.panelLayout(virtual, phone)
 	local width, height = layout.width, layout.height
+	local tab, setTab = React.useState(GuideVM.DEFAULT_TAB)
+	if props.page == "guide" then
+		-- The Guide's photo cards need a wider sheet than the settings rows.
+		local guide = GuideVM.layout(virtual, phone)
+		width, height = guide.width, guide.height
+	end
 	local bindings = InputServiceClient:bindingsFor(VacuumConstants.ACTION)
 	local input = UserInputService:GetLastInputType()
 	local control = "Hold the vacuum button near dust."
@@ -239,7 +244,6 @@ local function DepotHubScreen(
 			control = `Hold {name} near dust to clean.`
 		end
 	end
-	local copy = VM.copy(props.page, control)
 	local body: { [string]: React.ReactNode } = {}
 	if props.page == "settings" then
 		-- Inset like the cards: the sliders' and RESTORE DEFAULTS' outlines and drops stay inside the scroll frame.
@@ -250,135 +254,42 @@ local function DepotHubScreen(
 			PaddingBottom = UDim.new(0, 20),
 		})
 		body.settings = e(SettingsRows, { width = layout.bodyWidth - 2 * EDGE, phone = phone, preview = props.preview })
-	else
-		local icons = VM.sectionIcons(props.page)
-		body.list = e("UIListLayout", {
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 16),
-		})
-		body.pad = e("UIPadding", {
-			PaddingLeft = UDim.new(0, if phone then 34 else 52),
-			PaddingRight = UDim.new(0, EDGE),
-			PaddingTop = UDim.new(0, 14),
-			PaddingBottom = UDim.new(0, 20),
-		})
-		local iconSize = if phone then 64 else 92
-		for index, section in copy.sections do
-			-- A card per section on the depth stack, its render breaking the card's left edge. The card is as tall as
-			-- its measured copy (TextService) plus the surface's lip and drop: an automatic size would also count the
-			-- surface's selected glow and ring, which reach past the card, and leave every card padded to the tallest.
-			-- The scroll content is the body width plus the panel padding (see DepotHubViewModel.panelLayout).
-			local textWidth = layout.bodyWidth
-				+ layout.padding
-				- (if phone then 34 else 52)
-				- 2 * EDGE
-				- iconSize * 0.66
-				- 14
-			local titleHeight = TextService:GetTextSize(
-				section.title,
-				if phone then 18 else 24,
-				Enum.Font.LuckiestGuy,
-				Vector2.new(textWidth, math.huge)
-			).Y
-			local bodyHeight = TextService:GetTextSize(
-				section.body,
-				if phone then 15 else 20,
-				Enum.Font.FredokaOne,
-				Vector2.new(textWidth, math.huge)
-			).Y
-			local cardHeight = math.max(iconSize * 0.8, 12 + titleHeight + 4 + bodyHeight + 14 + DEPTH.lip + DEPTH.drop)
-			body[`section{index}`] = e("Frame", {
-				LayoutOrder = index,
-				Size = UDim2.new(1, -EDGE, 0, math.ceil(cardHeight)),
-				BackgroundTransparency = 1,
-			}, {
-				surface = e(ToonSurface, {
-					hue = "cream",
-					radius = 18,
-					pattern = "rings",
-					size = UDim2.new(1, 0, 1, -DEPTH.drop),
-					zIndex = 1,
-				}),
-				icon = e(ToonIcon, {
-					icon = icons[index],
-					position = UDim2.fromOffset(-iconSize * 0.42, -8),
-					size = UDim2.fromOffset(iconSize, iconSize),
-					drop = 4,
-					zIndex = 3,
-				}),
-				text = e("Frame", {
-					Size = UDim2.fromScale(1, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundTransparency = 1,
-					ZIndex = 2,
-				}, {
-					pad = e("UIPadding", {
-						PaddingLeft = UDim.new(0, iconSize * 0.66),
-						PaddingRight = UDim.new(0, 14),
-						PaddingTop = UDim.new(0, 12),
-						-- The surface's lip and the card's drop sit under the copy.
-						PaddingBottom = UDim.new(0, 14 + DEPTH.lip + DEPTH.drop),
-					}),
-					list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }),
-					title = e("TextLabel", {
-						LayoutOrder = 1,
-						Size = UDim2.fromScale(1, 0),
-						AutomaticSize = Enum.AutomaticSize.Y,
-						BackgroundTransparency = 1,
-						Text = section.title,
-						TextWrapped = true,
-						FontFace = UIToonConstants.FONT.display,
-						TextSize = if phone then 18 else 24,
-						TextColor3 = UIToonConstants.shade("grape").lo,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						ZIndex = 2,
-					}),
-					body = e("TextLabel", {
-						LayoutOrder = 2,
-						Size = UDim2.fromScale(1, 0),
-						AutomaticSize = Enum.AutomaticSize.Y,
-						BackgroundTransparency = 1,
-						Text = section.body,
-						TextWrapped = true,
-						FontFace = UIToonConstants.FONT.body,
-						TextSize = if phone then 15 else 20,
-						TextColor3 = COLOR.ink,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						ZIndex = 2,
-					}),
-				}),
-			})
-		end
-		-- The Guide's way back into training (only where the hub has a Training pad).
-		if props.page == "guide" and TrainingHubSystem.offered() then
-			body.training = e("Frame", {
-				LayoutOrder = #copy.sections + 1,
-				Size = UDim2.new(1, -EDGE, 0, if phone then 56 else 72),
-				BackgroundTransparency = 1,
-			}, {
-				button = e(ToonButton, {
-					variant = "gleam",
-					text = TrainingConstants.TEXT.againButton,
-					textSize = if phone then 18 else 24,
-					anchor = Vector2.new(0.5, 0),
-					position = UDim2.fromScale(0.5, 0),
-					size = UDim2.new(0, if phone then 260 else 360, 1, -8),
-					sound = "confirm",
-					onActivated = function()
-						SceneStack.remove(VM.scene(props.page))
-						TrainingHubSystem.again()
-					end,
-				}),
-			})
-		end
 	end
 	local headerHeight = if layout.compact then 84 else 104
-	local subtitle = if props.page == "settings"
+	local subtitle: string? = if props.page == "settings"
 		then (if props.preview then "Local preview · does not save" else "Saved to your account")
-		else copy.subtitle
+		else nil
 	local icon: "guide" | "settings" = if props.page == "guide" then "guide" else "settings"
-	local children: { [string]: React.ReactNode } = {
-		scroll = e("ScrollingFrame", {
+	local children: { [string]: React.ReactNode } = {}
+	if props.page == "guide" then
+		-- The Guide's tabs and photo cards (DepotGuidePanel) fill the sheet under its header; the way back into
+		-- training (only where the hub has a Training pad) sits under the HOW TO PLAY cards.
+		local inset = if phone then 16 else 32
+		children.guide = e("Frame", {
+			Position = UDim2.fromOffset(inset, headerHeight + (if phone then 14 else 28)),
+			Size = UDim2.new(1, -2 * inset, 1, -headerHeight - (if phone then 26 else 56)),
+			BackgroundTransparency = 1,
+		}, {
+			panel = e(DepotGuidePanel, {
+				tab = tab,
+				phone = phone,
+				width = width - 2 * inset,
+				height = height - headerHeight - (if phone then 26 else 56),
+				onTab = setTab,
+				control = control,
+				training = if TrainingHubSystem.offered()
+					then {
+						text = TrainingConstants.TEXT.againButton,
+						onActivated = function()
+							SceneStack.remove(VM.scene(props.page))
+							TrainingHubSystem.again()
+						end,
+					}
+					else nil,
+			}),
+		})
+	else
+		children.scroll = e("ScrollingFrame", {
 			Position = UDim2.fromOffset(layout.padding * 0.5, headerHeight + 44),
 			Size = UDim2.new(1, -layout.padding, 1, -headerHeight - 64),
 			BackgroundTransparency = 1,
@@ -394,8 +305,8 @@ local function DepotHubScreen(
 				AutomaticSize = Enum.AutomaticSize.Y,
 				BackgroundTransparency = 1,
 			}, body),
-		}),
-	}
+		})
+	end
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = COLOR.ink,

@@ -72,6 +72,28 @@ return function()
 
 	-- Owner 11-10: the coach's hide (ears folded forward over her eyes) read wrong. It must work for any employee,
 	-- so it is a cower that does not lean on ear shape: ears pinned back flat (as in the sneak), never over the face.
+	describe("rank poses (p075: a new pose at every rank)", function()
+		local ORDER = { "shy", "wave", "proud", "point", "coachCheer", "cheer", "victory" }
+
+		it("gives each of the seven ranks its own pose on the profile card, crew pictures and the ladder", function()
+			local set = EmployeePoseRegistry.get("Pippa")
+			for _, context in { "profile", "crew", "ladder" } do
+				local levels = set.contexts[context].byLevel
+				expect(levels).to.be.ok()
+				for level, pose in ORDER do
+					expect(levels[level]).to.equal(pose)
+				end
+			end
+		end)
+
+		it("shares one rank table, so the three places never disagree", function()
+			local set = EmployeePoseRegistry.get("Cappy")
+			expect(set.contexts.crew.byLevel).to.equal(set.contexts.profile.byLevel)
+			expect(set.contexts.ladder.byLevel).to.equal(set.contexts.profile.byLevel)
+			expect(EmployeePoseRegistry.RANK_POSES).to.equal(set.contexts.profile.byLevel)
+		end)
+	end)
+
 	describe("the coach's hide", function()
 		local hide = EmployeePoseRegistry.get("Pippa").poses.hide
 		local shh = EmployeePoseRegistry.get("Pippa").poses.shh

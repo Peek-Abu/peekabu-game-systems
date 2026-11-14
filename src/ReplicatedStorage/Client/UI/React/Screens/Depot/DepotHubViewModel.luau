@@ -48,12 +48,6 @@ function VM.gift(state: PlayerDataTypes.DailyReward, now: number): GiftView
 	}
 end
 
--- The render beside each guide / locker section, in VM.copy's order. The noise section wears the Quiet stat's render:
--- the guide is about every map's monster, so it shows none of their faces.
-function VM.sectionIcons(_page: Page): { UIAssets.ToonIcon }
-	return { "truck", "vacuum", "statQuiet", "clock" }
-end
-
 -- The hub page's header title.
 function VM.pageTitle(page: Page): string
 	return if page == "guide" then "GUIDE" else "SETTINGS"
@@ -154,37 +148,6 @@ function VM.panelLayout(viewport: Vector2, phone: boolean): PanelLayout
 end
 function VM.scene(page: Page): string
 	return `depot.{page}`
-end
-function VM.copy(
-	page: Page,
-	cleanControl: string?
-): { title: string, subtitle: string, sections: { { title: string, body: string } } }
-	if page == "guide" then
-		return {
-			title = "FIELD GUIDE",
-			subtitle = "MORROW & MORROW CLEARANCE / NEW ASSOCIATE BRIEFING",
-			sections = {
-				{
-					title = "01 / GET THE JOB",
-					body = "Walk into a company truck bed. Bring up to three friends; anyone aboard can depart.",
-				},
-				{
-					title = "02 / VACUUM & LOAD",
-					body = `Equip your vacuum. {cleanControl or "Hold the vacuum button near dust."} Every pile you vacuum takes Gloom away right then, and so does cleaning the grime off a treasure. Load the treasure onto the truck (the Crew Truck) for Credits.`,
-				},
-				{
-					title = "03 / WATCH YOUR NOISE",
-					body = "Shh! Noise wakes things up. Put things down carefully. Bulky things need both hands, and your vacuum goes on your back while you carry. Empty hands let you run faster.",
-				},
-				{
-					title = "04 / CLOCK OFF",
-					body = "Remove the contract's Gloom, then choose: clock out at the truck, or sign the overtime sheet beside it for new shimmering loot worth ×1.5 and faster monsters. Every Gloom removed pays 1 Credit at the end of the shift. Review your crew's awards and vote for another shift or the depot.",
-				},
-			},
-		}
-	end
-	-- Settings draws its own rows; it has no copy of its own.
-	return { title = "SETTINGS", subtitle = "", sections = {} }
 end
 -- The hub's small "Find a truck!" tab (owner 11-11: the full Next shift card got in the way): shown only while the
 -- player is not aboard a truck (aboard, the queue pad's full card shows) and hidden while an interaction prompt is
