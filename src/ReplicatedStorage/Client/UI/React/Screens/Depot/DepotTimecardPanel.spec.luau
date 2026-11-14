@@ -45,9 +45,19 @@ return function()
 			expect(face.prize3).to.be.ok()
 			expect(face.prize5).to.be.ok()
 			expect(face.done.props.text).to.equal("1 of 5 done")
-			-- Today is already punched: the button says so and is off.
-			expect(face.punch.props.disabled).to.equal(true)
-			expect(face.punch.props.text).to.equal("PUNCHED TODAY")
+			-- Today is already punched: the button says so, is off and does not pulse.
+			expect(face.punch.props.active).to.equal(false)
+			expect(face.punch.props.children.button.props.disabled).to.equal(true)
+			expect(face.punch.props.children.button.props.text).to.equal("PUNCHED TODAY")
+		end)
+
+		it("pulses PUNCH IN! while today's punch is free (owner 2026-11-14)", function()
+			local face = base({
+				status = Rules.status({ week = MONDAY, punched = {}, weeks = 0 }, MONDAY),
+			}).props.children.card.props.content.card.props.children
+			expect(face.punch.props.active).to.equal(true)
+			expect(face.punch.props.children.button.props.text).to.equal("PUNCH IN!")
+			expect(face.punch.props.children.button.props.disabled).to.equal(false)
 		end)
 
 		it("keeps only the big facts: no week code, no UTC, no filled-weeks line", function()

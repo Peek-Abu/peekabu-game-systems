@@ -81,4 +81,25 @@ return function()
 			expect(VM.twinkle(0.2, 1, 3) ~= VM.twinkle(0.2, 2, 3)).to.equal(true)
 		end)
 	end)
+
+	describe("pulse", function()
+		it("breathes the scale a little and the glow a lot over one period, back where it started", function()
+			local period = MOTION.pulsePeriod
+			local lowScale, highScale, lowGlow, highGlow = math.huge, -math.huge, math.huge, -math.huge
+			for step = 0, 63 do
+				local p = VM.pulse(step * period / 64)
+				lowScale = math.min(lowScale, p.scale)
+				highScale = math.max(highScale, p.scale)
+				lowGlow = math.min(lowGlow, p.glow)
+				highGlow = math.max(highGlow, p.glow)
+			end
+			expect(lowScale).to.equal(1)
+			expect(highScale > 1.05 and highScale <= 1.08).to.equal(true)
+			-- glow is an ImageTransparency: always visible, clearly brighter at the peak
+			expect(highGlow <= 0.75).to.equal(true)
+			expect(lowGlow <= 0.2).to.equal(true)
+			local a, b = VM.pulse(0), VM.pulse(period)
+			expect(math.abs(a.scale - b.scale) < 1e-6).to.equal(true)
+		end)
+	end)
 end

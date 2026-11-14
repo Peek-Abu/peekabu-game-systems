@@ -160,6 +160,8 @@ local MOTION = table.freeze({
 	wipeDelay = 0.12,
 	-- Sparkles twinkle on a stagger.
 	sparklePeriod = 1.6,
+	-- A "press me" pulse (ToonPulse): one swell and glow every this many seconds.
+	pulsePeriod = 1.2,
 })
 
 -- Roblox's own controls, kept clear (design px): the top-left menu/chat buttons, the phone thumbstick (bottom-left)

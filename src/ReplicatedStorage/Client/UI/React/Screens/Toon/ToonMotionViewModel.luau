@@ -72,4 +72,12 @@ function ToonMotionViewModel.twinkle(seconds: number, index: number, count: numb
 	return 0.35 + 0.65 * wave * wave
 end
 
+-- "Press me!" (owner 2026-11-14: an unpunched punch-in must obviously ask to be clicked): over one
+-- MOTION.pulsePeriod the button swells to +7% and back while its glow (an ImageTransparency) goes from faint to bright.
+export type Pulse = { scale: number, glow: number }
+function ToonMotionViewModel.pulse(seconds: number): Pulse
+	local wave = (1 - math.cos(seconds / MOTION.pulsePeriod * 2 * math.pi)) / 2
+	return { scale = 1 + 0.07 * wave, glow = 0.75 - 0.6 * wave }
+end
+
 return ToonMotionViewModel

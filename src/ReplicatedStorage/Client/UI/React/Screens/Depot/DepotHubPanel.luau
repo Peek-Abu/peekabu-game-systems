@@ -31,6 +31,7 @@ local ToonBar = require(Toon.ToonBar)
 local ToonButton = require(Toon.ToonButton)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
+local ToonPulse = require(Toon.ToonPulse)
 local ToonSparkle = require(Toon.ToonSparkle)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonSurface = require(Toon.ToonSurface)
@@ -224,20 +225,28 @@ local function clipboardTile(props: DepotHubPanelProps): React.ReactNode
 		return nil
 	end
 	local phone = props.phone
-	return e(ToonButton, {
-		variant = "lilac",
-		layout = "tile",
-		icon = "clock",
-		-- The phone tile is 66 px: a short word that fits at a readable size.
-		text = if phone then "CARD" else "CLIPBOARD",
-		textSize = if phone then 13 else 20,
-		badge = if props.clipboardBadge then "!" else nil,
+	local tile = DepotHubViewModel.clipboardTile(props.clipboardBadge == true, phone)
+	-- While today's punch is free the tile pulses in a mint glow with bubbles (ToonPulse) and says PUNCH IN!.
+	return e(ToonPulse, {
+		active = tile.pulse,
 		anchor = Vector2.new(1, 0),
 		position = UDim2.fromOffset(0, if phone then 214 else 424),
 		size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
-		small = phone,
-		radius = if phone then 16 else 24,
-		onActivated = onOpen,
+		reach = if phone then 12 else 22,
+		children = {
+			tile = e(ToonButton, {
+				variant = if tile.pulse then "primary" else "lilac",
+				layout = "tile",
+				icon = "clock",
+				text = tile.text,
+				textSize = if phone then 13 else 20,
+				badge = if tile.pulse then "!" else nil,
+				size = UDim2.fromScale(1, 1),
+				small = phone,
+				radius = if phone then 16 else 24,
+				onActivated = onOpen,
+			}),
+		},
 	})
 end
 

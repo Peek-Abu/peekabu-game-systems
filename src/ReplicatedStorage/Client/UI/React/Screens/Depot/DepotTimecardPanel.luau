@@ -23,6 +23,7 @@ local ToonText = require(Toon.ToonText)
 local ToonBar = require(Toon.ToonBar)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
+local ToonPulse = require(Toon.ToonPulse)
 local UIToonConstants = require(Toon.UIToonConstants)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
@@ -203,15 +204,24 @@ local function timecardFace(props: Props): { [string]: React.ReactNode }
 			BorderSizePixel = 0,
 			ZIndex = 2,
 		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) }),
-		punch = e(ToonButton, {
-			text = if status.canPunch then "PUNCH IN!" else "PUNCHED TODAY",
-			textSize = 30,
-			variant = "primary",
+		-- While today's punch is free the button pulses in a mint glow with bubbles (owner 2026-11-14).
+		punch = e(ToonPulse, {
+			active = status.canPunch and props.pending ~= true,
 			position = UDim2.fromOffset(20, 262),
 			size = UDim2.fromOffset(290, 56),
-			disabled = not status.canPunch or props.pending == true,
-			onActivated = props.onPunch,
+			reach = 16,
 			zIndex = 3,
+			children = {
+				button = e(ToonButton, {
+					text = if status.canPunch then "PUNCH IN!" else "PUNCHED TODAY",
+					textSize = 30,
+					variant = "primary",
+					size = UDim2.fromScale(1, 1),
+					disabled = not status.canPunch or props.pending == true,
+					onActivated = props.onPunch,
+					zIndex = 3,
+				}),
+			},
 		}),
 	}
 	for _, slot in slots do

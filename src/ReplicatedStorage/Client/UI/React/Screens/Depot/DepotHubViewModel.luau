@@ -48,6 +48,16 @@ function VM.gift(state: PlayerDataTypes.DailyReward, now: number): GiftView
 	}
 end
 
+-- The Company Clipboard tile: while today's punch is free it says PUNCH IN! and pulses (owner 2026-11-14: it must
+-- obviously ask to be clicked); after it, it is the plain CLIPBOARD. The phone tile is 66 px, so its words are short.
+export type ClipboardTileView = { text: string, pulse: boolean }
+function VM.clipboardTile(canPunch: boolean, phone: boolean): ClipboardTileView
+	if canPunch then
+		return { text = if phone then "PUNCH" else "PUNCH IN!", pulse = true }
+	end
+	return { text = if phone then "CARD" else "CLIPBOARD", pulse = false }
+end
+
 -- The hub page's header title.
 function VM.pageTitle(page: Page): string
 	return if page == "guide" then "GUIDE" else "SETTINGS"
