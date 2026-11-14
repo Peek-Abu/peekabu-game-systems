@@ -262,6 +262,7 @@ return function()
 		it("gives Bramble its own landing thump for the drop off a perch", function()
 			expect(OccupantKindRegistry.soundsOf("bramble").thump).to.equal("brambleThump")
 			expect(OccupantAssets.SOUNDS.brambleThump).to.be.ok()
+			expect(string.match(OccupantAssets.SOUNDS.brambleThump.assetId, "^rbxassetid://%d+$")).to.be.ok()
 			-- It lands as the drop's fall ends.
 			expect(OccupantAssets.THUMP_HIT).to.be.near(OccupantConstants.DROP_FALL_SECONDS, 1e-6)
 		end)

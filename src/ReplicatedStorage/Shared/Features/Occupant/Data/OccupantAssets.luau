@@ -231,10 +231,11 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 30,
 	},
 	-- Bramble drops off a perch (B4; positional, from its head, played as it leaves the top): the hop and the fall,
-	-- then the landing THUMP_HIT seconds in, as the drop's fall ends. In-house, pending the owner's pick and the upload
-	-- (silent until then).
+	-- then the landing THUMP_HIT seconds in, as the drop's fall ends. Owner pick C "soft and sneaky" (2026-11-14, Icey
+	-- Labs, in-house): a feather flutter, a small wing beat, a plush flop and pillow thud, stuffing puffs out, a muffled
+	-- low harp chord, loose feathers settling.
 	brambleThump = {
-		assetId = PENDING,
+		assetId = "rbxassetid://97041946735842",
 		group = "SFX",
 		bus = "Threat",
 		volume = 0.9,

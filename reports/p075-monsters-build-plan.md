@@ -223,3 +223,8 @@ saying, so this is **Q2**.
 1. Perch: Bramble crouches on top of a locker, trophy case or hoop with its feet on the top (not sunk in, not floating), leaning out, head cocked toward you.
 2. Drop: when you walk close (within 10 studs) or look away after spotting it, it hops off, falls fast and squashes on landing, feet on the floor, then stands and walks on.
 3. Thump (after the upload): the hop/flutter starts as it leaves the top and the THUMP lands as its feet hit the floor, heard from around 50 studs, quiet beyond.
+
+**Thump uploaded (2026-11-14):** the owner picked take C ("soft and sneaky"). OGG mono, Icey Labs 189923277,
+`rbxassetid://97041946735842` (owner and audio type checked on the economy API), wired into `brambleThump`. Rig check on
+Shift: the perch head now looks down (it stared at the ceiling) and the wing lifts are smaller (2de045ac); suite
+6676/6676.
