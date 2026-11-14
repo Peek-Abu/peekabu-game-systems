@@ -103,10 +103,12 @@ return table.freeze({
 	-- of grime; measured over 60 seeds, 2026-10-17), so these ask about 60 / 64 / 69 / 74% of it (the site does not
 	-- grow with the crew; OfficeSpawnUtils tops a thin one up with piles so the contract never needs more than 80%).
 	-- QUOTA is the two-player figure (the fallback before a run sets its own); a run and the depot's signs use
-	-- QUOTA_BY_CREW for the crew (ShiftQuotaFormulas). Crews of 5 and 6 come from a Big Crew host (crew hosting); the
-	-- same +50 a player asks 74 / 76% of the site (OfficeSpawnUtils' top-up still holds, measured 2026-10-29).
+	-- QUOTA_BY_CREW for the crew (ShiftQuotaFormulas). Crews of 5 and 6 come from a Big Crew host (crew hosting): five
+	-- keeps the same +50 a player (840); six posts only +10 more (850, owner 2026-11-14, "just lower quota"), the most
+	-- the first roll of all 100 measured maps (50 Offices, 50 Schools, each with its own spawns) covers with the site's
+	-- 25% margin; 860 already misses an Office.
 	QUOTA = 690,
-	QUOTA_BY_CREW = table.freeze({ 640, 690, 740, 790, 840, 890 }),
+	QUOTA_BY_CREW = table.freeze({ 640, 690, 740, 790, 840, 850 }),
 	-- The contract on each map is QUOTA_BY_CREW times its scale, rounded to QUOTA_STEP (ShiftQuotaFormulas.quota). The
 	-- School, the second place, asks 25% more (p1-school-danger, 2026-11-14: solo 800, a crew of 4 990); it also rolls
 	-- more piles and valuables (OfficeConstants.SPAWN_BY_MAP), and every Gloom pays CREDITS_PER_GLOOM, so it pays more.

@@ -12,11 +12,14 @@ return function()
 			expect(ShiftQuotaFormulas.quota(4)).to.equal(ShiftConstants.QUOTA_BY_CREW[4])
 		end)
 
-		it("posts 840 and 890 for a Big Crew of five and six (the same +50 a player)", function()
-			expect(ShiftQuotaFormulas.quota(5)).to.equal(840)
-			expect(ShiftQuotaFormulas.quota(6)).to.equal(890)
-			expect(#ShiftConstants.QUOTA_BY_CREW).to.equal(6)
-		end)
+		it(
+			"posts 840 and 850 for a Big Crew of five and six (owner, 2026-11-14: six keeps the safety margin)",
+			function()
+				expect(ShiftQuotaFormulas.quota(5)).to.equal(840)
+				expect(ShiftQuotaFormulas.quota(6)).to.equal(850)
+				expect(#ShiftConstants.QUOTA_BY_CREW).to.equal(6)
+			end
+		)
 
 		it("never shrinks with a bigger crew", function()
 			for crew = 2, #ShiftConstants.QUOTA_BY_CREW do
@@ -36,12 +39,12 @@ return function()
 			end
 		end)
 
-		it("asks 25% more at the School, rounded to 5 (solo 800, a crew of 4 990, six 1115)", function()
+		it("asks 25% more at the School, rounded to 5 (solo 800, a crew of 4 990, six 1065)", function()
 			expect(ShiftQuotaFormulas.quota(1, "school")).to.equal(800)
 			expect(ShiftQuotaFormulas.quota(2, "school")).to.equal(865)
 			expect(ShiftQuotaFormulas.quota(3, "school")).to.equal(925)
 			expect(ShiftQuotaFormulas.quota(4, "school")).to.equal(990)
-			expect(ShiftQuotaFormulas.quota(6, "school")).to.equal(1115)
+			expect(ShiftQuotaFormulas.quota(6, "school")).to.equal(1065)
 		end)
 
 		it("always asks more at the School than at the Office for the same crew", function()

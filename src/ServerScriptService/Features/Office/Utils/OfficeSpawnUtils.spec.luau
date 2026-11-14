@@ -782,4 +782,44 @@ return function()
 			expect(school > office).to.equal(true)
 		end)
 	end)
+
+	-- The safety margin (owner, 2026-11-14: "just lower quota"): on 100 maps (50 Offices, 50 Schools), the FIRST roll
+	-- for every crew size, with the map's own spawn numbers and contract, already leaves the site at least
+	-- 1 / CONTRACT_SHARE_MAX of that contract, with no re-roll.
+	it("keeps every crew's contract within the safety margin on the first roll of 50 Offices and 50 Schools", function()
+		local generators =
+			{ office = OfficeLayoutGenerationUtils.generate, school = SchoolLayoutGenerationUtils.generate }
+		local misses = {}
+		for crew = 1, #ShiftConstants.QUOTA_BY_CREW do
+			for map, generate in generators do
+				local contract = ShiftQuotaFormulas.quota(crew, map)
+				local spawn = OfficeConstants.SPAWN_BY_MAP[map]
+				local rollOptions = {
+					quota = contract,
+					variant = "B",
+					dirtyRooms = spawn.dirtyRooms,
+					pilesPerRoom = spawn.pilesPerRoom,
+					valuables = spawn.valuables,
+					valueScale = spawn.valueScale,
+					topUpMax = spawn.topUpMax,
+				}
+				for seed = 1, 50 do
+					if seed % 5 == 0 then
+						task.wait()
+					end
+					local plan = OfficeSpawnUtils.roll(generate(LAYOUT, seed), rollOptions, Random.new(seed))
+					local gloom = OfficeLootUtils.gloomOf(plan).total
+					if gloom * OfficeConstants.CONTRACT_SHARE_MAX < contract then
+						table.insert(
+							misses,
+							`{map} seed {seed}, crew {crew}: {gloom} Gloom for a contract of {contract}`
+						)
+					end
+				end
+			end
+		end
+		if #misses > 0 then
+			error(table.concat(misses, "\n"))
+		end
+	end)
 end
