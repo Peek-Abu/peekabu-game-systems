@@ -20,15 +20,15 @@ type Bundle = CosmeticTypes.Bundle
 
 local BUNDLES: { Bundle } = {
 	-- The Legendary skins' bundles: the skin, its emote, its sticker pack and its idle (owner, 2026-11-13). Owner, 11-13
-	-- (price sheet Q3): a bundle is 30% off its items alone, rounded down to 10
-	-- (1,200 + 400 + 150 + 400 = 2,150 -> 1,500).
+	-- (price chart round 2): a bundle is 30% off its items alone, rounded down to 10
+	-- (1,600 + 500 + 400 + 220 = 2,720 -> 1,900), always more off than any single-item sale.
 	{
 		id = "Bundle.BubbleBuddy",
 		name = "Bubble Buddy Bundle",
 		rarity = "legendary",
 		items = { "Pippa.BubbleBuddy", "Pippa.Bubbles", "BubblePack", "Pippa.BubbleBuddyIdle" },
 		currency = "gleam",
-		price = 1500,
+		price = 1900,
 		lore = "Everything for a bubbly day: the skin, the Bubbles emote, the stickers and the idle.",
 	},
 	{
@@ -37,7 +37,7 @@ local BUNDLES: { Bundle } = {
 		rarity = "legendary",
 		items = { "Cappy.PJ", "Cappy.CocoaSip", "CozyPack", "Cappy.PJIdle" },
 		currency = "gleam",
-		price = 1500,
+		price = 1900,
 		lore = "Everything for a cozy night: the PJs, the Cocoa Sip emote, the stickers and the idle.",
 	},
 	{
@@ -46,7 +46,7 @@ local BUNDLES: { Bundle } = {
 		rarity = "legendary",
 		items = { "Prickles.Sheriff", "Prickles.Lasso", "SheriffPack", "Prickles.SheriffIdle" },
 		currency = "gleam",
-		price = 1500,
+		price = 1900,
 		lore = "Everything a sheriff needs: the skin, the Lasso emote, the stickers and the idle.",
 	},
 }

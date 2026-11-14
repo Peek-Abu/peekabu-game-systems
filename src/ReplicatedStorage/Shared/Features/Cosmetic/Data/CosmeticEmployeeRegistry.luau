@@ -11,6 +11,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 
+-- Gleam prices (owner, 2026-11-13, price chart round 2): a Legendary skin 1,600, an Epic emote 500, an Epic idle 220,
+-- so each Legendary bundle's items alone add up to 2,720 and its 1,900 is honestly 30% off.
 local ITEMS: { CosmeticTypes.Item } = {
 	-- Employees
 	{
@@ -143,7 +145,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "Bubble Buddy",
 		rarity = "legendary",
 		source = "gleam",
-		price = 1200,
+		price = 1600,
 		styles = 3,
 		lore = "Rain or shine, Pippa thinks bubbles make cleaning fun.",
 	},
@@ -183,7 +185,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		-- Epic, not Legendary (owner, 2026-11-12): only the skins are Legendary.
 		rarity = "epic",
 		source = "gleam",
-		price = 400,
+		price = 500,
 		lore = "Pippa blows one giant bubble and floats away inside it. Pop!",
 	},
 	-- Bubble Buddy's idle as its own item (owner, 2026-11-13): her paws on the duck ring the Bubble Buddy outfit wears,
@@ -195,7 +197,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "Bubble Buddy Idle",
 		rarity = "epic",
 		source = "gleam",
-		price = 400,
+		price = 220,
 		fits = { "Pippa.BubbleBuddy" },
 		lore = "Pippa floats in her duck ring, ready for a splash.",
 	},
@@ -208,7 +210,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "PJ Cappy",
 		rarity = "legendary",
 		source = "gleam",
-		price = 1200,
+		price = 1600,
 		styles = 3,
 		lore = "Cappy cleans in his PJs. He says the shark slippers are for speed. Probably.",
 	},
@@ -249,7 +251,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		-- Epic, not Legendary (owner, 2026-11-12): only the skins are Legendary.
 		rarity = "epic",
 		source = "gleam",
-		price = 400,
+		price = 500,
 		lore = "A slow sip of cocoa, then a happy sigh. Ahh.",
 	},
 	-- PJ Cappy's idle as its own item (owner, 2026-11-13): the pillow is also an emote prop template (EmoteProps.Pillow,
@@ -261,7 +263,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "PJ Idle",
 		rarity = "epic",
 		source = "gleam",
-		price = 400,
+		price = 220,
 		lore = "Cappy hugs his pillow and naps standing up.",
 	},
 
@@ -273,7 +275,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "Sheriff Prickles",
 		rarity = "legendary",
 		source = "gleam",
-		price = 1200,
+		price = 1600,
 		styles = 3,
 		lore = "There's a new sheriff on the night shift, and he is very prickly.",
 	},
@@ -313,7 +315,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		-- Epic, not Legendary (owner, 2026-11-12): only the skins are Legendary.
 		rarity = "epic",
 		source = "gleam",
-		price = 400,
+		price = 500,
 		lore = "Spin it, throw it, yank it back. Yee-haw!",
 		quote = true,
 	},
@@ -326,7 +328,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		name = "Sheriff Idle",
 		rarity = "epic",
 		source = "gleam",
-		price = 400,
+		price = 220,
 		lore = "Prickles spins his hose like a rope. Yee-haw!",
 	},
 }

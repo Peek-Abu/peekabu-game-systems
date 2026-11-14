@@ -148,6 +148,24 @@ return function()
 			end
 		end)
 
+		it("keeps a single-item sale at 10% off at most, and every bundle more off than that", function()
+			-- Owner, 2026-11-13 (price chart round 2): bundles are always the bigger deal.
+			expect(ShopConstants.DAILY_SALE.percent <= 10).to.equal(true)
+			local bundles = 0
+			for _, offer in ShopRegistry.all() do
+				if #offer.items > 1 then
+					bundles += 1
+					local alone = 0
+					for _, id in offer.items do
+						alone += regular(id)
+					end
+					local off = (1 - offer.price / alone) * 100
+					expect(off > ShopConstants.DAILY_SALE.percent).to.equal(true)
+				end
+			end
+			expect(bundles > 0).to.equal(true)
+		end)
+
 		it("lets an owned item on sale take off only its regular share of a bundle", function()
 			local checked = 0
 			for day = 0, 60 do

@@ -56,10 +56,11 @@ return table.freeze({
 	MAX_ID_LENGTH = 64,
 	-- A worked-out price (a bundle you own part of) is rounded up to a multiple of this.
 	PRICE_STEP = 10,
-	-- The daily rotation's sale (owner, 11-13: price sheet Q6): the Featured item and the first `picks` of Today's
-	-- picks are `percent` off until the shop changes (single items only; never an employee or a bundle).
-	DAILY_SALE = table.freeze({ percent = 20, picks = 2 }),
-	-- The most Gleam one buy request may agree to top up with (a hire from zero Credits is 250).
+	-- The daily rotation's sale (owner, 11-13: price sheet Q6; price chart round 2 caps a single item at 10% off, so a
+	-- bundle is always the bigger deal): the Featured item and the first `picks` of Today's picks are `percent` off
+	-- until the shop changes (single items only; never an employee or a bundle).
+	DAILY_SALE = table.freeze({ percent = 10, picks = 2 }),
+	-- The most Gleam one buy request may agree to top up with (a hire from zero Credits is 500).
 	MAX_TOP_UP = 100000,
 	BUNDLES = table.freeze(BUNDLES),
 	PRODUCT_IDS = table.freeze(PRODUCT_IDS),

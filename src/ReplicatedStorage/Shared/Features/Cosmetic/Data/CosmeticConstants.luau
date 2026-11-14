@@ -34,6 +34,13 @@ return table.freeze({
 	STICKER_SLOTS = STICKER_SLOTS,
 	-- The most colour styles a skin may have (Legendaries ship 3).
 	MAX_STYLES = 9,
+	-- A sticker pack's rarity and Gleam price by how many stickers it holds (owner, 2026-11-13: 100 Gleam a sticker).
+	-- CosmeticStickerRegistry.spec holds every pack to it.
+	STICKER_PACKS = table.freeze({
+		[2] = table.freeze({ rarity = "rare", price = 200 }),
+		[4] = table.freeze({ rarity = "epic", price = 400 }),
+		[6] = table.freeze({ rarity = "legendary", price = 600 }),
+	}),
 	-- Ids are 1-64 characters (EntitlementRules.isKey).
 	MAX_ID_LENGTH = 64,
 	-- The most ids one "seen" request may carry (one page of cards).
