@@ -48,4 +48,20 @@ return function()
 			expect(VM.HOLD_SECONDS > VM.AUTO_SECONDS).to.equal(true)
 		end)
 	end)
+
+	describe("nameSize", function()
+		it("keeps a short name at full size", function()
+			expect(VM.nameSize(60, "PJ CAPPY", 600)).to.equal(60)
+		end)
+
+		it("shrinks a long name so it stays on one line (it never covers the line under it)", function()
+			local fitted = VM.nameSize(60, "BUBBLE BUDDY BUNDLE", 400)
+			expect(fitted < 60).to.equal(true)
+			expect(#"BUBBLE BUDDY BUNDLE" * fitted * VM.GLYPH_WIDTH <= 400).to.equal(true)
+		end)
+
+		it("never goes below the readable floor", function()
+			expect(VM.nameSize(60, string.rep("W", 200), 100)).to.equal(VM.NAME_FLOOR)
+		end)
+	end)
 end

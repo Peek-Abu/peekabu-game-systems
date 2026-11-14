@@ -888,7 +888,11 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		elseif shown ~= nil then
 			local product = VM.product(shown, owns, balances)
 			local card = product.card
-			local nameSize = math.floor(layout.headingSize * (if phone then 1 else 1.4))
+			local nameSize = CarouselVM.nameSize(
+				math.floor(layout.headingSize * (if phone then 1 else 1.4)),
+				string.upper(card.name),
+				bannerWidth * 0.55
+			)
 			local priced: Nodes = {
 				price = e(ToonPrice, {
 					currency = card.currency,
@@ -1032,7 +1036,8 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						Position = UDim2.fromScale(0.5, 0.5),
 						Size = UDim2.fromOffset(dot, dot),
-						BackgroundColor3 = if index == spot then UIToonConstants.shade("gold").base else COLOR.white,
+						-- The current dot is ink: gold vanished on the gold banner (play-check 2026-11-14).
+						BackgroundColor3 = if index == spot then COLOR.ink else COLOR.white,
 						BorderSizePixel = 0,
 					}, {
 						corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),

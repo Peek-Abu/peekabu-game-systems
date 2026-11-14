@@ -52,4 +52,15 @@ function ShopCarouselViewModel.due(since: number, picked: boolean): boolean
 	return since >= if picked then ShopCarouselViewModel.HOLD_SECONDS else ShopCarouselViewModel.AUTO_SECONDS
 end
 
+-- The display face's average letter width, as a share of its size, and the smallest a slide's name may get.
+ShopCarouselViewModel.GLYPH_WIDTH = 0.62
+ShopCarouselViewModel.NAME_FLOOR = 16
+
+-- A slide's name size: `base`, or smaller so `name` fits on one line `width` px wide (a long bundle name wrapped onto
+-- the line under it, owner play-check 2026-11-14); never below NAME_FLOOR.
+function ShopCarouselViewModel.nameSize(base: number, name: string, width: number): number
+	local fits = width / math.max(1, #name * ShopCarouselViewModel.GLYPH_WIDTH)
+	return math.max(ShopCarouselViewModel.NAME_FLOOR, math.floor(math.min(base, fits)))
+end
+
 return ShopCarouselViewModel
