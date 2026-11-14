@@ -85,8 +85,49 @@ menus that would gain most from the same treatment. Every shot follows `game-ui-
   real crew.
 - **Caught / Rehired card:** a horror photo there would scare young kids for little gain.
 
-## Mocks
-Mock 1 (Field Guide) and mock 2 (monster cards), from real Studio captures. Review page: _pending the Studio slot_.
+## Mocks (2026-11-13)
+**Owner review page:** https://claude.ai/artifact/CTavrAssNqC2X3CQFdvZpu
+- 17 yes/no questions (look / layout / words / what to build).
+- Answers save to its db collection `picks` (doc ids `r1-<Q>`, fields `answer`, `note`, `at`).
+
+**Mock 2: monster cards ("Who's out tonight?"): real captures.**
+- Studio Shift place in Edit mode (coordinator slot), clones of `Assets.CleanupCrew.Characters.Manager` and `.Bramble`
+  posed through Motor6D C0 turns (the `EmployeePoseRegistry` convention: degrees about X, Y, Z in `CFrame.Angles`
+  order).
+  - Harlow listening, hand to ear, `Noticing` face.
+  - Bramble frozen, wings up.
+- Cut out with rembg `isnet-general-use` + alpha matting. `cutout.py`'s backdrop key left violet halos, because my
+  grey wall and floor were two tones.
+- `iconize.py --style ink --rim #FF4F6E`, on a `photos.py portrait` grape rays/halftone backdrop, the head breaking the
+  card's top.
+- **For the build:** reshoot bigger, on one flat chroma colour (magenta suits both), so the edges come out clean.
+
+**Mock 1: How to play: layout final, photos are stand-ins.**
+- The Training map in Edit mode doesn't look like play: the carpet floor renders black, and the Gloom creep is flat
+  blue.
+- I tried fill lights and a higher ambient; neither fixed the floor. A test shot of Pippa vacuuming proved the pose
+  and the hand-fitted vacuum work.
+- **The four step photos need a short Play slot** on the Shift place:
+  - a client RenderStep camera override (see the studio-play-captures memory);
+  - no saves.
+- The review page says so, and asks layout/words now.
+
+**Studio clean-up:**
+- Everything I added sat in `workspace.P075_TEMP`, which is deleted.
+- Lighting is restored from the values saved at the start: ClockTime 0, Brightness 0.5, Exposure -0.7, both
+  ambients.
+- Nothing saved; the coordinator was told.
+
+**Files** (outside git, in the shared notes folder `p075-scene-menus/`):
+- `mock.html` (the HTML mock, V1 tokens + `base2.css`), `renders/`, `raw/`, `cut/`.
+- `photos/` holds the cut-outs and backdrops.
 
 ## Owner's answers
-_pending_
+_pending (read `picks` on the review page)_
+
+## Next
+1. A Play slot for the four How-to-play step photos. Swap them into the mock and republish the review page.
+2. Read the owner's picks. Build only the YES items. Each build:
+   - states its module placement first;
+   - is spec-first;
+   - uploads to Icey Labs only after the owner's OK.
