@@ -160,6 +160,8 @@ return table.freeze({
 	EXIT_NOISE = 9,
 	CRAMPED_NOISE = 19,
 	TUMBLE_SOUND_RADIUS = 60,
+	-- Climbing in and out on your own is heard by everyone this close (HideAssets.IN / OUT, 3D from the spot).
+	HIDE_SOUND_RADIUS = 45,
 	-- The hand items small enough to hide with (the hotbar's small sizes: tiny and light); a big item stops you.
 	POCKETABLE_SIZES = table.freeze({ tiny = true, light = true }),
 	-- The body under the furniture: the root stands where a standing root would (the pose folds the body down), placed

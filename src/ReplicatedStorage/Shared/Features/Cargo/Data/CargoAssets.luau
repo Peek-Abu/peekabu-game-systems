@@ -63,8 +63,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 90,
 		maxConcurrent = 3,
 	},
+	-- A fragile item breaks: a small ceramic mug shattering with tinkling bits (P0.5 round 2 pick A, in-house SA3 foley,
+	-- Icey Labs 2026-11-14; replaced the PSE library smash 9114597147).
 	cargoShatter = {
-		assetId = "rbxassetid://9114597147",
+		assetId = "rbxassetid://97245298829775",
 		group = "SFX",
 		bus = "Action",
 		volume = 0.9,

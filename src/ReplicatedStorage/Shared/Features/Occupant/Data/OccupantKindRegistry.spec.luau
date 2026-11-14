@@ -240,7 +240,8 @@ return function()
 					expect(id).never.to.equal("catchFired")
 				end
 			end
-			expect(sounds.footsteps).to.equal(nil)
+			-- Its own soft foam steps (FootstepAssets.SETS.bramble, behind the proximity gate), never Harlow's heels.
+			expect(sounds.footsteps).to.equal("bramble")
 			expect(sounds.mutter).to.equal(nil)
 			expect(sounds.curious).to.equal(nil)
 			expect(sounds.sigh).to.equal(nil)

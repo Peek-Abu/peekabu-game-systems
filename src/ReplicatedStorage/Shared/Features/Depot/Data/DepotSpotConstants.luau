@@ -42,8 +42,12 @@ local PROMPTS: { [string]: { action: string, object: string } } = table.freeze({
 	locker = table.freeze({ action = "Open", object = "Locker" }),
 })
 
+-- The hub radio, in the order the Ring steps through them. Lunch Line and Night Lot: P0.5 round 1 picks (owner
+-- 2026-11-13; Night Lot was the yard tune, "this should be for hub too!"). Quiet Night stays last (no music).
 local STATIONS: { Station } = {
 	table.freeze({ name = "Garage Tunes", track = "depotHubTheme" }),
+	table.freeze({ name = "Lunch Line", track = "depotHubLunch" }),
+	table.freeze({ name = "Night Lot", track = "depotHubNightLot" }),
 	table.freeze({ name = "Quiet Night", track = nil }),
 }
 

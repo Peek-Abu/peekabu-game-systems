@@ -154,8 +154,8 @@ local BRAMBLE: Kind = {
 	words = { caughtBy = "Bramble", catchTip = "firstCatchBramble", overtimeTip = "overtimeBramble" },
 	-- No voice: Bramble never speaks (none of Harlow's lines, no barks).
 	voice = nil,
-	-- None of Harlow's sounds. Its catch and unfreeze are its own (OccupantAssets, uploaded 2026-11-12); its footsteps (the plan's soft foam thump) wait for a `bramble`
-	-- FootstepAssets set, so its steps are silent until then.
+	-- None of Harlow's sounds. Its catch and unfreeze are its own (OccupantAssets, uploaded 2026-11-12); its footsteps are
+	-- its own soft foam thumps (FootstepAssets.SETS.bramble), silent until close, then loud and quick (the proximity gate).
 	sounds = {
 		mutter = nil,
 		curious = nil,
@@ -170,7 +170,7 @@ local BRAMBLE: Kind = {
 		grab = nil,
 		powerDown = nil,
 		unfreeze = "brambleUnfreeze",
-		footsteps = nil,
+		footsteps = "bramble",
 	},
 	-- Owner 11-13: "just do a sound and take a life": no freeze, camera, lights out or knockdown.
 	catchStyle = "strike",

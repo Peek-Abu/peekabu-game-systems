@@ -56,6 +56,7 @@ local DepotMapRules = require(DepotShared.Rules.DepotMapRules)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
@@ -75,6 +76,7 @@ local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServi
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 local ShiftCardUtils = require(ServerScriptService.Features.Shift.Utils.ShiftCardUtils)
+local SoundServiceServer = require(ServerScriptService.Features.Sound.SoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 -- The place-role table, at load: Queue resolves this server's role and routes when services start.
@@ -262,6 +264,7 @@ export type DepotServiceServer = {
 local DepotServiceServer: DepotServiceServer = {
 	dependencies = {
 		"QueueServiceServer",
+		"SoundServiceServer",
 		"ToastServiceServer",
 		"InteractionServiceServer",
 		"StateSyncServiceServer",
@@ -313,6 +316,12 @@ local DepotServiceServer: DepotServiceServer = {
 			-- starts over.
 			local map: ShiftTypes.MapId = DepotMapSystem.mapOfPad(pad)
 			DepotMapSystem.departed(pad)
+			-- The truck leaves: its door rolls shut, then the engine starts, heard round the truck.
+			local at = pad.Position
+			SoundServiceServer:playAt(at, ShiftAssets.TRUCK_DOOR, ShiftAssets.TRUCK_SOUND_RADIUS)
+			task.delay(ShiftAssets.TRUCK_START_DELAY, function()
+				SoundServiceServer:playAt(at, ShiftAssets.TRUCK_START, ShiftAssets.TRUCK_SOUND_RADIUS)
+			end)
 			-- A training trip has no contract to brief (training's own HUD and signs say what to do).
 			if isTrainingPad(pad) then
 				return

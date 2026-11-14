@@ -173,6 +173,36 @@ local SETS: { [string]: FootstepSet } = {
 			concrete = {},
 		},
 	},
+	-- Bramble (the School's monster): soft foam thumps (P0.5 round 2 pick A, 2026-11-13; four variants matched to a
+	-- -20 dB loudest window, Icey Labs uploads 2026-11-14). Owner: "super quiet / pretty much quiet as a bat until
+	-- pretty close and then his footsteps suddenly sound loud and quick!": the proximity gate. Its patrol is 16
+	-- studs/s and its chase 27 (OccupantKindRegistry), past a sprint.
+	bramble = {
+		volume = 0.9,
+		pitch = { min = 0.96, max = 1.04 },
+		rollOffMaxDistance = 30,
+		walkSpeed = 16,
+		runSpeed = 27,
+		gaits = {
+			walk = { volume = 1, pitch = 1 },
+			sprint = { volume = 1.3, pitch = 1.08 },
+			crouch = { volume = 0.5, pitch = 1 },
+			hidden = { volume = 0, pitch = 1 },
+		},
+		proximity = { silentBeyond = 18, loudVolume = 1.6, quickPitch = 1.12 },
+		surfaces = {
+			default = {
+				"rbxassetid://118171310754492",
+				"rbxassetid://82486123577269",
+				"rbxassetid://78611868927015",
+				"rbxassetid://76092751036051",
+			},
+			carpet = {},
+			tile = {},
+			wood = {},
+			concrete = {},
+		},
+	},
 	-- Any other player character: Pippa's steps.
 	default = {
 		volume = 0.9,

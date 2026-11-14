@@ -18,12 +18,17 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- clarinet over harpsichord and pizz; a bar-exact 60 s OGG loop. 2D, the music slot, while you are in the hub
 	-- (OfficeAtmosphereSystem).
 	depotHubTheme = { assetId = "rbxassetid://113418650275760", group = "Music", volume = 1, looped = true },
-	-- The shift bell by the trucks (DepotSpotConstants.BELL_SOUND): the office's far ding, played at the bell for
-	-- everyone in the hub.
+	-- More radio stations (P0.5 round 1 picks, in-house, 2026-11-13): "Lunch Line", a Bb major pizzicato march at 120
+	-- bpm (32 s bar-exact loop, -20 LUFS, the theme's level), and "Night Lot", the D minor music-box tune written for
+	-- the yard (40 s loop, mastered -21 LUFS, so +1 dB here). 2D, the music slot, like the theme.
+	depotHubLunch = { assetId = "rbxassetid://77603225068746", group = "Music", volume = 1, looped = true },
+	depotHubNightLot = { assetId = "rbxassetid://119775165221236", group = "Music", volume = 1.12, looped = true },
+	-- The shift bell by the trucks (DepotSpotConstants.BELL_SOUND), played at the bell for everyone in the hub: its own
+	-- hand-chime "ding-ding" (P0.5 round 1 pick A, 2026-11-13), no longer the office ambience's far ding.
 	depotShiftBell = {
-		assetId = "rbxassetid://136430418224601",
+		assetId = "rbxassetid://93665172455660",
 		group = "SFX",
-		volume = 1.1,
+		volume = 0.8,
 		pitch = { min = 0.97, max = 1.03 },
 		maxConcurrent = 3,
 		rollOffMinDistance = 18,

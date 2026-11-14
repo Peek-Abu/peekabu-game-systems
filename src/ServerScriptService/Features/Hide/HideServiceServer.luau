@@ -242,6 +242,8 @@ local function leave(player: Player, reason: ExitReason): boolean
 		noiseMade:Fire(outAt, radius, if tumble then "hideTumble" else "hideExit", { player.UserId })
 		if tumble then
 			SoundServiceServer:playAt(outAt, HideAssets.TUMBLE, HideConstants.TUMBLE_SOUND_RADIUS)
+		else
+			SoundServiceServer:playAt(outAt, HideAssets.OUT, HideConstants.HIDE_SOUND_RADIUS)
 		end
 	end
 	if reason == "cramped" then
@@ -298,6 +300,7 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 	root.Anchored = true
 	root.AssemblyLinearVelocity = Vector3.zero
 	tween:Play()
+	SoundServiceServer:playAt(root.Position, HideAssets.IN, HideConstants.HIDE_SOUND_RADIUS)
 	-- Parent changes may be signalled deferred (the stowed wand reappears on the pack a beat after the unequip), so
 	-- measure again once they have landed and slide to the frame of the body as it now is.
 	task.defer(function()

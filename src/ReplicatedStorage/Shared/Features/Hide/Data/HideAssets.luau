@@ -4,9 +4,10 @@
 	feature's Data/<Feature>Assets"). Registers its sounds at load on whichever realm requires this first (guarded):
 	the server plays them through SoundServiceServer, the client requires this (HidePoseSystem) so the id is known.
 
-	- TUMBLE: tumbling out of a spot pushed out "cramped" (the Manager's behaviours design §10.3). PLACEHOLDER: the
-	  in-house body-fall C (characters/audio/listening/round3/masters/sfx/bodyfall_C.wav, the footstepBodyFall upload)
-	  played quietly; a dedicated "tumble out of the furniture" sound is still to be made.
+	- IN / OUT: crawling into a spot (cloth rustle + a soft wood creak) and climbing out on your own (cloth + a light
+	  wood knock), 3D from the spot (P0.5 round 2 picks A, in-house SA3 foley, the event alone; Icey Labs 2026-11-14).
+	- TUMBLE: tumbling out of a spot pushed out "cramped" (the Manager's behaviours design §10.3): its own bump on the
+	  furniture, body thud and roll (P0.5 round 2 pick A), no longer the body-fall it borrowed.
 
 	Static data + registration (spec-exempt).
 
@@ -19,14 +20,32 @@ local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.Sound
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 
 local TUMBLE = "hideTumble"
+local IN = "hideIn"
+local OUT = "hideOut"
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	[TUMBLE] = {
-		assetId = "rbxassetid://83428002679573",
+		assetId = "rbxassetid://122926404383994",
 		group = "SFX",
 		bus = "Action",
-		volume = 0.45,
-		pitch = { min = 1.05, max = 1.15 },
+		volume = 0.9,
+		pitch = { min = 0.97, max = 1.03 },
+		rollOffMaxDistance = 45,
+	},
+	[IN] = {
+		assetId = "rbxassetid://112669131353651",
+		group = "SFX",
+		bus = "Action",
+		volume = 1,
+		pitch = { min = 0.96, max = 1.04 },
+		rollOffMaxDistance = 45,
+	},
+	[OUT] = {
+		assetId = "rbxassetid://138926184712996",
+		group = "SFX",
+		bus = "Action",
+		volume = 1,
+		pitch = { min = 0.96, max = 1.04 },
 		rollOffMaxDistance = 45,
 	},
 }
@@ -40,4 +59,6 @@ end
 return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	TUMBLE = TUMBLE,
+	IN = IN,
+	OUT = OUT,
 })

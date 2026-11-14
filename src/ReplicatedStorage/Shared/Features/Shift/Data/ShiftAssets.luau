@@ -40,6 +40,25 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	shiftTicking = { assetId = "rbxassetid://118452299844030", group = "Music", volume = 0.5, looped = true },
 	-- Two honks: the truck's countdown started (half the crew clocked out), or it leaves at once.
 	shiftClockOutHorn = { assetId = "rbxassetid://121905159563801", group = "SFX", bus = "Stings", volume = 1 },
+	-- The crew truck leaving the hub (DepotServiceServer, when a Queue pad departs): its roll-up back door rattles down
+	-- and latches, then the old diesel cranks and settles to idle, 3D at the truck (P0.5 round 2 picks A, in-house SA3
+	-- foley, the event alone; Icey Labs 2026-11-14).
+	shiftTruckDoor = {
+		assetId = "rbxassetid://129758286716571",
+		group = "SFX",
+		bus = "Action",
+		volume = 0.9,
+		rollOffMinDistance = 15,
+		rollOffMaxDistance = 140,
+	},
+	shiftTruckStart = {
+		assetId = "rbxassetid://80528170851849",
+		group = "SFX",
+		bus = "Action",
+		volume = 0.8,
+		rollOffMinDistance = 15,
+		rollOffMaxDistance = 140,
+	},
 	shiftCountdownTick = { assetId = "rbxassetid://135218748578686", group = "UI", volume = 0.6, maxConcurrent = 2 },
 	-- The toast styles' sounds (ShiftConstants.TOAST_STYLES): a paper rustle and a rubber stamp.
 	shiftStickyNote = { assetId = "rbxassetid://99429190384090", group = "UI", volume = 0.6 },
@@ -78,4 +97,10 @@ return table.freeze({
 	JINGLE_SOUNDS = table.freeze(JINGLE_SOUNDS),
 	TICKING = "shiftTicking",
 	COUNTDOWN_TICK = "shiftCountdownTick",
+	TRUCK_DOOR = "shiftTruckDoor",
+	TRUCK_START = "shiftTruckStart",
+	-- The engine starts this long after the door latches.
+	TRUCK_START_DELAY = 0.9,
+	-- Everyone within this many studs of the truck hears it leave.
+	TRUCK_SOUND_RADIUS = 140,
 })
