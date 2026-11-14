@@ -443,6 +443,12 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 				if since >= GROW_EVERY and fitted ~= nil then
 					since = 0
 					local seen = EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(live, nil))
+					-- A spinning model is measured as the box round its root too, so a prop it swings out (a Legendary's
+					-- showcase idle holds one) widens the view evenly and never pulls the camera off-centre.
+					local spinAxis = root
+					if seen ~= nil and spinAxis ~= nil then
+						seen = ToonSpinViewModel.around(seen, spinAxis)
+					end
 					local grown = if seen ~= nil then PortraitViewModel.grow(fitted, seen) else nil
 					if grown ~= nil then
 						bounds = grown

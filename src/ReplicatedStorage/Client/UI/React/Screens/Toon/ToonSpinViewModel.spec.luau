@@ -96,6 +96,25 @@ return function()
 			expect(wide.min.Y).to.equal(0)
 			expect(wide.max.Y).to.equal(5)
 		end)
+
+		it(
+			"keeps the camera centred when a turning model's props reach out (a growing box stays on the root)",
+			function()
+				local PortraitViewModel = require(script.Parent.Parent.Portrait.PortraitViewModel)
+				local fitted = VM.around(box, root)
+				-- A Legendary's showcase prop held far out to one side, after a quarter turn.
+				local seen = { min = Vector3.new(-1, 0, -0.5), max = Vector3.new(1, 5, 4) }
+				local raw = PortraitViewModel.grow(fitted, seen)
+				local rawCentre = (raw.min + raw.max) / 2
+				-- Growing by the raw box drifts off the root (the bug the owner saw on Legendary skins).
+				expect(math.abs(rawCentre.Z) > 0.1).to.equal(true)
+				local grown = PortraitViewModel.grow(fitted, VM.around(seen, root))
+				local centre = (grown.min + grown.max) / 2
+				expect(centre.X).to.be.near(0, 1e-6)
+				expect(centre.Z).to.be.near(0, 1e-6)
+				expect(grown.max.Z >= 4).to.equal(true)
+			end
+		)
 	end)
 
 	describe("turn", function()
