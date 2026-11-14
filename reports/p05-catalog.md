@@ -90,3 +90,24 @@ Every check passed:
 
 Not checked in a shift. EmoteProps has a `Pillow` template, so PJ Idle now fits every Cappy skin (its `fits` line
 is dropped). There is no `DuckRing` template, so Bubble Buddy Idle stays locked to its skin.
+
+## Owner feedback round (2026-11-14): idles in the Shop, Vacuums filter, Bubble Buddy Idle on any skin
+- bb990618: an idle's Shop card and page play the idle on the Classic skin, never the skin it came from. The page
+  line says "Idle only (no skin) for <name> · cosmetic only", in the panel beside the hero, not on top of it.
+  The Skins filters now go All, Vacuums, then the employees; the employee filters no longer list vacuums.
+- 4a61f57d, 6d9572f8, ad7e98c1 and d6a51fdf: Bubble Buddy Idle now works on every Pippa skin.
+  - EmotePropRegistry entries can have `steady` props (out for the whole clip) and a `standIn` (a template that
+    stands in for a prop a skin wears at its holster).
+  - Her idle and fidget keep a waist duck ring (the `DuckRingWaist` template) out on skins without one; her own
+    skin shows its worn ring.
+  - A prop clip that stops hands its props back to one still playing (the ring comes back after the fidget).
+- Place art (the owner saves): `ReplicatedStorage.Assets.CleanupCrew.EmoteProps.DuckRingWaist` in both Odd Hours
+  and Odd Hours: Shift. It's a clone of `Outfits.PippaBubbleBuddy.Props.DuckRing` with its Motor6D set to
+  Hand=LowerTorso and C0 at the ring's HolsterOffset.
+- Lobby play-check on d6a51fdf passed:
+  - Classic Pippa: the ring stays out for 40 s through 2 fidgets.
+  - Bubble Buddy skin: no second ring.
+  - All 3 Shop idle pages play on the Classic skin with their props.
+  - Filter order is right.
+  - Screenshots are in the side-session notes (`p05-bubble-idle-classic-pippa`, `p05-shop-bubble-idle-page`).
+- Not checked: a real click on the Vacuums filter, and the idles inside a shift.
