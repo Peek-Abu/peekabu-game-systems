@@ -167,3 +167,26 @@ saying, so this is **Q2**.
   - B5 is dropped.
   - The first-catch tips stay as they are until Q1 is answered.
   - The perch pose, drop animation and thump are held for the owner.
+
+## Shift check (2026-11-14, served at dc1ee2ac)
+- **Suite:** 6658 passed, 3 failed. None of the three failures is mine:
+  - `OccupantKindRegistry.spec` footstepSetOf: p05-sound's 61aed3cc turned on Bramble's steps; the spec still says
+    none.
+  - `AnimationCarryHarness.spec` and `DepotTruckVisualSystem.spec`: routed to p05-perf-art.
+  - My first run had other failures: old words pinned in specs, the chase-27 spec, and my perch spec fixtures. All
+    fixed in dc1ee2ac.
+- **Real play: not done.**
+  - The MCP starts solo Play only, and the Shift Play uses the owner's real account with saving on.
+  - My School pick didn't take, likely because the place is locked on that profile. The truck left for the Office.
+  - Unlocking the School would mean granting Credits and buying it on the owner's real save, so I didn't.
+  - Nothing was written to Credits or places. The one Office trip that did start ran as a normal Office shift.
+  - Flags set and cleared: `RunTests`, `DevAutoPick`. No temp instances. Nothing saved.
+
+### Owner play-check (Shift, Test > Clients and Servers > 2 players, School)
+1. **B1:** player A vacuums while looking at Bramble and he keeps moving. Player B only looks and he freezes.
+2. **S7:** once he chases, he outruns a sprint (30).
+3. **B4:** stop watching him for about 15 s with both players more than 40 studs away.
+   - He should appear standing on top of a locker, trophy case or the gym hoop near you, not inside it.
+   - Look at him and he stays still. Look away and he drops to the floor.
+   - He also drops after 20 s, or if you walk within 10 studs.
+4. **B3:** his steps are silent far away and suddenly loud and quick within about 18 studs (p05-sound's set).
