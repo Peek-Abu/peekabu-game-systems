@@ -61,6 +61,14 @@ export type InsideItem = {
 	confirm: string,
 }
 
+export type PageButton = "buy" | "getGleam" | "back"
+
+export type ItemPage = {
+	from: string,
+	chance: string?,
+	button: PageButton,
+}
+
 export type OddsItemRow = {
 	id: string,
 	name: string,
@@ -282,6 +290,27 @@ function VM.inside(locker: Locker, owns: Owns, balances: Balances, restricted: b
 		})
 	end
 	return list
+end
+
+--[=[
+	A "What's inside" item's own page (owner, 2026-11-14: locker items get a product-page view too): where it comes from,
+	its chance each open (the odds sheet's per-item chance), and its one button: the direct buy where the card offers it,
+	Get Gleam when that buy is too dear, else Back.
+]=]
+function VM.itemPage(locker: Locker, item: InsideItem, pool: { Item }?): ItemPage
+	local items = pool or LockerRules.pool(locker)
+	local odds = LockerRules.odds(locker, items)
+	local chance: string? = nil
+	for _, entry in odds.rarities do
+		if table.find(entry.items, item.id) ~= nil then
+			chance = `{formatPercent(entry.chance / math.max(1, #entry.items))} chance each time you open it`
+		end
+	end
+	local button: PageButton = if item.owned or item.directPrice == nil
+		then "back"
+		elseif item.canBuyDirect then "buy"
+		else "getGleam"
+	return { from = `You can get it from the {locker.name}.`, chance = chance, button = button }
 end
 
 function VM.oddsSheet(locker: Locker, state: LockerTypes.Lockers, pool: { Item }?): OddsSheet

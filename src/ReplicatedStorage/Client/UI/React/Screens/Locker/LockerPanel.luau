@@ -3,7 +3,8 @@
 	LockerPanel: the Shop's Lockers tab (design: docs/superpowers/specs/2026-10-25-odd-hours-lockers-design.md).
 	Left: the two Lost & Found Locker cards (Gloom Locker and Gleam Locker) with their render, key count, live pity
 	line, Odds button and Open button. Right: "What's inside" for the selected Locker, with each item's rarity, Owned
-	stamp, and (for restricted players on the Gleam Locker) direct purchase price and confirmation modal.
+	stamp, and (for restricted players on the Gleam Locker) direct purchase price. Tapping an item opens its own page
+	(LockerItemPanel, LockerStore.viewing) in place of the tab, where its direct buy and confirmation modal live.
 
 	Presentational React component over `LockerViewModel` and `LockerStore` (exempt; values specced in
 	`LockerViewModel`).
@@ -34,6 +35,7 @@ local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
 local UIToonConstants = require(Toon.UIToonConstants)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
+local LockerItemPanel = require(script.Parent.LockerItemPanel)
 local LockerOddsSheet = require(script.Parent.LockerOddsSheet)
 local VM = require(script.Parent.LockerViewModel)
 
@@ -76,7 +78,7 @@ local function insideCard(
 	size: Vector2,
 	phone: boolean,
 	order: number,
-	onBuyDirect: (item: VM.InsideItem) -> ()
+	onOpen: (item: VM.InsideItem) -> ()
 ): React.ReactNode
 	local shade = UIToonConstants.rarity(item.rarity)
 	local nameSize = if phone then 13 else 22
@@ -156,23 +158,17 @@ local function insideCard(
 			})
 			else nil,
 	}
-	if item.directPrice ~= nil and not item.owned then
-		return e("TextButton", {
-			Size = UDim2.fromOffset(size.X, size.Y),
-			BackgroundTransparency = 1,
-			Text = "",
-			AutoButtonColor = false,
-			LayoutOrder = order,
-			[React.Event.Activated] = function()
-				onBuyDirect(item)
-			end,
-		}, nodes)
-	end
-	return e(
-		"Frame",
-		{ Size = UDim2.fromOffset(size.X, size.Y), BackgroundTransparency = 1, LayoutOrder = order },
-		nodes
-	)
+	-- Every card opens the item's own page (LockerItemPanel), where a direct buy lives.
+	return e("TextButton", {
+		Size = UDim2.fromOffset(size.X, size.Y),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		LayoutOrder = order,
+		[React.Event.Activated] = function()
+			onOpen(item)
+		end,
+	}, nodes)
 end
 
 local function lockerCardView(
@@ -306,6 +302,13 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 	local selected = ReactCharm.useAtom(LockerStore.selected)
 	local oddsFor = ReactCharm.useAtom(LockerStore.oddsFor)
 	local result = ReactCharm.useAtom(LockerStore.result)
+	local viewing = ReactCharm.useAtom(LockerStore.viewing)
+	-- An item's page never outlives the Lockers tab.
+	React.useEffect(function(): () -> ()
+		return function()
+			LockerStore.view(nil)
+		end
+	end, {})
 	local directConfirm, setDirectConfirm = React.useState(function(): VM.InsideItem?
 		return nil
 	end)
@@ -368,12 +371,14 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 	}
 	for index, item in inside do
 		grid[item.id] = insideCard(item, Vector2.new(cellWidth, cellHeight), phone, index, function(entry)
-			if entry.canBuyDirect then
-				setDirectConfirm(entry)
-			else
-				props.onGetGleam()
-			end
+			LockerStore.view(entry.id)
 		end)
+	end
+	local viewed: VM.InsideItem? = nil
+	for _, item in inside do
+		if item.id == viewing then
+			viewed = item
+		end
 	end
 
 	local selectedCard = if selected == "gleam" then cards[2] else cards[1]
@@ -440,7 +445,21 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 		confirmFace = dialog
 	end
 
-	local modalOpen = oddsLocker ~= nil or confirmFace ~= nil
+	local modalOpen = oddsLocker ~= nil or confirmFace ~= nil or viewed ~= nil
+	local page = if viewed ~= nil
+		then e(LockerItemPanel, {
+			item = viewed,
+			page = VM.itemPage(activeLocker, viewed),
+			layout = layout,
+			onBack = function()
+				LockerStore.view(nil)
+			end,
+			onBuy = function()
+				setDirectConfirm(viewed)
+			end,
+			onGetGleam = props.onGetGleam,
+		})
+		else nil
 
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		left = if not modalOpen
@@ -488,6 +507,7 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 				size = UDim2.fromOffset(rightWidth, content.height - headingSize - 24),
 				children = emptyFace,
 			}),
+		page = if oddsLocker == nil then page else nil,
 		odds = if oddsLocker ~= nil
 			then e(LockerOddsSheet, {
 				sheet = VM.oddsSheet(oddsLocker, state),

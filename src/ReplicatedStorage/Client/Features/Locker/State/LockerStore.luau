@@ -6,6 +6,7 @@
 	- `selected`: which Locker's "What's inside" list is shown (`"gloom"` or `"gleam"`).
 	- `oddsFor`: which Locker's odds sheet is open (`nil` when closed).
 	- `opening`: the `LockerTypes.Outcome` currently playing its stage-1 opening animation (`nil` when idle).
+	- `viewing`: the "What's inside" item whose page is open (an item id; `nil` when none). Switching Lockers closes it.
 	- `result`: the last refusal from the server (`{ locker, reason }`), cleared when switching Lockers or starting an
 	  open.
 
@@ -31,6 +32,8 @@ local noOpening: Outcome? = nil
 local opening = Charm.atom(noOpening)
 local noResult: Result? = nil
 local result = Charm.atom(noResult)
+local noViewing: string? = nil
+local viewing = Charm.atom(noViewing)
 
 local LockerStore = {
 	restricted = restricted,
@@ -38,6 +41,7 @@ local LockerStore = {
 	oddsFor = oddsFor,
 	opening = opening,
 	result = result,
+	viewing = viewing,
 }
 
 function LockerStore.setRestricted(value: boolean)
@@ -47,6 +51,12 @@ end
 function LockerStore.select(id: LockerId)
 	selected(id)
 	result(nil)
+	viewing(nil)
+end
+
+-- Opens a "What's inside" item's page (nil closes it).
+function LockerStore.view(id: string?)
+	viewing(id)
 end
 
 function LockerStore.openOdds(id: LockerId)
@@ -78,6 +88,7 @@ function LockerStore.reset()
 	oddsFor(nil)
 	opening(nil)
 	result(nil)
+	viewing(nil)
 end
 
 return LockerStore

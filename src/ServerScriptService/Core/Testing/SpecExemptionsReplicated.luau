@@ -414,6 +414,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Employee.Systems.EmployeeHeadLookSystem"] = "Motor6D/Animator/RunService shell for the head look (the angles, easing and head-owning rule are specced in EmployeeHeadLookFormulas)",
 	["ReplicatedStorage.Client.Features.Employee.Systems.EmployeeLanyardSystem"] = "EditableMesh/SurfaceGui/RunService shell for the v4 strap and v6 rank badge (geometry, widths and spring specced in EmployeeLanyardFormulas)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerPanel"] = "presentational React component (Locker cards and inside list specced in LockerViewModel; story in ShopScreen.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerItemPanel"] = "presentational React component (where it comes from, its chance and its button specced in LockerViewModel.itemPage)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerOddsSheet"] = "presentational React component (odds and refund rows specced in LockerViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerOpeningScreen"] = "presentational React screen over LockerStore.opening (values specced in LockerViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait"] = "React component over a ViewportFrame (story in CharacterPortrait.story; framing, light and the missing-portrait timing specced in PortraitViewModel, pose in EmployeePoseRules, the copy in EmployeePortraitSystem)",

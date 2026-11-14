@@ -116,6 +116,34 @@ return function()
 		end)
 	end)
 
+	describe("itemPage", function()
+		it("says which Locker an item comes from and its chance each open, the same as the odds sheet", function()
+			local items = VM.inside(GLOOM, owner(), { gloom = 0, gleam = 0 }, false)
+			local item = items[1]
+			local page = VM.itemPage(GLOOM, item)
+			expect(page.from).to.equal("You can get it from the Gloom Locker.")
+			local sheet = VM.oddsSheet(GLOOM, { keys = {}, pity = {}, opened = 0 })
+			local each
+			for _, row in sheet.rarities do
+				for _, entry in row.items do
+					if entry.id == item.id then
+						each = entry.chanceText
+					end
+				end
+			end
+			expect(page.chance).to.equal(`{each} chance each time you open it`)
+			expect(page.button).to.equal("back")
+		end)
+
+		it("offers the direct buy only where the card already does, and Get Gleam when it is too dear", function()
+			local items = VM.inside(GLEAM, owner(), { gloom = 0, gleam = 1000 }, true, SAMPLE_POOL)
+			expect(VM.itemPage(GLEAM, items[1], SAMPLE_POOL).button).to.equal("getGleam")
+			expect(VM.itemPage(GLEAM, items[2], SAMPLE_POOL).button).to.equal("buy")
+			local owned = VM.inside(GLEAM, owner({ "Pippa.BubbleBuddy" }), { gloom = 0, gleam = 0 }, true, SAMPLE_POOL)
+			expect(VM.itemPage(GLEAM, owned[1], SAMPLE_POOL).button).to.equal("back")
+		end)
+	end)
+
 	describe("oddsSheet", function()
 		it("shows real scaled percentages, per-item chances, the pity sentence and duplicate refunds", function()
 			local sheet = VM.oddsSheet(GLOOM, { keys = {}, pity = { gloom = 2 }, opened = 2 })

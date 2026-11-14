@@ -403,6 +403,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local storeProduct = ReactCharm.useAtom(ShopStore.product)
 	local result = ReactCharm.useAtom(ShopStore.result)
 	local lockerOpening = ReactCharm.useAtom(LockerStore.opening)
+	local lockerViewing = ReactCharm.useAtom(LockerStore.viewing)
 	local passInfo = ReactCharm.useAtom(ShopStore.passInfo)
 	local bundleInfo = ReactCharm.useAtom(ShopStore.bundleInfo)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
@@ -1125,7 +1126,16 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		}),
 	}
 	-- An open item's page takes its rarity's look (ShopRarityLookViewModel); the lists keep the shop's own colours.
-	local look = if offer ~= nil then ShopRarityLookViewModel.look(VM.card(offer, owns, balances).rarity) else nil
+	local viewedItem = if offer == nil
+			and tab == "lockers"
+			and lockerViewing ~= nil
+		then CosmeticRegistry.get(lockerViewing)
+		else nil
+	-- A Locker item's own page (LockerItemPanel) takes its rarity's look too.
+	local look = if offer ~= nil
+		then ShopRarityLookViewModel.look(VM.card(offer, owns, balances).rarity)
+		elseif viewedItem ~= nil then ShopRarityLookViewModel.look(viewedItem.rarity)
+		else nil
 	local function raysOf(layer: ShopRarityLookViewModel.RayLayer?): ToonBackdrop.Rays?
 		return if layer ~= nil
 			then {
