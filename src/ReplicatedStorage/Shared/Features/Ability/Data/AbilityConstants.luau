@@ -6,7 +6,7 @@
 ]=]
 
 -- The words a refused use or an ended plant shows (kid reading level). A reason without words shows nothing; a press
--- while the power cools down has no words but the client's "nope" sound (AbilityAssets.NOT_READY).
+-- while the power cools down has no words but the menus' UI error sound (AbilityServiceClient.use).
 local REASON_WORDS: { [string]: string } = {
 	nothing = "Nothing to find!",
 	holding = "Put that down first!",

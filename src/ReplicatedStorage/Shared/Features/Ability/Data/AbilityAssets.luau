@@ -80,8 +80,6 @@ local CLIP_SOUNDS: { [string]: string } = {
 return table.freeze({
 	LETS_GO = "abilityLetsGo",
 	SPOT_PING = "abilitySpotPing",
-	-- The soft "nope" when the power is pressed while it cools down (owner P1 2026-11-14, in place of a text): 2D, UI.
-	NOT_READY = "abilityNotReady",
 	CLIP_SOUNDS = table.freeze(CLIP_SOUNDS),
 	-- A clip-timed sound whose clip is cut short fades out over this many seconds, never stops dead.
 	CUT_FADE = 0.3,

@@ -36,6 +36,7 @@ local AbilityRules = require(ReplicatedStorage.Shared.Features.Ability.Rules.Abi
 local AbilitySpotSystem = require(ReplicatedStorage.Client.Features.Ability.Systems.AbilitySpotSystem)
 local AbilityVfxSystem = require(ReplicatedStorage.Client.Features.Ability.Systems.AbilityVfxSystem)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
 local player = Players.LocalPlayer
 local stoppers: { () -> () } = {}
@@ -205,8 +206,8 @@ local AbilityServiceClient: AbilityServiceClient = {
 
 	--[=[
 		Asks the server to use the ability (the ability key, the phone's button). The server decides; a refusal comes
-		back as a toast, except a press while the power cools down: that plays the "nope" here at once (the HUD ring
-		shows the wait).
+		back as a toast, except a press while the power cools down: that plays the UI error "uh-oh" here at once (the
+		menus' own "no" sound, owner pick 2026-11-15; the HUD ring shows the wait).
 	]=]
 	use = function(_self)
 		counters.used += 1
@@ -214,7 +215,7 @@ local AbilityServiceClient: AbilityServiceClient = {
 			AbilityStore.abilityId() ~= nil
 			and AbilityRules.coolingDown(Workspace:GetServerTimeNow(), AbilityStore.readyAt())
 		then
-			SoundServiceClient:play(AbilityAssets.NOT_READY)
+			SoundServiceClient:play(UIAssets.soundTiers.error)
 		end
 		AbilityEvents.packets.Use.send(true)
 	end,
