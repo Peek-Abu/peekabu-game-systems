@@ -151,8 +151,11 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 	)
 	local tabText = fitted.textSize
 	local tabNodes: { [string]: React.ReactNode } = {}
-	-- Scrolling tabs are laid out from the scroller's left; fixed ones from the bar's.
+	-- Scrolling tabs are laid out from the scroller's left; fixed ones from the bar's. The scroller reaches HEADROOM px
+	-- above the bar so it does not clip the selected tab's lift or a Soon flag.
+	local HEADROOM = 10
 	local tabX = if fitted.scroll then 0 else x
+	local tabY = if fitted.scroll then 6 + HEADROOM else 6
 	for index, tab in props.tabs do
 		local width = fitted.widths[index]
 		local selected = tab.id == props.current
@@ -165,7 +168,7 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 			textSize = tabText,
 			disabled = soon,
 			selected = selected,
-			position = UDim2.fromOffset(tabX, 6),
+			position = UDim2.fromOffset(tabX, tabY),
 			size = UDim2.fromOffset(width, h - 14),
 			onActivated = function()
 				if not soon then
@@ -183,7 +186,7 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 				tilt = 6,
 				textSize = flagText,
 				anchor = Vector2.new(1, 0),
-				position = UDim2.fromOffset(tabX + width + 16, if fitted.scroll then 0 else -8),
+				position = UDim2.fromOffset(tabX + width + 16, tabY - 14),
 				size = UDim2.fromOffset(math.floor(4 * flagText * 0.75) + 44, if phone then 22 else 28),
 				zIndex = 5,
 			})
@@ -192,9 +195,9 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 	end
 	if fitted.scroll then
 		nodes.tabs = e("ScrollingFrame", {
-			Position = UDim2.fromOffset(x, 0),
-			Size = UDim2.fromOffset(math.max(0, room), h),
-			CanvasSize = UDim2.fromOffset(tabX + 16, h),
+			Position = UDim2.fromOffset(x, -HEADROOM),
+			Size = UDim2.fromOffset(math.max(0, room), h + HEADROOM),
+			CanvasSize = UDim2.fromOffset(tabX + 16, h + HEADROOM),
 			ScrollingDirection = Enum.ScrollingDirection.X,
 			ScrollBarThickness = 0,
 			BackgroundTransparency = 1,

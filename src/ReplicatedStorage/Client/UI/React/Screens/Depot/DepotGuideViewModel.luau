@@ -158,6 +158,65 @@ function VM.monsters(): { Monster }
 	}
 end
 
+export type StepCard = {
+	inset: number,
+	titleSize: number,
+	lineSize: number,
+	hintSize: number,
+	numberSize: number,
+	-- The photo's height (0 = no photo) and the least a photo is drawn at.
+	photo: number,
+	minPhoto: number,
+	photoGap: number,
+	-- Where the title starts, from the card's top.
+	textTop: number,
+}
+
+--[=[
+	A HOW TO PLAY step card's layout in a `width` x `height` slot: the words under the photo (the title, two lines of
+	the step's line and two of the vacuum hint) and the photo in what is left, never taller than its 592x720 shot. A
+	photo with less room than `minPhoto` is left out rather than drawn as a sliver, and the words then start under the
+	number badge (a phone's short sheet left the photos a few px tall and the words under the badges; P1, 11-14).
+]=]
+function VM.stepCard(width: number, height: number, phone: boolean): StepCard
+	local inset = if phone then 6 else 14
+	local titleSize = if phone then 15 else 34
+	local lineSize = if phone then 12 else 24
+	local hintSize = if phone then 12 else 18
+	local numberSize = if phone then 34 else 76
+	local photoGap = if phone then 6 else 22
+	local minPhoto = if phone then 44 else 90
+	local words = photoGap
+		+ titleSize
+		+ (if phone then 4 else 14)
+		+ lineSize * 2
+		+ 10
+		+ hintSize * 2
+		+ 6
+		+ inset * 2
+		+ numberSize * 0.3
+		+ UIToonConstants.DEPTH.lip
+		+ UIToonConstants.DEPTH.drop
+	local photo = math.max(0, math.min(width * 1.2, height - words))
+	if photo < minPhoto then
+		photo = 0
+	end
+	local textTop = if photo > 0
+		then inset + photo + photoGap
+		else math.max(inset + photoGap, math.ceil(numberSize * 0.6) + 4)
+	return {
+		inset = inset,
+		titleSize = titleSize,
+		lineSize = lineSize,
+		hintSize = hintSize,
+		numberSize = numberSize,
+		photo = photo,
+		minPhoto = minPhoto,
+		photoGap = photoGap,
+		textTop = textTop,
+	}
+end
+
 -- The sheet's size: its design size, kept inside the screen (16 px each side, 24 top and bottom).
 function VM.layout(viewport: Vector2, phone: boolean): Layout
 	local size = if phone then PHONE_SIZE else SIZE

@@ -30,8 +30,10 @@ local COLOR = UIToonConstants.COLOR
 local DEPTH = UIToonConstants.DEPTH
 -- Room inside the scroll frame for a card's ink outline (it is drawn outside the card) on its open sides.
 local EDGE = DEPTH.outline + 3
--- The header goo's requested scale (ToonPanel's default for a header's drips).
+-- The header goo's requested scale: ToonPanel's default for a header's drips, and smaller on a phone, in proportion to
+-- its smaller header (the drips took ~45 px of a 327 px sheet on a 667 x 375 phone, crowding the Guide's cards).
 local GOO_SCALE = 0.75
+local PHONE_GOO_SCALE = 0.5
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
 local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleViewModel)
@@ -273,8 +275,10 @@ local function DepotHubScreen(
 		-- the sheet's width; ToonPanel pours them from 3 px above the header's foot) plus a gap. The phone's fixed 26 px
 		-- left the tab words under the drips.
 		local below = math.max(
-			if phone then 26 else 52,
-			ToonGooViewModel.capReach(width, DEPTH.panelRadius, GOO_SCALE) - 3 + (if phone then 8 else 12)
+			if phone then 20 else 52,
+			ToonGooViewModel.capReach(width, DEPTH.panelRadius, if phone then PHONE_GOO_SCALE else GOO_SCALE)
+				- 3
+				+ (if phone then 8 else 12)
 		)
 		local foot = below + (if phone then 12 else 28)
 		children.guide = e("Frame", {
@@ -341,6 +345,7 @@ local function DepotHubScreen(
 						height = headerHeight,
 						titleSize = if layout.compact then 40 else 54,
 						goo = true,
+						gooScale = if phone then PHONE_GOO_SCALE else GOO_SCALE,
 					},
 					onClose = function()
 						SceneStack.remove(VM.scene(props.page))

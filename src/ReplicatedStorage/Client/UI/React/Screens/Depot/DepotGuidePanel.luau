@@ -96,25 +96,13 @@ local function stepCards(props: DepotGuidePanelProps, top: number, height: numbe
 	local phone = props.phone
 	local gap = if phone then 10 else 24
 	local width = (props.width - 3 * gap) / 4
-	local inset = if phone then 6 else 14
-	local titleSize = if phone then 15 else 34
-	local lineSize = if phone then 12 else 24
-	local hintSize = if phone then 12 else 18
-	local numberSize = if phone then 34 else 76
-	-- The words under the photo: the title, two lines of the step's line and two of the vacuum hint, with the gaps
-	-- and the card's lip; the photo takes what is left (never taller than its 592x720 shot).
-	local words = (if phone then 6 else 22)
-		+ titleSize
-		+ (if phone then 4 else 14)
-		+ lineSize * 2
-		+ 10
-		+ hintSize * 2
-		+ 6
-		+ inset * 2
-		+ numberSize * 0.3
-		+ UIToonConstants.DEPTH.lip
-		+ UIToonConstants.DEPTH.drop
-	local photoHeight = math.min(width * 1.2, height - words)
+	local layout = VM.stepCard(width, height, phone)
+	local inset = layout.inset
+	local titleSize = layout.titleSize
+	local lineSize = layout.lineSize
+	local hintSize = layout.hintSize
+	local numberSize = layout.numberSize
+	local photoHeight = layout.photo
 	local nodes: Nodes = {}
 	for index, step in VM.steps(props.control) do
 		local x = (index - 1) * (width + gap)
@@ -129,16 +117,18 @@ local function stepCards(props: DepotGuidePanelProps, top: number, height: numbe
 			small = phone,
 			zIndex = 2,
 		})
-		nodes[`stepPhoto{index}`] = photo(
-			step.photo,
-			UDim2.fromOffset(x + inset, cardTop + inset),
-			UDim2.fromOffset(width - 2 * inset, photoHeight),
-			if phone then 3 else 5,
-			if phone then 8 else 16,
-			3,
-			nil,
-			VM.STEP_PHOTO
-		)
+		nodes[`stepPhoto{index}`] = if photoHeight <= 0
+			then nil
+			else photo(
+				step.photo,
+				UDim2.fromOffset(x + inset, cardTop + inset),
+				UDim2.fromOffset(width - 2 * inset, photoHeight),
+				if phone then 3 else 5,
+				if phone then 8 else 16,
+				3,
+				nil,
+				VM.STEP_PHOTO
+			)
 		nodes[`stepNumber{index}`] = e(ToonSurface, {
 			hue = "gold",
 			anchor = Vector2.new(0.5, 0.5),
@@ -158,7 +148,7 @@ local function stepCards(props: DepotGuidePanelProps, top: number, height: numbe
 				}),
 			}),
 		})
-		local textTop = cardTop + inset + photoHeight + (if phone then 6 else 22)
+		local textTop = cardTop + layout.textTop
 		nodes[`stepTitle{index}`] = e(ToonText, {
 			text = step.title,
 			textSize = titleSize,

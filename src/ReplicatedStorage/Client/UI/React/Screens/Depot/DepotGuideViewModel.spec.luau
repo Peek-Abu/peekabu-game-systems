@@ -155,4 +155,28 @@ return function()
 			expect(phone.width <= 844 - 32).to.equal(true)
 		end)
 	end)
+
+	describe("stepCard", function()
+		it("gives a tall card its photo and starts the words under it", function()
+			local card = VM.stepCard(300, 560, false)
+			expect(card.photo > 0).to.equal(true)
+			expect(card.textTop).to.equal(card.inset + card.photo + card.photoGap)
+		end)
+
+		it("never draws a sliver: a photo is either gone or at least the minimum height", function()
+			for _, phone in { true, false } do
+				for height = 40, 600, 7 do
+					local card = VM.stepCard(if phone then 140 else 300, height, phone)
+					expect(card.photo == 0 or card.photo >= card.minPhoto).to.equal(true)
+				end
+			end
+		end)
+
+		it("starts the words below the number badge when there is no photo (a phone's short sheet)", function()
+			local card = VM.stepCard(140, 110, true)
+			expect(card.photo).to.equal(0)
+			-- The badge is centred numberSize * 0.1 under the card's top, so its foot is at numberSize * 0.6.
+			expect(card.textTop >= card.numberSize * 0.6 + 2).to.equal(true)
+		end)
+	end)
 end
