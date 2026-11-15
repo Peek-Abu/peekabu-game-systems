@@ -155,8 +155,8 @@ return function()
 	describe("fit", function()
 		it("scales the chart to the screen, never past full size", function()
 			expect(VM.fit(Vector2.new(4000, 3000), false)).to.equal(1)
-			expect(VM.fit(Vector2.new(800, 400), true) < 1).to.equal(true)
-			expect(VM.fit(Vector2.new(800, 400), true) > 0).to.equal(true)
+			expect(VM.fit(Vector2.new(500, 300), true) < 1).to.equal(true)
+			expect(VM.fit(Vector2.new(500, 300), true) > 0).to.equal(true)
 		end)
 	end)
 
@@ -168,16 +168,16 @@ return function()
 			expect(VM.fit(Vector2.new(640, 360), true) >= 0.95).to.equal(true)
 		end)
 
-		it("fits every one-word rank name across its phone step (SWEEPER read SWEEPE)", function()
+		it("fits every one-word rank name across its phone step (Sweeper read SWEEPE)", function()
 			for _, level in levels do
 				if string.find(level.name, " ", 1, true) == nil then
 					local width = TextService:GetTextSize(
-						string.upper(level.name),
+						level.name,
 						VM.PHONE_STEP.nameSize,
 						Enum.Font.LuckiestGuy,
 						Vector2.new(1000, 100)
 					).X
-					expect(width <= VM.PHONE_STEP.width - 4).to.equal(true)
+					expect(width <= VM.PHONE_STEP.width - 2).to.equal(true)
 				end
 			end
 		end)

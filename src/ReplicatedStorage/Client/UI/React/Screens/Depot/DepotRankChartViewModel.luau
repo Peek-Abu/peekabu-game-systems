@@ -53,8 +53,8 @@ local SIZE = Vector2.new(1420, 860)
 -- The phone chart fits a 667 x 375 phone at full size (632 <= 0.95 x 667), so its 12 px text is never drawn smaller
 -- (it was 732 wide and drawn at 0.82 there, under the readable floor).
 local PHONE_SIZE = Vector2.new(632, 344)
--- A phone step's width and its name's text size: a one-word name (SWEEPER, the widest) fits across it.
-local PHONE_STEP = table.freeze({ width = 55, nameSize = 12 })
+-- A phone step's width and its name's text size: a one-word name (Sweeper, the widest: 59 px at 12) fits across it.
+local PHONE_STEP = table.freeze({ width = 61, nameSize = 12 })
 
 local VM = {
 	SIZE = SIZE,

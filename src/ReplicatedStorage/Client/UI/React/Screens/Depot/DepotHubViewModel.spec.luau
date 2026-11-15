@@ -147,8 +147,8 @@ return function()
 
 	describe("menu tiles", function()
 		local TextService = game:GetService("TextService")
-		-- The phone tile's label box: the 68 px tile less its 4 px sides, less the label's ink stroke.
-		local PHONE_LABEL_ROOM = 56 - 4
+		-- The phone tile's label box as drawn (56 px; read off the live hub, 11-14). The stroke sits outside the text bounds.
+		local PHONE_LABEL_ROOM = 56
 
 		it("calls the Inventory tile BAG on a phone, INVENTORY on a desktop", function()
 			expect(VM.tileLabel("inventory", true)).to.equal("BAG")

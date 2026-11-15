@@ -65,26 +65,22 @@ return function()
 
 	describe("training run", function()
 		it("steps aside for the training coach (its card sat on the Today tracker on a phone)", function()
-			expect(
-				VM.where({
-					pinned = true,
-					clipboardOpen = false,
-					inHub = false,
-					hubBusy = false,
-					inShift = true,
-					training = true,
-				})
-			).to.equal(nil)
-			expect(
-				VM.where({
-					pinned = true,
-					clipboardOpen = false,
-					inHub = false,
-					hubBusy = false,
-					inShift = true,
-					training = false,
-				})
-			).to.equal("shift")
+			expect(VM.where({
+				pinned = true,
+				clipboardOpen = false,
+				inHub = false,
+				hubBusy = false,
+				inShift = true,
+				training = true,
+			})).to.equal(nil)
+			expect(VM.where({
+				pinned = true,
+				clipboardOpen = false,
+				inHub = false,
+				hubBusy = false,
+				inShift = true,
+				training = false,
+			})).to.equal("shift")
 		end)
 	end)
 end
