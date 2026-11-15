@@ -12,10 +12,12 @@
 	  screen (`onScreen`: in front of it and inside its reported FOV and aspect, edges included; owner 11-14), within
 	  FREEZE_RANGE (80) studs of the camera, with a clear server ray to it (the caller's `sightlines`): so any of it
 	  that shows on the screen, even a sliver at the edge or the part a wall does not hide, counts;
-	- and that point is ahead of their own head (`ahead`: past the plane through the head square to the camera's look;
-	  P1 11-14): a third-person camera sits ~12 studs behind the kid, so a monster closing in on their back shows on their
-	  screen long before it is in reach. Counted, Bramble froze ~12 studs behind every runner and never caught anyone.
-	  What is behind your back does not freeze it; turn round and face it.
+	- and that point is ahead of their own head (`ahead`: past the upright plane through the head square to the flat
+	  direction the camera faces; P1 11-14): a third-person camera sits ~12 studs behind the kid, so a monster closing in
+	  on their back shows on their screen long before it is in reach. Counted, Bramble froze 9-12 studs behind every
+	  runner and never caught anyone. The plane is upright, not square to the look: the camera looks a little down, and a
+	  tilted plane put its feet just behind the kid in front of them (live Play: it froze 2-3 studs behind and never
+	  struck). What is behind your back does not freeze it; turn round and face it.
 
 	The freeze (`advance`): any watcher freezes it at once; after the last one looks away it holds
 	FREEZE_UNFREEZE_BEAT (0.4 s), then moves. `canCatch`: never while frozen, nor for FREEZE_CATCH_BLOCK (0.6 s) after
@@ -132,14 +134,17 @@ function OccupantWatchRules.onScreen(report: Report, point: Vector3): boolean
 end
 
 --[=[
-	Whether `point` is ahead of the viewer's `head` along the camera's `look` (on or past the plane through the head
-	square to the look): something the kid faces, not something on their screen behind their back.
+	Whether `point` is ahead of the viewer's `head` in the flat direction the camera's `look` faces (on or past the
+	upright plane through the head square to it; heights never matter): something the kid faces, not something on their
+	screen behind their back. A camera looking straight up or down (no flat direction) uses the look itself.
 ]=]
 function OccupantWatchRules.ahead(head: Vector3, look: Vector3, point: Vector3): boolean
-	if look.Magnitude < 1e-3 then
+	local flat = Vector3.new(look.X, 0, look.Z)
+	local facing = if flat.Magnitude >= 1e-3 then flat.Unit elseif look.Magnitude >= 1e-3 then look.Unit else nil
+	if facing == nil then
 		return false
 	end
-	return (point - head):Dot(look.Unit) >= 0
+	return (point - head):Dot(facing) >= 0
 end
 
 --[=[

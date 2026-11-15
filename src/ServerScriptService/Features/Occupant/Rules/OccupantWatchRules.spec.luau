@@ -152,6 +152,18 @@ return function()
 				expect(shown).to.equal(true)
 				expect(watched).to.equal(false)
 			end
+			-- Its feet just behind them still do not count: the camera looks a little down, so a plane square to the
+			-- look would put low points behind the kid in front of them (live School Play 11-14: it froze 2-3 studs
+			-- behind and never struck). Only the flat direction the camera faces decides.
+			for _, low in { Vector3.new(0, 0.5, -0.5), Vector3.new(0.8, 0.2, -1.2), Vector3.new(0, 9, -0.3) } do
+				local v = viewer({
+					head = head,
+					report = report(camera, look),
+					sightlines = { { point = low, clear = true } },
+				})
+				expect(OccupantWatchRules.onScreen(v.report, low)).to.equal(true)
+				expect(OccupantWatchRules.watching(v, 100.1)).to.equal(false)
+			end
 			-- Beside or ahead of them it still counts, and so does a kid who turns their camera round to face it.
 			local _, beside = watchedAt(0.5)
 			expect(beside).to.equal(true)
