@@ -2,7 +2,7 @@
 --[=[
 	ShiftTransitScreen: the transit screen's root, mounted on the Overlay layer by ShiftServiceClient (above the HUD and
 	every panel). Draws ShiftTransitPanel from ShiftTransitStore (the cover, the welcome card on a first join to the hub, the ARRIVED stamp, the loading bar's progress, the slip's lines through
-	ShiftTransitViewModel) at the screen's scale (ShiftTransitViewModel.fit).
+	ShiftTransitViewModel; while leaving on a teleport, the trip's slip or the homeward card) at the screen's scale (ShiftTransitViewModel.fit).
 
 	@class ShiftTransitScreen
 ]=]
@@ -26,11 +26,26 @@ local function ShiftTransitScreen(): React.ReactNode
 	local snapshot = ReactCharm.useAtom(ShiftTransitStore.snapshot)
 	local progress = ReactCharm.useAtom(ShiftTransitStore.progress)
 	local fadeSeconds = ReactCharm.useAtom(ShiftTransitStore.fadeSeconds)
+	local leaving = ReactCharm.useAtom(ShiftTransitStore.leaving)
 	local viewport = usePaperViewport()
+	local view: ShiftTransitViewModel.SlipView? = nil
+	local greeting: ShiftTransitViewModel.WelcomeView? = nil
+	if covered and leaving ~= nil then
+		-- Leaving on a teleport: the arrival's own card, so the place being left hands over to it seamlessly.
+		if leaving.home then
+			greeting = ShiftTransitViewModel.homeward()
+		else
+			view = ShiftTransitViewModel.leavingSlip(leaving)
+		end
+	elseif covered and slip then
+		view = ShiftTransitViewModel.slip(snapshot, arrived)
+	elseif covered and welcome then
+		greeting = ShiftTransitViewModel.welcome(arrived)
+	end
 	local props: ShiftTransitPanel.ShiftTransitPanelProps = {
 		cover = ShiftTransitStore.coverOf(covered, slip, welcome),
-		view = if covered and slip then ShiftTransitViewModel.slip(snapshot, arrived) else nil,
-		welcome = if covered and welcome and not slip then ShiftTransitViewModel.welcome(arrived) else nil,
+		view = view,
+		welcome = greeting,
 		mascot = mascot,
 		scale = ShiftTransitViewModel.fit(viewport),
 		progress = progress,

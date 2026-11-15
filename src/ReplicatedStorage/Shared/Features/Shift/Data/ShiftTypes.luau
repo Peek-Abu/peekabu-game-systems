@@ -202,6 +202,25 @@ export type TransitSnapshot = {
 	map: MapId?,
 }
 
+-- A teleport this client is leaving on (P1: the load screen comes up in the place being left, the moment the trip is
+-- decided): home (the welcome card's look, back to the depot) or to a shift (the route slip, with the trip's client,
+-- truck and map when known).
+export type TransitLeaving = {
+	home: boolean,
+	client: string?,
+	truck: number?,
+	map: MapId?,
+}
+
+-- The Leaving packet's wire shape (ShiftTransitUtils.leavingPacket / leavingOf): "" and 0 stand for none.
+export type LeavingPacket = {
+	leaving: boolean,
+	home: boolean,
+	client: string,
+	truck: number,
+	map: string,
+}
+
 -- What this client's transit screen shows: nothing, plain black (the client booting, a respawn) or the route slip.
 -- "welcome": a first join to the hub, while the art loads (ShiftTransitRules.welcoming).
 export type TransitCover = "none" | "black" | "slip" | "welcome"

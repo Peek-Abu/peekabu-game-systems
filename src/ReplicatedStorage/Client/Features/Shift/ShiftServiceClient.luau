@@ -9,7 +9,8 @@
 	ShiftPromptSystem (the Interaction prompts drawn on paper) and registers the prompt chip; the chip and the phone
 	action arc are registered wrapped with ShiftPromptSystem.press as a prop, so neither component requires this
 	service (which requires them). Mounts the transit screen (ShiftTransitScreen) on the Overlay layer and starts
-	ShiftTransitSystem, which drives it (the load screen between the depot and the office and between shifts). Reads go
+	ShiftTransitSystem, which drives it, and ShiftLeavingSystem (the card and the input lock in the place being left
+	the moment a teleport is decided) (the load screen between the depot and the office and between shifts). Reads go
 	through ShiftStore.
 
 	Spec-exempt shell (Charm subscriptions, ByteNet); decoding is the specced ShiftSnapshotUtils.
@@ -35,6 +36,7 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local ShiftFeedbackSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftFeedbackSystem)
 local ShiftPromptSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftPromptSystem)
 local ShiftTransitSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftTransitSystem)
+local ShiftLeavingSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftLeavingSystem)
 local ShiftTransitScreen = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitScreen)
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -151,6 +153,7 @@ local ShiftServiceClient: ShiftServiceClient = {
 			UIRoot.acquire("Overlay")(React.createElement(ShiftTransitScreen))
 		end
 		ShiftTransitSystem.start()
+		ShiftLeavingSystem.start()
 		task.delay(ShiftConstants.PLATFORM_REPORT_DELAY, reportPlatform)
 		table.insert(
 			unsubscribers,
@@ -168,6 +171,7 @@ local ShiftServiceClient: ShiftServiceClient = {
 	end,
 
 	stop = function(_self)
+		ShiftLeavingSystem.stop()
 		ShiftTransitSystem.stop()
 		ShiftFeedbackSystem.stop()
 		for _, unsubscribe in unsubscribers do

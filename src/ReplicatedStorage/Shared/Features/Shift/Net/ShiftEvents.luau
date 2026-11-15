@@ -3,7 +3,8 @@
 	ShiftEvents: the Shift's ByteNet packets. Client → server: the server parses the vote (ShiftVoteRules) and
 	ignores it outside results, accepts a platform report only from ShiftPlatformRules' fixed enum, and a transit
 	ready report only for the sender's own hold. Server → client: EntranceFade, the office entrances' short black
-	cover (OfficeEntranceSystem), drawn by the transit screen (ShiftTransitSystem).
+	cover (OfficeEntranceSystem), drawn by the transit screen (ShiftTransitSystem); Leaving, a teleport this player is
+	leaving on (or, false, one that failed), which puts the load screen up in the place being left (ShiftLeavingSystem).
 
 	Boot-timing note (the CarryEvents precedent): the client waits for the per-namespace replicated value the
 	server creates when IT requires this module (at ShiftServiceServer load).
@@ -48,6 +49,18 @@ local ShiftEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.struct({
 					covered = ByteNet.bool,
 					seconds = ByteNet.float32,
+				}),
+				reliabilityType = "reliable",
+			}),
+			-- server -> client: this player is leaving on a teleport (show the load screen and lock input now), or, with
+			-- `leaving` false, the trip failed and they stay (take it down). ShiftTransitUtils.leavingPacket / leavingOf.
+			Leaving = ByteNet.definePacket({
+				value = ByteNet.struct({
+					leaving = ByteNet.bool,
+					home = ByteNet.bool,
+					client = ByteNet.string,
+					truck = ByteNet.uint8,
+					map = ByteNet.string,
 				}),
 				reliabilityType = "reliable",
 			}),

@@ -131,6 +131,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Shift.Systems.ShiftTripSystem"] = "Players/Queue-signal/teleport shell (ShiftCrewTracker, ShiftPlaceRules, ShiftCardUtils and DepotContractUtils are specced)",
 	["ServerScriptService.Features.Shift.Systems.ShiftVoteSystem"] = "RequestHandler/ByteNet vote shell (the vote decisions are specced in ShiftVoteRules)",
 	["ServerScriptService.Features.Shift.Systems.ShiftSiteSystem"] = "Office/Vacuum/Cargo/Round orchestration shell (variant, quota and the spawn roll are specced in ShiftVariantRules, ShiftQuotaFormulas and OfficeSpawnUtils)",
+	["ServerScriptService.Features.Shift.Systems.ShiftLeavingSystem"] = "Queue-signal/ByteNet/character shell (the card is specced in ShiftLeavingRules, the wire format in ShiftTransitUtils)",
 	["ServerScriptService.Features.Shift.Systems.ShiftTransitSystem"] = "Players/character/streaming/ByteNet/timer shell (holds, readiness and deadlines specced in ShiftTransitTracker, the entry in ShiftTransitUtils)",
 	["ServerScriptService.Features.Depot.Systems.DepotMapSystem"] = "ByteNet/Queue/Host/world-store shell (the decisions are specced in DepotMapRules and DepotMapTracker)",
 	["ServerScriptService.Features.Depot.Systems.DepotPlaceSystem"] = "ByteNet/PlayerData/Shop shell (the decisions are specced in DepotPlaceRules and ShopServiceServer.payOps)",

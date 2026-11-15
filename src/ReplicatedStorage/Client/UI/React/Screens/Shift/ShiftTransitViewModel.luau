@@ -7,7 +7,8 @@
 	map like its words: the map's photo (the Office's officeWide; the School's own slot, and while that is empty the
 	School map card's icon instead) and its monster's portrait (OccupantPortraitAssets). `advance` moves the loading bar
 	toward the client's readiness. `welcome` is a first join's welcome card in the hub (the game's name, a line, a tip
-	and the bar's words). Pure.
+	and the bar's words). Leaving on a teleport, the place being left shows the same cards: `leavingSlip` (the route
+	slip of the trip being left on) and `homeward` (the welcome card on the way back to the depot). Pure.
 
 	@class ShiftTransitViewModel
 ]=]
@@ -124,11 +125,33 @@ function ShiftTransitViewModel.welcome(arrived: boolean): WelcomeView
 	}
 end
 
+function ShiftTransitViewModel.homeward(): WelcomeView
+	return {
+		title = "ODD HOURS",
+		line = "Heading back to the depot.",
+		tip = "Clean up the mess. Hide from the monsters!",
+		bar = "DRIVING BACK...",
+		arrived = false,
+	}
+end
+
+local slipOf: (client: string?, truck: number?, mapValue: ShiftTypes.MapId?, arrived: boolean) -> SlipView
+
 function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arrived: boolean): SlipView
-	local client = if snapshot ~= nil then snapshot.client else nil
-	local truck = if snapshot ~= nil then snapshot.truck else nil
+	if snapshot == nil then
+		return slipOf(nil, nil, nil, arrived)
+	end
+	return slipOf(snapshot.client, snapshot.truck, snapshot.map, arrived)
+end
+
+-- The route slip of the trip this client is leaving on: the arrival's slip, in transit.
+function ShiftTransitViewModel.leavingSlip(leaving: ShiftTypes.TransitLeaving): SlipView
+	return slipOf(leaving.client, leaving.truck, leaving.map, false)
+end
+
+function slipOf(client: string?, truck: number?, mapValue: ShiftTypes.MapId?, arrived: boolean): SlipView
 	-- The run's map picks the site line, the tip, the picture and the portrait (the Office's when unknown).
-	local map: ShiftTypes.MapId = DepotMapRules.parse(if snapshot ~= nil then snapshot.map else nil)
+	local map: ShiftTypes.MapId = DepotMapRules.parse(mapValue)
 	local site = DepotMapRules.siteOf(map)
 	local photo = PHOTO[map]
 	local to = if client ~= nil

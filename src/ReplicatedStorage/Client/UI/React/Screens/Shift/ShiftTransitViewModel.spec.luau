@@ -187,4 +187,32 @@ return function()
 			expect(advance(0.3, 0 / 0, false, 1 / 60) >= 0.3).to.equal(true)
 		end)
 	end)
+
+	describe("leaving", function()
+		it("writes the same route slip as the arrival, in transit, from the trip being left on", function()
+			local leaving =
+				ShiftTransitViewModel.leavingSlip({ home = false, client = "Harlow & Finch Ltd.", truck = 2 })
+			local arriving =
+				ShiftTransitViewModel.slip({ holds = {}, client = "Harlow & Finch Ltd.", truck = 2 }, false)
+			expect(leaving.client).to.equal(arriving.client)
+			expect(leaving.truck).to.equal("TRUCK 2")
+			expect(leaving.heading).to.equal("EN ROUTE TO")
+			expect(leaving.bar).to.equal(arriving.bar)
+			expect(leaving.arrived).to.equal(false)
+		end)
+
+		it("follows the trip's map", function()
+			local view =
+				ShiftTransitViewModel.leavingSlip({ home = false, client = "Maple Hill School", map = "school" })
+			expect(view.portrait).to.equal(OccupantPortraitAssets.portrait("bramble", "calm"))
+		end)
+
+		it("puts the welcome card up on the way home, in short words", function()
+			local view = ShiftTransitViewModel.homeward()
+			expect(view.title).to.equal("ODD HOURS")
+			expect(view.line).to.equal("Heading back to the depot.")
+			expect(view.bar).to.equal("DRIVING BACK...")
+			expect(view.arrived).to.equal(false)
+		end)
+	end)
 end

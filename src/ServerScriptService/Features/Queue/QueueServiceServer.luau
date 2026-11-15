@@ -32,6 +32,11 @@
 	  `returned(player, payload)` fires where they land (live or local), and `returnPayloadOf` keeps the
 	  payload for a game that reads it later (a result summary).
 
+	- Leaving: `leaving(players, role, payload)` fires the moment a teleport is decided (a departure, a return, a
+	  redirect; never a local move), before its first attempt (QueueTeleportSystem waits TELEPORT_LEAD, so a game can
+	  put its load screen up first); `stayed(players, reason)` fires for the players a teleport gave up on who are
+	  still here.
+
 	The last player leaving a reserved server needs no code: Roblox shuts an empty server down.
 
 	Spec-exempt shell (TeleportService, Players, HttpService, signals), like its QueuePadSystem,
@@ -178,6 +183,8 @@ local function sendParty(
 	local sent = teleports:send({
 		players = party,
 		placeId = placeId,
+		role = padConfig.destination,
+		payload = payload,
 		reservedId = serverId,
 		data = data,
 		onReserved = function(): boolean
@@ -239,10 +246,11 @@ local function redirect(player: Player, ticket: QueueTicket?)
 	counters.redirects += 1
 	local home = config.homeRole or (if ticket ~= nil then ticket.from else nil)
 	local route = if home ~= nil then QueuePlaceRules.route("live", home, QueueRegistry.roles()) else nil
-	if route ~= nil and route.kind == "teleport" then
+	if route ~= nil and route.kind == "teleport" and home ~= nil then
 		teleports:send({
 			players = { player },
 			placeId = route.placeId,
+			role = home,
 			data = nil,
 			onFinished = function(gaveUp)
 				for _, stuck in gaveUp do
@@ -294,6 +302,10 @@ export type QueueServiceServer = {
 	returned: SignalTyped.Signal<Player, QueuePayload>,
 	departing: SignalTyped.Signal<BasePart, { Player }>,
 	departFailed: SignalTyped.Signal<BasePart, { Player }, string>,
+	-- A teleport was decided for these players (to `role`, with its payload): before its first attempt.
+	leaving: SignalTyped.Signal<{ Player }, string, QueuePayload>,
+	-- A teleport gave up on these players (after its retries); they are still here.
+	stayed: SignalTyped.Signal<{ Player }, string>,
 
 	start: (self: QueueServiceServer) -> (),
 	stop: (self: QueueServiceServer) -> (),
@@ -320,6 +332,8 @@ local QueueServiceServer: QueueServiceServer = {
 	returned = returned,
 	departing = departing,
 	departFailed = departFailed,
+	leaving = teleports.leaving,
+	stayed = teleports.stayed,
 
 	--[=[
 		Starts the pads, the arrival side on a reserved server (or return handling on a public live
@@ -461,6 +475,8 @@ local QueueServiceServer: QueueServiceServer = {
 			teleports:send({
 				players = players,
 				placeId = route.placeId,
+				role = role,
+				payload = clean,
 				data = HttpService:JSONEncode(QueueTeleportRules.encode(ticket)),
 				onFinished = function(gaveUp, failReason)
 					if #gaveUp > 0 then

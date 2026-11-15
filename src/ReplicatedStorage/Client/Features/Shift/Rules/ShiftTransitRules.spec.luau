@@ -253,4 +253,41 @@ return function()
 			expect(ShiftTransitRules.entranceSettled({ 1.2 })).to.equal(true)
 		end)
 	end)
+
+	describe("cover while leaving", function()
+		it("shows the route slip the moment a trip to a shift is decided, over everything", function()
+			local leaving = { home = false, client = "Harlow & Finch Ltd." }
+			expect(ShiftTransitRules.cover({ held = false, booting = false, now = 0, leaving = leaving })).to.equal(
+				"slip"
+			)
+			expect(
+				ShiftTransitRules.cover({ held = false, welcome = true, booting = true, now = 0, leaving = leaving })
+			).to.equal("slip")
+		end)
+
+		it("shows the welcome card on the way home, even over a slip or a blink", function()
+			local leaving = { home = true }
+			expect(ShiftTransitRules.cover({ held = false, booting = false, now = 0, leaving = leaving })).to.equal(
+				"welcome"
+			)
+			expect(
+				ShiftTransitRules.cover({ held = true, booting = false, blinkUntil = 5, now = 1, leaving = leaving })
+			).to.equal("welcome")
+		end)
+	end)
+
+	describe("leavingExpired", function()
+		it(
+			"gives control back only after LEAVING_CLIENT_TIMEOUT with no teleport and no word from the server",
+			function()
+				local limit = ShiftConstants.LEAVING_CLIENT_TIMEOUT
+				expect(ShiftTransitRules.leavingExpired(10, 10 + limit - 0.1)).to.equal(false)
+				expect(ShiftTransitRules.leavingExpired(10, 10 + limit)).to.equal(true)
+			end
+		)
+
+		it("outlasts every retry the server makes (a watchdog per attempt plus the backoff)", function()
+			expect(ShiftConstants.LEAVING_CLIENT_TIMEOUT > 4 * 30 + 1 + 2 + 4).to.equal(true)
+		end)
+	end)
 end

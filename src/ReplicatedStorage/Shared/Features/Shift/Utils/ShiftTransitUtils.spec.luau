@@ -75,4 +75,44 @@ return function()
 			expect(ShiftTransitUtils.holdOf(nil, 7)).to.equal(nil)
 		end)
 	end)
+
+	describe("leavingPacket and leavingOf", function()
+		it("round-trips a trip to the shift: its client, truck and map", function()
+			local packet = ShiftTransitUtils.leavingPacket({
+				home = false,
+				client = "Maple Hill School",
+				truck = 3,
+				map = "school",
+			})
+			expect(packet.leaving).to.equal(true)
+			local leaving = ShiftTransitUtils.leavingOf(packet)
+			expect(leaving).to.be.ok()
+			expect(leaving.home).to.equal(false)
+			expect(leaving.client).to.equal("Maple Hill School")
+			expect(leaving.truck).to.equal(3)
+			expect(leaving.map).to.equal("school")
+		end)
+
+		it("round-trips a trip home with nothing else", function()
+			local leaving = ShiftTransitUtils.leavingOf(ShiftTransitUtils.leavingPacket({ home = true }))
+			expect(leaving.home).to.equal(true)
+			expect(leaving.client).to.equal(nil)
+			expect(leaving.truck).to.equal(nil)
+			expect(leaving.map).to.equal(nil)
+		end)
+
+		it("sends a stay (no trip) as not leaving, read back as nil", function()
+			local packet = ShiftTransitUtils.leavingPacket(nil)
+			expect(packet.leaving).to.equal(false)
+			expect(ShiftTransitUtils.leavingOf(packet)).to.equal(nil)
+		end)
+
+		it("drops an unknown map and a zero truck", function()
+			local leaving =
+				ShiftTransitUtils.leavingOf({ leaving = true, home = false, client = "", truck = 0, map = "moon" })
+			expect(leaving.client).to.equal(nil)
+			expect(leaving.truck).to.equal(nil)
+			expect(leaving.map).to.equal(nil)
+		end)
+	end)
 end

@@ -2,7 +2,8 @@
 --[=[
 	ShiftTransitRules: what this client's transit screen shows, and whether a held client may reveal (ShiftTransitSystem).
 
-	`cover`: the route slip while the client is held (and through its ARRIVED stamp), the welcome card on a first join
+	`cover`: while this client is leaving on a teleport (ShiftEvents.Leaving), the arrival's own look over everything:
+	the route slip on a trip to a shift, the welcome card on the way home. Otherwise the route slip while the client is held (and through its ARRIVED stamp), the welcome card on a first join
 	to the hub (`welcoming`), plain black while the client boots (until its first sync, so nothing unlit shows) and
 	during a respawn blink; otherwise nothing.
 
@@ -19,6 +20,9 @@
 	API reports when it is done, so the screen waits for the scene to stop changing for a while, counted in time AND
 	frames so a slow client waits longer. Short of that it waits (with the first condition still missing), until TRANSIT_CLIENT_TIMEOUT, when it
 	reveals anyway (the reason is logged).
+
+	`leavingExpired`: whether a client still here LEAVING_CLIENT_TIMEOUT after its trip was decided gives control back
+	by itself (the server's word that the trip failed never came).
 
 	`progress`: how far along those stages the client is (0..1), which the load screen's bar draws.
 
@@ -43,6 +47,8 @@ export type CoverInput = {
 	-- A respawn blink runs until this os.clock() time.
 	blinkUntil: number?,
 	now: number,
+	-- The teleport this client is leaving on (nil: none).
+	leaving: ShiftTypes.TransitLeaving?,
 }
 
 export type WelcomeInput = {
@@ -76,6 +82,10 @@ export type VerdictInput = {
 local ShiftTransitRules = {}
 
 function ShiftTransitRules.cover(input: CoverInput): ShiftTypes.TransitCover
+	local leaving = input.leaving
+	if leaving ~= nil then
+		return if leaving.home then "welcome" else "slip"
+	end
 	if input.held then
 		return "slip"
 	end
@@ -90,6 +100,11 @@ function ShiftTransitRules.cover(input: CoverInput): ShiftTypes.TransitCover
 		return "black"
 	end
 	return "none"
+end
+
+-- Whether a trip decided at `since` (os.clock()) has run out of time at `now` with this client still here.
+function ShiftTransitRules.leavingExpired(since: number, now: number): boolean
+	return now - since >= ShiftConstants.LEAVING_CLIENT_TIMEOUT
 end
 
 -- Whether a first join's welcome card is still up (see the class notes).

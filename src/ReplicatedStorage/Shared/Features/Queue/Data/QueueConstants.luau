@@ -29,6 +29,9 @@ return table.freeze({
 	-- Seconds a player may still be here after their teleport started before it counts as failed. Long
 	-- enough that a slow but healthy TeleportAsync (and ReserveServer) is not retried on top of itself.
 	TELEPORT_WATCHDOG = 30,
+	-- Seconds between a teleport being decided and its first attempt: time for the leaving player's client to put its
+	-- load screen up and hand it to TeleportService:SetTeleportGui (QueueServiceServer.leaving).
+	TELEPORT_LEAD = 0.5,
 	-- Seconds an arrival server waits for the expected party before starting with whoever arrived.
 	ARRIVAL_TIMEOUT = 20,
 	-- A role's PlaceId before its place exists; reached by a local move.

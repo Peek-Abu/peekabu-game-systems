@@ -6,6 +6,9 @@
 	stored (`onReserved`) before anyone leaves. A failure (the store refusing, TeleportAsync erroring,
 	TeleportInitFailed, or a player still here TELEPORT_WATCHDOG seconds after the
 	attempt) is retried on QueueTeleportRules' schedule; after the last retry the player is given up on.
+	`leaving(players, role, payload)` fires as `send` accepts a request (the moment the teleport is decided), and the
+	first attempt waits QueueConstants.TELEPORT_LEAD after it, so a game can put the players' load screen up (and hand
+	it to the teleport) before they go; `stayed(players, reason)` fires for the players given up on who are still here.
 	`onFinished` runs once per departure with the players given up on (empty when everyone left). A request
 	whose players are all already in flight with an earlier departure starts nothing: `send` returns false
 	and `onFinished` never runs.
@@ -23,7 +26,9 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local TeleportService = game:GetService("TeleportService")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
+local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local QueueDepartureTracker = require(ServerScriptService.Features.Queue.State.QueueDepartureTracker)
 local QueueTeleportRules = require(ServerScriptService.Features.Queue.Rules.QueueTeleportRules)
 
@@ -32,6 +37,9 @@ export type OnFinished = (gaveUp: { Player }, reason: string?) -> ()
 export type Request = {
 	players: { Player },
 	placeId: number,
+	-- The destination role and the trip's payload, for `leaving` (nil payload: none).
+	role: string,
+	payload: QueueTypes.QueuePayload?,
 	-- A fresh reserved server's id (a party going out: TeleportOptions.ReservedServerId; the first teleport with a new
 	-- id creates the server and every retry reuses it), or nil to join any public server (a trip home, a redirect).
 	reservedId: string?,
@@ -45,6 +53,8 @@ export type Request = {
 }
 
 export type QueueTeleportSystem = {
+	leaving: SignalTyped.Signal<{ Player }, string, QueueTypes.QueuePayload>,
+	stayed: SignalTyped.Signal<{ Player }, string>,
 	send: (self: QueueTeleportSystem, request: Request) -> boolean,
 	initFailed: (self: QueueTeleportSystem, player: Player, reason: string) -> (),
 	left: (self: QueueTeleportSystem, player: Player) -> (),
@@ -66,6 +76,8 @@ local QueueTeleportSystem = {}
 function QueueTeleportSystem.new(): QueueTeleportSystem
 	local tracker = QueueDepartureTracker.new()
 	local records: { [number]: Record } = {}
+	local leaving: SignalTyped.Signal<{ Player }, string, QueueTypes.QueuePayload> = SignalTyped.new()
+	local stayed: SignalTyped.Signal<{ Player }, string> = SignalTyped.new()
 
 	-- Reports a departure once nobody in it is outstanding.
 	local function settle(id: number)
@@ -84,6 +96,9 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 			if player ~= nil and player.Parent == Players then
 				table.insert(gaveUp, player)
 			end
+		end
+		if #gaveUp > 0 then
+			stayed:Fire(gaveUp, outcome.reason or "teleport failed")
 		end
 		local ok, err = pcall(function()
 			record.request.onFinished(gaveUp, outcome.reason)
@@ -166,6 +181,9 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 
 	local system: QueueTeleportSystem
 	system = {
+		leaving = leaving,
+		stayed = stayed,
+
 		send = function(_self, request)
 			local ids: { number } = {}
 			local byId: { [number]: Player } = {}
@@ -178,7 +196,8 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 				return false
 			end
 			records[id] = { request = request, stored = false, players = byId }
-			task.spawn(attempt, id, request.players)
+			leaving:Fire(request.players, request.role, request.payload or {})
+			task.delay(QueueConstants.TELEPORT_LEAD, attempt, id, request.players)
 			return true
 		end,
 

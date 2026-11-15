@@ -147,6 +147,12 @@ return table.freeze({
 	TRANSIT_FADE_IN = 0.3,
 	TRANSIT_FADE_OUT = 0.5,
 	TRANSIT_ARRIVED_SECONDS = 0.45,
+	-- Leaving on a teleport (ShiftEvents.Leaving): the screen and the lock stay up until the place is left, the server
+	-- says the trip failed, or this long passes with neither (longer than every attempt Queue makes: a 30 s watchdog
+	-- each, four attempts, plus the backoff), when the client gives control back by itself.
+	LEAVING_CLIENT_TIMEOUT = 150,
+	-- The loading bar's target while leaving: it creeps on from here (ShiftTransitViewModel.advance).
+	LEAVING_PROGRESS = 0.1,
 	TRANSIT_PLACE_TOLERANCE = 8,
 	TRANSIT_STREAM_TIMEOUT = 6,
 	TRANSIT_SETTLE_SECONDS = 2,

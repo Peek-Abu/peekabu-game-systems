@@ -25,6 +25,10 @@
 	  (ShiftTransitRules.entranceSettled: a few quick frames in a row, or a second), fading over the packet's seconds
 	  (ShiftTransitStore.fadeSeconds; any other cover resets it to the transit's own fades).
 
+	- leaving on a teleport (ShiftTransitStore.leaving, set by ShiftLeavingSystem the moment the server decides the
+	  trip): the arrival's own card over everything (the trip's route slip, or the welcome card on the way home), its
+	  bar creeping from LEAVING_PROGRESS, until the place is left or the trip fails.
+
 	Spec-exempt shell (Players, streaming, Workspace, ByteNet, RunService); the decisions are the specced
 	ShiftTransitRules, the decoding the specced ShiftTransitUtils.
 
@@ -242,13 +246,20 @@ local function step()
 	if entranceUntil ~= nil and (blackUntil == nil or entranceUntil > blackUntil) then
 		blackUntil = entranceUntil
 	end
+	local leaving = ShiftTransitStore.leaving()
 	local cover = ShiftTransitRules.cover({
 		held = pending or arriving,
 		welcome = welcome,
 		booting = booting,
 		blinkUntil = blackUntil,
 		now = now,
+		leaving = leaving,
 	})
+	if leaving ~= nil then
+		arriving = false
+		welcomeArriving = false
+		progress = ShiftConstants.LEAVING_PROGRESS
+	end
 	local covered = cover ~= "none"
 	if ShiftTransitStore.covered() ~= covered then
 		ShiftTransitStore.covered(covered)

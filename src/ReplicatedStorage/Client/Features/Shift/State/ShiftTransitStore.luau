@@ -4,7 +4,8 @@
 	world entry, decoded by ShiftTransitUtils (nil before the first sync); what the transit screen shows
 	(ShiftTransitRules.cover) rides three flags, `covered` (anything: black, the slip or the welcome card), `slip` (the
 	route slip) and `welcome` (a first join's welcome card in the hub), read together by `coverOf`; `arrived` says whether the slip carries the ARRIVED stamp; `progress` is how far the held client is toward its reveal
-	(the loading bar); `fadeSeconds` overrides how long the cover's next fade takes (nil: TRANSIT_FADE_IN / OUT; an
+	(the loading bar); `leaving` is the teleport this client is leaving on (ShiftEvents.Leaving; nil: none), which puts the
+	arrival's own card up in the place being left; `fadeSeconds` overrides how long the cover's next fade takes (nil: TRANSIT_FADE_IN / OUT; an
 	office entrance's quick black cover sets it). ShiftTransitSystem writes them; the screen (ShiftTransitScreen), the atmosphere (instant changes while covered) and the
 	depot's travel cards read them. The client never writes the transit itself.
 
@@ -33,6 +34,9 @@ local progress = Charm.atom(0)
 -- How long the cover's next fade in or out takes; nil = the transit's own TRANSIT_FADE_IN / TRANSIT_FADE_OUT.
 local initialFadeSeconds: number? = nil
 local fadeSeconds = Charm.atom(initialFadeSeconds)
+-- The teleport this client is leaving on; nil = none.
+local initialLeaving: ShiftTypes.TransitLeaving? = nil
+local leaving = Charm.atom(initialLeaving)
 
 -- The cover the flags make.
 local function coverOf(isCovered: boolean, isSlip: boolean, isWelcome: boolean?): ShiftTypes.TransitCover
@@ -53,5 +57,6 @@ return {
 	arrived = arrived,
 	progress = progress,
 	fadeSeconds = fadeSeconds,
+	leaving = leaving,
 	coverOf = coverOf,
 }

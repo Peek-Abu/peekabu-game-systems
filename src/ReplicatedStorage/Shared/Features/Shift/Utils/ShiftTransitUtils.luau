@@ -129,6 +129,38 @@ function ShiftTransitUtils.decode(value: WorldValue?): TransitSnapshot?
 end
 
 --[=[
+	The Leaving packet for a trip (nil: the trip failed and the player stays; the client takes its screen down).
+]=]
+function ShiftTransitUtils.leavingPacket(leaving: ShiftTypes.TransitLeaving?): ShiftTypes.LeavingPacket
+	if leaving == nil then
+		return { leaving = false, home = false, client = "", truck = 0, map = "" }
+	end
+	return {
+		leaving = true,
+		home = leaving.home,
+		client = leaving.client or "",
+		truck = leaving.truck or 0,
+		map = leaving.map or "",
+	}
+end
+
+--[=[
+	The trip a Leaving packet names, or nil when it says the player stays. An empty client, a truck under 1 and a map
+	that is not exactly a map id read as none.
+]=]
+function ShiftTransitUtils.leavingOf(packet: ShiftTypes.LeavingPacket): ShiftTypes.TransitLeaving?
+	if not packet.leaving then
+		return nil
+	end
+	return {
+		home = packet.home,
+		client = if packet.client ~= "" then packet.client else nil,
+		truck = if packet.truck >= 1 then packet.truck else nil,
+		map = if DepotMapRules.isMap(packet.map) then DepotMapRules.parse(packet.map) else nil,
+	}
+end
+
+--[=[
 	The hold for `userId`, or nil (no snapshot, or not held).
 ]=]
 function ShiftTransitUtils.holdOf(snapshot: TransitSnapshot?, userId: number): TransitHold?

@@ -90,6 +90,7 @@ local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServi
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+local ShiftLeavingSystem = require(ServerScriptService.Features.Shift.Systems.ShiftLeavingSystem)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
 
@@ -498,6 +499,8 @@ local ShiftServiceServer: ShiftServiceServer = {
 		listens for votes and starts the clock.
 	]=]
 	start = function(_self)
+		-- Every server, the hub too: the load screen comes up in the place being left the moment a teleport is decided.
+		table.insert(stoppers, ShiftLeavingSystem.start())
 		if not QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT) then
 			log:info("not a shift server: the shift does not run here")
 			return
