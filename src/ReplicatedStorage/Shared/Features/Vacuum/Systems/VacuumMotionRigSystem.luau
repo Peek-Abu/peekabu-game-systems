@@ -175,6 +175,8 @@ type Reading = {
 	left: Attachment?,
 	rightRest: CFrame,
 	leftRest: CFrame?,
+	-- The handle at rest (root space): the right hand's grip attachment at its target.
+	handleRest: CFrame,
 	rootJoint: Joint?,
 	waist: Joint?,
 	rest: VacuumMotionFormulas.WandRest,
@@ -256,6 +258,7 @@ local function readRest(character: Model): Reading?
 		left = left,
 		rightRest = rightRest,
 		leftRest = leftRest,
+		handleRest = handleRest,
 		rootJoint = rootJoint,
 		waist = waist,
 		rest = rest,
@@ -319,6 +322,7 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 	local humanoid, root, tool, handle = reading.humanoid, reading.root, reading.tool, reading.handle
 	local right, left, rightRest, leftRest = reading.right, reading.left, reading.rightRest, reading.leftRest
 	local rootJoint, waist, rest = reading.rootJoint, reading.waist, reading.rest
+	local handleRest = reading.handleRest
 	local legs: { Leg } = {}
 	for _, side in { "Right", "Left" } do
 		local leg = legOf(character, side)
@@ -396,6 +400,20 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 		return motion
 	end
 
+	-- The wand last written (with its lift) and the lift held from it (VacuumMotionFormulas.floorLift).
+	local applied: CFrame? = nil
+	local lifted = 0
+
+	-- How far the floor head sat off where the last written wand put it (root space Y; the IK's miss), or 0.
+	local function residual(): number
+		local last = applied
+		if last == nil then
+			return 0
+		end
+		local shown = root.CFrame:ToObjectSpace(handle.CFrame) * handleRest:Inverse()
+		return VacuumMotionFormulas.lowestOf(rest, shown) - VacuumMotionFormulas.lowestOf(rest, last)
+	end
+
 	local released = false
 	return {
 		character = character,
@@ -406,7 +424,12 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 				return CFrame.identity
 			end
 			local motion = lean(pose.drop, pose.lean, pose.twist or 0)
-			local wand = pose.wand
+			-- Lifted by what the head sank under its pose last frame, so the hand's small miss never takes it into
+			-- the floor (Launch List g-prickles-floor-dip).
+			local need = VacuumMotionFormulas.floorLift(rest, pose.wand, residual(), Constants.floorMargin)
+			lifted = math.max(need, lifted * Constants.floorLiftHold)
+			local wand = CFrame.new(0, lifted, 0) * pose.wand
+			applied = wand
 			right.CFrame = wand * rightRest
 			if left ~= nil and leftRest ~= nil then
 				-- The left paw's wrap point is the pivot: it goes where the wand takes it, turned only part way.
@@ -433,6 +456,7 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 				return
 			end
 			released = true
+			applied, lifted = nil, 0
 			right.CFrame = rightRest
 			if left ~= nil and leftRest ~= nil then
 				left.CFrame = leftRest

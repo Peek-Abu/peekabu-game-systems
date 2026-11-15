@@ -39,6 +39,38 @@ return function()
 		return y
 	end
 
+	describe("floorLift (the head over the floor whatever the hand's IK missed by)", function()
+		-- The wand flattened onto the floor: its lowest corner exactly MARGIN over it.
+		local onFloor = CFrame.new(0, FLOOR + MARGIN - (FLOOR + 0.06), 0)
+
+		it("reads a wand's lowest corner", function()
+			expect(VacuumMotionFormulas.lowestOf(REST, CFrame.identity)).to.be.near(FLOOR + 0.06, 1e-9)
+			expect(VacuumMotionFormulas.lowestOf(REST, onFloor)).to.be.near(FLOOR + MARGIN, 1e-9)
+		end)
+
+		it("lifts nothing when the hand landed where it was sent", function()
+			expect(VacuumMotionFormulas.floorLift(REST, onFloor, 0, MARGIN)).to.be.near(0, 1e-9)
+		end)
+
+		it("lifts by what the hand sank by, so the head stays over the floor", function()
+			-- Cappy's brace (harness 2026-11-06): the head sat 0.083 under where the pose put it.
+			expect(VacuumMotionFormulas.floorLift(REST, onFloor, -0.083, MARGIN)).to.be.near(0.083, 1e-9)
+		end)
+
+		it("lifts nothing when the head is well clear, however the hand missed", function()
+			expect(VacuumMotionFormulas.floorLift(REST, CFrame.identity, -0.03, MARGIN)).to.be.near(0, 1e-9)
+		end)
+
+		it("lifts only what is missing when the head is a little clear", function()
+			local raised = CFrame.new(0, 0.05, 0) * onFloor
+			expect(VacuumMotionFormulas.floorLift(REST, raised, -0.08, MARGIN)).to.be.near(0.03, 1e-9)
+		end)
+
+		it("never lifts past its most (a hand far off its target is not chased)", function()
+			expect(VacuumMotionFormulas.floorLift(REST, onFloor, -5, MARGIN)).to.equal(Constants.floorLiftMost)
+		end)
+	end)
+
 	describe("step", function()
 		it("settles a critically damped spring on its target without overshoot", function()
 			local x, v, peak = 0, 0, 0
@@ -145,6 +177,51 @@ return function()
 			local behindLeft = Vector3.new(-0.1, 0, 1).Unit
 			local yaw = VacuumMotionFormulas.relativeYaw(behindLeft, body)
 			expect(yaw > math.rad(170) and yaw <= math.pi).to.equal(true)
+		end)
+
+		describe("pointerLook (P1: the nozzle follows the mouse)", function()
+			-- A body at the origin facing -Z, its floor 3 studs below its root; a camera behind and above it.
+			local BODY = CFrame.new(0, 3, 0)
+			local FLOOR_Y = 0
+			local CAMERA = Vector3.new(0, 10, 12)
+
+			it("takes its pitch from the pointer's ray", function()
+				local direction = (Vector3.new(0, 0, -8) - CAMERA).Unit
+				local pitch = VacuumMotionFormulas.pointerLook(CAMERA, direction, BODY, FLOOR_Y)
+				expect(pitch).to.be.near(math.asin(direction.Y), 1e-6)
+			end)
+
+			it("turns toward where the pointer meets the floor, seen from the body, not from the camera", function()
+				-- The point 4 left and 4 ahead of the body: 45 degrees left of it, though the ray from the camera
+				-- behind it heads only about 15 degrees left.
+				local direction = (Vector3.new(-4, 0, -4) - CAMERA).Unit
+				local _, yaw = VacuumMotionFormulas.pointerLook(CAMERA, direction, BODY, FLOOR_Y)
+				expect(yaw).to.be.near(math.rad(45), 1e-4)
+				local _, right =
+					VacuumMotionFormulas.pointerLook(CAMERA, (Vector3.new(3, 0, -3) - CAMERA).Unit, BODY, FLOOR_Y)
+				expect(right).to.be.near(math.rad(-45), 1e-4)
+			end)
+
+			it("follows a turned body", function()
+				-- The body faces +X (turned 90 degrees right); a point straight ahead of it reads straight ahead.
+				local turned = CFrame.lookAt(Vector3.new(0, 3, 0), Vector3.new(1, 3, 0))
+				local direction = (Vector3.new(5, 0, 0) - CAMERA).Unit
+				local _, yaw = VacuumMotionFormulas.pointerLook(CAMERA, direction, turned, FLOOR_Y)
+				expect(yaw).to.be.near(0, 1e-4)
+			end)
+
+			it("uses the ray's own heading when it never meets the floor (pointing above the horizon)", function()
+				local direction = Vector3.new(-1, 0.2, -1).Unit
+				local pitch, yaw = VacuumMotionFormulas.pointerLook(CAMERA, direction, BODY, FLOOR_Y)
+				expect(pitch > 0).to.equal(true)
+				expect(yaw).to.be.near(math.rad(45), 1e-4)
+			end)
+
+			it("uses the ray's own heading when the pointer is right at the body's feet", function()
+				local direction = (Vector3.new(0.1, 0, 0) - CAMERA).Unit
+				local _, yaw = VacuumMotionFormulas.pointerLook(CAMERA, direction, BODY, FLOOR_Y)
+				expect(yaw).to.be.near(VacuumMotionFormulas.relativeYaw(direction, BODY.LookVector), 1e-6)
+			end)
 		end)
 
 		it("keeps the look's heading within its most either way", function()

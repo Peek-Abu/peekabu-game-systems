@@ -39,6 +39,7 @@ local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Ut
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
 local VacuumLookSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumLookSystem)
 local VacuumHoseSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumHoseSystem)
+local VacuumAirSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumAirSystem)
 
 type Spring = { x: number, v: number }
 type Holder = {
@@ -358,6 +359,7 @@ local function step(dt: number)
 			release(holder)
 			unbob(holder)
 			VacuumHoseSystem.forget(holder.character)
+			VacuumAirSystem.forget(holder.character)
 			holders[player] = nil
 		end
 	end
@@ -403,6 +405,7 @@ local function step(dt: number)
 		bob(holder, dt)
 		stepHolder(player, holder, dt)
 		VacuumHoseSystem.step(character, holder.root, activeOf(player, character), dt, player.UserId % 997)
+		VacuumAirSystem.step(character, holder.root, activeOf(player, character))
 		if player == Players.LocalPlayer then
 			VacuumLookSystem.send(now, holder.character, holder.root, holder.rig ~= nil)
 		end
@@ -440,6 +443,7 @@ function VacuumMotionSystem.stop()
 		unbob(holder)
 	end
 	VacuumHoseSystem.forgetAll()
+	VacuumAirSystem.forgetAll()
 	table.clear(holders)
 	options = nil
 	VacuumLookSystem.reset()

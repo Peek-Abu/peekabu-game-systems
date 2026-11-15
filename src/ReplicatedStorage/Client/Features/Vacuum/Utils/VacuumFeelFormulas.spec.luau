@@ -93,4 +93,103 @@ return function()
 			expect(c0 >= 0.8 * tuning.floor - 1e-9 and c1 >= 0.24 * tuning.floor - 1e-9).to.equal(true)
 		end)
 	end)
+	describe("pileScale (P1: piles shrink smoothly)", function()
+		it("is the pile's height over its full height, within 0..1", function()
+			local base = Vector3.new(4, 2, 4)
+			expect(VacuumFeelFormulas.pileScale(Vector3.new(4, 2, 4), base)).to.be.near(1, 1e-9)
+			expect(VacuumFeelFormulas.pileScale(Vector3.new(2, 1, 2), base)).to.be.near(0.5, 1e-9)
+			expect(VacuumFeelFormulas.pileScale(Vector3.new(8, 4, 8), base)).to.be.near(1, 1e-9)
+		end)
+
+		it("reads full size when the full size is unknown", function()
+			expect(VacuumFeelFormulas.pileScale(Vector3.new(1, 1, 1), nil)).to.equal(1)
+			expect(VacuumFeelFormulas.pileScale(Vector3.new(1, 1, 1), Vector3.zero)).to.equal(1)
+		end)
+	end)
+
+	describe("shrinkTo (P1: piles shrink smoothly)", function()
+		it("glides through the server's steps instead of jumping with each", function()
+			-- The server steps the pile 0.05 smaller every 0.1 s; at 60 frames a second the shown scale never moves
+			-- more than a share of a step in one frame.
+			local shown, speed, target = 1, 0, 1
+			local most = 0
+			for frame = 1, 120 do
+				if frame % 6 == 0 then
+					target = math.max(0.35, target - 0.05)
+				end
+				local before = shown
+				shown, speed = VacuumFeelFormulas.shrinkTo(shown, speed, target, 1 / 60)
+				most = math.max(most, math.abs(shown - before))
+			end
+			expect(most < 0.05 / 2).to.equal(true)
+		end)
+
+		it("settles on the server's scale once it stops changing, without overshooting it", function()
+			local shown, speed = 1, 0
+			local least = 1
+			for _ = 1, 120 do
+				shown, speed = VacuumFeelFormulas.shrinkTo(shown, speed, 0.5, 1 / 60)
+				least = math.min(least, shown)
+			end
+			expect(shown).to.be.near(0.5, 1e-3)
+			expect(least >= 0.5 - 1e-3).to.equal(true)
+		end)
+	end)
+
+	describe("pieceFrame (an art pile's stand-in)", function()
+		local floor = CFrame.new(10, 0, 5)
+		local piece = CFrame.new(1, 2, 0)
+
+		it("puts each piece where the art had it at full size and no lean", function()
+			local frame = VacuumFeelFormulas.pieceFrame(floor, CFrame.identity, piece, 1, 1, 1)
+			expect((frame.Position - Vector3.new(11, 2, 5)).Magnitude).to.be.near(0, 1e-6)
+		end)
+
+		it("shrinks the pieces toward the floor point, never below the floor", function()
+			local frame = VacuumFeelFormulas.pieceFrame(floor, CFrame.identity, piece, 0.5, 1, 1)
+			expect((frame.Position - Vector3.new(10.5, 1, 5)).Magnitude).to.be.near(0, 1e-6)
+		end)
+
+		it("stretches up and thins across", function()
+			local frame = VacuumFeelFormulas.pieceFrame(floor, CFrame.identity, piece, 1, 1.5, 0.8)
+			expect((frame.Position - Vector3.new(10.8, 3, 5)).Magnitude).to.be.near(0, 1e-6)
+		end)
+
+		it("leans about the floor point", function()
+			local tilt = CFrame.fromAxisAngle(Vector3.xAxis, -math.pi / 2)
+			local frame = VacuumFeelFormulas.pieceFrame(floor, tilt, CFrame.new(0, 2, 0), 1, 1, 1)
+			expect(frame.Position.Y).to.be.near(0, 1e-6)
+			expect((frame.Position - Vector3.new(10, 0, 3)).Magnitude).to.be.near(0, 1e-6)
+		end)
+	end)
+
+	describe("airFlow (P1: air rushes into the nozzle)", function()
+		-- A floor head 1.2 wide, 0.3 tall, 0.5 deep, its bottom on the floor (y 0), 3 studs ahead of a root at y 3.
+		local head = CFrame.new(0, 0.15, -3)
+		local size = Vector3.new(1.2, 0.3, 0.5)
+		local root = Vector3.new(0, 3, 0)
+
+		it("pulls into the head's mouth, just over the floor", function()
+			local _, sink = VacuumFeelFormulas.airFlow(head, size, root)
+			expect(math.abs(sink.X)).to.be.near(0, 1e-6)
+			expect(sink.Y > 0 and sink.Y < 0.3).to.equal(true)
+			expect(sink.Z).to.be.near(-3, 1e-6)
+		end)
+
+		it("comes from ahead of the head (away from the holder) and above the floor", function()
+			local source, sink = VacuumFeelFormulas.airFlow(head, size, root)
+			expect(source.Z < sink.Z - 0.5).to.equal(true)
+			expect(source.Y > sink.Y + 0.3).to.equal(true)
+		end)
+
+		it("draws from about the head's width, so the air fans in over it", function()
+			local _, _, radius = VacuumFeelFormulas.airFlow(head, size, root)
+			expect(radius >= 1.2 / 2 and radius <= 1.2 * 1.5).to.equal(true)
+		end)
+
+		it("turns with the holder: a head off to the right takes its air from further right", function()
+			local source = VacuumFeelFormulas.airFlow(CFrame.new(3, 0.15, 0), size, root)
+			expect(source.X > 3.5).to.equal(true)
+		end)
+	end)
 end

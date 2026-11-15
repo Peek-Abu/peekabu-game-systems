@@ -67,18 +67,17 @@ return function()
 	it("dresses a pile in its kind's art from the default kit (every map), hiding the block", function()
 		local visual = PileArt.dress(pile, "paper", art)
 		expect(visual ~= nil).to.equal(true)
-		local host = pile:FindFirstChild(PileArt.HOST_NAME)
+		local host = pile:FindFirstChild(VacuumConstants.PILE_ART_HOST)
 		expect(host ~= nil).to.equal(true)
 		expect(visual.Parent).to.equal(host)
 		expect(pile.Transparency).to.equal(1)
-		expect(pile:GetAttribute(PileArt.SCALE_ATTRIBUTE)).to.equal(1)
 	end)
 
 	it(
 		"fits the art to its kind's art box, which may overhang the gameplay block, standing on the block's floor",
 		function()
 			PileArt.dress(pile, "paper", art)
-			local host = pile:FindFirstChild(PileArt.HOST_NAME)
+			local host = pile:FindFirstChild(VacuumConstants.PILE_ART_HOST)
 			local box = VacuumConstants.PILE_KINDS.paper.artSize
 			expect((host.Size - box).Magnitude < 1e-4).to.equal(true)
 			expect(host.CanCollide or host.CanQuery or host.CanTouch).to.equal(false)
@@ -103,26 +102,26 @@ return function()
 		expect(lowestOf(visual)).to.be.near(4, 1e-3)
 	end)
 
-	it("keeps the art on the floor at every step as the pile is vacuumed down to nothing", function()
+	it("keeps one art, at full size on the floor, while the pile is vacuumed down to nothing", function()
+		-- P1 2026-11-14 (the owner: "very snappy"): the art used to be re-cloned smaller each 5% of progress, a model
+		-- swap every frame or two. The server now keeps the art it dressed; each client shows it at the pile's size.
 		local floor = CFrame.new(-6, 2.5, 9) * CFrame.Angles(0, -0.3, 0)
 		local base = pile.Size
 		pile.CFrame = PileFormulas.standing(floor, base)
-		PileArt.dress(pile, "paper", art)
-		local refits = 0
+		local visual = PileArt.dress(pile, "paper", art)
+		local host = pile:FindFirstChild(VacuumConstants.PILE_ART_HOST)
+		local box = host.Size
 		for step = 1, 40 do
 			local progress = step / 40
 			local frame, size = PileFormulas.shrunk(pile.CFrame, pile.Size, base, progress)
 			pile.Size = size
 			pile.CFrame = frame
-			if PileArt.rescale(pile, "paper", PileFormulas.scaleAt(progress), art) then
-				refits += 1
-			end
 			expect(pile.Position.Y - pile.Size.Y / 2).to.be.near(2.5, 1e-4)
-			local host = pile:FindFirstChild(PileArt.HOST_NAME)
-			expect(host.Position.Y - host.Size.Y / 2).to.be.near(2.5, 1e-4)
-			expect(lowestOf(host:FindFirstChild("ArtVisual"))).to.be.near(2.5, 1e-3)
+			expect(pile:FindFirstChild(VacuumConstants.PILE_ART_HOST)).to.equal(host)
+			expect(host:FindFirstChild("ArtVisual")).to.equal(visual)
+			expect((host.Size - box).Magnitude < 1e-6).to.equal(true)
+			expect(lowestOf(visual)).to.be.near(2.5, 1e-3)
 		end
-		expect(refits > 5).to.equal(true)
 	end)
 
 	it("has every pile template in this place's kit pivoted at its base and accepted by the art system", function()
@@ -151,24 +150,7 @@ return function()
 
 	it("leaves a pile whose art the place lacks as its plain block", function()
 		expect(PileArt.dress(pile, "cables", art)).to.equal(nil)
-		expect(pile:FindFirstChild(PileArt.HOST_NAME)).to.equal(nil)
+		expect(pile:FindFirstChild(VacuumConstants.PILE_ART_HOST)).to.equal(nil)
 		expect(pile.Transparency).to.equal(0)
-	end)
-
-	it("re-fits the art only once the pile has shrunk a whole step since the last fit", function()
-		PileArt.dress(pile, "paper", art)
-		local first = pile:FindFirstChild(PileArt.HOST_NAME):FindFirstChild("ArtVisual")
-		pile.Size = Vector3.new(4, 1.2, 4) * (1 - VacuumConstants.PILE_ART_STEP / 2)
-		expect(PileArt.rescale(pile, "paper", 1 - VacuumConstants.PILE_ART_STEP / 2, art)).to.equal(false)
-		expect(pile:FindFirstChild(PileArt.HOST_NAME):FindFirstChild("ArtVisual")).to.equal(first)
-		local scale = 1 - VacuumConstants.PILE_ART_STEP
-		pile.Size = Vector3.new(4, 1.2, 4) * scale
-		expect(PileArt.rescale(pile, "paper", scale, art)).to.equal(true)
-		local host = pile:FindFirstChild(PileArt.HOST_NAME)
-		local refit = host:FindFirstChild("ArtVisual")
-		expect(refit ~= nil and refit ~= first).to.equal(true)
-		local box = VacuumConstants.PILE_KINDS.paper.artSize * scale
-		expect((host.Size - box).Magnitude < 1e-4).to.equal(true)
-		expect(pile:GetAttribute(PileArt.SCALE_ATTRIBUTE)).to.equal(scale)
 	end)
 end

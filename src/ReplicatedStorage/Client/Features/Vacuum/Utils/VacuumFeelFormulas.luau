@@ -4,7 +4,8 @@
 
 	- The pull (VacuumPullSystem): a pile being sucked leans toward the nozzle (`lean`), stretches up toward it and thins
 	  (`stretch`, about its volume kept), and wobbles (`wobble`), all growing as it nears done; each tug (a puff of goo)
-	  hops it, which stretches it further.
+	  hops it, which stretches it further. Its size glides toward the server's (`pileScale`, `shrinkTo`; P1 2026-11-14:
+	  the server shrinks it in 0.1 s steps), and an art pile's pieces are laid about its floor point (`pieceFrame`).
 	- The hose (VacuumHoseSystem, batch 2 2026-11-06): its curve swings with the wand's move (`hose`) and wiggles
 	  while sucking.
 	- The camera (VacuumCameraSystem, the local player only): the view widens a few degrees while sucking (`fov`), a
@@ -12,6 +13,10 @@
 
 	@class VacuumFeelFormulas
 ]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 
 local VacuumFeelFormulas = {}
 
@@ -26,6 +31,9 @@ local STRETCH = 0.22
 local TUG_STRETCH = 0.25
 local WOBBLE_BASE = 0.25
 local WOBBLE_HZ = 6.5
+-- The shown size's spring (critically damped): slow enough to glide through the server's 0.1 s shrink steps, quick
+-- enough to stay within about a step of it.
+local SHRINK_HZ = 2
 
 --[=[
 	The pile's lean toward a nozzle `distance` studs off at `progress` (0..1), radians.
@@ -115,6 +123,66 @@ function VacuumFeelFormulas.hose(
 	local c0 = base0 * math.max(tuning.floor, 1 + tuning.swing0 * swing + wave)
 	local c1 = base1 * math.max(tuning.floor, 1 - tuning.swing1 * swing - wave)
 	return c0, c1
+end
+
+--[=[
+	A pile's scale (1 = full size) from its `size` and its full size `base`: its height's share, within 0..1; 1 when
+	the full size is unknown.
+]=]
+function VacuumFeelFormulas.pileScale(size: Vector3, base: Vector3?): number
+	if base == nil or base.Y <= 0 then
+		return 1
+	end
+	return math.clamp(size.Y / base.Y, 0, 1)
+end
+
+--[=[
+	The shown scale and its speed after `dt` seconds gliding from `shown` (moving at `speed`) toward the server's
+	`target` (a critically damped spring, so it never overshoots a settled target).
+]=]
+function VacuumFeelFormulas.shrinkTo(shown: number, speed: number, target: number, dt: number): (number, number)
+	return VacuumMotionFormulas.step(shown, speed, target, dt, SHRINK_HZ, 1)
+end
+
+--[=[
+	Where an art pile's piece goes: `piece` is its frame relative to the art's floor point `floor` at full size; the
+	pile, at `scale`, is stretched `up` and `across` (in the art's own axes) and leaned by `tilt` (a world turn) about
+	that floor point.
+]=]
+function VacuumFeelFormulas.pieceFrame(
+	floor: CFrame,
+	tilt: CFrame,
+	piece: CFrame,
+	scale: number,
+	up: number,
+	across: number
+): CFrame
+	local stretch = Vector3.new(across, up, across) * scale
+	return CFrame.new(floor.Position) * tilt * floor.Rotation * CFrame.new(piece.Position * stretch) * piece.Rotation
+end
+
+-- The air drawn into the nozzle (P1 2026-11-14): it comes from AIR_OUT studs ahead of the mouth and AIR_UP over it,
+-- across AIR_WIDTH of the head's width.
+local AIR_OUT = 1.4
+local AIR_UP = 0.8
+local AIR_WIDTH = 0.9
+-- The mouth: this far over the head's bottom face.
+local AIR_MOUTH = 0.08
+
+--[=[
+	The air rushing into a floor head at `head` (its frame, `size`) held by a body whose root is at `root`: where it
+	comes from (ahead of the mouth, away from the holder, and up), where it goes (the mouth, just over the floor), and
+	how wide it draws (studs about its source), for a funnel stream (VfxFunnelSystem).
+]=]
+function VacuumFeelFormulas.airFlow(head: CFrame, size: Vector3, root: Vector3): (Vector3, Vector3, number)
+	local sink = head.Position - Vector3.new(0, size.Y / 2 - AIR_MOUTH, 0)
+	local away = Vector3.new(sink.X - root.X, 0, sink.Z - root.Z)
+	local out = if away.Magnitude > 1e-3 then away.Unit else Vector3.new(head.LookVector.X, 0, head.LookVector.Z)
+	if out.Magnitude < 1e-3 then
+		out = Vector3.new(0, 0, -1)
+	end
+	local source = sink + out.Unit * AIR_OUT + Vector3.new(0, AIR_UP, 0)
+	return source, sink, math.max(size.X, size.Z) * AIR_WIDTH
 end
 
 return VacuumFeelFormulas

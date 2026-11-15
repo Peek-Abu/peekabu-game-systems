@@ -142,6 +142,12 @@ return table.freeze({
 	}),
 	-- Never let the floor head under the floor: its lowest corner stays `floorMargin` above it.
 	floorMargin = 0.01,
+	-- The hand's IK lands a hair off its target (a wrist a degree off swings the head three studs away by 0.05), so
+	-- each frame the rig lifts the wand by what the head sank under its pose last frame (VacuumMotionFormulas
+	-- .floorLift, Launch List g-prickles-floor-dip), at most `floorLiftMost`; a lift eases away by `floorLiftHold` of
+	-- itself a frame, so a frame's jitter never drops the head back in.
+	floorLiftMost = 0.2,
+	floorLiftHold = 0.85,
 	-- Never move the wand where the left paw cannot follow: its grip stays within `reachUse` of the left arm's reach
 	-- from its shoulder (as the hold is planned), the layers scaled back together until it does. Turned about the
 	-- right hand, the aim, the reach for the floor and the sway to the right took GripLower 0.08-0.34 stud past

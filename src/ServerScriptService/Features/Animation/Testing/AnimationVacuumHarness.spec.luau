@@ -1,5 +1,5 @@
--- The vacuum hold validator: the hand wand held by Pippa (every player spawns as an employee) in every vacuum skin,
--- planned while she is falling (as a shift's start places the crew in the truck), then judged live at idle, walking,
+-- The vacuum hold validator: the hand wand held by Pippa, Cappy and Prickles (every player spawns as an employee) in
+-- every vacuum skin, planned while each is falling (as a shift's start places the crew in the truck), then judged live at idle, walking,
 -- sprinting and vacuuming, under every motion layer at its extremes (aim, brace, recoil, shimmy, sway). Prints the full report to the output. Needs the place's art for Pippa and the skins.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -19,19 +19,25 @@ return function()
 		end
 	end)
 
-	it("holds the wand in every skin on the employee, when the place has her art", function()
-		local seen = {}
-		for _, entry in result.entries do
-			seen[`{entry.rig}/{entry.skin}`] = true
+	it(
+		"holds the wand in every skin on every employee (Pippa, Cappy, Prickles), when the place has their art",
+		function()
+			local seen = {}
+			for _, entry in result.entries do
+				seen[`{entry.rig}/{entry.skin}`] = true
+			end
+			if not Harness.hasEmployee() then
+				expect(#result.entries).to.equal(0)
+				return
+			end
+			for name in VacuumSkinRegistry.SKINS do
+				for _, rig in { "Pippa", "Cappy", "Prickles" } do
+					local key = `{rig}/{name}`
+					expect(`{key} {seen[key] == true}`).to.equal(`{key} true`)
+				end
+			end
 		end
-		if not Harness.hasEmployee() then
-			expect(#result.entries).to.equal(0)
-			return
-		end
-		for name in VacuumSkinRegistry.SKINS do
-			expect(seen[`Pippa/{name}`]).to.equal(true)
-		end
-	end)
+	)
 
 	it("samples idle, walk, sprint and vacuuming frames", function()
 		for _, entry in result.entries do

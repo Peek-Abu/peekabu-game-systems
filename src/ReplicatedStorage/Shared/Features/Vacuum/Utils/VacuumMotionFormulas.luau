@@ -192,6 +192,38 @@ function VacuumMotionFormulas.relativeYaw(cameraLook: Vector3, bodyLook: Vector3
 	return wrapAngle(VacuumMotionFormulas.heading(cameraLook) - VacuumMotionFormulas.heading(bodyLook))
 end
 
+-- Closer than this (studs, flat) to the body, where the pointer meets the floor gives no steady heading.
+local POINTER_NEAR = 0.75
+
+--[=[
+	The look (pitch and yaw off the body, radians: up and left positive) of a pointer whose ray leaves `origin` along
+	`direction` (the camera through the mouse cursor), for a body at `body` (its root frame) over a floor at height
+	`floorY` (P1 2026-11-14: the nozzle follows the mouse). The pitch is the ray's own, so a cursor low on the screen
+	brings the floor head in and one high on it sends it out, exactly as tilting the camera does (`aim`); the yaw is
+	where the ray meets the floor seen from the body, so the nozzle turns toward the very spot under the cursor. A ray
+	that never meets the floor ahead (above the horizon), or meets it right at the body's feet, turns by its own heading.
+]=]
+function VacuumMotionFormulas.pointerLook(
+	origin: Vector3,
+	direction: Vector3,
+	body: CFrame,
+	floorY: number
+): (number, number)
+	local unit = if direction.Magnitude > 1e-6 then direction.Unit else body.LookVector
+	local pitch = math.asin(math.clamp(unit.Y, -1, 1))
+	if unit.Y < -1e-3 then
+		local along = (floorY - origin.Y) / unit.Y
+		if along > 0 then
+			local spot = body:PointToObjectSpace(origin + unit * along)
+			local flat = Vector3.new(spot.X, 0, spot.Z)
+			if flat.Magnitude >= POINTER_NEAR then
+				return pitch, VacuumMotionFormulas.heading(flat)
+			end
+		end
+	end
+	return pitch, VacuumMotionFormulas.relativeYaw(unit, body.LookVector)
+end
+
 --[=[
 	The look's heading off the body (radians, left positive) the wand aims at: `relative` within Constants.aim.maxLook
 	either way; looking back past the side, it eases back to straight ahead (0 straight behind), so a look swung
@@ -371,6 +403,24 @@ local function lowest(rest: WandRest, transform: CFrame): number
 		y = math.min(y, (transform * corner).Y)
 	end
 	return y
+end
+
+--[=[
+	The floor head's lowest corner (root space Y) with the rest hold moved by `transform`.
+]=]
+function VacuumMotionFormulas.lowestOf(rest: WandRest, transform: CFrame): number
+	return lowest(rest, transform)
+end
+
+--[=[
+	How far to lift the wand (studs, up) that a pose put at `wand` so its floor head stays `margin` over the floor,
+	given that last frame the head ended up `residual` studs off where its pose put it (the hand's IK misses by a
+	little, and a wrist turned a degree off swings a head three studs away by 0.05: Cappy's and Prickles' brace,
+	Launch List g-prickles-floor-dip): 0 when it clears anyway, at most Constants.floorLiftMost.
+]=]
+function VacuumMotionFormulas.floorLift(rest: WandRest, wand: CFrame, residual: number, margin: number): number
+	local short = rest.floorY + margin - (lowest(rest, wand) + residual)
+	return math.clamp(short, 0, Constants.floorLiftMost)
 end
 
 -- The floor clamp alone (`wand` without the reach).

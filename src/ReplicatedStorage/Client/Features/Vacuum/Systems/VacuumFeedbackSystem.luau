@@ -204,6 +204,10 @@ local function update(feel: PileFeel)
 	feel.count = readNumber(feel.pile, InteractionConstants.CHANNEL_COUNT_ATTRIBUTE)
 	feel.peak = math.max(feel.peak, feel.progress)
 	feel.position = feel.pile.Position
+	if not feel.grime then
+		-- A pile already partly vacuumed shows at its size, even when nobody is on it (its art is full size).
+		VacuumPullSystem.track(feel.pile)
+	end
 	if feel.count <= 0 then
 		stopSuction(feel)
 		return

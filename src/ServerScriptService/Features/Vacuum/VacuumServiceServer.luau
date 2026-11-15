@@ -179,10 +179,7 @@ local function shrink(pile: BasePart)
 	local frame, size = VacuumPileFormulas.shrunk(pile.CFrame, pile.Size, base, fraction)
 	pile.Size = size
 	pile.CFrame = frame
-	local kind = pile:GetAttribute(VacuumConstants.PILE_KIND_ATTRIBUTE)
-	if type(kind) == "string" then
-		VacuumPileArtSystem.rescale(pile, kind, VacuumPileFormulas.scaleAt(fraction))
-	end
+	-- Its art keeps its full size here: every client shows it at this size, gliding (VacuumPullSystem).
 end
 
 -- The channel's completion: the pile is cleared once, for everyone on it.

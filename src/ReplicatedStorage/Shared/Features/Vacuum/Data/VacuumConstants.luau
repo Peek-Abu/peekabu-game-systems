@@ -92,8 +92,9 @@ return table.freeze({
 	NOISE_RADIUS = 40,
 	-- A pile shrinks to this fraction of its size as progress reaches full.
 	MIN_SCALE = 0.35,
-	-- A shrinking pile's art is re-fitted each time the pile shrinks this much more (VacuumPileArtSystem.rescale).
-	PILE_ART_STEP = 0.05,
+	-- The hidden Part under a pile its art is fitted to, once, at full size (VacuumPileArtSystem); every client shows
+	-- that art at the pile's own size (VacuumPullSystem).
+	PILE_ART_HOST = "PileArtHost",
 	-- The hold-to-vacuum Input action and how often the client re-aims.
 	ACTION = "vacuum",
 	AIM_INTERVAL = 0.1,
