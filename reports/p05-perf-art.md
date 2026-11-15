@@ -56,6 +56,36 @@ Measured in the Lobby (Studio Play, client frame times from RenderStepped; swaps
 - Risk to watch: a client whose welcome card lifts in under ~1 s (everything cached) could see the rebuild. It is the
   same employee in the same spot, so at most a one-frame flicker.
 
+### 2b. Follow-up 2026-11-14: Shift still hitched; root cause found (engine), fix in every place
+
+Owner, Studio play-check: "theres still a hitch on first employee swap". The warm swap (`3af5823d`) only ran in the hub
+(`isHub`), so the Shift place never had it.
+
+Measured in Shift Studio Plays:
+
+| Test | First swap, worst frame |
+|---|---|
+| Baseline (Pippa -> Cappy) | 1,777 ms (server heartbeat stalled 1,762 ms right after the swap); the second swap 100 ms |
+| A bare rig as the first swap (root part, head, Humanoid; no art, no scripts) | 2,027 ms; Cappy after it 130 ms |
+| Old character parked, not destroyed | 2,329 ms |
+| Streaming focus pinned to a fixed part (ReplicationFocus) | 1,472 ms |
+
+Server timing of the swap itself: `player.Character =` 2.6 ms, parent 3.2 ms, destroying the old one 1.4 ms, every
+deferred server handler done 9.3 ms after the swap. The client's long frame ends before its CharacterAdded fires.
+
+So the stall is the engine's one-time work the first time a player's character is replaced, not our art, scripts or
+streaming. Nothing we build or load causes it, so there is nothing to preload. It can only be paid where nobody sees
+it.
+
+- Fix (`fb813f86`): the hidden first-character rebuild (0.5 s after spawning, behind the arrival card) runs in every
+  place, not only the hub.
+- After, Shift (fresh Play, the fix synced): the hidden rebuild ran once; the first real swap's worst frame is **91 ms**
+  (before 1,777 ms), the second 90 ms. No stall over 150 ms after the Play starts.
+- The Lobby measured 594 -> 125 ms earlier.
+- Not checked: a live (published) server. The owner was asked whether the first swap hitches there too.
+- The client script profiler fails through the Studio MCP tool ("Unable to cast value to Object"), and the server
+  profiler's JSON gives no per-function times through it either; the split above uses timestamps instead.
+
 ## 3. More performance (`p1-perf-more`)
 
 ### Memory leaks: none found
