@@ -162,10 +162,11 @@ function VacuumFeelFormulas.pieceFrame(
 end
 
 -- The air drawn into the nozzle (P1 2026-11-14): it comes from AIR_OUT studs ahead of the mouth and AIR_UP over it,
--- across AIR_WIDTH of the head's width.
-local AIR_OUT = 1.4
-local AIR_UP = 0.8
-local AIR_WIDTH = 0.9
+-- across AIR_WIDTH of the head's width (a fan about 45 degrees wide; Studio 2026-11-14: 1.4 out across 0.9 of the
+-- head was too short and narrow a flow to read).
+local AIR_OUT = 2.2
+local AIR_UP = 1
+local AIR_WIDTH = 2
 -- The mouth: this far over the head's bottom face.
 local AIR_MOUTH = 0.08
 

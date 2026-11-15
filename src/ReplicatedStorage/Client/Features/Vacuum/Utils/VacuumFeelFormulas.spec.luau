@@ -182,9 +182,9 @@ return function()
 			expect(source.Y > sink.Y + 0.3).to.equal(true)
 		end)
 
-		it("draws from about the head's width, so the air fans in over it", function()
+		it("draws from wider than the head, so the air fans in over it", function()
 			local _, _, radius = VacuumFeelFormulas.airFlow(head, size, root)
-			expect(radius >= 1.2 / 2 and radius <= 1.2 * 1.5).to.equal(true)
+			expect(radius >= 1.2 and radius <= 1.2 * 2.5).to.equal(true)
 		end)
 
 		it("turns with the holder: a head off to the right takes its air from further right", function()

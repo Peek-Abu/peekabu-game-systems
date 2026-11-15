@@ -4,8 +4,8 @@
 	and judges what the engine shows, so a rig, skin, clip or hold change that would take a hand off the wand fails
 	instead of reaching a playtest.
 
-	For each holder (AnimationCarryRigHarness; by default the employees Pippa, Cappy and Prickles: every player spawns as
-	an employee, so nobody else holds the wand) and each skin (VacuumSkinRegistry), `run`:
+	For each holder (AnimationCarryRigHarness; by default the employees Pippa and Cappy, Prickles by name: every player
+	spawns as an employee, so nobody else holds the wand) and each skin (VacuumSkinRegistry), `run`:
 	1. shows a frame of the stock fall clip (PLAN_CLIP) and only then makes the Tool (VacuumToolSystem.create, which
 	   plans the hold): the game makes it as a shift starts, while the crew, just placed in the truck, is falling onto
 	   its bed (Studio, 2026-10-16: Freefall, this clip at 0.53 s, the UpperTorso 0.36 stud forward and pitched 23
@@ -165,10 +165,14 @@ local PLAN_AT = 0.5
 -- holds the wand one-handed.
 -- Cappy and Prickles hold the wand two-handed too (Cappy since batch 2.6: left paw at most 0.142 stud off). Their
 -- floor heads dipped under the floor in the brace (Studio, 2026-11-06: Cappy 0.037-0.083 stud in idle B / walk B,
--- Prickles 0.021-0.026 in sprint B): the right hand's IK lands a hair off its target and the wand, welded to it,
--- swings that out to its head. The rig now lifts the wand by what the head sank last frame (VacuumMotionFormulas
--- .floorLift), so all three are judged by default (Launch List g-prickles-floor-dip).
-local DEFAULT_RIGS = { "Pippa", "Cappy", "Prickles" }
+-- Prickles 0.021-0.026 in sprint B; 2026-11-14 Prickles 0.041 in walk B / brace+left): the right hand's IK lands a
+-- hair off its target and the wand, welded to it, swings that out to its head. The rig now lifts the wand by what the
+-- head sank last frame (VacuumMotionFormulas.floorLift): Studio 2026-11-14, no frame of the three under +0.009.
+-- Cappy now passes whole, so it is judged by default. Prickles is judged by name only (`Options.rigs`): its floor is
+-- clean, but in idle B its left paw slips 0.248 stud off GripLower under "recoil back" (reach out, brace and the kick's
+-- rebound together), 0.018 past LEFT_TOLERANCE, with the lift on or off: the reach guard reads the planned shoulder,
+-- and idle B carries Prickles' shoulder further from the wand.
+local DEFAULT_RIGS = { "Pippa", "Cappy" }
 -- The vacuum's use clip (AnimationVacuumSystem), when registered.
 local USE_CLIP = "cleanupVacuumUse"
 

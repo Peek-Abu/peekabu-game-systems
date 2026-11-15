@@ -104,17 +104,19 @@ local PRESETS: { [string]: Burst } = {
 		maxDistance = 90,
 		layers = {
 			{
-				-- Air streaks: a bar along its flight (VelocityParallel; the bar texture is drawn across, so turned a
-				-- quarter), stretched long and thinned toward the mouth.
+				-- Air streaks: the bar lying along its flight (VelocityParallel, unturned; Studio 2026-11-14: turned a
+				-- quarter it lay across the flow), stretched along it (squash) and thinning toward the mouth. Sized and
+				-- opaque enough to read on the dark office carpet at graphics level 4 (the first try, 0.55 at 45%
+				-- clear, showed as one or two faint smudges).
 				texture = T.streak,
 				color = gradient({ P.porcelain, P.porcelainShade }),
-				size = seq({ { 0, 0.55 }, { 0.7, 0.45 }, { 1, 0.2 } }),
-				squash = seq({ { 0, 1.2 }, { 1, 1.6 } }),
-				transparency = seq({ { 0, 1 }, { 0.25, 0.45 }, { 0.8, 0.5 }, { 1, 1 } }),
-				lifetime = NumberRange.new(0.32),
+				size = seq({ { 0, 0.9 }, { 0.7, 0.75 }, { 1, 0.3 } }),
+				squash = seq({ { 0, 2 }, { 1, 2 } }),
+				transparency = seq({ { 0, 1 }, { 0.2, 0.25 }, { 0.8, 0.35 }, { 1, 1 } }),
+				lifetime = NumberRange.new(0.4),
 				speed = NumberRange.new(1),
-				rate = 34,
-				rotation = NumberRange.new(90),
+				rate = 48,
+				rotation = NumberRange.new(0),
 				orientation = Enum.ParticleOrientation.VelocityParallel,
 				lightInfluence = 0.3,
 				zOffset = 0.1,
@@ -125,9 +127,9 @@ local PRESETS: { [string]: Burst } = {
 				color = gradient({ P.dust, P.dustDark }),
 				size = seq({ { 0, 0.16 }, { 1, 0.06 } }),
 				transparency = seq({ { 0, 1 }, { 0.2, 0.25 }, { 1, 0.6 } }),
-				lifetime = NumberRange.new(0.36),
+				lifetime = NumberRange.new(0.45),
 				speed = NumberRange.new(1),
-				rate = 10,
+				rate = 12,
 				rotation = NumberRange.new(0, 360),
 				rotSpeed = NumberRange.new(-240, 240),
 				lightInfluence = 0.5,

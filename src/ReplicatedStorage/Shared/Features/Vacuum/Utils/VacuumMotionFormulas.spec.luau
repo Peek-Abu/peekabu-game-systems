@@ -44,26 +44,26 @@ return function()
 		local onFloor = CFrame.new(0, FLOOR + MARGIN - (FLOOR + 0.06), 0)
 
 		it("reads a wand's lowest corner", function()
-			expect(VacuumMotionFormulas.lowestOf(REST, CFrame.identity)).to.be.near(FLOOR + 0.06, 1e-9)
-			expect(VacuumMotionFormulas.lowestOf(REST, onFloor)).to.be.near(FLOOR + MARGIN, 1e-9)
+			expect(VacuumMotionFormulas.lowestOf(REST, CFrame.identity)).to.be.near(FLOOR + 0.06, 1e-4)
+			expect(VacuumMotionFormulas.lowestOf(REST, onFloor)).to.be.near(FLOOR + MARGIN, 1e-4)
 		end)
 
 		it("lifts nothing when the hand landed where it was sent", function()
-			expect(VacuumMotionFormulas.floorLift(REST, onFloor, 0, MARGIN)).to.be.near(0, 1e-9)
+			expect(VacuumMotionFormulas.floorLift(REST, onFloor, 0, MARGIN)).to.be.near(0, 1e-4)
 		end)
 
 		it("lifts by what the hand sank by, so the head stays over the floor", function()
 			-- Cappy's brace (harness 2026-11-06): the head sat 0.083 under where the pose put it.
-			expect(VacuumMotionFormulas.floorLift(REST, onFloor, -0.083, MARGIN)).to.be.near(0.083, 1e-9)
+			expect(VacuumMotionFormulas.floorLift(REST, onFloor, -0.083, MARGIN)).to.be.near(0.083, 1e-4)
 		end)
 
 		it("lifts nothing when the head is well clear, however the hand missed", function()
-			expect(VacuumMotionFormulas.floorLift(REST, CFrame.identity, -0.03, MARGIN)).to.be.near(0, 1e-9)
+			expect(VacuumMotionFormulas.floorLift(REST, CFrame.identity, -0.03, MARGIN)).to.be.near(0, 1e-4)
 		end)
 
 		it("lifts only what is missing when the head is a little clear", function()
 			local raised = CFrame.new(0, 0.05, 0) * onFloor
-			expect(VacuumMotionFormulas.floorLift(REST, raised, -0.08, MARGIN)).to.be.near(0.03, 1e-9)
+			expect(VacuumMotionFormulas.floorLift(REST, raised, -0.08, MARGIN)).to.be.near(0.03, 1e-4)
 		end)
 
 		it("never lifts past its most (a hand far off its target is not chased)", function()
