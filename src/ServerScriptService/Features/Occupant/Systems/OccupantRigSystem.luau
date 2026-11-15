@@ -22,7 +22,10 @@
 	shift transit whose cleanup errored; it runs guarded). `build` sweeps before it builds; OccupantServiceServer's
 	despawn sweeps after it removes the current rig.
 
-	An Instance builder; `sweep` is specced.
+	`build` also aligns the rig attachments to the authored joints (`alignRigAttachments`) before the Humanoid rebuilds
+	the joints from them.
+
+	An Instance builder; `sweep` and `alignRigAttachments` are specced.
 
 	@class OccupantRigSystem
 ]=]
@@ -104,6 +107,38 @@ local function generate(): Model
 	return model
 end
 
+--[=[
+	Sets each Motor6D's rig attachments (`<joint name>RigAttachment` in its Part0 and Part1) to the joint's authored C0
+	and C1, and returns how many joints it changed. A Humanoid with automatic scaling rebuilds every joint from those
+	attachments once the model is in the world, so attachments that do not match lose the joint's authored frame:
+	Bramble's wings are authored with a 90 degree turn in their joints and unturned attachments, and in game they sat
+	turned into its body in every pose (owner play-check 11-14). A joint with no rig attachments is left alone.
+]=]
+local function alignRigAttachments(model: Model): number
+	local changed = 0
+	for _, item in model:GetDescendants() do
+		if not item:IsA("Motor6D") then
+			continue
+		end
+		local part0, part1 = item.Part0, item.Part1
+		if part0 == nil or part1 == nil then
+			continue
+		end
+		local name = item.Name .. "RigAttachment"
+		local at0 = part0:FindFirstChild(name)
+		local at1 = part1:FindFirstChild(name)
+		if at0 == nil or at1 == nil or not at0:IsA("Attachment") or not at1:IsA("Attachment") then
+			continue
+		end
+		if at0.CFrame ~= item.C0 or at1.CFrame ~= item.C1 then
+			at0.CFrame = item.C0
+			at1.CFrame = item.C1
+			changed += 1
+		end
+	end
+	return changed
+end
+
 -- The kind's body: the template's clone, else the fallback; named, with no Animate script; at the kind's size
 -- (Model:ScaleTo scales the parts, joints, attachments and HipHeight, and the Humanoid's WalkSpeed and jump, which are
 -- put back: his speeds are the brain's tuning).
@@ -115,6 +150,8 @@ local function body(kind: OccupantKindRegistry.KindId): Model
 	if animate ~= nil then
 		animate:Destroy()
 	end
+	-- Before it is scaled or parented: the Humanoid's joint rebuild must reproduce the authored joints.
+	alignRigAttachments(model)
 	local scale = OccupantKindRegistry.scaleOf(kind)
 	if scale ~= 1 then
 		local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -138,6 +175,8 @@ local function set(instance: Instance, name: string, value: string | number | bo
 end
 
 local OccupantRigSystem = {}
+
+OccupantRigSystem.alignRigAttachments = alignRigAttachments
 
 --[=[
 	Despawns every manager rig in `tagged` (default: every instance tagged OccupantConstants.TAG) that is a Model other
