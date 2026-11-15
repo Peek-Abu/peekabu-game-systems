@@ -192,4 +192,119 @@ return function()
 			expect(source.X > 3.5).to.equal(true)
 		end)
 	end)
+	describe("into the nozzle (P1 v2: the pile stretches into the vacuum)", function()
+		local function near(a, b)
+			return (a - b).Magnitude < 1e-4
+		end
+
+		it("turns the art at most an eighth of a turn so one of its flat sides faces the nozzle", function()
+			for _, angle in { 0, 0.3, -0.6, 1.2, 2.5, -2.9 } do
+				local toward = Vector3.new(math.cos(angle), 0, math.sin(angle))
+				local rotation = CFrame.Angles(0, 0.4, 0)
+				local yaw = VacuumFeelFormulas.alignYaw(rotation, toward)
+				expect(math.abs(yaw) <= math.pi / 4 + 1e-6).to.equal(true)
+				local turned = CFrame.Angles(0, yaw, 0) * rotation
+				local best = math.max(math.abs(turned.RightVector:Dot(toward)), math.abs(turned.LookVector:Dot(toward)))
+				expect(best).to.be.near(1, 1e-4)
+			end
+		end)
+
+		it("stretches more as the pile nears done, less when the nozzle is far, never shorter", function()
+			expect(VacuumFeelFormulas.reach(0, 2)).to.equal(1)
+			local mid, late = VacuumFeelFormulas.reach(0.5, 2), VacuumFeelFormulas.reach(1, 2)
+			expect(mid > 1 and late > mid).to.equal(true)
+			expect(late <= 1 + VacuumFeelFormulas.MAX_REACH + 1e-9).to.equal(true)
+			expect(VacuumFeelFormulas.reach(1, 12) < late).to.equal(true)
+			expect(VacuumFeelFormulas.reach(1, 100)).to.equal(1)
+		end)
+
+		it("measures how far a box reaches along a direction", function()
+			local size = Vector3.new(4, 2, 6)
+			expect(VacuumFeelFormulas.extentAlong(CFrame.identity, size, Vector3.xAxis)).to.be.near(2, 1e-6)
+			expect(VacuumFeelFormulas.extentAlong(CFrame.identity, size, Vector3.zAxis)).to.be.near(3, 1e-6)
+			local diagonal = Vector3.new(1, 0, 1).Unit
+			expect(VacuumFeelFormulas.extentAlong(CFrame.identity, size, diagonal)).to.be.near(5 / math.sqrt(2), 1e-6)
+		end)
+
+		local floor = CFrame.new(10, 0, 5)
+		local size = Vector3.new(4, 2, 4)
+		local dir = Vector3.xAxis
+
+		it("is the plain stand-in with no stretch", function()
+			local piece = CFrame.new(1, 2, 0.5)
+			local frame, shown =
+				VacuumFeelFormulas.pulledPiece(floor, CFrame.identity, 0, piece, size, 0.5, 1, 1, dir, 1, 2)
+			local plain = VacuumFeelFormulas.pieceFrame(floor, CFrame.identity, piece, 0.5, 1, 1)
+			expect(near(frame.Position, plain.Position)).to.equal(true)
+			expect(near(shown, size * 0.5)).to.equal(true)
+		end)
+
+		it("keeps its back (away from the nozzle) where it was and pulls its front toward the nozzle", function()
+			local back = VacuumFeelFormulas.pulledPiece(
+				floor,
+				CFrame.identity,
+				0,
+				CFrame.new(-2, 0, 0),
+				size,
+				1,
+				1,
+				1,
+				dir,
+				1.5,
+				2
+			)
+			expect(near(back.Position, Vector3.new(8, 0, 5))).to.equal(true)
+			local front = VacuumFeelFormulas.pulledPiece(
+				floor,
+				CFrame.identity,
+				0,
+				CFrame.new(2, 0, 0),
+				size,
+				1,
+				1,
+				1,
+				dir,
+				1.5,
+				2
+			)
+			expect(near(front.Position, Vector3.new(14, 0, 5))).to.equal(true)
+		end)
+
+		it("keeps its base on the floor while it thins", function()
+			local frame =
+				VacuumFeelFormulas.pulledPiece(floor, CFrame.identity, 0, CFrame.new(0, 0, 1), size, 1, 1, 1, dir, 2, 2)
+			expect(frame.Position.Y).to.be.near(0, 1e-6)
+			local top =
+				VacuumFeelFormulas.pulledPiece(floor, CFrame.identity, 0, CFrame.new(0, 2, 0), size, 1, 1, 1, dir, 2, 2)
+			expect(top.Position.Y).to.be.near(2 / math.sqrt(2), 1e-4)
+		end)
+
+		it("grows the piece along the nozzle and thins it across, about its volume kept", function()
+			local _, shown =
+				VacuumFeelFormulas.pulledPiece(floor, CFrame.identity, 0, CFrame.identity, size, 1, 1, 1, dir, 2, 2)
+			expect(shown.X).to.be.near(8, 1e-4)
+			expect(shown.Y).to.be.near(2 / math.sqrt(2), 1e-4)
+			expect(shown.Z).to.be.near(4 / math.sqrt(2), 1e-4)
+			expect(shown.X * shown.Y * shown.Z).to.be.near(size.X * size.Y * size.Z, 1e-3)
+		end)
+
+		it("turns the piece by the yaw about the floor point", function()
+			local frame = VacuumFeelFormulas.pulledPiece(
+				floor,
+				CFrame.identity,
+				math.pi / 2,
+				CFrame.new(1, 0, 0),
+				size,
+				1,
+				1,
+				1,
+				dir,
+				1,
+				2
+			)
+			expect(near(frame.Position, floor.Position + CFrame.Angles(0, math.pi / 2, 0) * Vector3.new(1, 0, 0))).to.equal(
+				true
+			)
+		end)
+	end)
 end

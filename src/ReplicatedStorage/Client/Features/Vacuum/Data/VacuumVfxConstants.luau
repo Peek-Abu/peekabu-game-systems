@@ -6,8 +6,8 @@
 	- vacuumSuction (funnel): dust puffs and Gloom wisps (purple-black, turning teal at the nozzle) spiralling from the
 	  pile into the floor head, the rate and spin rising with the suction's strength.
 	- vacuumGrimeSuction (funnel): grime flakes and a few wisps peeling off a valuable into the floor head.
-	- vacuumAir (funnel, P1 2026-11-14): the air the vacuum gulps: pale porcelain streaks lying along their flight,
-	  and a few dust motes, fanning in from ahead of the floor head into its mouth while it sucks (VacuumAirSystem).
+	- vacuumAir (funnel, P1 v2 2026-11-15): with VacuumAirSystem's spiral wind ribbons and goo blobs, the air the
+	  vacuum gulps: lilac vortex rings shrinking into the floor head's mouth, and dust motes in the draft.
 	- vacuumPuff: a little dust cough off the pile each PUFF_STEP of progress, so it visibly shrinks in puffs.
 	- vacuumPop: the pile clearing: a ground-hugging dust ring, one short pop ring, the last Gloom escaping and a few
 	  clean bubbles (24 particles at most).
@@ -104,21 +104,19 @@ local PRESETS: { [string]: Burst } = {
 		maxDistance = 90,
 		layers = {
 			{
-				-- Air streaks: the bar lying along its flight (VelocityParallel, unturned; Studio 2026-11-14: turned a
-				-- quarter it lay across the flow), stretched along it (squash) and thinning toward the mouth. Sized and
-				-- opaque enough to read on the dark office carpet at graphics level 4 (the first try, 0.55 at 45%
-				-- clear, showed as one or two faint smudges).
-				texture = T.streak,
-				color = gradient({ P.porcelain, P.porcelainShade }),
-				size = seq({ { 0, 0.9 }, { 0.7, 0.75 }, { 1, 0.3 } }),
-				squash = seq({ { 0, 2 }, { 1, 2 } }),
-				transparency = seq({ { 0, 1 }, { 0.2, 0.25 }, { 0.8, 0.35 }, { 1, 1 } }),
-				lifetime = NumberRange.new(0.4),
+				-- Vortex rings (P1 v2 2026-11-15; v1's streaks read as "random lines going sideways into vacuum"): lilac
+				-- hoops facing along their flight, shrinking as they ride the funnel's spiral into the mouth.
+				texture = T.ring,
+				color = gradient({ Color3.fromRGB(226, 212, 255), Color3.fromRGB(180, 139, 255) }),
+				size = seq({ { 0, 1.5 }, { 0.6, 0.9 }, { 1, 0.2 } }),
+				transparency = seq({ { 0, 1 }, { 0.2, 0.35 }, { 0.8, 0.45 }, { 1, 1 } }),
+				lifetime = NumberRange.new(0.5),
 				speed = NumberRange.new(1),
-				rate = 48,
-				rotation = NumberRange.new(0),
-				orientation = Enum.ParticleOrientation.VelocityParallel,
-				lightInfluence = 0.3,
+				rate = 7,
+				rotation = NumberRange.new(0, 360),
+				orientation = Enum.ParticleOrientation.VelocityPerpendicular,
+				lightEmission = 0.3,
+				lightInfluence = 0,
 				zOffset = 0.1,
 			},
 			{

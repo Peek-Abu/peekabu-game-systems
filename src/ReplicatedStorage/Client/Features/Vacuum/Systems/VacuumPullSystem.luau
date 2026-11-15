@@ -10,6 +10,9 @@
 	art. The stand-in leans toward the nozzle about its base, stretches up and thins, and wobbles, more as it nears
 	done; each tug (`tug`, a puff of goo) hops it on a spring. Its size glides toward the server's (P1: the server
 	shrinks the block in 0.1 s steps and keeps the art at full size, VacuumPileArtSystem), so the pile shrinks smoothly.
+	Into the nozzle (P1 v2 2026-11-15): an art pile also turns so a flat side faces the nozzle and stretches toward
+	it about its back, its front pulled at the mouth, more as it nears done (VacuumFeelFormulas.pulledPiece), and goo
+	blobs tear off it and swirl into the nozzle (VacuumAirSystem.tear), more at each tug.
 	When the suction stops (`release`) the stand-in springs back upright; a block's then goes and the real block shows,
 	while an art pile's stays at the pile's size (the server's art is full size). `track` gives a pile that is already
 	partly vacuumed (seen late, or let go) its stand-in. When the real pile is gone (popped) the stand-in goes at once.
@@ -23,6 +26,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local VacuumAirSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumAirSystem)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumFeelFormulas = require(ReplicatedStorage.Client.Features.Vacuum.Utils.VacuumFeelFormulas)
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
@@ -52,6 +56,11 @@ type Pull = {
 	toward: Vector3,
 	-- Laid at rest at the server's size (nothing to move until something changes).
 	still: boolean,
+	-- Into the nozzle (P1 v2): the art's turn (radians) so a flat side faces the nozzle, and its stretch toward it.
+	yaw: Spring,
+	along: Spring,
+	-- When the last goo blob tore off it (os.clock).
+	toreAt: number,
 }
 
 local LEAN_HZ, LEAN_DAMPING = 3.2, 0.55
@@ -61,6 +70,13 @@ local HOP_IMPULSE = 14
 local SETTLED = 0.01
 -- A pile this close to full size needs no stand-in once let go.
 local FULL = 0.999
+-- Into the nozzle: the turn's and the stretch's springs.
+local YAW_HZ, YAW_DAMPING = 2.5, 0.8
+local ALONG_HZ, ALONG_DAMPING = 2.6, 0.6
+-- A goo blob tears off a sucked pile this often (s), from this share of its height; a tug tears off this many more.
+local TEAR_EVERY = 0.14
+local TEAR_HEIGHT = 0.6
+local TUG_BLOBS = 2
 
 local pulls: { [BasePart]: Pull } = {}
 local folder: Folder? = nil
@@ -157,6 +173,9 @@ local function make(pile: BasePart, held: boolean): Pull?
 		seed = (math.abs(pile.Position.X * 13.7 + pile.Position.Z * 7.3)) % 6.28,
 		toward = Vector3.new(0, 0, -1),
 		still = false,
+		yaw = { x = 0, v = 0 },
+		along = { x = 1, v = 0 },
+		toreAt = 0,
 	}
 	pulls[pile] = pull
 	return pull
@@ -170,6 +189,27 @@ local function remove(pull: Pull)
 		end
 	end
 	pulls[pull.pile] = nil
+end
+
+-- A goo blob tears off `pull`'s pile (from up its middle) and swirls into the nozzle it is sucked by.
+local function tear(pull: Pull)
+	if pull.nozzle == nil then
+		return
+	end
+	local pile = pull.pile
+	local height = pile.Size.Y
+	local pieces = pull.pieces
+	if pieces ~= nil then
+		height = 0
+		for _, piece in pieces do
+			height = math.max(height, piece.part.Size.Y)
+		end
+	end
+	local from = pile.Position - Vector3.new(0, pile.Size.Y / 2, 0) + Vector3.new(0, height * TEAR_HEIGHT, 0)
+	pull.toreAt = os.clock()
+	VacuumAirSystem.tear(from, function()
+		return pull.nozzle
+	end)
 end
 
 local function place(pull: Pull, dt: number)
@@ -187,6 +227,9 @@ local function place(pull: Pull, dt: number)
 		end
 	end
 	local distance = if nozzle ~= nil then (nozzle - base).Magnitude else math.huge
+	if pull.held and nozzle ~= nil and os.clock() - pull.toreAt >= TEAR_EVERY then
+		tear(pull)
+	end
 	local leanTarget = if pull.held then VacuumFeelFormulas.lean(distance, pull.progress) else 0
 	local lean = ease(pull.lean, leanTarget, dt, LEAN_HZ, LEAN_DAMPING)
 	local hop = ease(pull.hop, 0, dt, HOP_HZ, HOP_DAMPING)
@@ -201,11 +244,42 @@ local function place(pull: Pull, dt: number)
 	end
 	local tilt = CFrame.fromAxisAngle(axis.Unit, lean) * CFrame.fromAxisAngle(pull.toward, wobble)
 	local pieces, floor, copy = pull.pieces, pull.floor, pull.copy
+	local alongSettled = true
 	if pieces ~= nil and floor ~= nil then
-		for _, piece in pieces do
-			piece.part.CFrame = VacuumFeelFormulas.pieceFrame(floor, tilt, piece.frame, shown, up, across)
-			piece.part.Size = piece.size * shown
+		-- Into the nozzle: turned so a flat side faces it, stretched toward it about its back.
+		local yawTarget = 0
+		if pull.held then
+			yawTarget = pull.yaw.x
+				+ VacuumFeelFormulas.alignYaw(CFrame.Angles(0, pull.yaw.x, 0) * floor.Rotation, pull.toward)
 		end
+		local yaw = ease(pull.yaw, yawTarget, dt, YAW_HZ, YAW_DAMPING)
+		local alongTarget = if pull.held then VacuumFeelFormulas.reach(pull.progress, distance) else 1
+		local along = math.max(ease(pull.along, alongTarget, dt, ALONG_HZ, ALONG_DAMPING), 0.5)
+		local turn = CFrame.Angles(0, yaw, 0) * floor.Rotation
+		local back = 0
+		for _, piece in pieces do
+			local rotation = turn * piece.frame.Rotation
+			local reach = VacuumFeelFormulas.extentAlong(rotation, piece.size, pull.toward)
+			back = math.max(back, reach - (turn * piece.frame.Position):Dot(pull.toward))
+		end
+		for _, piece in pieces do
+			local frame, size = VacuumFeelFormulas.pulledPiece(
+				floor,
+				tilt,
+				yaw,
+				piece.frame,
+				piece.size,
+				shown,
+				up,
+				across,
+				pull.toward,
+				along,
+				back
+			)
+			piece.part.CFrame = frame
+			piece.part.Size = size
+		end
+		alongSettled = math.abs(along - 1) < SETTLED and math.abs(yaw) < SETTLED
 	elseif copy:IsA("BasePart") then
 		-- The block at the shown share of its size (the server's size now, carried back to the glide's scale).
 		local size = pile.Size * (if target > 0 then shown / target else 1)
@@ -214,6 +288,7 @@ local function place(pull: Pull, dt: number)
 		copy.CFrame = CFrame.new(base) * tilt * CFrame.new(0, size.Y / 2, 0) * pile.CFrame.Rotation
 	end
 	local settled = not pull.held
+		and alongSettled
 		and math.abs(lean) < SETTLED
 		and math.abs(hop) < SETTLED
 		and math.abs(shown - target) < 1e-3
@@ -286,6 +361,9 @@ function VacuumPullSystem.tug(pile: BasePart)
 	if pull ~= nil then
 		pull.hop.v += HOP_IMPULSE
 		pull.still = false
+		for _ = 1, TUG_BLOBS do
+			tear(pull)
+		end
 	end
 end
 

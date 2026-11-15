@@ -186,4 +186,95 @@ function VacuumFeelFormulas.airFlow(head: CFrame, size: Vector3, root: Vector3):
 	return source, sink, math.max(size.X, size.Z) * AIR_WIDTH
 end
 
+-- Into the nozzle (P1 v2 2026-11-15, the owner: "stretching INTO the vacuum while I'm getting smaller"): a pile
+-- stretches along the flat line to the nozzle, its back kept where it was and its front pulled toward the mouth,
+-- thinning across (its volume about kept), so its base stays on the floor. The art is one mesh whose size can only
+-- grow along its own axes, so it first turns (at most an eighth of a turn, `alignYaw`) until one of its flat sides
+-- faces the nozzle, then grows along that axis.
+VacuumFeelFormulas.MAX_REACH = 1.1
+-- How fast the stretch comes on with progress (under 1: early).
+local REACH_POWER = 0.7
+
+--[=[
+	The smallest turn (radians about world up, within an eighth of a turn) that brings one of `rotation`'s flat axes
+	(its right or look, either way) onto the flat direction `toward`.
+]=]
+function VacuumFeelFormulas.alignYaw(rotation: CFrame, toward: Vector3): number
+	local flat = Vector3.new(toward.X, 0, toward.Z)
+	local right = Vector3.new(rotation.RightVector.X, 0, rotation.RightVector.Z)
+	if flat.Magnitude < 1e-4 or right.Magnitude < 1e-4 then
+		return 0
+	end
+	local want = math.atan2(-flat.Z, flat.X)
+	local have = math.atan2(-right.Z, right.X)
+	local quarter = math.pi / 2
+	local d = (want - have) % quarter
+	if d > quarter / 2 then
+		d -= quarter
+	end
+	return d
+end
+
+--[=[
+	How much (1 = not at all) a pile stretches toward a nozzle `distance` studs off at `progress` (0..1).
+]=]
+function VacuumFeelFormulas.reach(progress: number, distance: number): number
+	local near = 1 - math.clamp((distance - NEAR_PULL) / (FAR_PULL - NEAR_PULL), 0, 1)
+	return 1 + VacuumFeelFormulas.MAX_REACH * math.clamp(progress, 0, 1) ^ REACH_POWER * near
+end
+
+--[=[
+	How far a box of `size` turned by `rotation` reaches from its centre along the unit direction `dir`.
+]=]
+function VacuumFeelFormulas.extentAlong(rotation: CFrame, size: Vector3, dir: Vector3): number
+	return (
+		math.abs(rotation.RightVector:Dot(dir)) * size.X
+		+ math.abs(rotation.UpVector:Dot(dir)) * size.Y
+		+ math.abs(rotation.LookVector:Dot(dir)) * size.Z
+	) / 2
+end
+
+--[=[
+	Where an art pile's piece goes and its size, pulled into the nozzle: as `pieceFrame` (the piece's frame `piece`
+	about the art's floor point `floor` and its full `size`, at `scale`, stretched `up` and thinned `across`, leaned by
+	`tilt`), first turned `yaw` about the floor point, then stretched `along` the flat unit direction `dir` to the
+	nozzle about its back (`back` studs behind the floor point at full size), thinned across it.
+]=]
+function VacuumFeelFormulas.pulledPiece(
+	floor: CFrame,
+	tilt: CFrame,
+	yaw: number,
+	piece: CFrame,
+	size: Vector3,
+	scale: number,
+	up: number,
+	across: number,
+	dir: Vector3,
+	along: number,
+	back: number
+): (CFrame, Vector3)
+	local thin = 1 / math.sqrt(math.max(along, 1e-3))
+	-- Stretched up and thinned across about the floor point (as pieceFrame).
+	local function lift(v: Vector3): Vector3
+		return Vector3.new(v.X * across, v.Y * up, v.Z * across)
+	end
+	-- Stretched along the nozzle and thinned across it.
+	local function pull(v: Vector3): Vector3
+		local d = v:Dot(dir)
+		return dir * (d * along) + (v - dir * d) * thin
+	end
+	local turn = CFrame.Angles(0, yaw, 0)
+	local rotation = turn * floor.Rotation * piece.Rotation
+	local offset = lift((turn * floor.Rotation * piece.Position) * scale)
+	local pin = -dir * (back * scale)
+	local placed = pin + pull(offset - pin)
+	local frame = CFrame.new(floor.Position) * tilt * CFrame.new(placed) * rotation
+	local shown = Vector3.new(
+		size.X * pull(lift(rotation.RightVector)).Magnitude,
+		size.Y * pull(lift(rotation.UpVector)).Magnitude,
+		size.Z * pull(lift(rotation.LookVector)).Magnitude
+	) * scale
+	return frame, shown
+end
+
 return VacuumFeelFormulas
