@@ -97,12 +97,13 @@ local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
 -- X < 0 folds the shin back, and the ankle undoes both so the feet stay flat (hip + knee + ankle = 0). Every pose
 -- here is in place: it never moves the body across the floor (the server moves the root, on checked paths).
 -- Perched: the flattest owl crouch on a prop's top (owner play-check 11-14: on top, never through the ceiling), body
--- hunched low over the edge, legs tucked under it, face tipped about 60 degrees down at the crew, wings held close.
+-- hunched low over the edge, legs tucked under it, face tipped about 65 degrees down at the crew, wings held close.
 -- The server sets its lowest point on the prop's visible top (OccupantSeatSystem.perch, measured with
 -- OccupantGestureFormulas.posedBox on the rig's own parts); Bramble's 0.9 scale makes it fit a 7-stud locker under a
 -- 13-stud ceiling.
 local PERCH_CROUCH: { [string]: Vector3 } = table.freeze({
-	Waist = Vector3.new(-70, 0, 0),
+	-- -75 (measured 11-14 on Bramble at 0.9: 5.44 studs tall, under the 5.7 a 7-stud locker leaves; -70 was 5.85).
+	Waist = Vector3.new(-75, 0, 0),
 	Neck = Vector3.new(10, 0, 8),
 	LeftHip = Vector3.new(150, 0, 0),
 	RightHip = Vector3.new(150, 0, 0),
