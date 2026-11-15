@@ -14,6 +14,7 @@
 	@class RevealScreen
 ]=]
 
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -161,6 +162,11 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local deps: { unknown } = { pop, key }
 	React.useEffect(function(): () -> ()
 		if pop == nil then
+			return function() end
+		end
+		-- Reduced Motion (the device setting): the title is simply there, no pop.
+		if GuiService.ReducedMotionEnabled then
+			pop.Scale = 1
 			return function() end
 		end
 		pop.Scale = 0.4

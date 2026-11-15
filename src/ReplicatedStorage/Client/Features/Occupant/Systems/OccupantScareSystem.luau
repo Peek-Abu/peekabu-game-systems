@@ -14,6 +14,7 @@
 	@class OccupantScareSystem
 ]=]
 
+local GuiService = game:GetService("GuiService")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -157,10 +158,20 @@ function OccupantScareSystem.snap()
 		picture.BackgroundTransparency = 1
 		picture.Image = image
 		picture.Parent = gui
-		TweenService:Create(picture, stretch, { Size = UDim2.fromScale(1, 0.85) }):Play()
+		if GuiService.ReducedMotionEnabled then
+			picture.Size = UDim2.fromScale(1, 0.85)
+		else
+			TweenService:Create(picture, stretch, { Size = UDim2.fromScale(1, 0.85) }):Play()
+		end
 	else
 		local mouth = drawGrin(gui)
-		TweenService:Create(mouth, stretch, { Size = UDim2.fromScale(OccupantConstants.GRIN_STRETCH, 0.2) }):Play()
+		local stretched = UDim2.fromScale(OccupantConstants.GRIN_STRETCH, 0.2)
+		-- Reduced Motion (the device setting): the grin is shown stretched, without the snap.
+		if GuiService.ReducedMotionEnabled then
+			mouth.Size = stretched
+		else
+			TweenService:Create(mouth, stretch, { Size = stretched }):Play()
+		end
 	end
 	-- Under his head on this client only (a client-made child of a replicated part never replicates).
 	gui.Parent = head

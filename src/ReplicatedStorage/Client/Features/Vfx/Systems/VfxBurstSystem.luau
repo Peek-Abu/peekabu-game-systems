@@ -22,6 +22,7 @@
 	@class VfxBurstSystem
 ]=]
 
+local GuiService = game:GetService("GuiService")
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -147,7 +148,12 @@ end
 -- One warm light: up in 0.03 s, down over its seconds, then gone. Never destroyed while lit.
 local function flash(parent: Attachment, light: BurstLight)
 	local level = quality()
-	if (level > 0 and level <= VfxConstants.LIGHT_MIN_QUALITY) or lights >= MAX_LIGHTS then
+	-- No flash under Reduced Motion (the device setting): a sudden light is what it asks to avoid.
+	if
+		(level > 0 and level <= VfxConstants.LIGHT_MIN_QUALITY)
+		or lights >= MAX_LIGHTS
+		or GuiService.ReducedMotionEnabled
+	then
 		return
 	end
 	lights += 1

@@ -10,6 +10,7 @@
 	@class TrainingFinish
 ]=]
 
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -45,7 +46,8 @@ local function useSpin(running: boolean): React.Binding<number>
 	local angle, setAngle = React.useBinding(0)
 	React.useEffect(function()
 		local start = os.clock()
-		local connection = if running
+		-- Reduced Motion (the device setting): the rays stand still.
+		local connection = if running and not GuiService.ReducedMotionEnabled
 			then RunService.Heartbeat:Connect(function()
 				setAngle(((os.clock() - start) * RAY_SPEED) % 360)
 			end)

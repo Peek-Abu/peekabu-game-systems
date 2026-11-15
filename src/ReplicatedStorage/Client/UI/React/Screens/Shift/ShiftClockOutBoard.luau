@@ -13,6 +13,7 @@
 	@class ShiftClockOutBoard
 ]=]
 
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
@@ -60,7 +61,10 @@ local function TruckCountdown(props: CountdownProps): React.ReactNode
 	local now = useServerClock(0.1)
 	local left = props.leavesAt - now
 	local urgent = ShiftClockOutViewModel.urgent(math.ceil(left))
-	local beat = if urgent then 1 + 0.12 * math.max(0, (left % 1) - 0.6) / 0.4 else 1
+	-- Reduced Motion (the device setting) keeps the coral but drops the pulse.
+	local beat = if urgent and not GuiService.ReducedMotionEnabled
+		then 1 + 0.12 * math.max(0, (left % 1) - 0.6) / 0.4
+		else 1
 	return e("Frame", {
 		Position = props.position,
 		Size = props.size,
