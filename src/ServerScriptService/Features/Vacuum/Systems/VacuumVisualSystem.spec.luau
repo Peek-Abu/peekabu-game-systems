@@ -7,6 +7,7 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
 local MotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VisualConstants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
+local VacuumRigUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumRigUtils)
 
 return function()
 	local function addPart(model, name, cframe, size)
@@ -55,67 +56,6 @@ return function()
 	local function find(container, name)
 		return container:FindFirstChild(name, true)
 	end
-
-	describe("measure", function()
-		it("reads an arm's shoulder (root space) and lengths from its rig attachments", function()
-			local holder = makeHolder()
-			local arm = Visual.arm(holder, "Right")
-			expect(arm.shoulder.X).to.be.near(0.5, 1e-4)
-			expect(arm.shoulder.Y).to.be.near(1, 1e-4)
-			expect(arm.upper).to.be.near(0.4, 1e-4)
-			-- The forearm, then the hand from its wrist to its wrap point (WRAP of the way to the grip attachment).
-			expect(arm.lower).to.be.near(0.4 + 0.3 * VisualConstants.WRAP, 1e-4)
-			holder:Destroy()
-		end)
-
-		it(
-			"holds the wand inside the paw: the wrap point lies between wrist and grip, given in the grip's space",
-			function()
-				local holder = makeHolder()
-				for _, side in { { "Right", 1 }, { "Left", -1 } } do
-					local name, sx = side[1], side[2]
-					local wrap = Visual.wrapOf(holder, name)
-					expect(wrap.X).to.be.near(sx * (-0.15 + 0.3 * VisualConstants.WRAP), 1e-4)
-					local arm = Visual.arm(holder, name)
-					-- From the grip attachment (at the paw's tip) back toward the wrist.
-					expect(arm.wrap.Magnitude).to.be.near(0.3 * (1 - VisualConstants.WRAP), 1e-4)
-					local grip = holder[name .. "Hand"][name .. "GripAttachment"]
-					expect((grip.CFrame:PointToWorldSpace(arm.wrap) - wrap).Magnitude < 1e-4).to.equal(true)
-				end
-				holder:Destroy()
-			end
-		)
-
-		it("reads the shoulder at the rig's rest pose, not where an animation or a landing has the torso", function()
-			-- Studio, a shift's start: the hold was planned while Pippa was being placed in the truck, her torso
-			-- 0.43 stud forward of rest, so the left hand's target lay out of her reach and that arm hung at full
-			-- stretch, swaying with the idle, 0.21-0.30 stud off the wand.
-			local holder = makeHolder()
-			local root = holder.HumanoidRootPart
-			local torso = holder.UpperTorso
-			local waist = Instance.new("Motor6D")
-			waist.Name = "Waist"
-			waist.Part0 = root
-			waist.Part1 = torso
-			waist.C0 = CFrame.new(0, 0.8, 0)
-			waist.Parent = torso
-			torso.CFrame = CFrame.new(0, 1.75, -0.45) * CFrame.Angles(0.3, 0, 0)
-			for _, side in { "Right", "Left" } do
-				local arm = Visual.arm(holder, side)
-				expect(arm.shoulder.X).to.be.near(if side == "Right" then 0.5 else -0.5, 1e-4)
-				expect(arm.shoulder.Y).to.be.near(1, 1e-4)
-				expect(arm.shoulder.Z).to.be.near(0, 1e-4)
-			end
-			holder:Destroy()
-		end)
-
-		it("has no arm for a rig without the attachments", function()
-			local model = Instance.new("Model")
-			Instance.new("Humanoid").Parent = model
-			expect(Visual.arm(model, "Right")).to.equal(nil)
-			model:Destroy()
-		end)
-	end)
 
 	describe("the wand in the hand", function()
 		it("builds the wand round one invisible handle, welded, without collisions, with a hose inlet", function()
@@ -170,7 +110,7 @@ return function()
 			-- handle = rightGrip * Tool.Grip:Inverse(), so the right hand's grip attachment is at Tool.Grip in handle
 			-- space, and its paw's wrap point (inside the paw) on GripUpper.
 			local inHandle = handle.CFrame:PointToObjectSpace(upper.WorldPosition)
-			local wrap = Visual.arm(holder, "Right").wrap
+			local wrap = VacuumRigUtils.arm(holder, "Right").wrap
 			expect((inHandle - hold.toolGrip:PointToWorldSpace(wrap)).Magnitude < 1e-3).to.equal(true)
 			-- GripLower sits where the left paw holds (hold.lower below the tube's top, however long the tube
 			-- telescopes): its modelled distance, or nearer the top when the paw slid up to reach it (batch 2.6), and
@@ -269,7 +209,7 @@ return function()
 				local backpack = Visual.wear(holder)
 				local back = torso:FindFirstChild(MOUNT.backName)
 				expect(back).to.be.ok()
-				local fit = Visual.fitOf(holder)
+				local fit = VacuumRigUtils.fitOf(holder)
 				expect(back.Position.Y).to.be.near(fit.mount.Position.Y, 1e-3)
 				expect(back.Position.Z).to.be.near(0.4 + MOUNT.clearance, 1e-3)
 				local front = padFront(backpack.model, torso)
@@ -453,26 +393,6 @@ return function()
 			Visual.build(plain)
 			expect(plain:GetAttribute("VacuumSkin")).to.equal(VacuumSkinRegistry.DEFAULT)
 			plain:Destroy()
-		end)
-	end)
-
-	describe("fit", function()
-		it("uses the employee's registry fit at its scale", function()
-			local holder = makeHolder()
-			holder:SetAttribute("EmployeeName", "Pippa")
-			local fit, scale = Visual.fitOf(holder)
-			expect(scale).to.be.near(1.25, 1e-6)
-			expect(fit.mount.Position.Y > 0).to.equal(true)
-			holder:Destroy()
-		end)
-
-		it("fits anyone else from their UpperTorso's size", function()
-			local holder = makeHolder()
-			local fit, scale = Visual.fitOf(holder)
-			expect(scale).to.equal(1)
-			expect(fit.mount.Position.Z).to.be.near(0.4, 1e-6)
-			expect(fit.size).to.equal(VisualConstants.GENERIC_SIZE)
-			holder:Destroy()
 		end)
 	end)
 end

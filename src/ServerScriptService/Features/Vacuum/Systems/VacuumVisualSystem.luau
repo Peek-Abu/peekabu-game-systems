@@ -19,6 +19,7 @@
 	  textured, camera-facing Beam) from the pack's outlet to the wand. `setHeld` unclips the stowed wand and runs the hose to the wand in the hand. The
 	  gauge's dust insert carries its full size and Weld offset as attributes and starts empty (hidden); each
 	  client sizes it to the crew's Gloom against the contract (VacuumFeedbackSystem).
+	- The holder's body (its arms, paws, hip and backpack fit) is read by VacuumRigUtils.
 	- `build` makes the hand wand inside the Tool: the grip at the handle, the wand leaning forward and its tube
 	  telescoped so the floor head rests flat on the floor from the holder's grip (VacuumHoldFormulas.hold, read
 	  from the holder's rig attachments). The hold it returns drives the arms (AnimationVacuumHoldSystem).
@@ -32,8 +33,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
-local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumMountFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMountFormulas)
@@ -43,7 +42,7 @@ local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.V
 local Constants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
 local VacuumHoldFormulas = require(ServerScriptService.Features.Vacuum.Utils.VacuumHoldFormulas)
 local VacuumKitUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumKitUtils)
-local AnimationCarryMeasureSystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarryMeasureSystem)
+local VacuumRigUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumRigUtils)
 
 export type WornBackpack = {
 	model: Model,
@@ -69,17 +68,6 @@ end
 local function partOf(container: Instance, name: string): BasePart?
 	local found = container:FindFirstChild(name, true)
 	return if found ~= nil and found:IsA("BasePart") then found else nil
-end
-
-local function attachmentOf(model: Model, partName: string, name: string): Attachment?
-	local part = model:FindFirstChild(partName)
-	local found = if part ~= nil then part:FindFirstChild(name) else nil
-	return if found ~= nil and found:IsA("Attachment") then found else nil
-end
-
-local function span(model: Model, partName: string, from: string, to: string): number?
-	local a, b = attachmentOf(model, partName, from), attachmentOf(model, partName, to)
-	return if a ~= nil and b ~= nil then (a.Position - b.Position).Magnitude else nil
 end
 
 -- A grip Attachment of a complete kit (VacuumKitUtils.kit).
@@ -158,121 +146,32 @@ local function padHalf(pack: Model): Vector2
 	return Vector2.new(size.X / 2, size.Y / 2)
 end
 
--- The right hip joint in `torso`'s space at the rig's rest pose (the Waist joint's C0 / C1, not an animated frame),
--- or the root's centre (live) on a rig without one, else the torso's bottom.
-local function hipInTorso(character: Model, torso: BasePart): Vector3
-	local waist: Motor6D? = nil
-	for _, child in torso:GetChildren() do
-		if child:IsA("Motor6D") and child.Part1 == torso and child.Part0 ~= nil then
-			waist = child
-			break
-		end
-	end
-	if waist ~= nil and waist.Part0 ~= nil then
-		local hip = waist.Part0:FindFirstChild("RightHipRigAttachment")
-		if hip ~= nil and hip:IsA("Attachment") then
-			-- torso = lower * C0 * C1:Inverse(), so lower in torso space is C1 * C0:Inverse().
-			return (waist.C1 * waist.C0:Inverse()) * hip.Position
-		end
-	end
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if root ~= nil and root:IsA("BasePart") then
-		return torso.CFrame:PointToObjectSpace(root.Position)
-	end
-	return Vector3.new(0, -torso.Size.Y / 2, 0)
-end
-
---[=[
-	`side` ("Left"/"Right") arm of `character` in HumanoidRootPart space, from its rig attachments (its reach to the
-	paw's wrap point, Visual.wrapOf, and that point in the grip attachment's space), with the shoulder
-	where it is at the rig's REST pose (its joint chain without the animation's Transforms,
-	AnimationCarryMeasureSystem.restFrame), so the hold never depends on the pose of the moment it is planned in. The
-	Tool is made as a shift starts, mid-stride or while the crew is placed in the truck: read live, Pippa's shoulders
-	were once measured 0.43 stud forward of rest, the left hand's target lay out of her reach, and that arm hung at
-	full stretch, swaying with the idle, 0.21-0.30 stud off the wand. Nil when the rig lacks the attachments.
-]=]
-function Visual.arm(character: Model, side: string): VacuumHoldFormulas.Arm?
-	local root = character:FindFirstChild("HumanoidRootPart")
-	local torso = character:FindFirstChild("UpperTorso")
-	local shoulder = attachmentOf(character, "UpperTorso", side .. "ShoulderRigAttachment")
-	local upper = span(character, side .. "UpperArm", side .. "ShoulderRigAttachment", side .. "ElbowRigAttachment")
-	local lower = span(character, side .. "LowerArm", side .. "ElbowRigAttachment", side .. "WristRigAttachment")
-	local wrap = Visual.wrapOf(character, side)
-	local wrist = attachmentOf(character, side .. "Hand", side .. "WristRigAttachment")
-	local grip = attachmentOf(character, side .. "Hand", side .. "GripAttachment")
-	if
-		root == nil
-		or not root:IsA("BasePart")
-		or torso == nil
-		or not torso:IsA("BasePart")
-		or shoulder == nil
-		or upper == nil
-		or lower == nil
-		or wrap == nil
-		or wrist == nil
-		or grip == nil
-	then
-		return nil
-	end
-	return {
-		shoulder = AnimationCarryMeasureSystem.restFrame(torso, root):PointToWorldSpace(shoulder.Position),
-		upper = upper,
-		lower = lower + (wrap - wrist.Position).Magnitude,
-		wrap = grip.CFrame:PointToObjectSpace(wrap),
-	}
-end
-
---[=[
-	Where `character`'s `side` paw holds the wand, in its hand's space: Constants.WRAP of the way from its wrist to
-	its grip attachment (VacuumHoldFormulas.Arm.wrap). Nil without both attachments.
-]=]
-function Visual.wrapOf(character: Model, side: string): Vector3?
-	local wrist = attachmentOf(character, side .. "Hand", side .. "WristRigAttachment")
-	local grip = attachmentOf(character, side .. "Hand", side .. "GripAttachment")
-	if wrist == nil or grip == nil then
-		return nil
-	end
-	return wrist.Position:Lerp(grip.Position, Constants.WRAP)
-end
-
---[=[
-	Where `character`'s backpack sits and the scale its fit is in: the employee's registry fit at the
-	employee's scale, else one fitted from its UpperTorso's size (scale 1).
-]=]
-function Visual.fitOf(character: Model?): (EmployeeRegistry.BackpackFit, number)
-	local name = if character ~= nil then character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) else nil
-	local def = if type(name) == "string" then EmployeeRegistry.get(name) else nil
-	if def ~= nil and def.backpack ~= nil then
-		return def.backpack, def.scale
-	end
-	local torso = if character ~= nil then character:FindFirstChild("UpperTorso") else nil
-	local size = if torso ~= nil and torso:IsA("BasePart")
-		then torso.Size
-		else Constants.REFERENCE_TORSO * Constants.GENERIC_SIZE
-	return VacuumHoldFormulas.genericFit(size, Constants.REFERENCE_TORSO, Constants.STRAP_DEPTH, Constants.GENERIC_SIZE),
-		1
-end
-
 -- The hold for `holder` with a wand this big, or nil when its arms cannot be measured.
 local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: number): VacuumHoldFormulas.Hold?
 	local humanoid = holder:FindFirstChildOfClass("Humanoid")
 	local root = holder:FindFirstChild("HumanoidRootPart")
-	local right = Visual.arm(holder, "Right")
+	local right = VacuumRigUtils.arm(holder, "Right")
 	if humanoid == nil or root == nil or not root:IsA("BasePart") or right == nil then
 		return nil
 	end
 	local tuning = Constants.hold
-	return VacuumHoldFormulas.hold(right, Visual.arm(holder, "Left"), -(root.Size.Y / 2 + humanoid.HipHeight), dims, {
-		down = tuning.down,
-		forward = tuning.forward,
-		out = tuning.out,
-		angle = tuning.angle,
-		yaw = tuning.yaw,
-		clearance = tuning.clearance * size,
-		minTube = tuning.minTube * size,
-		leftSlide = tuning.leftSlide,
-		maxShift = tuning.maxShift,
-	})
+	return VacuumHoldFormulas.hold(
+		right,
+		VacuumRigUtils.arm(holder, "Left"),
+		-(root.Size.Y / 2 + humanoid.HipHeight),
+		dims,
+		{
+			down = tuning.down,
+			forward = tuning.forward,
+			out = tuning.out,
+			angle = tuning.angle,
+			yaw = tuning.yaw,
+			clearance = tuning.clearance * size,
+			minTube = tuning.minTube * size,
+			leftSlide = tuning.leftSlide,
+			maxShift = tuning.maxShift,
+		}
+	)
 end
 
 --[=[
@@ -293,7 +192,7 @@ function Visual.build(
 	handle.CFrame = CFrame.identity
 	prepare(handle)
 	handle.Parent = tool
-	local fit, scale = Visual.fitOf(holder)
+	local fit, scale = VacuumRigUtils.fitOf(holder)
 	local size = fit.size * scale
 	local art = VacuumKitUtils.kit(worn)
 	local parts, dims, lipOffset = wandAt(art, size)
@@ -377,7 +276,7 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	if torso == nil or not torso:IsA("BasePart") then
 		return nil
 	end
-	local fit, scale = Visual.fitOf(character)
+	local fit, scale = VacuumRigUtils.fitOf(character)
 	local size = fit.size * scale
 	local art = VacuumKitUtils.kit(worn)
 	local model = Instance.new("Model")
@@ -416,7 +315,7 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	local heldTube = if stowHold ~= nil then stowHold.tube else Constants.DEFAULT_TUBE * size
 	local stow = Constants.stow
 	local stowTube = VacuumHoldFormulas.stowTube(
-		(torso.CFrame:ToObjectSpace(holster).Position - hipInTorso(character, torso)).Y,
+		(torso.CFrame:ToObjectSpace(holster).Position - VacuumRigUtils.hipInTorso(character, torso)).Y,
 		dims,
 		stow.lean,
 		Constants.hold.minTube * size,

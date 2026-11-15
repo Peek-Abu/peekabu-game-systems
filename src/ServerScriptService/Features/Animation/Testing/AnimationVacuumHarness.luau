@@ -20,7 +20,7 @@
 	   and the brace with each aim, the pop's recoil and its rebound, the shimmy each way, the wand's sway each way,
 	   aimed at the look point each way and all at once; the wand always aimed at the look point, as every client
 	   aims it; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
-	   Animator's IK) and judges each: each paw's wrap point (VacuumVisualSystem.wrapOf, inside the paw) must be on
+	   Animator's IK) and judges each: each paw's wrap point (VacuumRigUtils.wrapOf, inside the paw) must be on
 	   its grip, the right on the wand's GripUpper and the left on its GripLower (the grip contract), within
 	   GRIP_TOLERANCE (the left also within reachSlack: it may slip); each grip must lie inside its paw (the paw closes round the wand); the floor head's
 	   lowest corner must be over the floor (FLOOR_TOLERANCE). Each layer's worst line also reports how deep a hand
@@ -45,6 +45,7 @@ local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Ut
 local AnimationCarryClipHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryClipHarness)
 local AnimationCarryRigHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryRigHarness)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
+local VacuumRigUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumRigUtils)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 
 type Carrier = AnimationCarryRigHarness.Carrier
@@ -369,7 +370,7 @@ local function hold(carrier: Carrier, skin: VacuumSkinRegistry.SkinDef): Entry
 		table.insert(entry.problems, "the wand has no GripUpper / GripLower (the grip contract)")
 	end
 	local rightHand, leftHand = handOf(model, "Right"), handOf(model, "Left")
-	local rightWrap, leftWrap = VacuumVisualSystem.wrapOf(model, "Right"), VacuumVisualSystem.wrapOf(model, "Left")
+	local rightWrap, leftWrap = VacuumRigUtils.wrapOf(model, "Right"), VacuumRigUtils.wrapOf(model, "Left")
 	local headFound = tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME)
 	local head = if headFound ~= nil and headFound:IsA("BasePart") then headFound else nil
 	-- 4. The motion layers, laid on as every client lays them (after the Animator's IK, every frame).

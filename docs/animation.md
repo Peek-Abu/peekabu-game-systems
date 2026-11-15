@@ -269,12 +269,12 @@ Only arm joints are driven; no rig joint's C0/C1 or attachment is written.
   and a hand wand held in both hands, the right hand on the wand skin's `GripUpper`, the left on its `GripLower`
   (the grip contract, `characters/vacuum/README.md`); the wand telescopes so its floor head rests on the floor from
   the holder's grip. The hold is planned once, when the shift's Tool is made, from the holder's arms read at the
-  rig's **rest pose** (`VacuumVisualSystem.arm`: the shoulder through `AnimationCarryMeasureSystem.restFrame`, never
+  rig's **rest pose** (`VacuumRigUtils.arm`: the shoulder through `AnimationCarryMeasureSystem.restFrame`, never
   the pose of the moment): the Tool is made while the crew, just placed in the truck, is falling onto its bed, and a
   plan read from that pose (torso 0.36 forward, pitched 23 degrees) put Pippa's left hand out of reach, so that arm
   hung at full stretch, swaying with the idle, 0.2-0.3 stud off the wand. Two Transform IKControls (shoulder to
   grip attachment) hold the arms to targets fixed on the root, no smoothing, so the floor head glides level. Each
-  paw holds the wand at its **wrap point** (`VacuumVisualSystem.wrapOf`: 0.6 of the way from wrist to grip
+  paw holds the wand at its **wrap point** (`VacuumRigUtils.wrapOf`: 0.6 of the way from wrist to grip
   attachment, inside the paw), not at the grip attachment, which on Pippa sits on the very tip of the paw: planned
   there, the paws touched the wand with their fingertips; planned on the wrap point, the wand runs through the paw.
 
