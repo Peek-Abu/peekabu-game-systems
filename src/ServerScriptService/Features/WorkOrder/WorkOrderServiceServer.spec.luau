@@ -132,6 +132,9 @@ return function()
 					worked = function()
 						return { member.UserId }
 					end,
+					training = function()
+						return false
+					end,
 				}
 				local stop = Adapter.start(source, function(p, counter, amount)
 					Service:record(p, counter, amount)
