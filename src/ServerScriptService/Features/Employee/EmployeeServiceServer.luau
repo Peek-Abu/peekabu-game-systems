@@ -30,7 +30,6 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
-local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
@@ -69,9 +68,7 @@ local connections: { RBXScriptConnection } = {}
 -- loadout change needs a new character.
 local worn: { [number]: EmployeeSkinRules.Worn } = {}
 local swapped = 0
--- The hub (where the welcome card shows and employees are swapped), and the players whose first character there has
--- been rebuilt once already (EmployeeConstants.WARM_SWAP_DELAY).
-local isHub = game.PlaceId == DepotConstants.HUB_PLACE_ID
+-- The players whose first character in this server has been rebuilt once already (EmployeeConstants.WARM_SWAP_DELAY).
 local warmed: { [number]: true } = {}
 local warmSwaps = 0
 local cosmeticConnection: SignalTyped.Connection? = nil
@@ -264,8 +261,9 @@ local function buildFor(player: Player): Model?
 	return nil
 end
 
--- The hub's one hidden swap (EmployeeConstants.WARM_SWAP_DELAY): the same employee rebuilt where it stands, with no
--- goo puff, while the welcome card still covers the screen.
+-- The one hidden swap per player per server (EmployeeConstants.WARM_SWAP_DELAY): the same employee rebuilt where it
+-- stands, with no goo puff, while the arrival card (the hub's welcome card, the shift's route slip) still covers the
+-- screen.
 local function warmSwap(player: Player)
 	local character = player.Character
 	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
@@ -308,7 +306,7 @@ local function spawnFor(player: Player)
 	end
 	markVacuum(player.UserId, model)
 	EmployeeCharacterSystem.assign(player, model, nil, false)
-	if isHub and not warmed[player.UserId] then
+	if not warmed[player.UserId] then
 		warmed[player.UserId] = true
 		task.delay(EmployeeConstants.WARM_SWAP_DELAY, warmSwap, player)
 	end

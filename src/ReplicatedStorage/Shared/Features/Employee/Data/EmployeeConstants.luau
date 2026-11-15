@@ -58,9 +58,11 @@ local EmployeeConstants = {
 	LANYARD_BADGES_PATH = { "Assets", "CleanupCrew", "LanyardBadges" },
 	-- How long a joining player's spawn waits for their saved loadout before spawning the default employee.
 	LOADOUT_WAIT = 5,
-	-- In the hub, a player's first character is rebuilt once in place this many seconds after it spawns, behind the
-	-- welcome card. The first time a client's character is replaced, the engine freezes that client for ~0.6 s
-	-- (measured 2026-11-13, Lobby; later swaps ~0.1 s); this pays it before the player can swap employees.
+	-- In every place, a player's first character is rebuilt once in place this many seconds after it spawns, behind the
+	-- arrival card. The first time a player's character is replaced, the engine stalls for 0.6-2.3 s (measured
+	-- 2026-11-13/14 in Studio, Lobby and Shift; later swaps ~0.1 s). It is engine work, not ours: a bare rig with no art
+	-- or scripts stalls the same, our server code for the swap takes ~9 ms, and the stall ends before the client's
+	-- CharacterAdded. This pays it before the player can swap employees.
 	WARM_SWAP_DELAY = 0.5,
 	FACE_PLATE = "FacePlate",
 	FACE_APPEARANCE = "Face",
