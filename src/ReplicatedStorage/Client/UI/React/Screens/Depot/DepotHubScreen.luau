@@ -232,7 +232,8 @@ local function DepotHubScreen(
 	local input = UserInputService:GetLastInputType()
 	local control = "Hold the vacuum button near dust."
 	if input == Enum.UserInputType.Touch then
-		control = "Hold VACUUM on the shift's touch controls near dust."
+		-- Short enough for the Guide card's two phone lines.
+		control = "Hold VACUUM near dust."
 	elseif bindings ~= nil then
 		local keys = if string.sub(input.Name, 1, 7) == "Gamepad" then bindings.gamepad else bindings.keyboard
 		local key = if keys ~= nil then keys[1] else nil
