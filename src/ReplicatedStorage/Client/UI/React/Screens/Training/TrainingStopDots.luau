@@ -2,7 +2,7 @@
 --[=[
 	TrainingStopDots: the training run's five stop dots (done = gold with a check, this one = lilac, bigger, with its
 	number), drawn on the top edge of Prickles' card (TrainingCoach `badge`) now that the goal bar is gone (owner
-	2026-11-15: training shows no goals). A row of `phone`-sized dots, right-aligned in the frame it is given.
+	2026-11-15: training shows no goals). A row of `phone`-sized dots, from the left of the frame it is given.
 	Presentational (exempt).
 
 	@class TrainingStopDots
@@ -117,8 +117,9 @@ local function TrainingStopDots(props: TrainingStopDotsProps): React.ReactNode
 		list = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
-			HorizontalAlignment = Enum.HorizontalAlignment.Right,
-			Padding = UDim.new(0, if phone then 4 else 8),
+			-- From the left, right after the coach's name tab (the tape covers the card's top-right corner).
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			Padding = UDim.new(0, if phone then 3 else 8),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	}

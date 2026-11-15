@@ -162,7 +162,7 @@ local function TrainingGuideHud(): React.ReactNode
 			local fit = CrewVM.phoneFit(viewport.X)
 			local rightEdge = viewport.X - CREW_INSET - fit.list - CREW_GAP
 			local left = math.min(viewport.X / 2 - COACH_PHONE_WIDTH / 2, rightEdge - COACH_PHONE_WIDTH)
-			coachAt = UDim2.fromOffset(left, metrics.top)
+			coachAt = UDim2.fromOffset(left, ShiftHudViewModel.TRAINING_COACH_TOP.phone)
 		end
 		children.coach = e(TrainingCoach, {
 			line = line,

@@ -584,9 +584,9 @@ return function()
 			expect(trainingAt.Y).to.equal(at.Y + ShiftHudViewModel.TRAINING_LIVES_DROP)
 			expect(ShiftHudViewModel.TRAINING_LIVES_DROP).to.equal(40)
 			expect(trainingAt.X).to.equal(at.X)
-			-- The coach card's foot (its top at the meter's top, TRAINING_COACH_TALL tall) stays above the hearts.
-			local meter = ShiftHudViewModel.METER.phone
-			expect(meter.top + ShiftHudViewModel.TRAINING_COACH_TALL.phone < trainingAt.Y).to.equal(true)
+			-- The coach card's foot and its 7 px drop (TRAINING_COACH_TOP, TRAINING_COACH_TALL tall) clear the hearts.
+			local foot = ShiftHudViewModel.TRAINING_COACH_TOP.phone + ShiftHudViewModel.TRAINING_COACH_TALL.phone + 7
+			expect(foot + 2 <= trainingAt.Y).to.equal(true)
 			expect(trainingAt.Y + size.Y < 179).to.equal(true)
 		end)
 

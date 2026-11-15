@@ -269,7 +269,8 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	}
 	local badge = props.badge
 	if badge ~= nil then
-		local badgeLeft = textLeft - math.floor(4 * k) + math.floor(118 * k) + math.floor(10 * k)
+		-- 20 px (desktop) past the name tab's end, so the first dot never touches it (Studio capture 11-15).
+		local badgeLeft = textLeft - math.floor(4 * k) + math.floor(118 * k) + math.floor(20 * k)
 		local badgeRight = card.X - math.floor(50 * k)
 		local badgeHeight = math.floor(40 * k)
 		children.badge = e("Frame", {

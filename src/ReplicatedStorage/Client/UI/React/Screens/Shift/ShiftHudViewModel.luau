@@ -147,6 +147,9 @@ ShiftHudViewModel.METER_ICON_OVERHANG = 0.38
 -- meter's top and this tall (design px, its head and name tab included: TrainingCoach's phone card), and the hearts drop
 -- TRAINING_LIVES_DROP under it. On desktop the card stays bottom-left and the hearts stay put.
 ShiftHudViewModel.TRAINING_COACH_TALL = table.freeze({ phone = 115 })
+-- The phone coach card's top (design px): 10 px over the meter's, so its foot and its 7 px drop clear the hearts
+-- (Studio capture 11-15: at the meter's top the drop sat on the hearts).
+ShiftHudViewModel.TRAINING_COACH_TOP = table.freeze({ phone = 18 })
 ShiftHudViewModel.TRAINING_LIVES_DROP = 40
 
 -- The local player's Gloom-life hearts, just under the meter (HUD design px): a heart's side (`pip`; never under 20),
