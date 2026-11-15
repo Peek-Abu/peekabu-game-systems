@@ -92,8 +92,9 @@ export type ToonViewportProps = {
 	style: number?,
 	-- A live hero's idle item (the key after the dot, one that fits the skin; nil = the skin's own idle).
 	idle: string?,
-	-- false: an employee preview without the rank lanyard (an item's card or page shows the item, not you: owner
-	-- 11-15). nil wears it. An outfit (your own look) always keeps what you wear.
+	-- true: the employee preview wears your rank lanyard (a surface that shows YOU: the Inventory employee page, the
+	-- employee page's title art). nil or false: none (owner 11-15: an item, a hire or a coach shows the employee, not you). An
+	-- outfit (your own look) always keeps what you wear.
 	lanyard: boolean?,
 	live: boolean?,
 	-- A Cosmetic emote id: a live hero loops it.
@@ -220,13 +221,21 @@ local function build(props: ToonViewportProps): (Model?, boolean)
 			false
 	end
 	if props.live == true then
-		local model = EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage, props.style, props.lanyard)
+		local model =
+			EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage, props.style, props.lanyard == true)
 		if model ~= nil then
 			return model, true
 		end
 	end
 	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(employee), props.context or "idle", {})
-	return EmployeePreviewSystem.static(employee, props.skin, ReplicatedStorage, pose, props.style, props.lanyard),
+	return EmployeePreviewSystem.static(
+		employee,
+		props.skin,
+		ReplicatedStorage,
+		pose,
+		props.style,
+		props.lanyard == true
+	),
 		false
 end
 
@@ -236,7 +245,7 @@ local function lookKey(props: ToonViewportProps): string
 	if outfit ~= nil then
 		return `{outfit.employee}|{outfit.look.skin}|{outfit.look.style}|{outfit.vacuum}`
 	end
-	local lanyard = if props.lanyard == false then "bare" else ""
+	local lanyard = if props.lanyard == true then "lanyard" else ""
 	return `{props.employee or ""}|{props.skin or ""}|{props.style or 1}|{props.vacuum or ""}|{lanyard}`
 end
 

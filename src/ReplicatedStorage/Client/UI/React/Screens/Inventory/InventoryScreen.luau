@@ -200,6 +200,8 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 				return e(ToonViewport, {
 					employee = employee,
 					skin = if look ~= nil then VM.skinKey(look.skin) else nil,
+					-- Your own employee: it wears your rank lanyard (owner 11-15: only surfaces that show you do).
+					lanyard = true,
 					framing = "upper",
 					size = UDim2.fromOffset(size, size),
 				})
