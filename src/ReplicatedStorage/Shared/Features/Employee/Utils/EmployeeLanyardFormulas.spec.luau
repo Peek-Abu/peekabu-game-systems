@@ -61,6 +61,95 @@ return function()
 		end)
 	end)
 
+	describe("part-ribbon runs (the strap built from Parts when EditableMesh is refused)", function()
+		local NAMES = { "Pippa", "Cappy", "CappyNoHoodie", "Prickles", "Manager" }
+
+		local function v3(t)
+			return Vector3.new(t[1], t[2], t[3])
+		end
+
+		-- The furthest a run's straight, flat segment strays from the fitted strap at any station it covers: the
+		-- centre line's distance plus the half-width edge swing from the station's normal leaning off the run's.
+		local function runError(fit, width, run)
+			local rb = fit.ribbon
+			local function point(i)
+				return v3(rb.centre[i]) + v3(rb.offset[i][3])
+			end
+			local a, b = point(run[1]), point(run[2])
+			local d = b - a
+			local normal = (v3(rb.normal[run[1]]) + v3(rb.normal[run[2]])).Unit
+			local worst = 0
+			for k = run[1], run[2] do
+				local p = point(k) - a
+				local t = math.clamp(p:Dot(d) / d:Dot(d), 0, 1)
+				local lean = v3(rb.normal[k]).Unit:Dot(normal)
+				local swing = width / 2 * math.sqrt(math.max(0, 1 - lean * lean))
+				worst = math.max(worst, (p - d * t).Magnitude + swing)
+			end
+			return worst
+		end
+
+		it("covers every station once, in order, end to end", function()
+			for _, name in NAMES do
+				local fit = EmployeeLanyardFormulas.fit(name)
+				local runs = EmployeeLanyardFormulas.ribbonRuns(fit, EmployeeLanyardFormulas.width(fit, 1), 0.01)
+				expect(runs[1][1]).to.equal(1)
+				expect(runs[#runs][2]).to.equal(#fit.ribbon.centre)
+				for i, run in runs do
+					expect(run[2] > run[1]).to.equal(true)
+					if i > 1 then
+						expect(run[1]).to.equal(runs[i - 1][2])
+					end
+				end
+			end
+		end)
+
+		it("keeps every run within the tolerance of the fitted strap", function()
+			for _, name in NAMES do
+				local fit = EmployeeLanyardFormulas.fit(name)
+				for _, rank in { 1, 7 } do
+					local width = EmployeeLanyardFormulas.width(fit, rank)
+					for _, tolerance in { 0.005, 0.02 } do
+						for _, run in EmployeeLanyardFormulas.ribbonRuns(fit, width, tolerance) do
+							-- a two-station run is the fitted segment itself, whatever its error
+							if run[2] - run[1] > 1 then
+								expect(runError(fit, width, run) <= tolerance + 1e-9).to.equal(true)
+							end
+						end
+					end
+				end
+			end
+		end)
+
+		it("is one segment per station at zero tolerance", function()
+			local fit = EmployeeLanyardFormulas.fit("Pippa")
+			local runs = EmployeeLanyardFormulas.ribbonRuns(fit, EmployeeLanyardFormulas.width(fit, 1), 0)
+			expect(#runs).to.equal(#fit.ribbon.centre - 1)
+		end)
+
+		it("cuts the strap's parts at the character and preview tolerances", function()
+			-- Measured 2026-11-15 (Lobby): every strap was 96 Parts, the most of any piece on a character (Pippa: 96
+			-- of 140 parts) and ~1,150 of the 3,138 instances the Shop's cards add when it opens.
+			for _, name in NAMES do
+				local fit = EmployeeLanyardFormulas.fit(name)
+				local stations = #fit.ribbon.centre
+				for _, rank in { 1, 7 } do
+					local width = EmployeeLanyardFormulas.width(fit, rank)
+					local character =
+						#EmployeeLanyardFormulas.ribbonRuns(fit, width, EmployeeLanyardConstants.PART_RIBBON_TOLERANCE)
+					local preview = #EmployeeLanyardFormulas.ribbonRuns(
+						fit,
+						width,
+						EmployeeLanyardConstants.PREVIEW_RIBBON_TOLERANCE
+					)
+					expect(character <= stations * 0.75).to.equal(true)
+					expect(preview <= stations * 0.45).to.equal(true)
+					expect(preview <= character).to.equal(true)
+				end
+			end
+		end)
+	end)
+
 	describe("imported badge orientation", function()
 		it("puts the uploaded front outward and rear relief behind the front information", function()
 			-- Verified on the live unflipped R1: imported -Z shows the 3D NEW! over the front GUI.

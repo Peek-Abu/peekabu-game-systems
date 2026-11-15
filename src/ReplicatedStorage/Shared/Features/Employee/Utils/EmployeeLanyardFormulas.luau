@@ -213,6 +213,58 @@ function EmployeeLanyardFormulas.geometry(fit: Fit, width: number, scale: number
 	return { pos = pos, tris = tris, triBand = band, nSamples = n }
 end
 
+local function unit(a: Vec): Vec
+	local length = math.sqrt(dot(a, a))
+	return if length > 1e-9 then mulv(a, 1 / length) else a
+end
+
+-- The strap's centre line at station `i` (the ribbon's middle offset row).
+local function strapPoint(rb: Ribbon, i: number): Vec
+	return add(rb.centre[i], rb.offset[i][3])
+end
+
+-- How far one straight, flat segment from station `first` to `last` strays from the fitted strap at the stations it
+-- spans: the centre line's distance from the chord, plus the half-width edge swing where a station's normal leans off
+-- the segment's (the mean of its two end normals).
+local function runError(rb: Ribbon, halfWidth: number, first: number, last: number): number
+	local a = strapPoint(rb, first)
+	local d = sub(strapPoint(rb, last), a)
+	local dd = dot(d, d)
+	local normal = unit(add(unit(rb.normal[first]), unit(rb.normal[last])))
+	local worst = 0
+	for k = first, last do
+		local p = sub(strapPoint(rb, k), a)
+		local t = if dd > 1e-12 then math.clamp(dot(p, d) / dd, 0, 1) else 0
+		local off = sub(p, mulv(d, t))
+		local lean = dot(unit(rb.normal[k]), normal)
+		worst = math.max(worst, math.sqrt(dot(off, off)) + halfWidth * math.sqrt(math.max(0, 1 - lean * lean)))
+	end
+	return worst
+end
+
+--[=[
+	The fewest straight segments the part-ribbon strap (the fallback when EditableMesh is refused) can be built from
+	while staying within `tolerance` studs (fit space, before scaling) of the fitted strap: runs of station indices
+	`{ first, last }`, end to end from station 1 to the last. Each run grows while it stays within the tolerance
+	(greedy); tolerance 0 gives one run per pair of stations (the old 96-part strap).
+]=]
+function EmployeeLanyardFormulas.ribbonRuns(fit: Fit, width: number, tolerance: number): { { number } }
+	local rb = fit.ribbon
+	local n = #rb.centre
+	local halfWidth = width / 2
+	local runs: { { number } } = {}
+	local first = 1
+	while first < n do
+		local last = first + 1
+		while last < n and runError(rb, halfWidth, first, last + 1) <= tolerance do
+			last += 1
+		end
+		table.insert(runs, { first, last })
+		first = last
+	end
+	return runs
+end
+
 local function rad(d: number): number
 	return d * math.pi / 180
 end

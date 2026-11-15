@@ -169,22 +169,31 @@ local function buildStrapMesh(fit: Fit, rank: number, scale: number, ut: BasePar
 end
 
 -- Synchronous 3D part-ribbon fallback along the fitted stations: renders in both Workspace and ViewportFrames even
--- when EditableMesh is disabled in Experience Settings -> Security.
-local function fallbackRibbonParts(fit: Fit, rank: number, scale: number, ut: BasePart, parent: Instance)
+-- when EditableMesh is disabled in Experience Settings -> Security. One Part per straight run within `tolerance` studs
+-- of the fitted strap (EmployeeLanyardFormulas.ribbonRuns), not one per station: 96 Parts became 8-67.
+local function fallbackRibbonParts(
+	fit: Fit,
+	rank: number,
+	scale: number,
+	ut: BasePart,
+	parent: Instance,
+	tolerance: number
+)
 	local rb = fit.ribbon
-	local n = #rb.centre
 	local col = EmployeeLanyardConstants.COLOURS[rank] or EmployeeLanyardConstants.COLOURS[1]
 	local color = rgb(col.main)
-	local w = EmployeeLanyardFormulas.width(fit, rank) * scale
+	local width = EmployeeLanyardFormulas.width(fit, rank)
+	local w = width * scale
 	local thickness = math.max(0.012, EmployeeLanyardConstants.STRAP_T * scale * 2)
-	for i = 1, n - 1 do
+	for _, run in EmployeeLanyardFormulas.ribbonRuns(fit, width, tolerance) do
+		local i, j = run[1], run[2]
 		local p0 = (v3(rb.centre[i]) + v3(rb.offset[i][3])) * scale
-		local p1 = (v3(rb.centre[i + 1]) + v3(rb.offset[i + 1][3])) * scale
+		local p1 = (v3(rb.centre[j]) + v3(rb.offset[j][3])) * scale
 		local delta = p1 - p0
 		local len = delta.Magnitude
 		if len > 1e-4 then
 			local mid = (p0 + p1) * 0.5
-			local nrm = (v3(rb.normal[i]) + v3(rb.normal[i + 1])).Unit
+			local nrm = (v3(rb.normal[i]) + v3(rb.normal[j])).Unit
 			local tan = delta / len
 			local bin = tan:Cross(nrm)
 			if bin.Magnitude < 1e-4 then
@@ -231,7 +240,11 @@ function EmployeeLanyardSystem.attach(
 	if strap ~= nil then
 		strap.Parent = folder
 	else
-		fallbackRibbonParts(fit, rank, scale, ut, folder)
+		-- syncOnly is the preview path (attachPreview): a card is small, so it takes the coarser strap.
+		local tolerance = if syncOnly
+			then EmployeeLanyardConstants.PREVIEW_RIBBON_TOLERANCE
+			else EmployeeLanyardConstants.PART_RIBBON_TOLERANCE
+		fallbackRibbonParts(fit, rank, scale, ut, folder, tolerance)
 	end
 	local badgeWeld: Weld? = nil
 	local badgeRoot: BasePart? = nil

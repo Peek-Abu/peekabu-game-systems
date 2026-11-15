@@ -159,6 +159,12 @@ return table.freeze({
 	-- Studs the info card's face sits in front of the badge's front-most part. The badge is only ~0.03-0.08 studs
 	-- thick, so a buried card is hidden outright up close; this keeps it flush but always in front.
 	CARD_CLEARANCE = 0.002,
+	-- Studs (fit space) the part-ribbon strap may stray from the fitted strap (EmployeeLanyardFormulas.ribbonRuns). It
+	-- is built from Parts whenever EditableMesh is refused (every character on 2026-11-15: 96 Parts each, the most of
+	-- any piece on a character) and always on previews. On a character 0.01 is under a quarter of the strap's rank-1 width (0.04-0.09);
+	-- a preview card is a few hundred pixels tall, so it takes 0.02.
+	PART_RIBBON_TOLERANCE = 0.01,
+	PREVIEW_RIBBON_TOLERANCE = 0.02,
 	RANK_RATIO = table.freeze(RANK_RATIO),
 	ACROSS = table.freeze(ACROSS),
 	COLOURS = table.freeze(COLOURS),
