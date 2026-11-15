@@ -3,7 +3,9 @@
 	OccupantWatchReportSystem: this client's camera report for a freeze kind's "watched" check (Bramble;
 	OccupantWatchSystem on the server). Every FREEZE_REPORT_INTERVAL (10 Hz), and only while a freeze kind's rig (a
 	model tagged OccupantConstants.TAG whose kind has the freeze twist) exists, it sends OccupantEvents.CameraReport:
-	the camera's position and look direction. Nothing is sent while the monster is Harlow.
+	the camera's position, look and up directions, its vertical FieldOfView and the screen's aspect (ViewportSize), so
+	the server checks what is on this player's actual screen, edges included. Nothing is sent while the monster is
+	Harlow.
 
 	The server trusts none of it beyond its own bounds (freshness, the camera near the head with a clear line, its own
 	rays). `freezeKindOut` is specced; the rest is a RunService/ByteNet shell.
@@ -56,7 +58,15 @@ function OccupantWatchReportSystem.start()
 			return
 		end
 		local frame = camera.CFrame
-		OccupantEvents.packets.CameraReport.send({ position = frame.Position, look = frame.LookVector })
+		local viewport = camera.ViewportSize
+		local aspect = if viewport.Y > 0 then viewport.X / viewport.Y else 16 / 9
+		OccupantEvents.packets.CameraReport.send({
+			position = frame.Position,
+			look = frame.LookVector,
+			up = frame.UpVector,
+			fov = camera.FieldOfView,
+			aspect = aspect,
+		})
 		sent += 1
 	end)
 end

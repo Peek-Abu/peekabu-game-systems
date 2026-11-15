@@ -145,7 +145,7 @@ return function()
 	end)
 
 	describe("begin", function()
-		it("goes up onto the picked top unseen, facing the nearest kid, still", function()
+		it("goes up onto the picked top unseen, facing out over its open side (never toward a kid), still", function()
 			local step = OccupantPerchRules.begin(mind(), senses())
 			expect(step).to.be.ok()
 			expect(step.mind.mode).to.equal("perch")
@@ -156,7 +156,9 @@ return function()
 			local up = effectOf(step, "perch")
 			expect(up.top).to.equal(Vector3.new(30, 7, 0))
 			expect(up.at).to.equal(Vector3.new(30, 9, 0))
-			expect(up.facing).to.equal(KID)
+			-- Its one landing is in front (+Z): it faces that way, whoever stands where (owner 11-14: a kid behind a
+			-- wall had it leaning into the wall).
+			expect(up.facing).to.equal(Vector3.new(30, 0, 4))
 		end)
 
 		it("is nil when not ready or nothing fits", function()
@@ -182,7 +184,7 @@ return function()
 			expect(effectOf(step, "drop")).to.equal(nil)
 		end)
 
-		it("drops to the checked landing nearest the kid once someone watched him up there and looked away", function()
+		it("drops to its open side's landing once someone watched him up there and looked away", function()
 			local step = OccupantPerchRules.think(perched(), senses({ now = 106, unfrozenAt = 105.5 }))
 			expect(step.mind.mode).to.equal("patrol")
 			expect(step.mind.perch).to.equal(nil)
@@ -207,12 +209,21 @@ return function()
 	end)
 
 	describe("floorFor and landingCandidates (where the drop lands)", function()
-		it("takes the checked landing nearest the nearest kid who is out", function()
-			local p = spot("a", 0, { landings = { Vector3.new(0, 0, -4), Vector3.new(0, 0, 4) } })
-			local kid = { { userId = 7, position = Vector3.new(0, 0, 30), clear = false } }
-			expect(OccupantPerchRules.floorFor(p, senses({ players = kid }))).to.equal(Vector3.new(0, 0, 4))
-			local other = { { userId = 7, position = Vector3.new(0, 0, -30), clear = false } }
-			expect(OccupantPerchRules.floorFor(p, senses({ players = other }))).to.equal(Vector3.new(0, 0, -4))
+		it("lands on the open side: the landing nearest the landings' mean direction, whoever is where", function()
+			-- An end locker: open in front (+Z), at its end (+X) and between them; the mean points front-and-end.
+			local corner = spot("a", 0, {
+				landings = { Vector3.new(0, 0, 4), Vector3.new(4, 0, 0), Vector3.new(3, 0, 3) },
+			})
+			local behind = { { userId = 7, position = Vector3.new(0, 0, -30), clear = false } }
+			expect(OccupantPerchRules.floorFor(corner, senses({ players = behind }))).to.equal(Vector3.new(3, 0, 3))
+			-- A mid-bank locker: one landing, straight out in front.
+			local mid = spot("b", 0, { landings = { Vector3.new(0, 0, 4) } })
+			expect(OccupantPerchRules.floorFor(mid, senses({ players = behind }))).to.equal(Vector3.new(0, 0, 4))
+		end)
+
+		it("takes the first landing when they cancel out (open on two opposite sides)", function()
+			local both = spot("a", 0, { landings = { Vector3.new(0, 0, 4), Vector3.new(0, 0, -4) } })
+			expect(OccupantPerchRules.floorFor(both, senses())).to.equal(Vector3.new(0, 0, 4))
 		end)
 
 		it("falls back to the nearest route point only for a perch with no landing", function()

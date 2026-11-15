@@ -90,27 +90,63 @@ local function finite(vector: Vector3): boolean
 		and math.abs(vector.Z) < math.huge
 end
 
---[=[
-	A camera report's position and unit look, or nil when either is not finite or the look is (near) zero.
-]=]
-function OccupantWatchSystem.parseReport(data: { position: Vector3, look: Vector3 }): (Vector3?, Vector3?)
-	local position, look = data.position, data.look
-	if typeof(position) ~= "Vector3" or typeof(look) ~= "Vector3" then
-		return nil, nil
-	end
-	if not finite(position) or not finite(look) or look.Magnitude < 1e-3 then
-		return nil, nil
-	end
-	return position, look.Unit
+-- The camera report as it arrives (OccupantEvents.CameraReport).
+export type ReportData = { position: Vector3, look: Vector3, up: Vector3, fov: number, aspect: number }
+
+local function number(value: unknown): boolean
+	return type(value) == "number" and value == value and math.abs(value) < math.huge
 end
 
 --[=[
-	The rig's three points a watcher may see: its head, its chest (the root) and its knees (halfway down its legs).
+	A camera report as the server keeps it (OccupantWatchRules.Report, less its time): its position, unit look, an up
+	square to the look (world up when the sent one is broken or along the look) and its half-screen tangents
+	(OccupantWatchRules.screen: the FOV and aspect held to a real screen). Nil when the position, look, FOV or aspect is
+	not finite, or the look is (near) zero.
+]=]
+function OccupantWatchSystem.parseReport(data: ReportData): Report?
+	local position, look, up = data.position, data.look, data.up
+	if typeof(position) ~= "Vector3" or typeof(look) ~= "Vector3" then
+		return nil
+	end
+	if not finite(position) or not finite(look) or look.Magnitude < 1e-3 then
+		return nil
+	end
+	if not number(data.fov) or not number(data.aspect) then
+		return nil
+	end
+	local unit = look.Unit
+	local sent = if typeof(up) == "Vector3" and finite(up) then up else Vector3.yAxis
+	local square = sent - unit * sent:Dot(unit)
+	if square.Magnitude < 1e-3 then
+		-- A broken up, or one along the look: square world up (or, looking straight up or down, world forward).
+		local world = if math.abs(unit.Y) < 0.99 then Vector3.yAxis else Vector3.zAxis
+		square = world - unit * world:Dot(unit)
+	end
+	local tanV, tanH = OccupantWatchRules.screen(data.fov, data.aspect)
+	return { position = position, look = unit, up = square.Unit, tanV = tanV, tanH = tanH, receivedAt = 0 }
+end
+
+-- How far over the ground its feet point sits (a ray to the ground itself would end in the floor).
+OccupantWatchSystem.FEET_LIFT = 0.2
+
+--[=[
+	The points of the rig a watcher may see (owner 11-14: any of it on the screen counts): the centre of every visible
+	part of its body (not the invisible root or any part with Transparency 1), the top of its head, and its feet (the
+	ground under its root, FEET_LIFT up).
 ]=]
 function OccupantWatchSystem.points(rig: Rig): { Vector3 }
+	local points: { Vector3 } = {}
+	for _, item in rig.model:GetDescendants() do
+		if item:IsA("BasePart") and item ~= rig.root and item.Transparency < 1 then
+			table.insert(points, item.Position)
+		end
+	end
+	local skull = rig.head
+	table.insert(points, (skull.CFrame * CFrame.new(0, skull.Size.Y / 2, 0)).Position)
 	local root = rig.root
-	local knees = root.Position - Vector3.new(0, root.Size.Y / 2 + rig.humanoid.HipHeight / 2, 0)
-	return { rig.head.Position, root.Position, knees }
+	local ground = root.Size.Y / 2 + rig.humanoid.HipHeight - OccupantWatchSystem.FEET_LIFT
+	table.insert(points, root.Position - Vector3.new(0, ground, 0))
+	return points
 end
 
 -- Whether `model`'s kind has the freeze twist.
@@ -151,14 +187,15 @@ local onReport = RequestHandler.wrap({
 	-- 10 a second, with room for a burst after a hitch.
 	rateLimit = { maxRequests = 20, windowSeconds = 1 },
 	onReject = "count",
-	validate = function(data: { position: Vector3, look: Vector3 }, _player: Player): (boolean, string?, Report?)
-		local position, look = OccupantWatchSystem.parseReport(data)
-		if position == nil or look == nil then
+	validate = function(data: ReportData, _player: Player): (boolean, string?, Report?)
+		local report = OccupantWatchSystem.parseReport(data)
+		if report == nil then
 			return false, "bad camera report", nil
 		end
-		return true, nil, { position = position, look = look, receivedAt = os.clock() }
+		report.receivedAt = os.clock()
+		return true, nil, report
 	end,
-	handler = function(_data: { position: Vector3, look: Vector3 }, player: Player, report: Report?)
+	handler = function(_data: ReportData, player: Player, report: Report?)
 		if report ~= nil and watchedModel ~= nil then
 			reports[player] = report
 			counters.reports += 1
@@ -190,17 +227,19 @@ local function clearLine(from: Vector3, to: Vector3, params: RaycastParams): boo
 	return Workspace:Raycast(from, to - from, params) == nil
 end
 
--- Whether some body point is in the camera's cone and range (worth the rays).
-local function inView(report: Report, points: { Vector3 }): boolean
+-- The body points on the camera's screen and in range (only these are worth a ray).
+local function onScreen(report: Report, points: { Vector3 }): { Vector3 }
+	local shown: { Vector3 } = {}
 	for _, point in points do
-		if
-			OccupantWatchRules.inRange(report.position, point)
-			and OccupantWatchRules.inCone(report.position, report.look, point)
-		then
-			return true
+		if OccupantWatchRules.inRange(report.position, point) and OccupantWatchRules.onScreen(report, point) then
+			table.insert(shown, point)
 		end
 	end
-	return false
+	return shown
+end
+
+local function inView(report: Report, points: { Vector3 }): boolean
+	return #onScreen(report, points) > 0
 end
 
 -- Every perch part's spot, as measured on the map, once per part (the props never move during a run).
@@ -339,8 +378,13 @@ local function watches(
 	viewer.report = report
 	viewer.cameraClear = clearLine(viewer.head, report.position, params)
 	if viewer.cameraClear then
-		for _, point in points do
-			table.insert(viewer.sightlines, { point = point, clear = clearLine(report.position, point, params) })
+		-- Rays only to the points on the screen, and none after the first clear one.
+		for _, point in onScreen(report, points) do
+			local clear = clearLine(report.position, point, params)
+			table.insert(viewer.sightlines, { point = point, clear = clear })
+			if clear then
+				break
+			end
 		end
 	end
 	return OccupantWatchRules.watching(viewer, now)
@@ -488,13 +532,11 @@ function OccupantWatchSystem.start(from: Source)
 	end
 	source = from
 	local elapsed = 0
-	local stopReports = OccupantEvents.packets.CameraReport.listen(
-		function(data: { position: Vector3, look: Vector3 }, player: Player?)
-			if player ~= nil then
-				onReport(data, player)
-			end
+	local stopReports = OccupantEvents.packets.CameraReport.listen(function(data: ReportData, player: Player?)
+		if player ~= nil then
+			onReport(data, player)
 		end
-	)
+	end)
 	local heartbeat = RunService.Heartbeat:Connect(function(deltaTime: number)
 		elapsed += deltaTime
 		if elapsed < OccupantConstants.FREEZE_CHECK_INTERVAL then

@@ -8,9 +8,10 @@
 	- their client's camera report is fresh: received under FREEZE_REPORT_FRESH (0.3 s) ago (`fresh`);
 	- the reported camera sits within FREEZE_CAMERA_RANGE (16) studs of their head (`cameraNear`), with a clear line
 	  from the head to the camera (`cameraClear`, the caller's ray): no camera forged far off or through a wall;
-	- one of the monster's points (head, chest, knees) is inside the camera's FREEZE_CONE (35 degrees) look cone
-	  (`inCone`), within FREEZE_RANGE (80) studs of the camera, with a clear server ray to it (the caller's
-	  `sightlines`).
+	- one of the monster's points (every visible part of its body, the top of its head, its feet) is on that camera's
+	  screen (`onScreen`: in front of it and inside its reported FOV and aspect, edges included; owner 11-14), within
+	  FREEZE_RANGE (80) studs of the camera, with a clear server ray to it (the caller's `sightlines`): so any of it
+	  that shows on the screen, even a sliver at the edge or the part a wall does not hide, counts.
 
 	The freeze (`advance`): any watcher freezes it at once; after the last one looks away it holds
 	FREEZE_UNFREEZE_BEAT (0.4 s), then moves. `canCatch`: never while frozen, nor for FREEZE_CATCH_BLOCK (0.6 s) after
@@ -37,10 +38,14 @@ type Senses = OccupantTypes.Senses
 type Effect = OccupantTypes.Effect
 type Step = OccupantMindUtils.Step
 
--- A client's camera report, as the server received it.
+-- A client's camera report, as the server keeps it: where the camera is, its unit look and up (square to the look),
+-- its half-screen tangents (`screen`), and when the server received it.
 export type Report = {
 	position: Vector3,
 	look: Vector3,
+	up: Vector3,
+	tanV: number,
+	tanH: number,
 	receivedAt: number,
 }
 
@@ -73,8 +78,6 @@ export type Freeze = {
 	unfrozenAt: number?,
 }
 
-local COS_CONE = math.cos(math.rad(OccupantConstants.FREEZE_CONE))
-
 local OccupantWatchRules = {}
 
 function OccupantWatchRules.eligible(viewer: Viewer): boolean
@@ -90,15 +93,38 @@ function OccupantWatchRules.cameraNear(head: Vector3, camera: Vector3): boolean
 end
 
 --[=[
-	Whether `point` is within FREEZE_CONE degrees of the camera's `look` (false for a zero look or a point at the
-	camera).
+	The half-screen tangents of a camera with a `fov`-degree vertical field of view on a screen `aspect` wide (width /
+	height): tan(fov / 2) and that times the aspect, each FREEZE_SCREEN_SLACK wider. The FOV is held to
+	FREEZE_FOV_MIN..FREEZE_FOV_MAX and the aspect to FREEZE_ASPECT_MIN..FREEZE_ASPECT_MAX.
 ]=]
-function OccupantWatchRules.inCone(camera: Vector3, look: Vector3, point: Vector3): boolean
-	local offset = point - camera
-	if offset.Magnitude < 1e-3 or look.Magnitude < 1e-3 then
+function OccupantWatchRules.screen(fov: number, aspect: number): (number, number)
+	local degrees = math.clamp(fov, OccupantConstants.FREEZE_FOV_MIN, OccupantConstants.FREEZE_FOV_MAX)
+	local wide = math.clamp(aspect, OccupantConstants.FREEZE_ASPECT_MIN, OccupantConstants.FREEZE_ASPECT_MAX)
+	local tanV = math.tan(math.rad(degrees / 2)) * (1 + OccupantConstants.FREEZE_SCREEN_SLACK)
+	return tanV, tanV * wide
+end
+
+--[=[
+	Whether `point` shows on the camera's screen: in front of the camera, and within its half-screens across (right,
+	from the look and up) and up and down (false for a zero look or a point at the camera).
+]=]
+function OccupantWatchRules.onScreen(report: Report, point: Vector3): boolean
+	local look = report.look
+	if look.Magnitude < 1e-3 then
 		return false
 	end
-	return offset.Unit:Dot(look.Unit) >= COS_CONE
+	local offset = point - report.position
+	local forward = offset:Dot(look.Unit)
+	if forward <= 1e-3 then
+		return false
+	end
+	local right = look:Cross(report.up)
+	if right.Magnitude < 1e-3 then
+		return false
+	end
+	right = right.Unit
+	local up = right:Cross(look).Unit
+	return math.abs(offset:Dot(right)) <= forward * report.tanH and math.abs(offset:Dot(up)) <= forward * report.tanV
 end
 
 --[=[
@@ -123,7 +149,7 @@ function OccupantWatchRules.watching(viewer: Viewer, now: number): boolean
 		if
 			line.clear
 			and OccupantWatchRules.inRange(report.position, line.point)
-			and OccupantWatchRules.inCone(report.position, report.look, line.point)
+			and OccupantWatchRules.onScreen(report, line.point)
 		then
 			return true
 		end

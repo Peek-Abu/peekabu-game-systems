@@ -10,6 +10,20 @@ local HEAD = Vector3.new(0, 8, 30)
 local CHEST = Vector3.new(0, 5, 30)
 local KNEES = Vector3.new(0, 1.5, 30)
 
+-- A camera report as the server keeps it: at `position` looking along `look` (world up unless `up`), a `fov`-degree
+-- (vertical) screen of `aspect` (default 70 degrees, 16:9), received at 100.
+local function report(position, look, fov, aspect, up)
+	local tanV, tanH = OccupantWatchRules.screen(fov or 70, aspect or 16 / 9)
+	return {
+		position = position,
+		look = look,
+		up = up or Vector3.yAxis,
+		tanV = tanV,
+		tanH = tanH,
+		receivedAt = 100,
+	}
+end
+
 -- A crew member at the origin (head at y 5), camera 8 studs behind the head looking at the monster's chest, a report
 -- received at 100, every ray clear; `extra` overrides any field.
 local function viewer(extra)
@@ -21,7 +35,7 @@ local function viewer(extra)
 		inTruck = false,
 		vacuuming = false,
 		head = Vector3.new(0, 5, 0),
-		report = { position = camera, look = (CHEST - camera).Unit, receivedAt = 100 },
+		report = report(camera, (CHEST - camera).Unit),
 		cameraClear = true,
 		sightlines = {
 			{ point = HEAD, clear = true },
@@ -72,10 +86,10 @@ return function()
 
 		it("refuses a forged camera far from the head", function()
 			local far = Vector3.new(0, 7, 20)
-			local v = viewer({ report = { position = far, look = (CHEST - far).Unit, receivedAt = 100 } })
+			local v = viewer({ report = report(far, (CHEST - far).Unit) })
 			expect(OccupantWatchRules.watching(v, 100.1)).to.equal(false)
 			local edge = Vector3.new(0, 5, -C.FREEZE_CAMERA_RANGE)
-			local ok = viewer({ report = { position = edge, look = (CHEST - edge).Unit, receivedAt = 100 } })
+			local ok = viewer({ report = report(edge, (CHEST - edge).Unit) })
 			expect(OccupantWatchRules.watching(ok, 100.1)).to.equal(true)
 		end)
 
@@ -83,25 +97,62 @@ return function()
 			expect(OccupantWatchRules.watching(viewer({ cameraClear = false }), 100.1)).to.equal(false)
 		end)
 
-		it("needs the camera to look within 35 degrees of it", function()
-			local camera = Vector3.new(0, 7, -8)
-			local toChest = (CHEST - camera).Unit
-			local function turned(degrees)
-				local look = CFrame.fromAxisAngle(Vector3.yAxis, math.rad(degrees)):VectorToWorldSpace(toChest)
-				return viewer({ report = { position = camera, look = look, receivedAt = 100 } })
+		it("counts it anywhere on the screen, out to its very edges (owner 11-14: the edges must count)", function()
+			-- A 70 degree, 16:9 screen reaches atan(16/9 x tan 35) = 51.2 degrees left and right, 35 up and down.
+			local camera = Vector3.new(0, 5, 0)
+			local function seenAt(yaw, pitch, fov, aspect)
+				local direction = CFrame.Angles(0, math.rad(yaw), 0)
+					* CFrame.Angles(math.rad(pitch), 0, 0)
+					* Vector3.new(0, 0, -1)
+				local point = camera + direction * 20
+				return OccupantWatchRules.watching(
+					viewer({
+						report = report(camera, Vector3.new(0, 0, -1), fov, aspect),
+						sightlines = { { point = point, clear = true } },
+					}),
+					100.1
+				)
 			end
-			expect(OccupantWatchRules.watching(turned(C.FREEZE_CONE - 6), 100.1)).to.equal(true)
-			expect(OccupantWatchRules.watching(turned(60), 100.1)).to.equal(false)
-			expect(OccupantWatchRules.watching(turned(180), 100.1)).to.equal(false)
+			expect(seenAt(0, 0)).to.equal(true)
+			expect(seenAt(49, 0)).to.equal(true)
+			expect(seenAt(-49, 0)).to.equal(true)
+			expect(seenAt(54, 0)).to.equal(false)
+			expect(seenAt(0, 33)).to.equal(true)
+			expect(seenAt(0, -33)).to.equal(true)
+			expect(seenAt(0, 38)).to.equal(false)
+			-- Near a corner of the screen, just inside both edges.
+			expect(seenAt(40, 25)).to.equal(true)
+			-- A wide phone screen (2.2:1) reaches further to the sides (57 degrees).
+			expect(seenAt(55, 0, 70, 2.2)).to.equal(true)
+			expect(seenAt(55, 0)).to.equal(false)
+			-- Behind the camera never.
+			expect(seenAt(180, 0)).to.equal(false)
+			expect(seenAt(95, 0, 70, 3)).to.equal(false)
+		end)
+
+		it("takes the camera's own up (a rolled camera's screen turns with it)", function()
+			local camera = Vector3.new(0, 5, 0)
+			-- Rolled 90 degrees: the screen's long side now runs up and down, so 45 degrees up is on it.
+			local high = camera + (CFrame.Angles(math.rad(45), 0, 0) * Vector3.new(0, 0, -1)) * 20
+			local rolled = viewer({
+				report = report(camera, Vector3.new(0, 0, -1), 70, 16 / 9, Vector3.new(1, 0, 0)),
+				sightlines = { { point = high, clear = true } },
+			})
+			expect(OccupantWatchRules.watching(rolled, 100.1)).to.equal(true)
+			local level = viewer({
+				report = report(camera, Vector3.new(0, 0, -1), 70, 16 / 9),
+				sightlines = { { point = high, clear = true } },
+			})
+			expect(OccupantWatchRules.watching(level, 100.1)).to.equal(false)
 		end)
 
 		it("refuses a zero or broken look direction", function()
 			local camera = Vector3.new(0, 7, -8)
-			local v = viewer({ report = { position = camera, look = Vector3.zero, receivedAt = 100 } })
+			local v = viewer({ report = report(camera, Vector3.zero) })
 			expect(OccupantWatchRules.watching(v, 100.1)).to.equal(false)
 		end)
 
-		it("counts any one clear ray to its head, chest or knees", function()
+		it("counts any one clear ray to a point on its body (partly hidden still counts)", function()
 			expect(OccupantWatchRules.watching(viewer({ sightlines = lines(true, false, false) }), 100.1)).to.equal(
 				true
 			)
@@ -114,12 +165,12 @@ return function()
 		end)
 
 		it(
-			"needs a clear ray to a point inside the cone (a clear point behind the camera's view does not count)",
+			"needs a clear ray to a point on the screen (a clear point behind the camera's view does not count)",
 			function()
 				local camera = Vector3.new(0, 7, -8)
 				local behind = Vector3.new(0, 5, -40)
 				local v = viewer({
-					report = { position = camera, look = (CHEST - camera).Unit, receivedAt = 100 },
+					report = report(camera, (CHEST - camera).Unit),
 					sightlines = { { point = behind, clear = true }, { point = CHEST, clear = false } },
 				})
 				expect(OccupantWatchRules.watching(v, 100.1)).to.equal(false)
@@ -132,7 +183,7 @@ return function()
 			local far = Vector3.new(0, 5, -8 + C.FREEZE_RANGE + 1)
 			local function at(point)
 				return viewer({
-					report = { position = camera, look = (point - camera).Unit, receivedAt = 100 },
+					report = report(camera, (point - camera).Unit),
 					sightlines = { { point = point, clear = true } },
 				})
 			end
@@ -143,9 +194,7 @@ return function()
 
 	describe("the pieces", function()
 		it("fresh: under 0.3 s, never without a report", function()
-			expect(OccupantWatchRules.fresh({ position = Vector3.zero, look = Vector3.zAxis, receivedAt = 5 }, 5.29)).to.equal(
-				true
-			)
+			expect(OccupantWatchRules.fresh(report(Vector3.zero, Vector3.zAxis), 100.29)).to.equal(true)
 			expect(OccupantWatchRules.fresh(nil, 5)).to.equal(false)
 		end)
 
@@ -154,11 +203,29 @@ return function()
 			expect(OccupantWatchRules.cameraNear(Vector3.zero, Vector3.new(0, 0, 16.5))).to.equal(false)
 		end)
 
-		it("inCone: within 35 degrees of the look", function()
-			expect(OccupantWatchRules.inCone(Vector3.zero, Vector3.zAxis, Vector3.new(0, 0, 10))).to.equal(true)
-			expect(OccupantWatchRules.inCone(Vector3.zero, Vector3.zAxis, Vector3.new(10, 0, 10))).to.equal(false)
-			expect(OccupantWatchRules.inCone(Vector3.zero, Vector3.zAxis, Vector3.new(5, 0, 10))).to.equal(true)
-			expect(OccupantWatchRules.inCone(Vector3.zero, Vector3.zAxis, Vector3.zero)).to.equal(false)
+		it("screen: the half-screen tangents of a vertical FOV and aspect, clamped to a real screen", function()
+			local tanV, tanH = OccupantWatchRules.screen(70, 16 / 9)
+			local slack = 1 + C.FREEZE_SCREEN_SLACK
+			expect(tanV).to.be.near(math.tan(math.rad(35)) * slack, 1e-6)
+			expect(tanH).to.be.near(math.tan(math.rad(35)) * 16 / 9 * slack, 1e-6)
+			-- A forged huge FOV or a silly aspect is held to FREEZE_FOV_MAX and FREEZE_ASPECT_MAX.
+			local bigV, bigH = OccupantWatchRules.screen(179, 50)
+			expect(bigV).to.be.near(math.tan(math.rad(C.FREEZE_FOV_MAX / 2)) * slack, 1e-6)
+			expect(bigH).to.be.near(bigV * C.FREEZE_ASPECT_MAX, 1e-6)
+			local smallV, smallH = OccupantWatchRules.screen(0, 0)
+			expect(smallV).to.be.near(math.tan(math.rad(C.FREEZE_FOV_MIN / 2)) * slack, 1e-6)
+			expect(smallH).to.be.near(smallV * C.FREEZE_ASPECT_MIN, 1e-6)
+		end)
+
+		it("onScreen: in front of the camera and within both half-screens", function()
+			local r = report(Vector3.zero, Vector3.new(0, 0, -1))
+			expect(OccupantWatchRules.onScreen(r, Vector3.new(0, 0, -10))).to.equal(true)
+			expect(OccupantWatchRules.onScreen(r, Vector3.new(0, 0, 10))).to.equal(false)
+			expect(OccupantWatchRules.onScreen(r, Vector3.zero)).to.equal(false)
+			expect(OccupantWatchRules.onScreen(r, Vector3.new(r.tanH * 10 * 0.99, 0, -10))).to.equal(true)
+			expect(OccupantWatchRules.onScreen(r, Vector3.new(r.tanH * 10 * 1.01, 0, -10))).to.equal(false)
+			expect(OccupantWatchRules.onScreen(r, Vector3.new(0, -r.tanV * 10 * 0.99, -10))).to.equal(true)
+			expect(OccupantWatchRules.onScreen(r, Vector3.new(0, r.tanV * 10 * 1.01, -10))).to.equal(false)
 		end)
 
 		it("eligible: alive, standing, not hiding, outside the truck and not vacuuming", function()

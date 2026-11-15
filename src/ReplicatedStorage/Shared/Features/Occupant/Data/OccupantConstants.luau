@@ -727,14 +727,21 @@ return table.freeze({
 	FROZEN_ATTRIBUTE = "OccupantFrozen",
 	HEAD_TARGET_ATTRIBUTE = "OccupantHeadTarget",
 	-- "Freezes while watched" (substitute spec, "Watched is decided on the server"; Bramble): the camera report's rate
-	-- and the server's check rate, how old a report may be, how far the camera may sit from the head (max zoom 13), the
-	-- look cone (half-angle, degrees) and the sight cap.
+	-- and the server's check rate, how old a report may be, how far the camera may sit from the head (max zoom 13) and
+	-- the sight cap. Seen = on the player's actual screen (owner 11-14: "the edges dont count"): the report carries the
+	-- camera's vertical FOV and the screen's aspect, held to FREEZE_FOV_MIN..MAX degrees and FREEZE_ASPECT_MIN..MAX
+	-- (a forged wide screen gains nothing past a real one), and a point counts FREEZE_SCREEN_SLACK past the edge (a
+	-- body part's sliver at the very edge of the screen).
 	FREEZE_REPORT_INTERVAL = 0.1,
 	FREEZE_CHECK_INTERVAL = 0.1,
 	FREEZE_REPORT_FRESH = 0.3,
 	FREEZE_CAMERA_RANGE = 16,
-	FREEZE_CONE = 35,
 	FREEZE_RANGE = 80,
+	FREEZE_FOV_MIN = 1,
+	FREEZE_FOV_MAX = 100,
+	FREEZE_ASPECT_MIN = 0.3,
+	FREEZE_ASPECT_MAX = 3,
+	FREEZE_SCREEN_SLACK = 0.02,
 	-- Fairness: after the last watcher looks away he holds this long, then no catch for FREEZE_CATCH_BLOCK more.
 	FREEZE_UNFREEZE_BEAT = 0.4,
 	FREEZE_CATCH_BLOCK = 0.6,

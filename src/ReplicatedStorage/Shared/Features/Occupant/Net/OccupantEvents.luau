@@ -62,12 +62,17 @@ local OccupantEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.bool,
 				reliabilityType = "reliable",
 			}),
-			-- From a client, 10 times a second while a freeze kind is out: its camera's position and look direction.
-			-- Unreliable: a lost report only goes stale (FREEZE_REPORT_FRESH), the next one replaces it.
+			-- From a client, 10 times a second while a freeze kind is out: its camera's position, look and up
+			-- directions, its vertical FOV (degrees) and the screen's aspect (width / height), so the server checks the
+			-- player's actual screen. Unreliable: a lost report only goes stale (FREEZE_REPORT_FRESH), the next one
+			-- replaces it.
 			CameraReport = ByteNet.definePacket({
 				value = ByteNet.struct({
 					position = ByteNet.vec3,
 					look = ByteNet.vec3,
+					up = ByteNet.vec3,
+					fov = ByteNet.float32,
+					aspect = ByteNet.float32,
 				}),
 				reliabilityType = "unreliable",
 			}),

@@ -11,10 +11,10 @@
 	- `pick`: of the perches no crew camera sees (Senses.perches) that he `fits`, the one nearest a crew member who is
 	  out (not hidden), but no nearer than PERCH_NEAR and no farther than PERCH_FAR.
 	- `begin`: up he goes, unseen and in a lights-out blackout (the `perch` effect: OccupantSeatSystem sets his crouch
-	  on the top), facing the nearest kid, still (mode "perch").
+	  on the top), facing and leaning out over its open side (`floorFor`), still (mode "perch").
 	- `think`, up there: he stays still until someone watched him there and looked away (an unfreeze after he went up),
-	  someone comes within PERCH_DROP_RANGE, or PERCH_HOLD_MAX passes; then he drops to the checked landing nearest the
-	  crew (the `drop` effect, `floorFor`, along `fallAt`: out past the edge, then down) and patrols on, not to perch
+	  someone comes within PERCH_DROP_RANGE, or PERCH_HOLD_MAX passes; then he drops to the open side's landing (the
+	  `drop` effect, `floorFor`, along `fallAt`: out past the edge, then down) and patrols on, not to perch
 	  again for PERCH_COOLDOWN. A watched think never gets here: frozen, the brain holds (OccupantBrainRules.hold).
 
 	Distances are flat (studs across the floor). Pure (see OccupantMindUtils).
@@ -67,23 +67,32 @@ local function nearestOut(senses: Senses, point: Vector3): (Glimpse?, number)
 end
 
 --[=[
-	Where the drop off `perch` lands: of its checked landings, the one nearest the crew member who is out nearest it
-	(the first with nobody out). A perch with no landing (never picked, but the break can still drop him) falls back to
-	the route point nearest it.
+	The open side of `perch` (owner play-check 11-14: a kid behind a wall had him leaning into the wall): of its checked
+	landings (each a clear way out over a floor), the one nearest their mean direction from the top, so out into the
+	hallway or the open air whoever stands where; the first when they cancel out. He faces it up there and drops to it.
+	A perch with no landing (never picked, but the break can still drop him) falls back to the route point nearest it.
 ]=]
 function OccupantPerchRules.floorFor(perch: Perch, senses: Senses): Vector3
-	if #perch.landings > 0 then
-		local kid = nearestOut(senses, perch.at)
-		if kid == nil then
-			return perch.landings[1]
+	local landings = perch.landings
+	if #landings > 0 then
+		local function direction(landing: Vector3): Vector3
+			local flat = Vector3.new(landing.X - perch.top.X, 0, landing.Z - perch.top.Z)
+			return if flat.Magnitude > 1e-6 then flat.Unit else Vector3.zero
 		end
-		local best = perch.landings[1]
-		local bestDistance = math.huge
-		for _, landing in perch.landings do
-			local distance = M.flat(landing, kid.position)
-			if distance < bestDistance then
+		local mean = Vector3.zero
+		for _, landing in landings do
+			mean += direction(landing)
+		end
+		if mean.Magnitude < 1e-3 then
+			return landings[1]
+		end
+		local best = landings[1]
+		local bestDot = -math.huge
+		for _, landing in landings do
+			local dot = direction(landing):Dot(mean.Unit)
+			if dot > bestDot + 1e-9 then
 				best = landing
-				bestDistance = distance
+				bestDot = dot
 			end
 		end
 		return best
@@ -193,8 +202,8 @@ function OccupantPerchRules.begin(mind: Mind, senses: Senses): Step?
 	nextMind.steer = nil
 	nextMind.perch = perch
 	nextMind.perchedAt = senses.now
-	local kid = nearestOut(senses, perch.at)
-	local facing = if kid ~= nil then kid.position else senses.position
+	-- Out over its open side, never toward a kid (who may be behind a wall).
+	local facing = OccupantPerchRules.floorFor(perch, senses)
 	return M.addEffect(
 		{ mind = nextMind, intent = M.IDLE },
 		{ kind = "perch", top = perch.top, facing = facing, at = perch.at }
