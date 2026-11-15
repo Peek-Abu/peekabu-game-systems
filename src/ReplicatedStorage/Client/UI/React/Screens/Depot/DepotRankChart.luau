@@ -65,16 +65,17 @@ local DESKTOP: Layout = {
 	pill = { w = 104, h = 44, size = 28 },
 }
 
+-- Laid out to draw at full size on a 667 x 375 phone (VM.PHONE_SIZE): no text under 12 px, every word whole.
 local PHONE: Layout = {
 	band = 56,
 	titleSize = 30,
-	subtitle = { x = 150, y = 8, w = 500, h = 42, size = 14 },
-	card = { x = 18, y = 74, w = 226, h = 250 },
+	subtitle = { x = 150, y = 8, w = 400, h = 42, size = 14 },
+	card = { x = 14, y = 66, w = 200, h = 266 },
 	cardBadge = { w = 66, h = 140 },
-	text = { title = 15, rank = 22, body = 13, get = 12 },
+	text = { title = 15, rank = 22, body = 14, get = 12 },
 	bar = 16,
-	stairs = { x = 262, floor = 326, width = 56, gap = 7, base = 74, step = 20 },
-	stepText = { name = 13, longName = 12, level = 12 },
+	stairs = { x = 226, floor = 326, width = VM.PHONE_STEP.width, gap = 2, base = 74, step = 20 },
+	stepText = { name = VM.PHONE_STEP.nameSize, longName = 12, level = 12 },
 	badge = Vector2.new(26, 56),
 	portrait = Vector2.new(96, 112),
 	pill = { w = 52, h = 24, size = 14 },
@@ -144,7 +145,8 @@ local function card(view: VM.View, l: Layout): { [string]: React.ReactNode }
 		size = UDim2.fromOffset(c.w - 2 * pad, l.text.body + 6),
 		zIndex = 4,
 	})
-	local barY = c.y + math.floor(c.h * 0.52)
+	-- On a phone the bar follows the level line, so the You get: list stays inside the card (it ran past its foot).
+	local barY = if l == PHONE then levelY + l.text.body + 10 else c.y + math.floor(c.h * 0.52)
 	nodes.cardBar = e("Frame", {
 		Position = UDim2.fromOffset(c.x + pad, barY),
 		Size = UDim2.fromOffset(c.w - 2 * pad, l.bar),

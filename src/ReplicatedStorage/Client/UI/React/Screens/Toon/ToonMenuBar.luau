@@ -12,20 +12,28 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 
 local React = require(ReplicatedStorage.Packages.React)
+local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
+local ToonMenuBarViewModel = require(Toon.ToonMenuBarViewModel)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
+
+-- A tab word's drawn width at `size` (the kit's display face, Luckiest Guy).
+local function measure(text: string, size: number): number
+	return TextService:GetTextSize(text, size, Enum.Font.LuckiestGuy, Vector2.new(10000, 1000)).X
+end
 
 export type Tab = {
 	id: string,
@@ -122,37 +130,42 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 	end
 	x += math.floor(art * 0.3) + plateWidth + (if phone then 14 else 24)
 
-	-- The tabs, shrunk together (text and width) when the bar is too narrow for them beside the wallets.
+	-- The tabs, sized from their measured words to the room between the plate and the wallets
+	-- (ToonMenuBarViewModel.tabs): shrunk to the readable floor, then without icons, else scrolling sideways.
 	local walletWidth = if phone then 120 else 190
 	local tabGap = if phone then 8 else 12
 	local baseText = math.floor(h * 0.4)
-	local function tabWidth(tab: Tab, text: number): number
-		return math.floor(#tab.text * text * 0.66) + (if tab.icon ~= nil then text * 2 + 14 else 34)
-	end
-	local total = 0
+	local inputs: { ToonMenuBarViewModel.TabInput } = {}
 	for _, tab in props.tabs do
-		total += tabWidth(tab, baseText) + tabGap
+		table.insert(inputs, { text = tab.text, icon = tab.icon ~= nil })
 	end
-	local fit = 1
 	local barWidth = props.width
-	if barWidth ~= nil and total > 0 then
-		local room = barWidth - x - (h + 28) - 2 * (walletWidth + 18) - tabGap
-		fit = math.clamp(room / total, 0.6, 1)
-	end
-	local tabText = math.floor(baseText * fit)
+	local room = if barWidth ~= nil then barWidth - x - (h + 28) - 2 * (walletWidth + 18) - tabGap else math.huge
+	local fitted = ToonMenuBarViewModel.tabs(
+		inputs,
+		room,
+		baseText,
+		if phone then UIPaperConstants.TEXT_MIN.phone else UIPaperConstants.TEXT_MIN.desktop,
+		tabGap,
+		measure
+	)
+	local tabText = fitted.textSize
+	local tabNodes: { [string]: React.ReactNode } = {}
+	-- Scrolling tabs are laid out from the scroller's left; fixed ones from the bar's.
+	local tabX = if fitted.scroll then 0 else x
 	for index, tab in props.tabs do
-		local width = tabWidth(tab, tabText)
+		local width = fitted.widths[index]
 		local selected = tab.id == props.current
 		local soon = tab.soon == true
-		nodes[`tab{index}`] = e(ToonButton, {
+		tabNodes[`tab{index}`] = e(ToonButton, {
 			variant = if soon then "secondary" else if selected then "gleam" else "grape",
 			sound = "tab",
 			text = tab.text,
-			icon = tab.icon,
+			icon = if fitted.icons then tab.icon else nil,
 			textSize = tabText,
 			disabled = soon,
 			selected = selected,
-			position = UDim2.fromOffset(x, 6),
+			position = UDim2.fromOffset(tabX, 6),
 			size = UDim2.fromOffset(width, h - 14),
 			onActivated = function()
 				if not soon then
@@ -162,20 +175,36 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 		})
 		if soon then
 			-- Over the tab's top-right corner, kept inside the bar (the screen's edge would cut a flag above it),
-			-- and wide enough for the whole word next to the notch.
+			-- and wide enough for the whole word next to the notch. In a scroller it sits on the tab's top edge.
 			local flagText = if phone then 13 else 16
-			nodes[`soon{index}`] = e(ToonFlag, {
+			tabNodes[`soon{index}`] = e(ToonFlag, {
 				text = "Soon",
 				hue = "coral",
 				tilt = 6,
 				textSize = flagText,
 				anchor = Vector2.new(1, 0),
-				position = UDim2.fromOffset(x + width + 16, -8),
+				position = UDim2.fromOffset(tabX + width + 16, if fitted.scroll then 0 else -8),
 				size = UDim2.fromOffset(math.floor(4 * flagText * 0.75) + 44, if phone then 22 else 28),
 				zIndex = 5,
 			})
 		end
-		x += width + tabGap
+		tabX += width + tabGap
+	end
+	if fitted.scroll then
+		nodes.tabs = e("ScrollingFrame", {
+			Position = UDim2.fromOffset(x, 0),
+			Size = UDim2.fromOffset(math.max(0, room), h),
+			CanvasSize = UDim2.fromOffset(tabX + 16, h),
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			ScrollBarThickness = 0,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Selectable = false,
+		}, tabNodes)
+	else
+		for key, node in tabNodes do
+			nodes[key] = node
+		end
 	end
 
 	-- The wallets and the close, from the right.

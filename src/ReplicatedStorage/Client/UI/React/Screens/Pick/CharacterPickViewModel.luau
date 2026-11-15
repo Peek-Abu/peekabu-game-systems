@@ -101,4 +101,36 @@ function VM.shouldOpen(loadout: CosmeticTypes.Loadout, synced: boolean, inDepot:
 	return synced and inDepot and not loadout.picked
 end
 
+-- The line under PICK YOUR EMPLOYEE! (short: it names no menu, so it reads the same on every layout).
+VM.SUBTITLE = "You can switch any time at the depot"
+
+export type Header = {
+	titleSize: number,
+	-- The subtitle pill's top, size and text size, from the title's top.
+	subY: number,
+	subWidth: number,
+	subHeight: number,
+	subText: number,
+	-- Where the cards start, from the title's top.
+	top: number,
+}
+
+--[=[
+	The pick screen's header, in design px from the title's top: the title box (its text size + 12), the subtitle pill
+	below it, then the body. The pill sat inside the title's box, so the tilted title and its drop covered its top.
+]=]
+function VM.header(phone: boolean): Header
+	local titleSize = if phone then 44 else 104
+	local subY = titleSize + 12 + (if phone then 4 else 6)
+	local subHeight = if phone then 26 else 48
+	return {
+		titleSize = titleSize,
+		subY = subY,
+		subWidth = if phone then 300 else 820,
+		subHeight = subHeight,
+		subText = if phone then 13 else 22,
+		top = subY + subHeight + (if phone then 8 else 10),
+	}
+end
+
 return VM

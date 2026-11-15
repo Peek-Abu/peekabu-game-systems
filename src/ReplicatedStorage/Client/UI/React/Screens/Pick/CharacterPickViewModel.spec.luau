@@ -94,4 +94,23 @@ return function()
 	it("defaults the selection to the default employee", function()
 		expect(VM.DEFAULT).to.equal(CosmeticConstants.DEFAULT_EMPLOYEE)
 	end)
+
+	describe("header", function()
+		local TextService = game:GetService("TextService")
+
+		it("puts the subtitle under the title's box and the body under the subtitle, on both layouts", function()
+			for _, phone in { true, false } do
+				local h = VM.header(phone)
+				expect(h.subY >= h.titleSize + 12).to.equal(true)
+				expect(h.top >= h.subY + h.subHeight + 6).to.equal(true)
+			end
+		end)
+
+		it("keeps the subtitle on one line inside its phone pill", function()
+			local h = VM.header(true)
+			local width =
+				TextService:GetTextSize(VM.SUBTITLE, h.subText, Enum.Font.FredokaOne, Vector2.new(2000, 100)).X
+			expect(width <= h.subWidth - 48).to.equal(true)
+		end)
+	end)
 end

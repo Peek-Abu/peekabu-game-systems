@@ -312,8 +312,9 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local layout = InventoryViewModel.layout(virtual, phone)
 	local content = layout.content
 	local gap = layout.gap
-	local titleSize = if phone then 44 else 104
-	local top = layout.barY + titleSize + (if phone then 30 else 58)
+	local header = VM.header(phone)
+	local titleSize = header.titleSize
+	local top = layout.barY + header.top
 	local height = math.max(0, virtual.Y - top - (if phone then 12 else 24))
 	local listWidth = math.floor(content.width * (if phone then 0.26 else 0.25))
 	local heroWidth = math.floor(content.width * (if phone then 0.36 else 0.4))
@@ -422,13 +423,13 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 					fit = true,
 				}),
 				sub = e(ToonPill, {
-					text = "You can switch any time in your Inventory at the depot",
+					text = VM.SUBTITLE,
 					hue = "night",
-					textSize = if phone then 13 else 22,
+					textSize = header.subText,
 					padX = 24,
 					anchor = Vector2.new(0.5, 0),
-					position = UDim2.new(0.5, 0, 0, layout.barY + titleSize + (if phone then 4 else 8)),
-					size = UDim2.fromOffset(if phone then 420 else 820, if phone then 26 else 48),
+					position = UDim2.new(0.5, 0, 0, layout.barY + header.subY),
+					size = UDim2.fromOffset(header.subWidth, header.subHeight),
 				}),
 				body = e("Frame", {
 					Position = UDim2.fromOffset(content.x, top),

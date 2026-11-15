@@ -91,4 +91,14 @@ function ToonGooViewModel.run(kind: Kind, from: number, to: number, requestedSca
 	return { pieces = pieces, scale = scale, height = height * scale }
 end
 
+--[=[
+	How far (design px) a header's cap run hangs below where it starts, on a component `width` wide with corner `radius`
+	at the requested `scale`: the run's own height, so content placed under a gooey header clears the drips whatever
+	the solved scale (a wider panel solves a bigger one).
+]=]
+function ToonGooViewModel.capReach(width: number, radius: number, scale: number?): number
+	local from, to = ToonGooViewModel.inset(width, radius)
+	return ToonGooViewModel.run("cap", from, to, scale).height
+end
+
 return ToonGooViewModel

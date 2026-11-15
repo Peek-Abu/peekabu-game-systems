@@ -119,6 +119,19 @@ end
 function VM.clipboardShown(isNew: boolean): boolean
 	return not isNew
 end
+-- The menu tiles' labels (JOBS, INVENTORY, GUIDE, SETTINGS). The phone tile's label box is 56 px, and INVENTORY needs
+-- 62 px even at the 12 px text floor, so the phone says BAG (its render is a backpack), as CLIPBOARD says CARD.
+local TILE_LABELS: { [string]: string } = {
+	jobs = "JOBS",
+	inventory = "INVENTORY",
+	guide = "GUIDE",
+	settings = "SETTINGS",
+}
+local PHONE_TILE_LABELS: { [string]: string } = { inventory = "BAG" }
+function VM.tileLabel(key: string, phone: boolean): string
+	local short = if phone then PHONE_TILE_LABELS[key] else nil
+	return short or TILE_LABELS[key] or string.upper(key)
+end
 function VM.cardSize(phone: boolean): Vector2
 	return if phone then Vector2.new(62, 72) else Vector2.new(86, 106)
 end

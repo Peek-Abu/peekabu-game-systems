@@ -185,10 +185,34 @@ end
 local function tiles(props: DepotHubPanelProps): React.ReactNode
 	local phone = props.phone
 	local list: { Tile } = {
-		{ key = "jobs", label = "JOBS", icon = "jobs", variant = "gleam", activate = props.onJobs },
-		{ key = "inventory", label = "INVENTORY", icon = "inventory", variant = "grape", activate = props.onInventory },
-		{ key = "guide", label = "GUIDE", icon = "guide", variant = "primary", activate = props.onGuide },
-		{ key = "settings", label = "SETTINGS", icon = "settings", variant = "lilac", activate = props.onSettings },
+		{
+			key = "jobs",
+			label = DepotHubViewModel.tileLabel("jobs", phone),
+			icon = "jobs",
+			variant = "gleam",
+			activate = props.onJobs,
+		},
+		{
+			key = "inventory",
+			label = DepotHubViewModel.tileLabel("inventory", phone),
+			icon = "inventory",
+			variant = "grape",
+			activate = props.onInventory,
+		},
+		{
+			key = "guide",
+			label = DepotHubViewModel.tileLabel("guide", phone),
+			icon = "guide",
+			variant = "primary",
+			activate = props.onGuide,
+		},
+		{
+			key = "settings",
+			label = DepotHubViewModel.tileLabel("settings", phone),
+			icon = "settings",
+			variant = "lilac",
+			activate = props.onSettings,
+		},
 	}
 	local side = if phone then 68 else 136
 	local gap = if phone then 12 else 18

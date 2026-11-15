@@ -25,10 +25,13 @@ local ToonPanel = require(Toon.ToonPanel)
 local ToonSlider = require(Toon.ToonSlider)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
+local ToonGooViewModel = require(Toon.ToonGooViewModel)
 local COLOR = UIToonConstants.COLOR
 local DEPTH = UIToonConstants.DEPTH
 -- Room inside the scroll frame for a card's ink outline (it is drawn outside the card) on its open sides.
 local EDGE = DEPTH.outline + 3
+-- The header goo's requested scale (ToonPanel's default for a header's drips).
+local GOO_SCALE = 0.75
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
 local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleViewModel)
@@ -266,17 +269,24 @@ local function DepotHubScreen(
 		-- The Guide's tabs and photo cards (DepotGuidePanel) fill the sheet under its header; the way back into
 		-- training (only where the hub has a Training pad) sits under the HOW TO PLAY cards.
 		local inset = if phone then 16 else 32
+		-- Clear of the Gloom goo dripping from the header's foot: the drips' real reach (the run's solved scale follows
+		-- the sheet's width; ToonPanel pours them from 3 px above the header's foot) plus a gap. The phone's fixed 26 px
+		-- left the tab words under the drips.
+		local below = math.max(
+			if phone then 26 else 52,
+			ToonGooViewModel.capReach(width, DEPTH.panelRadius, GOO_SCALE) - 3 + (if phone then 8 else 12)
+		)
+		local foot = below + (if phone then 12 else 28)
 		children.guide = e("Frame", {
-			-- Clear of the Gloom goo dripping from the header's foot.
-			Position = UDim2.fromOffset(inset, headerHeight + (if phone then 26 else 52)),
-			Size = UDim2.new(1, -2 * inset, 1, -headerHeight - (if phone then 38 else 80)),
+			Position = UDim2.fromOffset(inset, headerHeight + below),
+			Size = UDim2.new(1, -2 * inset, 1, -headerHeight - foot),
 			BackgroundTransparency = 1,
 		}, {
 			panel = e(DepotGuidePanel, {
 				tab = tab,
 				phone = phone,
 				width = width - 2 * inset,
-				height = height - headerHeight - (if phone then 38 else 80),
+				height = height - headerHeight - foot,
 				onTab = setTab,
 				control = control,
 				training = if TrainingHubSystem.offered()

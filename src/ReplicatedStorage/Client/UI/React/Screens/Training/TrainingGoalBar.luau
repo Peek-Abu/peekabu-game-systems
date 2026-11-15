@@ -148,7 +148,8 @@ local function TrainingGoalBar(props: TrainingGoalBarProps): React.ReactNode
 			hue = "grape",
 			textSize = if phone then 12 else 18,
 			position = UDim2.fromOffset(left, if phone then -12 else -20),
-			size = UDim2.fromOffset(if phone then 74 else 120, if phone then 22 else 32),
+			-- TRAINING at 12 px is ~56 px with its stroke; the pill keeps 12 px a side (it read TRAINI at 74).
+			size = UDim2.fromOffset(if phone then 86 else 120, if phone then 22 else 32),
 			zIndex = 7,
 		}),
 		dots = e("Frame", {

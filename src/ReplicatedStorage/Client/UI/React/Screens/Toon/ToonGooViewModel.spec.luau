@@ -88,4 +88,12 @@ return function()
 			expect(to).to.equal(374)
 		end)
 	end)
+
+	describe("capReach", function()
+		it("is how far a header's drips hang below its foot, as the run draws them", function()
+			local fromX, toX = VM.inset(600, 24)
+			expect(VM.capReach(600, 24, 0.75)).to.equal(VM.run("cap", fromX, toX, 0.75).height)
+			expect(VM.capReach(600, 24, 0.75) > 0).to.equal(true)
+		end)
+	end)
 end

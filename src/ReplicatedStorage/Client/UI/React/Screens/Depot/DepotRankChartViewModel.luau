@@ -50,11 +50,16 @@ export type View = {
 
 -- The chart's design size (desktop / phone), px.
 local SIZE = Vector2.new(1420, 860)
-local PHONE_SIZE = Vector2.new(732, 344)
+-- The phone chart fits a 667 x 375 phone at full size (632 <= 0.95 x 667), so its 12 px text is never drawn smaller
+-- (it was 732 wide and drawn at 0.82 there, under the readable floor).
+local PHONE_SIZE = Vector2.new(632, 344)
+-- A phone step's width and its name's text size: a one-word name (SWEEPER, the widest) fits across it.
+local PHONE_STEP = table.freeze({ width = 55, nameSize = 12 })
 
 local VM = {
 	SIZE = SIZE,
 	PHONE_SIZE = PHONE_SIZE,
+	PHONE_STEP = PHONE_STEP,
 }
 
 -- 1800 -> "1,800".
@@ -143,10 +148,12 @@ function VM.badgeDistance(size: Vector3, aspect: number, fov: number): number
 	return math.max((size.Y / 2) / tanV, (size.X / 2) / tanH) + size.Z / 2
 end
 
--- The scale that fits the chart in the screen (90% of it), never above 1.
+-- The scale that fits the chart in the screen (90% of it; 95% on a phone, where every px of text counts), never
+-- above 1.
 function VM.fit(viewport: Vector2, phone: boolean): number
 	local size = if phone then PHONE_SIZE else SIZE
-	return math.min(1, viewport.X * 0.9 / size.X, viewport.Y * 0.9 / size.Y)
+	local share = if phone then 0.95 else 0.9
+	return math.min(1, viewport.X * share / size.X, viewport.Y * share / size.Y)
 end
 
 return VM

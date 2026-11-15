@@ -26,6 +26,9 @@ export type WhereInput = {
 	hubBusy: boolean,
 	-- A running shift the player is crew in, not clocking out, caught or hidden away.
 	inShift: boolean,
+	-- A training run: the coach's card owns the tracker's spot (they overlapped on a phone), and a daily goal is no
+	-- help in the tutorial.
+	training: boolean?,
 }
 
 export type Lines = {
@@ -43,7 +46,7 @@ local DAY = 86400
 local CompanyTrackerViewModel = {}
 
 function CompanyTrackerViewModel.where(input: WhereInput): Where?
-	if not input.pinned or input.clipboardOpen then
+	if not input.pinned or input.clipboardOpen or input.training == true then
 		return nil
 	end
 	if input.inHub then

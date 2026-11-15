@@ -144,4 +144,28 @@ return function()
 			expect(VM.FIND_TRUCK_TEXT).to.equal("Find a truck!")
 		end)
 	end)
+
+	describe("menu tiles", function()
+		local TextService = game:GetService("TextService")
+		-- The phone tile's label box: the 68 px tile less its 4 px sides, less the label's ink stroke.
+		local PHONE_LABEL_ROOM = 56 - 4
+
+		it("calls the Inventory tile BAG on a phone, INVENTORY on a desktop", function()
+			expect(VM.tileLabel("inventory", true)).to.equal("BAG")
+			expect(VM.tileLabel("inventory", false)).to.equal("INVENTORY")
+			expect(VM.tileLabel("jobs", true)).to.equal("JOBS")
+		end)
+
+		it("fits every phone tile label at the 12 px text floor (INVENTORY needed 62 px of 56)", function()
+			for _, key in { "jobs", "inventory", "guide", "settings" } do
+				local width = TextService:GetTextSize(
+					VM.tileLabel(key, true),
+					12,
+					Enum.Font.LuckiestGuy,
+					Vector2.new(1000, 100)
+				).X
+				expect(width <= PHONE_LABEL_ROOM).to.equal(true)
+			end
+		end)
+	end)
 end

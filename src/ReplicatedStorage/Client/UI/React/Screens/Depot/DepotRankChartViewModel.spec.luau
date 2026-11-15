@@ -159,4 +159,27 @@ return function()
 			expect(VM.fit(Vector2.new(800, 400), true) > 0).to.equal(true)
 		end)
 	end)
+
+	describe("phone fit", function()
+		local TextService = game:GetService("TextService")
+
+		it("draws the phone chart at full size on a 667 x 375 phone, so no text drops under 12 px", function()
+			expect(VM.fit(Vector2.new(667, 375), true)).to.equal(1)
+			expect(VM.fit(Vector2.new(640, 360), true) >= 0.95).to.equal(true)
+		end)
+
+		it("fits every one-word rank name across its phone step (SWEEPER read SWEEPE)", function()
+			for _, level in levels do
+				if string.find(level.name, " ", 1, true) == nil then
+					local width = TextService:GetTextSize(
+						string.upper(level.name),
+						VM.PHONE_STEP.nameSize,
+						Enum.Font.LuckiestGuy,
+						Vector2.new(1000, 100)
+					).X
+					expect(width <= VM.PHONE_STEP.width - 4).to.equal(true)
+				end
+			end
+		end)
+	end)
 end

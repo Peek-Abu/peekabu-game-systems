@@ -47,6 +47,7 @@ local TimecardRules = require(TimecardShared.Rules.TimecardRules)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local TimecardMomentStore = require(ReplicatedStorage.Client.Features.Timecard.State.TimecardMomentStore)
 local TimecardMomentSystem = require(ReplicatedStorage.Client.Features.Timecard.Systems.TimecardMomentSystem)
+local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
 
 local function tracker(): React.ReactNode
 	local pinned = ReactCharm.useAtom(Company.pinned)
@@ -59,6 +60,8 @@ local function tracker(): React.ReactNode
 	local scaring = ReactCharm.useAtom(CatchStore.scaring)
 	local travel = ReactCharm.useAtom(DepotStore.card)
 	local scenes = ReactCharm.useAtom(UIStore.sceneStack)
+	-- On a training run (TrainingCoachStore.stop is set) the coach owns the tracker's spot.
+	local training = ReactCharm.useAtom(TrainingCoachStore.stop) ~= nil
 	local scale = usePaperHudScale()
 	local now = useServerClock(1)
 	local userId = Players.LocalPlayer.UserId
@@ -74,6 +77,7 @@ local function tracker(): React.ReactNode
 		inHub = DepotHubViewModel.visible(shift, userId),
 		hubBusy = travel ~= nil or #scenes > 0,
 		inShift = inShift,
+		training = training,
 	})
 	-- In the hub the Today tracker lives inside the clipboard card (owner 11-08); it shows only in a shift.
 	if found == nil or found == "hub" then
