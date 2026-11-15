@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotHub: the depot hub's HUD widget (registered by DepotServiceClient). Reads the shift snapshot (never shown over a
-	crew's shift), the travel card (hidden under it), the player's published rank, their Credits (the `credits` balance),
+	crew's shift), the travel card (hidden under it), the player's published rank, their Credits and Gloom (the `credits` and `gloom` balances),
 	their weekly timecard on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
 	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the clipboard is a CLIPBOARD tile under SHOP and the invite row sits under the Tonight card (owner 11-08, layout A; no clipboard before training is done, DepotHubViewModel.clipboardShown); the calendar tile is the one daily button: PUNCH IN! with a "!" until today's punch (a tap punches), then the time to tomorrow's (a tap opens the Timecard)
@@ -148,6 +148,7 @@ local function DepotHub(): React.ReactNode
 				userId = player.UserId,
 				profile = VM.profile(player.DisplayName, rank),
 				credits = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
+				gloom = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "gloom")),
 				gift = daily,
 				tonight = VM.tonight(boardContract(), picked),
 				cta = nil,

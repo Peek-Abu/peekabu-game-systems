@@ -6,7 +6,9 @@
 	  breaking the card, the player's name, the Clearance Level star, the rank name on desktop and the XP bar);
 	- under it the menu tiles (JOBS, INVENTORY, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
 	  grid on phone, clear of the thumbstick);
-	- top-right: the Credits counter (the coin render overlapping a gold number) and the calendar tile, the one daily button
+	- top-right: the Credits counter (the coin render overlapping a gold number), the Gloom counter left of it (the
+	  Gloom splat overlapping a grape number; owner P1 2026-11-14: there was nowhere to see your Gloom) and the
+	  calendar tile, the one daily button
 	  (PUNCH IN! with a "!" until today's punch, and a tap punches in; else the time to tomorrow's, and it opens the
 	  Timecard); on desktop the Tonight card (tonight's building photo, the Manager breaking its
 	  edge), which opens the Jobs board;
@@ -48,6 +50,8 @@ export type DepotHubPanelProps = {
 	userId: number?,
 	profile: DepotHubViewModel.ProfileView,
 	credits: string,
+	-- The player's Gloom balance, grouped ("1,240").
+	gloom: string,
 	gift: DepotHubViewModel.GiftView,
 	tonight: DepotHubViewModel.TonightView,
 	-- The full Next shift card; nil while the queue pad's own card shows (and in the hub, where the small tab shows).
@@ -256,6 +260,18 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			anchor = Vector2.new(1, 0),
 			position = UDim2.fromScale(1, 0),
 			size = if phone then UDim2.fromOffset(176, 46) else UDim2.fromOffset(330, 82),
+		}),
+		-- Gloom, left of Credits on the same row: the same pill, the Gloom splat and the kit's Gloom number colour.
+		gloom = e(ToonPill, {
+			text = props.gloom,
+			meaning = "grape",
+			textSize = if phone then 30 else 56,
+			icon = "gloom",
+			iconSize = if phone then 60 else 108,
+			small = phone,
+			anchor = Vector2.new(1, 0),
+			position = if phone then UDim2.fromOffset(-188, 0) else UDim2.fromOffset(-354, 0),
+			size = if phone then UDim2.fromOffset(130, 46) else UDim2.fromOffset(240, 82),
 		}),
 		-- Gleam's sparkles over the counter (the kit marks what you earn).
 		sparkles = e(ToonSparkle, {

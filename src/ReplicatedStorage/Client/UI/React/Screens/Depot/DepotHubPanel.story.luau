@@ -43,6 +43,7 @@ return UILabs.CreateReactStory({
 		phone = phone,
 		profile = DepotHubViewModel.profile("Pippa", { xp = controls.Xp, prevXp = controls.Xp }),
 		credits = "1,240",
+		gloom = "86",
 		gift = DepotHubViewModel.daily(controls.GiftReady == true, now, phone),
 		tonight = DepotHubViewModel.tonight("harlow-finch-1"),
 		cta = DepotPadViewModel.cta(if controls.Aboard then pad else nil, 2),
