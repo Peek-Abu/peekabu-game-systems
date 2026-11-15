@@ -2,8 +2,9 @@
 --[=[
 	ShiftActionButton: one round button of the phone's action arc (ShiftMobileButtons) in the V1 kit: a round plate on
 	the depth stack, grape for the big VACUUM / BANK button and night for the small ones (the in-run HUD stays dark and
-	restrained), mint while it is ready (BANK at the truck, CROUCH while crouched), steel and half-faded while it is
-	unavailable (it then ignores input). The label is stroked display type; a press sinks the plate onto its drop.
+	restrained), mint while it is ready (BANK at the truck, CROUCH while crouched), coral while it warns (LEAVE once a
+	hiding stay is cramped), steel and half-faded while it is unavailable (it then ignores input). A hold prompt's
+	progress (`fill`) draws as a mint bar under the button. The label is stroked display type; a press sinks the plate onto its drop.
 	`spot` places it from the screen's bottom-right corner (ShiftHudViewModel.arcFor). Holds go through `onHoldBegin` /
 	`onHoldEnd`, taps through `onActivated`. Presentational (exempt; story in ShiftActionButton.story; the arc and the
 	states are specced in ShiftHudViewModel).
@@ -17,6 +18,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
+local ToonBar = require(Toon.ToonBar)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
@@ -30,6 +32,9 @@ export type ShiftActionButtonProps = {
 	large: boolean,
 	available: boolean,
 	ready: boolean,
+	warn: boolean?,
+	-- 0-1: a hold in progress, drawn as a bar under the button; nil: none.
+	fill: number?,
 	onActivated: (() -> ())?,
 	onHoldBegin: (() -> ())?,
 	onHoldEnd: (() -> ())?,
@@ -51,6 +56,7 @@ local function ShiftActionButton(props: ShiftActionButtonProps): React.ReactNode
 	local available = props.available
 	local hue: UIToonConstants.Hue = if not available
 		then "steel"
+		elseif props.warn == true then "coral"
 		elseif props.ready then "mint"
 		elseif props.large then "grape"
 		else "night"
@@ -126,6 +132,14 @@ local function ShiftActionButton(props: ShiftActionButtonProps): React.ReactNode
 				children = face,
 			}),
 		}),
+		fill = if props.fill ~= nil
+			then e(ToonBar, {
+				kind = "xp",
+				fill = props.fill,
+				position = UDim2.new(0.1, 0, 1, UIToonConstants.DEPTH.drop + 4),
+				size = UDim2.new(0.8, 0, 0, 10),
+			})
+			else nil,
 	})
 end
 

@@ -140,6 +140,12 @@ local function ShiftHud(): React.ReactNode
 		onSelect = function(slot: number)
 			CargoServiceClient:select(slot)
 		end,
+		-- Phone Layout 2: the DROP button is gone; holding the held item's slot drops it (a touch screen only).
+		onDrop = if UserInputService.TouchEnabled
+			then function()
+				CargoServiceClient:drop()
+			end
+			else nil,
 	})
 	-- While the crew clocks out: who is out and the truck's countdown, under the Gloom meter.
 	local board = ShiftClockOutViewModel.board(snapshot, player.UserId)

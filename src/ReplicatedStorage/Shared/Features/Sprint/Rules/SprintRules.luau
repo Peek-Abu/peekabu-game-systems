@@ -46,10 +46,31 @@ function SprintRules.canSprint(input: Input): (boolean, string?)
 end
 
 --[=[
-	Whether the phone's SPRINT button is offered: whenever the player is not hiding.
+	Whether the phone's SPRINT button is offered: whenever the player is not hiding, unless the move stick runs
+	(`stickRun`, SprintConstants.STICK_RUN.enabled): a far push is the run then, and the button goes.
 ]=]
-function SprintRules.offered(hidden: boolean): boolean
-	return not hidden
+function SprintRules.offered(hidden: boolean, stickRun: boolean): boolean
+	return not hidden and not stickRun
+end
+
+export type StickRun = {
+	enabled: boolean,
+	-- How far (0-1) the touch stick is pushed to start running, and how far it falls back before the run stops.
+	threshold: number,
+	release: number,
+}
+
+--[=[
+	Whether the touch move stick asks for a sprint (phone Layout 2, owner pick 11-15): pushed at least `threshold` of
+	the way out to start, held until it falls under `release` (`held`: it asks now), so the run does not flicker at the
+	edge. Never from a crouch (`crouching`): a sprint stands the player up (CrouchServiceServer), and a far push while
+	sneaking must keep sneaking; CROUCH is tapped to stand first.
+]=]
+function SprintRules.stickRun(magnitude: number, crouching: boolean, held: boolean, settings: StickRun): boolean
+	if not settings.enabled or crouching then
+		return false
+	end
+	return magnitude >= (if held then settings.release else settings.threshold)
 end
 
 return SprintRules

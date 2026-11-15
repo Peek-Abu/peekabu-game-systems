@@ -128,4 +128,27 @@ return function()
 			expect(bar.Y).to.equal(56 + 5)
 		end)
 	end)
+	describe("droppable", function()
+		local function slot(extra)
+			local value = { slot = 2, vacuum = false, kind = "coffeeMug", inHands = true }
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("drops on a long press only from the slot whose item is in the hands", function()
+			expect(ShiftHotbarViewModel.droppable(slot())).to.equal(true)
+			expect(ShiftHotbarViewModel.droppable(slot({ inHands = false }))).to.equal(false)
+		end)
+
+		it("never drops the vacuum or an empty slot", function()
+			expect(ShiftHotbarViewModel.droppable(slot({ vacuum = true, kind = nil }))).to.equal(false)
+			expect(ShiftHotbarViewModel.droppable(slot({ kind = nil, inHands = false }))).to.equal(false)
+		end)
+
+		it("holds about half a second, past a tap and short of a long wait", function()
+			expect(ShiftHotbarViewModel.DROP_HOLD >= 0.35 and ShiftHotbarViewModel.DROP_HOLD <= 0.8).to.equal(true)
+		end)
+	end)
 end

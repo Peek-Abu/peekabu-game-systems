@@ -3,7 +3,7 @@
 	ShiftHudViewModel: what the approved Shift HUD (Figma 1a-1c: the time card, the clearance folder and finder's fee
 	plate, the hands item and the clock-out slip; the hotbar is ShiftHotbarViewModel's) shows, as display-ready fields per piece, from the shift snapshot and
 	the local player's public entry; the phone's action-button arc (Figma 1d/1e: which buttons show, which are lit);
-	the paper interaction prompt chip and the phone LOAD button's readiness (from ShiftPromptStore); the desktop key
+	the paper interaction prompt chip (from ShiftPromptStore) and when the arc takes its place; the desktop key
 	hints row (Figma 1a) from the live Input bindings. Pure (specced); the components only lay the fields out. The
 	crew roster has its own view model (ShiftCrewViewModel); the performance review has ShiftReviewViewModel.
 
@@ -17,6 +17,7 @@ local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CargoConstants = require(CargoShared.Data.CargoConstants)
 local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
+local CargoInventoryRules = require(CargoShared.Rules.CargoInventoryRules)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
@@ -24,6 +25,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants)
 local SprintRules = require(ReplicatedStorage.Shared.Features.Sprint.Rules.SprintRules)
 local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
 local CrouchRules = require(ReplicatedStorage.Shared.Features.Crouch.Rules.CrouchRules)
@@ -82,13 +84,12 @@ export type HudView = {
 }
 
 export type ButtonsView = {
-	primary: "VACUUM" | "BANK",
-	primaryReady: boolean,
-	-- VACUUM is always usable; LOAD only while lit (a touch hold reaches only a prompt that is shown).
+	-- The big button (phone Layout 2): VACUUM, or THROW while a throwable item is in hand.
+	primary: "VACUUM" | "THROW",
+	-- VACUUM with a big item in hand cannot be used (it fills both hands); everything else can.
 	primaryAvailable: boolean,
-	drop: boolean,
-	throw: boolean,
-	-- SPRINT (held): whenever the player is not hiding (a load slows it, it never forbids it).
+	-- SPRINT (held): whenever the player is not hiding (a load slows it, it never forbids it), unless the move stick
+	-- runs (SprintConstants.STICK_RUN).
 	sprint: boolean,
 	-- CROUCH (a toggle, lit while crouched): whenever the player is not hiding (the server refuses it with a big item).
 	crouch: boolean,
@@ -104,8 +105,9 @@ export type ArcSpot = {
 
 export type ArcView = {
 	primary: ArcSpot,
-	drop: ArcSpot,
-	throw: ArcSpot,
+	-- The helper button (ShiftHelperViewModel): HIDE / LEAVE / SEARCH / PICK UP / BANK ..., only while there is one.
+	helper: ArcSpot,
+	-- Drawn only while the move stick does not run (SprintConstants.STICK_RUN).
 	sprint: ArcSpot,
 	-- CROUCH: right above the engine's Jump button.
 	crouch: ArcSpot,
@@ -304,38 +306,23 @@ function ShiftHudViewModel.hud(
 end
 
 --[=[
-	The phone's action buttons (Figma 1d/1e): one big button that is VACUUM with empty hands and LOAD while holding
-	something (lit green when the truck's Load prompt is up, `loadReady`); DROP / THROW only with something in hand
-	(THROW only for a throwable item); SPRINT and CROUCH whenever not `hiding`. The hotbar's slots are tapped on the
-	hotbar itself.
+	The phone's action buttons (Layout 2, owner pick 11-15): one big button that is VACUUM, or THROW while a throwable
+	item is in hand (VACUUM with a small item in hand puts it away first; under a big item it is dim); SPRINT only while
+	the move stick does not run, and CROUCH, whenever not `hiding`. Drop is a long press on the item's hotbar slot, and
+	the prompts (HIDE, SEARCH, BANK ...) ride the helper button (ShiftHelperViewModel).
 ]=]
-function ShiftHudViewModel.buttons(
-	me: PublicPlayerTypes.PublicPlayer?,
-	loadReady: boolean,
-	hiding: boolean?
-): ButtonsView
+function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, hiding: boolean?): ButtonsView
 	local entry: PublicPlayerTypes.PublicPlayer = me or {}
 	local kind = entry[CarryConstants.PUBLIC_FIELD]
 	local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
-	local holding = type(kind) == "string"
-	local primary: "VACUUM" | "BANK" = if holding then "BANK" else "VACUUM"
+	local throwable = def ~= nil and def.throwable == true
+	local big = def ~= nil and not CargoInventoryRules.isSmall(def)
 	return {
-		primary = primary,
-		primaryReady = holding and loadReady,
-		primaryAvailable = not holding or loadReady,
-		drop = holding,
-		throw = def ~= nil and def.throwable,
-		sprint = SprintRules.offered(hiding == true),
+		primary = if throwable then "THROW" else "VACUUM",
+		primaryAvailable = throwable or not big,
+		sprint = SprintRules.offered(hiding == true, SprintConstants.STICK_RUN.enabled),
 		crouch = CrouchRules.offered(hiding == true),
 	}
-end
-
---[=[
-	Whether the big button is a pressable LOAD right now (the arc shows, it reads LOAD and the Load prompt is up). A
-	held LOAD is let go the moment this turns false.
-]=]
-function ShiftHudViewModel.loadLive(view: ButtonsView?): boolean
-	return view ~= nil and view.primary == "BANK" and view.primaryAvailable
 end
 
 -- The engine's TouchGui switches to the large Jump button above this short side (px).
@@ -345,12 +332,12 @@ local function spot(x: number, y: number, size: number): ArcSpot
 	return table.freeze({ x = x, y = y, size = size })
 end
 
--- Figma 1d (844x390): the Jump button is 70 px at (1,-95,1,-90); LOAD/VACUUM 104 px at (608, 266), DROP (512, 282),
--- THROW (555, 194), 72 px each, as offsets from the bottom-right corner.
+-- Figma 1d (844x390): the Jump button is 70 px at (1,-95,1,-90); VACUUM 104 px at (608, 266), as offsets from the
+-- bottom-right corner.
 local PHONE_ARC: ArcView = table.freeze({
 	primary = spot(-236, -124, 104),
-	drop = spot(-332, -108, 72),
-	throw = spot(-289, -196, 72),
+	-- HELPER (Layout 2): up and left of the big button, where THROW was, above the hotbar (DROP's old spot sat on it).
+	helper = spot(-291, -198, 76),
 	-- SPRINT: up and left of DROP, clear of THROW and of the thumbstick zone on the narrowest landscape phones.
 	sprint = spot(-380, -196, 72),
 	-- CROUCH: over the Jump button, 18 px above it (the thumb's natural reach: jump and crouch on one column).
@@ -367,8 +354,8 @@ local PHONE_ARC: ArcView = table.freeze({
 -- a 1024 px wide tablet.
 local TABLET_ARC: ArcView = table.freeze({
 	primary = spot(-292, -132, 104),
-	drop = spot(-262, -224, 72),
-	throw = spot(-262, -316, 72),
+	-- HELPER: above the big button, where DROP was.
+	helper = spot(-264, -226, 76),
 	-- SPRINT: above THROW (the arc's left edge stays inside the right 60% down to 501 px).
 	sprint = spot(-262, -408, 72),
 	-- CROUCH: centred over the large Jump button, 20 px above it.
@@ -403,13 +390,21 @@ function ShiftHudViewModel.mobileButtons(
 	me: PublicPlayerTypes.PublicPlayer?,
 	touch: boolean,
 	hidden: boolean,
-	loadReady: boolean,
 	hiding: boolean?
 ): ButtonsView?
 	if not touch or hidden or snapshot == nil or snapshot.phase ~= "running" then
 		return nil
 	end
-	return ShiftHudViewModel.buttons(me, loadReady, hiding)
+	return ShiftHudViewModel.buttons(me, hiding)
+end
+
+--[=[
+	Whether the HIDE and interaction chips give way to the arc's helper button: while a shift runs, on a touch screen
+	without a keyboard (where the chips would be touch buttons, `promptTouchable`). A keyboard player keeps the chips,
+	whose key legends say what to press.
+]=]
+function ShiftHudViewModel.chipsOnArc(snapshot: ShiftSnapshot?, touch: boolean, keyboard: boolean): boolean
+	return snapshot ~= nil and snapshot.phase == "running" and ShiftHudViewModel.promptTouchable(touch, keyboard)
 end
 
 --[=[
@@ -437,14 +432,6 @@ function ShiftHudViewModel.prompt(
 		fill = if started ~= nil then math.clamp((now - started) / view.hold, 0, 1) else 0
 	end
 	return { key = view.key, text = text, fill = fill }
-end
-
---[=[
-	Whether the phone's big button can LOAD: only while the truck's Load prompt is the one shown (the engine takes a
-	touch hold on a prompt only while that prompt is shown on this client).
-]=]
-function ShiftHudViewModel.loadReady(view: ShiftPromptStore.PromptView?): boolean
-	return view ~= nil and view.kind == CargoConstants.LOAD_KIND
 end
 
 local KEY_NAMES: { [string]: string } = {

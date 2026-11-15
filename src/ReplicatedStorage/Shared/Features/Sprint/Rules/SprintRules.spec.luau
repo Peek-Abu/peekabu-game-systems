@@ -35,8 +35,49 @@ return function()
 
 	describe("offered", function()
 		it("offers the button whenever the player is not hiding, hands full or not", function()
-			expect(SprintRules.offered(false)).to.equal(true)
-			expect(SprintRules.offered(true)).to.equal(false)
+			expect(SprintRules.offered(false, false)).to.equal(true)
+			expect(SprintRules.offered(true, false)).to.equal(false)
+		end)
+
+		it("drops the SPRINT button while the stick runs (a far push is the run)", function()
+			expect(SprintRules.offered(false, true)).to.equal(false)
+			expect(SprintRules.offered(true, true)).to.equal(false)
+		end)
+	end)
+
+	describe("stickRun", function()
+		local SETTINGS = { enabled = true, threshold = 0.9, release = 0.8 }
+
+		it("runs once the stick is pushed past the threshold", function()
+			expect(SprintRules.stickRun(0.5, false, false, SETTINGS)).to.equal(false)
+			expect(SprintRules.stickRun(0.89, false, false, SETTINGS)).to.equal(false)
+			expect(SprintRules.stickRun(0.9, false, false, SETTINGS)).to.equal(true)
+			expect(SprintRules.stickRun(1, false, false, SETTINGS)).to.equal(true)
+		end)
+
+		it("keeps running until the push falls under the release, so it never flickers at the edge", function()
+			expect(SprintRules.stickRun(0.85, false, true, SETTINGS)).to.equal(true)
+			expect(SprintRules.stickRun(0.8, false, true, SETTINGS)).to.equal(true)
+			expect(SprintRules.stickRun(0.79, false, true, SETTINGS)).to.equal(false)
+		end)
+
+		it("never runs from a crouch: a far push keeps sneaking instead of standing up", function()
+			expect(SprintRules.stickRun(1, true, false, SETTINGS)).to.equal(false)
+			expect(SprintRules.stickRun(1, true, true, SETTINGS)).to.equal(false)
+		end)
+
+		it("does nothing while switched off", function()
+			local off = { enabled = false, threshold = 0.9, release = 0.8 }
+			expect(SprintRules.stickRun(1, false, false, off)).to.equal(false)
+			expect(SprintRules.stickRun(1, false, true, off)).to.equal(false)
+		end)
+
+		it("ships switched on, with a release under the threshold", function()
+			local SprintConstants = require(script.Parent.Parent.Data.SprintConstants)
+			local stick = SprintConstants.STICK_RUN
+			expect(stick.threshold > stick.release).to.equal(true)
+			expect(stick.threshold <= 1).to.equal(true)
+			expect(stick.release > 0).to.equal(true)
 		end)
 	end)
 end

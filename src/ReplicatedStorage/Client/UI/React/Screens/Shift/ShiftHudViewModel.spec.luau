@@ -1,5 +1,6 @@
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local ShiftHudViewModel = require(script.Parent.ShiftHudViewModel)
+local SprintConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Sprint.Data.SprintConstants)
 
 local function snapshot(extra)
 	local value = {
@@ -39,7 +40,7 @@ local function rectGap(button, rect)
 	return math.sqrt(dx * dx + dy * dy) - button.size / 2
 end
 
-local BUTTONS = { "primary", "drop", "throw", "sprint", "crouch", "ability" }
+local BUTTONS = { "primary", "helper", "sprint", "crouch", "ability" }
 
 -- Every gap the arc must keep, as a list of the ones it breaks (empty when clear): >= 16 px from the Jump button and
 -- between buttons, and right of the thumbstick zone (the left 40% of a `width` px screen). Pure, so it can live
@@ -227,35 +228,37 @@ return function()
 	end)
 
 	describe("phone buttons", function()
-		it("offers VACUUM with empty hands, and nothing to drop or throw", function()
-			local view = ShiftHudViewModel.buttons(nil, false)
+		local STICK = SprintConstants.STICK_RUN.enabled
+
+		it("offers VACUUM with empty hands", function()
+			local view = ShiftHudViewModel.buttons(nil)
 			expect(view.primary).to.equal("VACUUM")
-			expect(view.primaryReady).to.equal(false)
-			expect(view.drop).to.equal(false)
-			expect(view.throw).to.equal(false)
+			expect(view.primaryAvailable).to.equal(true)
 		end)
 
-		it("switches to LOAD while holding something, lit only at the truck", function()
-			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primary).to.equal("BANK")
-			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primaryReady).to.equal(false)
-			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, true).primaryReady).to.equal(true)
+		it("turns the big button into THROW while holding a throwable item", function()
+			local view = ShiftHudViewModel.buttons({ carrying = "rubbishBag" })
+			expect(view.primary).to.equal("THROW")
+			expect(view.primaryAvailable).to.equal(true)
 		end)
 
-		it("allows a throw only for a throwable item", function()
-			expect(ShiftHudViewModel.buttons({ carrying = "rubbishBag" }, false).throw).to.equal(true)
-			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).throw).to.equal(false)
+		it("keeps VACUUM usable with a small item in hand (a press puts it away), dim under a big one", function()
+			expect(ShiftHudViewModel.buttons({ carrying = "recyclingBox" }).primary).to.equal("VACUUM")
+			expect(ShiftHudViewModel.buttons({ carrying = "recyclingBox" }).primaryAvailable).to.equal(true)
+			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }).primary).to.equal("VACUUM")
+			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }).primaryAvailable).to.equal(false)
 		end)
 
-		it("offers SPRINT with or without a load, never while hiding", function()
-			expect(ShiftHudViewModel.buttons(nil, false).sprint).to.equal(true)
-			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).sprint).to.equal(true)
-			expect(ShiftHudViewModel.buttons(nil, false, true).sprint).to.equal(false)
+		it("offers SPRINT only while the stick does not run, never while hiding", function()
+			expect(ShiftHudViewModel.buttons(nil).sprint).to.equal(not STICK)
+			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }).sprint).to.equal(not STICK)
+			expect(ShiftHudViewModel.buttons(nil, true).sprint).to.equal(false)
 		end)
 
 		it("offers the CROUCH toggle with or without a load, never while hiding", function()
-			expect(ShiftHudViewModel.buttons(nil, false).crouch).to.equal(true)
-			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).crouch).to.equal(true)
-			expect(ShiftHudViewModel.buttons(nil, false, true).crouch).to.equal(false)
+			expect(ShiftHudViewModel.buttons(nil).crouch).to.equal(true)
+			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }).crouch).to.equal(true)
+			expect(ShiftHudViewModel.buttons(nil, true).crouch).to.equal(false)
 		end)
 
 		it("puts CROUCH right above the Jump button, its own column", function()
@@ -278,48 +281,40 @@ return function()
 			end
 		end)
 
-		it("keeps SPRINT clear of the other buttons on a narrow phone too", function()
+		it("keeps the helper and SPRINT clear of the other buttons on a narrow phone too", function()
 			expect(arcFailures(ShiftHudViewModel.arcFor(375), 667)).to.equal("")
 		end)
 
-		it("never lights LOAD with empty hands, even at the truck", function()
-			local view = ShiftHudViewModel.buttons(nil, true)
-			expect(view.primary).to.equal("VACUUM")
-			expect(view.primaryReady).to.equal(false)
-		end)
-
-		it("keeps VACUUM usable and LOAD usable only while the Load prompt is up", function()
-			expect(ShiftHudViewModel.buttons(nil, false).primaryAvailable).to.equal(true)
-			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primaryAvailable).to.equal(false)
-			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, true).primaryAvailable).to.equal(true)
-		end)
-
-		it("calls LOAD live only while it shows, reads LOAD and its prompt is up", function()
-			expect(ShiftHudViewModel.loadLive(ShiftHudViewModel.buttons({ carrying = "monitor" }, true))).to.equal(true)
-			expect(ShiftHudViewModel.loadLive(ShiftHudViewModel.buttons({ carrying = "monitor" }, false))).to.equal(
-				false
-			)
-			expect(ShiftHudViewModel.loadLive(ShiftHudViewModel.buttons(nil, true))).to.equal(false)
-			expect(ShiftHudViewModel.loadLive(nil)).to.equal(false)
+		it("keeps the helper button above the hotbar on a phone (the hotbar's top is 71 px up)", function()
+			local arc = ShiftHudViewModel.arcFor(375)
+			expect(arc.helper.y + arc.helper.size <= -71).to.equal(true)
+			expect(arc.helper.size >= 44).to.equal(true)
 		end)
 	end)
 
 	describe("mobile buttons", function()
 		it("shows the arc only on a touch device while a shift runs and the HUD is up", function()
 			local me = { carrying = "monitor" }
-			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, true, false, false)).never.to.equal(nil)
-			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, false, false, false)).to.equal(nil)
-			expect(ShiftHudViewModel.mobileButtons(nil, me, true, false, false)).to.equal(nil)
-			expect(ShiftHudViewModel.mobileButtons(snapshot({ phase = "results" }), me, true, false, false)).to.equal(
-				nil
-			)
-			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, true, true, false)).to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, true, false)).never.to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, false, false)).to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(nil, me, true, false)).to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(snapshot({ phase = "results" }), me, true, false)).to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, true, true)).to.equal(nil)
 		end)
 
-		it("passes the hands and the truck's Load prompt through to the buttons", function()
-			local view = ShiftHudViewModel.mobileButtons(snapshot(), { carrying = "monitor" }, true, false, true)
-			expect(view.primary).to.equal("BANK")
-			expect(view.primaryReady).to.equal(true)
+		it("passes the hands and the hiding flag through to the buttons", function()
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), { carrying = "rubbishBag" }, true, false).primary).to.equal(
+				"THROW"
+			)
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), nil, true, false, true).crouch).to.equal(false)
+		end)
+
+		it("takes the chips' place with the helper button only where the chips would be touch buttons", function()
+			expect(ShiftHudViewModel.chipsOnArc(snapshot(), true, false)).to.equal(true)
+			expect(ShiftHudViewModel.chipsOnArc(snapshot(), true, true)).to.equal(false)
+			expect(ShiftHudViewModel.chipsOnArc(snapshot(), false, false)).to.equal(false)
+			expect(ShiftHudViewModel.chipsOnArc(snapshot({ phase = "results" }), true, false)).to.equal(false)
+			expect(ShiftHudViewModel.chipsOnArc(nil, true, false)).to.equal(false)
 		end)
 	end)
 
@@ -348,8 +343,7 @@ return function()
 			expect(arc.primary.size).to.equal(104)
 			expect(arc.primary.x).to.equal(-236)
 			expect(arc.primary.y).to.equal(-124)
-			expect(arc.drop.x).to.equal(-332)
-			expect(arc.throw.y).to.equal(-196)
+			expect(arc.helper.size).to.equal(76)
 			expect(arcFailures(arc, 844)).to.equal("")
 			expect(ShiftHudViewModel.arcFor(500).jump.size).to.equal(70)
 		end)

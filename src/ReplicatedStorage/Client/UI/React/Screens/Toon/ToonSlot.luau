@@ -3,7 +3,8 @@
 	ToonSlot: a hotbar slot on the kit's stack (a dark night plate in a shift): the item's render filling and breaking
 	the plate, its key number top-left, an optional caption pill at the foot (the vacuum's charge, a valuable's worth
 	with the coin), and the states: `selected` lifts it inside the lilac ring, `disabled` greys it, `dimmed` recedes it, empty shows the
-	bare plate. Tapping or clicking calls `onActivated` when given. Presentational (exempt; story in ToonSlot.story;
+	bare plate. Tapping or clicking calls `onActivated` when given; holding a touch (or the mouse) for `longPress`
+	seconds calls `onLongPress` instead (the phone's drop), and the tap that ends that hold is swallowed. Presentational (exempt; story in ToonSlot.story;
 	the states are specced in ToonStyleViewModel).
 
 	@class ToonSlot
@@ -44,12 +45,23 @@ export type ToonSlotProps = {
 	-- Receded: darker and a touch smaller, its render greyed (the slots a big item locks), still tappable.
 	dimmed: boolean?,
 	onActivated: (() -> ())?,
+	-- A long press: `onLongPress` after `longPress` seconds held (both needed).
+	onLongPress: (() -> ())?,
+	longPress: number?,
 	zIndex: number?,
 	layoutOrder: number?,
 }
 
+local function isPress(input: InputObject): boolean
+	return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
+end
+
 local function ToonSlot(props: ToonSlotProps): React.ReactNode
 	local hovered, setHovered = React.useState(false)
+	-- The long press in flight (a counter: a release or a new press makes an older timer stale), and whether one fired
+	-- (its release's Activated is then not a tap).
+	local pressId = React.useRef(0)
+	local longFired = React.useRef(false)
 	local disabled = props.disabled == true
 	local target = ToonStyleViewModel.pose({
 		hovered = hovered and props.onActivated ~= nil,
@@ -131,6 +143,27 @@ local function ToonSlot(props: ToonSlotProps): React.ReactNode
 		Text = "",
 		ZIndex = props.zIndex,
 		LayoutOrder = props.layoutOrder,
+		[React.Event.InputBegan] = function(_button: TextButton, input: InputObject)
+			local onLongPress = props.onLongPress
+			local seconds = props.longPress
+			if onLongPress == nil or seconds == nil or disabled or not isPress(input) then
+				return
+			end
+			pressId.current += 1
+			local mine = pressId.current
+			longFired.current = false
+			task.delay(seconds, function()
+				if pressId.current == mine then
+					longFired.current = true
+					onLongPress()
+				end
+			end)
+		end,
+		[React.Event.InputEnded] = function(_button: TextButton, input: InputObject)
+			if isPress(input) then
+				pressId.current += 1
+			end
+		end,
 		[React.Event.MouseEnter] = function()
 			setHovered(true)
 		end,
@@ -138,6 +171,10 @@ local function ToonSlot(props: ToonSlotProps): React.ReactNode
 			setHovered(false)
 		end,
 		[React.Event.Activated] = function()
+			if longFired.current then
+				longFired.current = false
+				return
+			end
 			if not disabled then
 				onActivated()
 			end

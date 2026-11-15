@@ -8,7 +8,8 @@
 	leaves while hidden (the `onPress` / `onLeave` props, from HideServiceClient, so this module never requires the
 	service that registers it).
 
-	A HUD widget: it reads HideStore and draws what HideViewModel.chip decides.
+	A HUD widget: it reads HideStore and draws what HideViewModel.chip decides. On a touch phone during a shift it is not
+	drawn: the action arc's helper button does its job (phone Layout 2, ShiftHudViewModel.chipsOnArc).
 
 	@class HideChip
 ]=]
@@ -24,6 +25,7 @@ local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideCo
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
+local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
@@ -82,6 +84,7 @@ local function HideChip(props: HideChipProps?): React.ReactNode
 	local gamepad = useAtom(UIGamepadStore.active)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
+	local snapshot = useAtom(ShiftStore.snapshot)
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
 	local holding = prompt ~= nil and prompt.holdStartedAt ~= nil
@@ -102,7 +105,10 @@ local function HideChip(props: HideChipProps?): React.ReactNode
 	local caught = me ~= nil and me[DeathConstants.PUBLIC_FIELD] == true
 	-- The key cap names the controller's button for a controller player (LB), the key otherwise (C).
 	local key = ShiftHudViewModel.promptKey(HideConstants.KEYBOARD_KEY, HideConstants.GAMEPAD_KEY, gamepad)
-	local chip = HideViewModel.chip(prompt, hidden, key, now, scaring or caught)
+	-- On a touch phone in a shift the arc's helper button does this chip's job (phone Layout 2).
+	local onArc =
+		ShiftHudViewModel.chipsOnArc(snapshot, UserInputService.TouchEnabled, UserInputService.KeyboardEnabled)
+	local chip = HideViewModel.chip(prompt, hidden, key, now, onArc or scaring or caught)
 	local drawnId = if hidden ~= nil then -1 elseif prompt ~= nil then prompt.id else 0
 	React.useEffect(function()
 		return function()

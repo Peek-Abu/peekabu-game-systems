@@ -4,7 +4,8 @@
 	prompt the engine is showing (ShiftPromptStore; the engine's own card is off, see ShiftPromptSystem). A cream pill
 	on the depth stack, centred below the crosshair: a key cap with the prompt's key and the words; a hold prompt fills
 	a mint bar under the words while it is held. On phone it is a narrower pill high in the screen, without the key
-	(there is no keyboard).
+	(there is no keyboard). On a touch phone during a shift it is not drawn: the action arc's helper button does its job
+	(phone Layout 2, ShiftHudViewModel.chipsOnArc).
 
 	On a touch device without a keyboard the whole slip is a touch button (elsewhere a plain Frame, so it never sinks a
 	mouse click): a touch holds the prompt and lifting (or sliding off) lets go, through the
@@ -28,6 +29,7 @@ local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.Carr
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
+local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
@@ -98,6 +100,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	local shown = useAtom(ShiftPromptStore.shown)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
+	local snapshot = useAtom(ShiftStore.snapshot)
 	-- The desktop chip is drawn scaled to the window, with the rest of the HUD (PaperHudFrame).
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
@@ -117,7 +120,10 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
 	local carrying = if me ~= nil then me[CarryConstants.PUBLIC_FIELD] else nil
-	local chip = ShiftHudViewModel.prompt(shown, carrying, now, ShiftHudViewModel.hidden(me, scaring))
+	-- On a touch phone in a shift the arc's helper button does this chip's job (phone Layout 2).
+	local onArc =
+		ShiftHudViewModel.chipsOnArc(snapshot, UserInputService.TouchEnabled, UserInputService.KeyboardEnabled)
+	local chip = ShiftHudViewModel.prompt(shown, carrying, now, onArc or ShiftHudViewModel.hidden(me, scaring))
 	-- The prompt the slip is drawn for (0: none). Returning nil keeps this widget mounted, so a slip that goes away
 	-- mid-press (the prompt hid, a newer one showed, the HUD hid) never sees its InputEnded: let go when it changes.
 	local drawnId = if chip ~= nil and shown ~= nil then shown.id else 0

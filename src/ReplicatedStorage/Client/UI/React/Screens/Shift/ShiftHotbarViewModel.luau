@@ -211,4 +211,15 @@ function ShiftHotbarViewModel.hotbar(me: PublicPlayerTypes.PublicPlayer?, cleare
 	return { slots = slots, locked = locked, selected = selected }
 end
 
+-- Phone Layout 2: holding an item's slot this long drops it (the DROP button is gone; DOORS and Pressure do the same).
+ShiftHotbarViewModel.DROP_HOLD = 0.5
+
+--[=[
+	Whether a long press on `slot` drops: only the slot whose item is in the hands (the server's Drop drops what is held;
+	a press on another slot just picks it). Never the vacuum.
+]=]
+function ShiftHotbarViewModel.droppable(slot: SlotView): boolean
+	return not slot.vacuum and slot.kind ~= nil and slot.inHands
+end
+
 return ShiftHotbarViewModel

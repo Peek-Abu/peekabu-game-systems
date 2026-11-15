@@ -316,6 +316,7 @@ export type HideServiceClient = {
 	getState: (self: HideServiceClient) -> { [string]: any },
 	isHidden: (self: HideServiceClient) -> boolean,
 	leave: (self: HideServiceClient) -> (),
+	press: (self: HideServiceClient, down: boolean) -> (),
 }
 
 local HideServiceClient: HideServiceClient = {
@@ -491,6 +492,14 @@ local HideServiceClient: HideServiceClient = {
 	]=]
 	leave = function(_self)
 		requestExit()
+	end,
+
+	--[=[
+		Holds (`down`) or releases the shown hiding prompt: the phone's helper button (ShiftMobileButtons), the same
+		touch path as the chip's.
+	]=]
+	press = function(_self, down)
+		press(down)
 	end,
 
 	getState = function(_self)

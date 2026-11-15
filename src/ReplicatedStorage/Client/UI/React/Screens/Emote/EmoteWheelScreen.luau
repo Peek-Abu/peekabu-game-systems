@@ -37,6 +37,8 @@ local COLOR = UIToonConstants.COLOR
 export type EmoteWheelScreenProps = {
 	onPick: (slot: number) -> (),
 	onClose: () -> (),
+	-- Touch only: swaps to the other wheel (chat <-> emotes share one HUD button, phone Layout 2).
+	onSwap: (() -> ())?,
 	-- Fixed data instead of the stores (a story).
 	preview: VM.View?,
 	viewport: Vector2?,
@@ -194,6 +196,19 @@ local function EmoteWheelScreen(props: EmoteWheelScreenProps): React.ReactNode
 				props.onClose()
 			end,
 		}),
+		-- Where the talk button sits (ChatWheelButtons): a tap there again swaps wheels.
+		swap = if props.onSwap ~= nil and UserInputService.TouchEnabled
+			then e(ToonButton, {
+				variant = "sky",
+				text = "CHAT",
+				textSize = 16,
+				anchor = Vector2.new(1, 0.5),
+				position = UDim2.new(1, -12, 0.42, 0),
+				size = UDim2.fromOffset(112, 48),
+				zIndex = 10,
+				onActivated = props.onSwap,
+			})
+			else nil,
 		scaled = e(PaperHudFrame, {
 			scale = scale,
 			children = {

@@ -46,6 +46,7 @@ local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
 local OccupantDreadFormulas = require(OccupantShared.Utils.OccupantDreadFormulas)
 local OccupantChaseMusicSystem = require(OccupantClient.Systems.OccupantChaseMusicSystem)
+local OccupantDreadStore = require(OccupantClient.State.OccupantDreadStore)
 local OccupantDreadTracker = require(OccupantClient.State.OccupantDreadTracker)
 local OccupantFaceLightSystem = require(OccupantClient.Systems.OccupantFaceLightSystem)
 local DepotAtmosphereUtils = require(ReplicatedStorage.Client.Features.Depot.Utils.DepotAtmosphereUtils)
@@ -322,6 +323,7 @@ local function clearAll()
 	look = OccupantDreadFormulas.ZERO
 	framing = 0
 	stage = "none"
+	OccupantDreadStore.setStage("none")
 	proximity = 0
 	crew = 0
 	hidden = false
@@ -388,6 +390,7 @@ local function step(dt: number)
 	if nextStage ~= stage then
 		counters.stages += 1
 		stage = nextStage
+		OccupantDreadStore.setStage(stage)
 	end
 	local closeness = if stage == "chase" then OccupantTellRules.chaseLayer(distance) else 0
 	local reduced = reduceMotion()

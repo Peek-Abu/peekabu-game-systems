@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftActionButton.story: the phone's action arc in Studio's edit mode (UI Labs), on an 844x390 phone frame: the big
-	button (`Bank` turns VACUUM into BANK, `Ready` lights it mint, `Unavailable` steels and fades it), DROP, THROW,
+	button (`Bank` turns VACUUM into THROW, `Ready` lights it mint, `Unavailable` steels and fades it), the helper (HIDE),
 	SPRINT and CROUCH (`Crouching` lights it) at their arc spots.
 
 	@class ShiftActionButton.story
@@ -57,14 +57,13 @@ return UILabs.CreateReactStory({
 			BorderSizePixel = 0,
 		}, {
 			primary = button(
-				if controls.Bank then "BANK" else "VACUUM",
+				if controls.Bank then "THROW" else "VACUUM",
 				arc.primary,
 				true,
 				controls.Ready,
 				not controls.Unavailable
 			),
-			drop = button("DROP", arc.drop, false, false, true),
-			throw = button("THROW", arc.throw, false, false, true),
+			helper = button("HIDE", arc.helper, false, false, true),
 			sprint = button("SPRINT", arc.sprint, false, false, true),
 			crouch = button("CROUCH", arc.crouch, false, controls.Crouching, true),
 		}),

@@ -336,6 +336,8 @@ local TrainingConstants = {
 		tourRun = "Run! Hold Shift to run fast.",
 		tourRunPad = "Run! Press the left stick to run fast.",
 		tourRunTouch = "Run! Hold the SPRINT button.",
+		-- Phone Layout 2 (SprintConstants.STICK_RUN): the SPRINT button is gone; a far push on the stick runs.
+		tourRunStick = "Run! Push the stick all the way out.",
 	}),
 }
 

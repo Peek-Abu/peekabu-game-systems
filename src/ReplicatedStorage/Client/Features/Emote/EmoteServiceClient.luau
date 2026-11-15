@@ -106,6 +106,9 @@ local function watchForMove()
 	end)
 end
 
+-- What the wheel's CHAT button opens on a touch screen (CalloutServiceClient sets it: the chat wheel), or nil.
+local swapTo: (() -> ())? = nil
+
 local function openWheel()
 	if not EmoteWheelStore.open() then
 		EmoteWheelStore.show()
@@ -127,6 +130,7 @@ export type EmoteServiceClient = {
 	play: (self: EmoteServiceClient, slot: number) -> (),
 	openWheel: (self: EmoteServiceClient) -> (),
 	closeWheel: (self: EmoteServiceClient) -> (),
+	setSwap: (self: EmoteServiceClient, swap: (() -> ())?) -> (),
 }
 
 local EmoteServiceClient: EmoteServiceClient = {
@@ -148,6 +152,15 @@ local EmoteServiceClient: EmoteServiceClient = {
 									self:play(slot)
 								end,
 								onClose = closeWheel,
+								onSwap = if swapTo ~= nil
+									then function()
+										local target = swapTo
+										closeWheel()
+										if target ~= nil then
+											target()
+										end
+									end
+									else nil,
 							})
 						end,
 					},
@@ -207,6 +220,14 @@ local EmoteServiceClient: EmoteServiceClient = {
 
 	closeWheel = function(_self)
 		closeWheel()
+	end,
+
+	--[=[
+		What the wheel's CHAT button opens (phone Layout 2: chat and emotes share one HUD button): the chat wheel, set by
+		CalloutServiceClient, which depends on this service (so this one never requires it).
+	]=]
+	setSwap = function(_self, swap)
+		swapTo = swap
 	end,
 }
 

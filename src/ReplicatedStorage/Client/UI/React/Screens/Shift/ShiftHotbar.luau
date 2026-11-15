@@ -6,7 +6,8 @@
 	a little viewport) with a caption pill: the worth with the Gleam coin ("???" until appraised), "+N" for trash, coral
 	for a FRAGILE item. The slots' size is ShiftHotbarViewModel.metrics (the user's half-size hotbar). The chosen slot
 	lifts inside the lilac ring; a big item's slot reads FULL and the others recede while it locks them. Tapping or
-	clicking a slot asks for it (`onSelect`). Presentational: it draws the HotbarView it is given.
+	clicking a slot asks for it (`onSelect`); holding the slot whose item is in the hands drops it (`onDrop`, phone
+	Layout 2: ShiftHotbarViewModel.droppable). Presentational: it draws the HotbarView it is given.
 
 	@class ShiftHotbar
 ]=]
@@ -28,6 +29,8 @@ export type Props = {
 	position: UDim2,
 	anchor: Vector2,
 	onSelect: ((slot: number) -> ())?,
+	-- A long press on the held item's slot (ShiftHotbarViewModel.DROP_HOLD): drop it.
+	onDrop: (() -> ())?,
 }
 
 -- The item's art template (the art kit's cargo model), or nil while it has none.
@@ -83,6 +86,7 @@ type CardProps = {
 	locked: boolean,
 	index: number,
 	onSelect: ((slot: number) -> ())?,
+	onDrop: (() -> ())?,
 }
 
 local function Card(props: CardProps): React.ReactNode
@@ -101,6 +105,7 @@ local function Card(props: CardProps): React.ReactNode
 		}, { model = e(ItemIcon, { kind = kind, size = side }) })
 	end
 	local onSelect = props.onSelect
+	local onDrop = if ShiftHotbarViewModel.droppable(slot) then props.onDrop else nil
 	return e("Frame", {
 		LayoutOrder = props.index,
 		Size = UDim2.fromOffset(side, size.height + size.lift),
@@ -132,6 +137,8 @@ local function Card(props: CardProps): React.ReactNode
 					onSelect(slot.slot)
 				end
 				else nil,
+			onLongPress = onDrop,
+			longPress = if onDrop ~= nil then ShiftHotbarViewModel.DROP_HOLD else nil,
 		}),
 	})
 end
@@ -153,6 +160,7 @@ local function ShiftHotbar(props: Props): React.ReactNode
 			locked = props.view.locked,
 			index = index,
 			onSelect = props.onSelect,
+			onDrop = props.onDrop,
 		})
 	end
 	local bar = ShiftHotbarViewModel.barSize(props.phone, #props.view.slots)

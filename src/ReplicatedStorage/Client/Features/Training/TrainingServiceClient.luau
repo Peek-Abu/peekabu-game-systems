@@ -28,6 +28,7 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local WorldTypes = require(ReplicatedStorage.Shared.Data.WorldTypes)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
+local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
@@ -90,6 +91,9 @@ end
 local function runLineNow(): string
 	return if UserInputService.KeyboardEnabled
 		then TrainingConstants.TEXT.tourRun
+		elseif
+			UserInputService.TouchEnabled and SprintConstants.STICK_RUN.enabled
+		then TrainingConstants.TEXT.tourRunStick
 		elseif UserInputService.TouchEnabled then TrainingConstants.TEXT.tourRunTouch
 		else TrainingConstants.TEXT.tourRunPad
 end

@@ -5,7 +5,8 @@
 	- Hold the `chatWheel` action (T, or d-pad up) to open the wheel (its scene is registered here, at init). The spot
 	  a ping would mark is aimed as T goes down: where the mouse points (the screen's centre on a phone or gamepad),
 	  out to CalloutConstants.PING_RANGE. Letting go over a ping or sticker sends it; a click or tap sends at once.
-	- On phones, two round HUD buttons open the emote wheel and this wheel (ChatWheelButtons, registered here).
+	- On phones, one round talk button opens this wheel, which swaps to the emote wheel and back (ChatWheelButtons,
+	  registered here; phone Layout 2).
 	- What the server tells everyone (CalloutEvents.Shown) is shown here: a sticker is thrown from the
 	  sender's hand to where the server pinned it, above and ahead of them as they sent it, and stays there as they
 	  move on (CalloutStickerSystem); it is kept for the crew list (CalloutStore). The sender's own client plays the
@@ -183,17 +184,16 @@ local CalloutServiceClient: CalloutServiceClient = {
 	dependencies = { "InputServiceClient", "EmoteServiceClient", "AnimationServiceClient" },
 
 	init = function(_self)
-		-- Phones: round buttons that open the emote and chat wheels (keys do it on PC and gamepads).
+		-- Phones: one round talk button opens the chat wheel, whose EMOTES button swaps to the emote wheel and back (phone
+		-- Layout 2: chat and emotes share one button; keys do it on PC and gamepads).
 		if not HudRegistry.has("chatWheelButtons") then
 			HudRegistry.register("chatWheelButtons", function()
-				return React.createElement(ChatWheelButtons, {
-					onEmotes = function()
-						EmoteServiceClient:openWheel()
-					end,
-					onChat = openWheel,
-				})
+				return React.createElement(ChatWheelButtons, { onTalk = openWheel })
 			end, 20)
 		end
+		EmoteServiceClient:setSwap(function()
+			openWheel()
+		end)
 		if not SceneRegistry.has(ChatWheelViewModel.SCENE) then
 			SceneRegistry.register({
 				name = ChatWheelViewModel.SCENE,
@@ -209,6 +209,10 @@ local CalloutServiceClient: CalloutServiceClient = {
 								end,
 								onClose = function()
 									closeWheel()
+								end,
+								onSwap = function()
+									closeWheel()
+									EmoteServiceClient:openWheel()
 								end,
 							})
 						end,

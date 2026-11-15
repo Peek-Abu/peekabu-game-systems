@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	SprintServiceClient: the local side of sprinting (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md
-	§3). Holding the base Input action `sprint` (Shift / L3), or the phone's SPRINT button (`setHeld`), tells the server
-	the key is held; the server decides whether that sprints and sets the speed. The server's Stamina packet (to this
+	§3). Holding the base Input action `sprint` (Shift / L3), the phone's SPRINT button (`setHeld`), or pushing the touch
+	move stick far out (SprintStickSystem, phone Layout 2) tells the server the key is held; the server decides whether
+	that sprints and sets the speed. The server's Stamina packet (to this
 	player only) and the Player's Sprinting attribute feed SprintStore; the shift HUD draws the stamina bar from it (ShiftCompactHudPanel, over the
 	hotbar).
 
@@ -19,18 +20,20 @@ local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.Sp
 local SprintEvents = require(ReplicatedStorage.Shared.Features.Sprint.Net.SprintEvents)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
+local SprintStickSystem = require(ReplicatedStorage.Client.Features.Sprint.Systems.SprintStickSystem)
 
 local player = Players.LocalPlayer
 local stoppers: { () -> () } = {}
--- What holds the sprint: the key, and the phone button.
+-- What holds the sprint: the key, the phone button, and the touch stick pushed far.
 local keyHeld = false
 local buttonHeld = false
+local stickHeld = false
 local sent = false
 -- The last stamina the server sent (0-1; nil until the first, which reads as a full bar).
 local lastStamina: number? = nil
 
 local function send()
-	local held = keyHeld or buttonHeld
+	local held = keyHeld or buttonHeld or stickHeld
 	if held ~= sent then
 		sent = held
 		SprintEvents.packets.Sprint.send(held)
@@ -65,7 +68,12 @@ local SprintServiceClient: SprintServiceClient = {
 			mirror()
 		end)
 		local sprinting = player:GetAttributeChangedSignal(SprintConstants.SPRINTING_ATTRIBUTE):Connect(mirror)
+		SprintStickSystem.start(function(held: boolean)
+			stickHeld = held
+			send()
+		end)
 		table.insert(stoppers, function()
+			SprintStickSystem.stop()
 			unbind()
 			stopStamina()
 			sprinting:Disconnect()
@@ -80,6 +88,7 @@ local SprintServiceClient: SprintServiceClient = {
 		table.clear(stoppers)
 		keyHeld = false
 		buttonHeld = false
+		stickHeld = false
 		send()
 	end,
 

@@ -53,6 +53,8 @@ export type Props = {
 	onCrewToggle: (() -> ())?,
 	-- A hotbar slot was tapped or clicked: ask for that slot.
 	onSelect: ((slot: number) -> ())?,
+	-- A long press on the held item's hotbar slot (phone Layout 2): drop it.
+	onDrop: (() -> ())?,
 	bindings: VM.KeyBindings?,
 	-- The bindings are the gamepad's (a controller player): the hints print controller buttons.
 	gamepad: boolean?,
@@ -220,6 +222,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 		position = UDim2.new(0.5, 0, 1, -inset - 8),
 		anchor = Vector2.new(0.5, 1),
 		onSelect = props.onSelect,
+		onDrop = props.onDrop,
 	})
 	local stackTop = inset + 8 + bar.Y + 14
 	-- The stamina bar over the hotbar while it is not full: the sneaker render and a gold (coral when low) bar.

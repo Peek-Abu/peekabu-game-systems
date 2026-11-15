@@ -39,6 +39,10 @@ return table.freeze({
 	BOOST_UNTIL_ATTRIBUTE = "SpeedBoostUntil",
 	-- How often the server steps everyone's stamina.
 	TICK = 0.05,
+	-- Phone Layout 2 (owner pick 11-15): on a touch screen, pushing the move stick far out is the run, and the SPRINT
+	-- button goes (SprintRules.stickRun / offered). `enabled = false` brings the button back. A tuning hypothesis
+	-- until a real phone checks it: start at 90 % of the stick's reach, stop under 80 %.
+	STICK_RUN = table.freeze({ enabled = true, threshold = 0.9, release = 0.8 }),
 	-- Sprint requests are rate limited (a held key sends two).
 	REQUEST_RATE = table.freeze({ maxRequests = 20, windowSeconds = 5 }),
 })
