@@ -153,9 +153,10 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 	local tabNodes: { [string]: React.ReactNode } = {}
 	-- Scrolling tabs are laid out from the scroller's left; fixed ones from the bar's. The scroller reaches HEADROOM px
 	-- above the bar so it does not clip the selected tab's lift or a Soon flag.
-	local HEADROOM = 10
+	local HEADROOM = ToonMenuBarViewModel.SELECTED_REACH
 	local tabX = if fitted.scroll then 0 else x
-	local tabY = if fitted.scroll then 6 + HEADROOM else 6
+	local tabTop = ToonMenuBarViewModel.TAB_TOP
+	local tabY = if fitted.scroll then tabTop + HEADROOM else tabTop
 	for index, tab in props.tabs do
 		local width = fitted.widths[index]
 		local selected = tab.id == props.current

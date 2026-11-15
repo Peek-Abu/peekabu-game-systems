@@ -611,4 +611,14 @@ return function()
 			expect(table.concat(VM.PAGE_TABS, ",")).to.equal("skins,emotes,idles,about")
 		end)
 	end)
+
+	describe("menu bar top", function()
+		it("keeps a selected tab's lift and ring on a phone's screen, under the safe top (FEATURED was cut)", function()
+			local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
+			local ToonMenuBarViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonMenuBarViewModel)
+			local layout = VM.layout(Vector2.new(667, 375), true)
+			local reach = layout.barY + ToonMenuBarViewModel.TAB_TOP - ToonMenuBarViewModel.SELECTED_REACH
+			expect(reach >= UIToonConstants.SAFE.phone.top).to.equal(true)
+		end)
+	end)
 end

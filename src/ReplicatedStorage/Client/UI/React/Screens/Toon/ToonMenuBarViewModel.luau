@@ -10,6 +10,10 @@
 	@class ToonMenuBarViewModel
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
+
 export type TabInput = { text: string, icon: boolean }
 export type TabLayout = {
 	textSize: number,
@@ -26,6 +30,12 @@ export type Measure = (text: string, size: number) -> number
 local STROKE = 4
 
 local ToonMenuBarViewModel = {}
+
+-- A tab's top inside the bar (design px).
+ToonMenuBarViewModel.TAB_TOP = 6
+-- How far a selected tab reaches above its top: its lift, then the lilac ring outside its outline (ToonSurface: 3 px
+-- out, a 5 px stroke). A bar must start at least this far (less TAB_TOP) under the screen's safe top.
+ToonMenuBarViewModel.SELECTED_REACH = UIToonConstants.MOTION.selectedLift + UIToonConstants.DEPTH.outline + 3 + 5
 
 -- A tab's width at `size`: its word, the stroke, and the button's own room (the icon and its gap, or the side pads).
 function ToonMenuBarViewModel.tabWidth(tab: TabInput, size: number, icons: boolean, measure: Measure): number

@@ -31,6 +31,7 @@ local ToonSourceBand = require(ReplicatedStorage.Client.UI.React.Screens.Toon.To
 local ToonStatRows = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStatRows)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
+local ToonMenuBarViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonMenuBarViewModel)
 
 type Item = CosmeticTypes.Item
 type Loadout = CosmeticTypes.Loadout
@@ -651,7 +652,9 @@ end
 
 function VM.layout(virtual: Vector2, phone: boolean): Layout
 	local safe = if phone then UIToonConstants.SAFE.phone else UIToonConstants.SAFE.desktop
-	local barY = if phone then 6 else 14
+	-- On a phone the bar starts low enough that a selected tab's lift and ring stay under the safe top (FEATURED's top
+	-- was cut by the screen's edge at 6).
+	local barY = if phone then safe.top + ToonMenuBarViewModel.SELECTED_REACH - ToonMenuBarViewModel.TAB_TOP else 14
 	local barHeight = if phone then 50 else 76
 	local gap = if phone then 10 else 22
 	local x = safe.left
