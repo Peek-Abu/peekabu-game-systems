@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CoffeeChoice: how to pay for Coffee for the crew (owner 11-10). A small cream panel under the coffee button (phone:
-	under it at the top right) with the grape title band and its X, the line "2x pay for 30 minutes", and two buttons:
+	under it at the top right) with the grape title band and its X, the line "2x Credits and Gloom for 30 minutes", and two buttons:
 	the Robux price (lilac; Roblox's purchase prompt) and "150" with the Gleam coin (gleam). The hub's coffee machine shows it centred with its own line. Presentational (exempt; the
 	Gleam buy is the server's, checked by the specced CoffeeRules.payGleam).
 

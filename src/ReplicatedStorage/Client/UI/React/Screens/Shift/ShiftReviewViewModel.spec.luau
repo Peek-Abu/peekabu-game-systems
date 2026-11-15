@@ -148,7 +148,7 @@ return function()
 			local view =
 				ShiftReviewViewModel.review(snapshot({}, review({ coffee = "Ice", payScale = 2 })), nil, 4, 100, false)
 			expect(view.rows[2].value).to.equal("1154 Credits")
-			expect(view.rows[2].detail).to.equal("Coffee by Ice: 2x")
+			expect(view.rows[2].detail).to.equal("Coffee by Ice: 2x Credits and Gloom · Saved Gloom 72")
 			expect(view.cards[2].label).to.equal("Credits earned · Coffee 2x")
 			expect(view.cards[2].value).to.equal("+1154")
 		end)
@@ -162,7 +162,7 @@ return function()
 				false
 			)
 			expect(view.rows[2].value).to.equal("865 Credits")
-			expect(view.rows[2].detail).to.equal("Coffee by Ice: 1.5x")
+			expect(view.rows[2].detail).to.equal("Coffee by Ice: 1.5x Credits and Gloom · Saved Gloom 54")
 			expect(view.cards[2].label).to.equal("Credits earned · Coffee 1.5x")
 		end)
 

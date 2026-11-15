@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CoffeeConstants = require(ReplicatedStorage.Shared.Features.Coffee.Data.CoffeeConstants)
+local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopPurchaseRules = require(script.Parent.ShopPurchaseRules)
 
@@ -23,7 +24,21 @@ return function()
 			expect(purchase.amount).to.equal(CoffeeConstants.SECONDS // 60)
 		end)
 
-		it("is nil for a product it does not know (a deal announces its own cosmetics)", function()
+		it("shows a deal's Gleam (its picks get their own reveal); a deal with no Gleam shows nothing", function()
+			for _, id in DealConstants.ORDER do
+				local deal = DealConstants.DEALS[id]
+				local purchase = ShopPurchaseRules.forProduct(deal.productKey)
+				if deal.gleam > 0 then
+					expect(purchase).to.be.ok()
+					expect(purchase.kind).to.equal("gleam")
+					expect(purchase.amount).to.equal(deal.gleam)
+				else
+					expect(purchase).to.equal(nil)
+				end
+			end
+		end)
+
+		it("is nil for a product it does not know", function()
 			expect(ShopPurchaseRules.forProduct("dealSomething")).to.equal(nil)
 			expect(ShopPurchaseRules.forProduct("")).to.equal(nil)
 		end)

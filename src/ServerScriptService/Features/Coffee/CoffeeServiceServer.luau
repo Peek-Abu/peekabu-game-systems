@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CoffeeServiceServer: Coffee for the crew (owner 11-08; 30 minutes of shift time, owner 11-10). A Robux developer
-	product gives the buyer 30 minutes of coffee time; while it runs the whole crew's Credits pay is doubled, and the
+	product gives the buyer 30 minutes of coffee time; while it runs the whole crew's Credits pay and kept Gloom are doubled, and the
 	office PA names the buyer.
 
 	- **Gleam.** The same coffee costs CoffeeConstants.GLEAM_PRICE Gleam (owner 11-10): CoffeeEvents.BuyGleam, rate

@@ -343,9 +343,10 @@ function ShiftReviewViewModel.review(
 	-- The pay (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5): every Gloom removed,
 	-- from dust and from cleaning valuables, plus the valuables banked; paid whether or not the contract was met.
 	local split = ShiftQuotaFormulas.breakdown(results.cleared, results.dust or 0, results.bonus)
-	local saved = ShiftQuotaFormulas.savedGloom(results.cleared)
-	-- Coffee for the crew doubles the pay for the part of the shift it ran (the server pays the same: ShiftPaySystem.amounts).
+	-- Coffee for the crew doubles the pay and the saved Gloom for the part of the shift it ran (the server pays the
+	-- same: ShiftPaySystem.amounts).
 	local scale = results.payScale or 1
+	local saved = math.floor(ShiftQuotaFormulas.savedGloom(results.cleared) * scale)
 	local paid = math.floor(split.credits * scale)
 	local coffee = results.coffee
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
@@ -399,7 +400,7 @@ function ShiftReviewViewModel.review(
 				label = ShiftCurrencyUtils.earnedLabel(),
 				value = ShiftCurrencyUtils.amount(paid),
 				detail = if coffee ~= nil
-					then string.format(CoffeeConstants.TEXT.review, coffee, CoffeeRules.scaleText(scale))
+					then string.format(CoffeeConstants.TEXT.review, coffee, CoffeeRules.scaleText(scale), saved)
 					else `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Treasure {split.valuables} · Saved Gloom {saved}`,
 			},
 			{ label = "CREW CAUGHT", value = tostring(results.catches) },

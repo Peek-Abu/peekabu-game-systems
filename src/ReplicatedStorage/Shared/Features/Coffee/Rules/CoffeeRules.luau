@@ -4,7 +4,7 @@
 	the buyer's coffee time left (`seconds`) and when that time started (`since`, their place in line). Every purchase
 	adds CoffeeConstants.SECONDS (`add`) in the same save as its receipt (exactly once). The time counts down only
 	while a real shift runs with players in the server (`runs`), one buyer at a time: the earliest buyer in the server
-	(`spender`), so two coffees never stack past 2x. While it runs the crew's Credits pay is doubled; the review pays
+	(`spender`), so two coffees never stack past 2x. While it runs the crew's Credits pay and kept Gloom are doubled; the review pays
 	2x for the part of the shift the coffee ran (`payScale`). A coffee costs the developer product's Robux (`robuxText`) or
 	CoffeeConstants.GLEAM_PRICE Gleam (`affords`, `payGleam`). Pure.
 
@@ -111,7 +111,7 @@ function CoffeeRules.offered(phase: string, training: boolean, active: boolean):
 end
 
 --[=[
-	What the shift's Credits pay is multiplied by: 2x for the part of the shift (`ranFor` seconds) the coffee ran
+	What the shift's Credits pay and kept Gloom are multiplied by: 2x for the part of the shift (`ranFor` seconds) the coffee ran
 	(`coffeeSeconds`), to the nearest tenth, never past 2x.
 ]=]
 function CoffeeRules.payScale(coffeeSeconds: number, ranFor: number): number
@@ -157,7 +157,7 @@ function CoffeeRules.badge(raw: WorldTypes.WorldValue?): Badge?
 end
 
 --[=[
-	The HUD badge: "2x PAY · ICE · 24:10".
+	The HUD badge: "2x CREDITS & GLOOM · ICE · 24:10".
 ]=]
 function CoffeeRules.badgeText(buyer: string, seconds: number): string
 	return `{CoffeeConstants.TEXT.badge} · {string.upper(buyer)} · {CoffeeRules.clock(seconds)}`

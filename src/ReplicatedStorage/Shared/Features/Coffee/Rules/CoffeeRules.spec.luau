@@ -157,7 +157,7 @@ return function()
 		end)
 
 		it("shows the buyer and the time left", function()
-			expect(CoffeeRules.badgeText("Ice", 1450)).to.equal("2x PAY · ICE · 24:10")
+			expect(CoffeeRules.badgeText("Ice", 1450)).to.equal("2x CREDITS & GLOOM · ICE · 24:10")
 		end)
 	end)
 
@@ -203,7 +203,9 @@ return function()
 
 	describe("paLine", function()
 		it("names the buyer and says it is 30 minutes", function()
-			expect(CoffeeRules.paLine("Ice")).to.equal("PA: Ice bought coffee! The crew gets 2x pay for 30 minutes!")
+			expect(CoffeeRules.paLine("Ice")).to.equal(
+				"PA: Ice bought coffee! The crew gets 2x Credits and Gloom for 30 minutes!"
+			)
 		end)
 	end)
 end

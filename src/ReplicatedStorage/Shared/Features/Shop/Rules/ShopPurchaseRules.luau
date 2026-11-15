@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShopPurchaseRules: what the "You bought it!" screen shows for a Robux buy that is not a cosmetic (owner 11-15). A
-	Gleam bundle's product is Gleam of its amount, the coffee product is coffee of its minutes, a game pass is that pass.
+	Gleam bundle's product is Gleam of its amount (a one-time deal's product its Gleam), the coffee product is coffee of its minutes, a game pass is that pass.
 	The server sends one (ShopEvents.Purchased) only after the buy is granted: a product once its receipt's save has
 	landed (MarketplaceServiceServer.productGranted), a pass once Roblox says it was bought. `parse` checks what the
 	client got; `shows` keeps a coffee bought in a shift off the screen (the office PA already names the buyer).
@@ -12,6 +12,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CoffeeConstants = require(ReplicatedStorage.Shared.Features.Coffee.Data.CoffeeConstants)
+local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 
@@ -30,6 +31,13 @@ function ShopPurchaseRules.forProduct(key: string): Purchase?
 	end
 	if key == CoffeeConstants.PRODUCT_KEY then
 		return { kind = "coffee", key = key, amount = CoffeeConstants.SECONDS // 60 }
+	end
+	-- A one-time deal's Gleam (Pick a Legendary: +500). Its pick gets its own reveal once chosen.
+	for _, id in DealConstants.ORDER do
+		local deal = DealConstants.DEALS[id]
+		if deal.productKey == key and deal.gleam > 0 then
+			return { kind = "gleam", key = key, amount = deal.gleam }
+		end
 	end
 	return nil
 end

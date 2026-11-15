@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CoffeeConstants: Coffee for the crew (owner 11-08; 30 minutes, owner 11-10): a Robux developer product that gives
-	the buyer 30 minutes of coffee time, spent only while a shift runs; while it runs the whole crew's Credits pay is
+	the buyer 30 minutes of coffee time, spent only while a shift runs; while it runs the whole crew's Credits pay (and the Gloom they keep, owner 11-15) is
 	doubled, and the buyer is named on the office PA. Static data (spec-exempt).
 
 	@class CoffeeConstants
@@ -38,13 +38,15 @@ local CoffeeConstants = {
 	PA_TRIES = 10,
 	PA_RETRY_SECONDS = 1,
 	TEXT = table.freeze({
-		pa = "PA: %s bought coffee! The crew gets 2x pay for 30 minutes!",
+		-- Owner 11-15 ("Add Gloom too"): coffee doubles the Credits AND the Gloom you keep, and the words say so. The
+		-- HUD button stays "2x PAY" (it is 130 px wide on a phone); everything with room names both.
+		pa = "PA: %s bought coffee! The crew gets 2x Credits and Gloom for 30 minutes!",
 		button = "2x PAY",
-		badge = "2x PAY",
-		review = "Coffee by %s: %sx",
+		badge = "2x CREDITS & GLOOM",
+		review = "Coffee by %s: %sx Credits and Gloom · Saved Gloom %d",
 		short = "You need %d Gleam!",
 		choiceTitle = "COFFEE FOR THE CREW",
-		choiceLine = "2x pay for 30 minutes",
+		choiceLine = "2x Credits and Gloom for 30 minutes",
 		robux = "%d R$",
 		gleam = "%d",
 		card = "Credits earned · Coffee %sx",

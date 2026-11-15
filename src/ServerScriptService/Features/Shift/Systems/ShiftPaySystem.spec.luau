@@ -111,13 +111,24 @@ return function()
 			stop()
 		end)
 
-		it("doubles the Credits (not the saved Gloom) when the crew had coffee", function()
+		it("doubles the Credits and the saved Gloom when the crew had coffee (owner 11-15: add Gloom too)", function()
 			local plain = ShiftPaySystem.amounts(review(340, 260, 420))
 			local coffee = review(340, 260, 420)
 			coffee.payScale = 2
 			local doubled = ShiftPaySystem.amounts(coffee)
 			expect(doubled.credits).to.equal(plain.credits * 2)
-			expect(doubled.gloom).to.equal(plain.gloom)
+			expect(doubled.gloom).to.equal(plain.gloom * 2)
+		end)
+
+		it("scales the saved Gloom for a part-shift coffee, rounded down", function()
+			local coffee = review(340, 260, 420)
+			coffee.payScale = 1.5
+			-- 34 saved x 1.5 = 51.
+			expect(ShiftPaySystem.amounts(coffee).gloom).to.equal(51)
+			local small = review(19, 19, 0)
+			small.payScale = 1.5
+			-- 1 saved x 1.5 = 1.5 -> 1.
+			expect(ShiftPaySystem.amounts(small).gloom).to.equal(1)
 		end)
 
 		it("saves a tenth of the Gloom removed, rounded down", function()

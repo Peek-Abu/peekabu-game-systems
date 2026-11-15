@@ -100,7 +100,7 @@ local DepotSpotConstants = {
 		EMITTER_NAME = "RadioBody",
 	}),
 	-- The coffee scene's words.
-	COFFEE_LINE = "2x pay on your next shift!",
+	COFFEE_LINE = "2x Credits and Gloom on your next shift!",
 	-- The scenes the client opens.
 	SCENES = table.freeze({
 		coffee = "depot.Coffee",

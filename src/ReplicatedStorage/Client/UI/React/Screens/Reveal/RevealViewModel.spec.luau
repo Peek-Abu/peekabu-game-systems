@@ -390,7 +390,7 @@ return function()
 				VM.view({ ids = {}, source = "robux", purchase = { kind = "coffee", key = "coffeeCrew", amount = 30 } })
 			expect(view.title).to.equal("COFFEE TIME!")
 			expect(view.name).to.equal("Coffee for the crew")
-			expect(view.line).to.equal("2x Credits for your crew for 30 minutes of shifts!")
+			expect(view.line).to.equal("2x Credits and Gloom for your crew for 30 minutes of shifts!")
 			expect(view.art.icon).to.equal("coffee")
 		end)
 

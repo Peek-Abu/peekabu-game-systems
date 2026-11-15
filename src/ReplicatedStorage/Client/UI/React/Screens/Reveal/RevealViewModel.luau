@@ -170,7 +170,7 @@ local function purchaseView(purchase: ShopTypes.Purchase): View
 		end
 	elseif purchase.kind == "coffee" then
 		title, name = "COFFEE TIME!", "Coffee for the crew"
-		line = `2x Credits for your crew for {purchase.amount} minutes of shifts!`
+		line = `2x Credits and Gloom for your crew for {purchase.amount} minutes of shifts!`
 		art = { icon = "coffee" }
 	else
 		local copy = ShopConstants.PASS_COPY[purchase.key]
