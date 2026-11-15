@@ -68,6 +68,7 @@ local PortraitError = require(ReplicatedStorage.Client.UI.React.Screens.Portrait
 local PortraitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitViewModel)
 local ToonSpinViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSpinViewModel)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
+local UIBuildQueueSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UIBuildQueueSystem)
 
 local e = React.createElement
 
@@ -299,209 +300,229 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		if frame == nil then
 			return function() end
 		end
-		local model, moving = build(props)
-		setShown(model ~= nil)
-		if model == nil then
-			return function() end
-		end
-		local bounds =
-			EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(model, PortraitViewModel.parts(props.framing)))
-		-- A spinning model turns about its own root: the camera and platform centre there, on a box fitted ONCE to
-		-- everywhere its clips and props reach (EmployeePreviewSystem.reachOf, measured), so the camera never refits.
-		local root: Vector3? = nil
-		if props.spin == true and bounds ~= nil then
-			local rootPart = model:FindFirstChild("HumanoidRootPart")
-			local at = if rootPart ~= nil and rootPart:IsA("BasePart")
-				then rootPart.Position
-				else (bounds.min + bounds.max) / 2
-			root = at
-			local outfit = props.outfit
-			local reach = if outfit ~= nil
-				then EmployeePreviewSystem.reachOf(outfit.employee, CosmeticRegistry.keyOf(outfit.look.skin))
-				elseif props.employee ~= nil then EmployeePreviewSystem.reachOf(
-					props.employee,
-					props.skin,
-					props.idle
-				)
-				else nil
-			bounds = ToonSpinViewModel.reach(bounds, at, reach)
-		end
-		local emote = if moving and not covered then props.emote else nil
-		if emote ~= nil and bounds ~= nil then
-			local height = bounds.max.Y - bounds.min.Y
-			bounds = { min = bounds.min, max = bounds.max + Vector3.new(0, height * EMOTE_HEADROOM, 0) }
-		end
-		local unplatformed = bounds
-		local stand: Model? = nil
-		if platform ~= nil and bounds ~= nil then
-			stand, bounds = platformFor(bounds, platform)
-		end
-		local who = if props.outfit ~= nil then props.outfit.employee else props.employee
-		local skin = if props.outfit ~= nil then nil else props.skin
-		local cleanups: { () -> () } = {}
-		local stageTurn: ((degrees: number) -> ())? = nil
-		local pose = if emote ~= nil and who ~= nil
-			then EmployeePoseRules.select(EmployeePoseRegistry.get(who), props.context or "idle", {})
-			else nil
-		-- The live model goes to the stage; until the stage is live (its assets loaded), this viewport shows a posed copy
-		-- of it on its own platform, dropped in the frame the stage takes over.
-		local standIn = if pose ~= nil then EmployeePortraitSystem.build(model, pose, true) else nil
-		if emote ~= nil and who ~= nil and bounds ~= nil and standIn ~= nil then
-			local standInPlatform: Model? = nil
-			if platform ~= nil and unplatformed ~= nil then
-				standInPlatform = platformFor(unplatformed, platform)
+		-- Builds the model into the frame and returns its teardown.
+		local function mount(): () -> ()
+			local model, moving = build(props)
+			setShown(model ~= nil)
+			if model == nil then
+				return function() end
 			end
-			local stage = EmployeeStageSystem.show({
-				model = model,
-				platform = stand,
-				bounds = bounds,
-				employee = who,
-				skin = skin,
-				emote = emote,
-				onReady = function()
+			local bounds =
+				EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(model, PortraitViewModel.parts(props.framing)))
+			-- A spinning model turns about its own root: the camera and platform centre there, on a box fitted ONCE to
+			-- everywhere its clips and props reach (EmployeePreviewSystem.reachOf, measured), so the camera never refits.
+			local root: Vector3? = nil
+			if props.spin == true and bounds ~= nil then
+				local rootPart = model:FindFirstChild("HumanoidRootPart")
+				local at = if rootPart ~= nil and rootPart:IsA("BasePart")
+					then rootPart.Position
+					else (bounds.min + bounds.max) / 2
+				root = at
+				local outfit = props.outfit
+				local reach = if outfit ~= nil
+					then EmployeePreviewSystem.reachOf(outfit.employee, CosmeticRegistry.keyOf(outfit.look.skin))
+					elseif props.employee ~= nil then EmployeePreviewSystem.reachOf(
+						props.employee,
+						props.skin,
+						props.idle
+					)
+					else nil
+				bounds = ToonSpinViewModel.reach(bounds, at, reach)
+			end
+			local emote = if moving and not covered then props.emote else nil
+			if emote ~= nil and bounds ~= nil then
+				local height = bounds.max.Y - bounds.min.Y
+				bounds = { min = bounds.min, max = bounds.max + Vector3.new(0, height * EMOTE_HEADROOM, 0) }
+			end
+			local unplatformed = bounds
+			local stand: Model? = nil
+			if platform ~= nil and bounds ~= nil then
+				stand, bounds = platformFor(bounds, platform)
+			end
+			local who = if props.outfit ~= nil then props.outfit.employee else props.employee
+			local skin = if props.outfit ~= nil then nil else props.skin
+			local cleanups: { () -> () } = {}
+			local stageTurn: ((degrees: number) -> ())? = nil
+			local pose = if emote ~= nil and who ~= nil
+				then EmployeePoseRules.select(EmployeePoseRegistry.get(who), props.context or "idle", {})
+				else nil
+			-- The live model goes to the stage; until the stage is live (its assets loaded), this viewport shows a posed copy
+			-- of it on its own platform, dropped in the frame the stage takes over.
+			local standIn = if pose ~= nil then EmployeePortraitSystem.build(model, pose, true) else nil
+			if emote ~= nil and who ~= nil and bounds ~= nil and standIn ~= nil then
+				local standInPlatform: Model? = nil
+				if platform ~= nil and unplatformed ~= nil then
+					standInPlatform = platformFor(unplatformed, platform)
+				end
+				local stage = EmployeeStageSystem.show({
+					model = model,
+					platform = stand,
+					bounds = bounds,
+					employee = who,
+					skin = skin,
+					emote = emote,
+					onReady = function()
+						standIn:Destroy()
+						if standInPlatform ~= nil then
+							standInPlatform:Destroy()
+						end
+					end,
+				})
+				if stage ~= nil then
+					stageTurn = stage.turn
+					local window: ViewportFrame = frame
+					local function place()
+						stage.place({ position = window.AbsolutePosition, size = window.AbsoluteSize })
+					end
+					place()
+					local moved = window:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
+					local sized = window:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+					table.insert(cleanups, function()
+						moved:Disconnect()
+						sized:Disconnect()
+						-- Destroys the live model and its platform and puts the camera back.
+						stage.release()
+					end)
+					model, moving, stand = standIn, false, standInPlatform
+				else
 					standIn:Destroy()
 					if standInPlatform ~= nil then
 						standInPlatform:Destroy()
 					end
-				end,
-			})
-			if stage ~= nil then
-				stageTurn = stage.turn
-				local window: ViewportFrame = frame
-				local function place()
-					stage.place({ position = window.AbsolutePosition, size = window.AbsoluteSize })
-				end
-				place()
-				local moved = window:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
-				local sized = window:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
-				table.insert(cleanups, function()
-					moved:Disconnect()
-					sized:Disconnect()
-					-- Destroys the live model and its platform and puts the camera back.
-					stage.release()
-				end)
-				model, moving, stand = standIn, false, standInPlatform
-			else
-				standIn:Destroy()
-				if standInPlatform ~= nil then
-					standInPlatform:Destroy()
 				end
 			end
-		end
-		local camera = Instance.new("Camera")
-		local function fit()
-			if bounds ~= nil then
-				local view = PortraitViewModel.camera(bounds, props.framing, aspectOf(frame), props.turn)
-				camera.FieldOfView = view.fov
-				camera.CFrame = view.cframe
-			end
-		end
-		fit()
-		-- The player's spin turns the model shown here (and the stage's), never the camera or the platform.
-		local spun: Model = model
-		local home = spun:GetPivot()
-		local onStage = stageTurn
-		local axis = root
-		if axis ~= nil then
-			local spinAxis: Vector3 = axis
-			local function apply(angle: number)
-				spun:PivotTo(ToonSpinViewModel.turn(home, spinAxis, angle))
-				if onStage ~= nil then
-					onStage(angle)
+			local camera = Instance.new("Camera")
+			local function fit()
+				if bounds ~= nil then
+					local view = PortraitViewModel.camera(bounds, props.framing, aspectOf(frame), props.turn)
+					camera.FieldOfView = view.fov
+					camera.CFrame = view.cframe
 				end
 			end
-			applySpin.current = apply
-			if spinState.current.angle ~= 0 then
-				apply(spinState.current.angle)
-			end
-		end
-		camera.Parent = frame
-		frame.CurrentCamera = camera
-		local holder: Instance = frame
-		if moving then
-			local world = Instance.new("WorldModel")
-			world.Parent = frame
-			holder = world
-		end
-		model.Parent = holder
-		if stand ~= nil then
-			stand.Parent = frame
-		end
-		local untrack: { () -> () } = {}
-		if moving and who ~= nil then
-			table.insert(untrack, previewProps.track(model))
-			table.insert(untrack, previewFaces.track(model))
-			local idle = if props.outfit ~= nil then nil else props.idle
-			local stopReveal = if props.reveal == true
-				then EmployeePreviewSystem.playReveal(model, who, skin, idle)
-				else nil
-			if stopReveal ~= nil then
-				table.insert(untrack, stopReveal)
-			else
-				EmployeePreviewSystem.playIdle(model, who, skin, nil, idle)
-			end
-			local stopFidgets = EmployeePreviewSystem.playFidgets(model, who, skin, idle)
-			if stopFidgets ~= nil then
-				table.insert(untrack, stopFidgets)
-			end
-			if props.reveal ~= true then
-				hero.current = { model = model, who = who, skin = skin, idle = idle }
-				answerClick(false)
-			end
-		end
-		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
-		-- A live full figure moves out of its rest-pose box (a reveal's raised arm or hop, an idle's ears): keep
-		-- measuring it and ease the camera out to take in all of it, never in (owner, 2026-11-12: never cut off).
-		local growing: RBXScriptConnection? = nil
-		-- (Not a spinning hero: its camera was fitted once to its measured reach and holds; owner, 2026-11-14.)
-		if moving and props.framing == "full" and bounds ~= nil and root == nil then
-			local live: Model = model
-			local target: CFrame? = nil
-			local since = 0
-			growing = RunService.Heartbeat:Connect(function(dt: number)
-				since += dt
-				local fitted = bounds
-				if since >= GROW_EVERY and fitted ~= nil then
-					since = 0
-					local seen = EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(live, nil))
-					local grown = if seen ~= nil then PortraitViewModel.grow(fitted, seen) else nil
-					if grown ~= nil then
-						bounds = grown
-						target = PortraitViewModel.camera(grown, props.framing, aspectOf(frame), props.turn).cframe
+			fit()
+			-- The player's spin turns the model shown here (and the stage's), never the camera or the platform.
+			local spun: Model = model
+			local home = spun:GetPivot()
+			local onStage = stageTurn
+			local axis = root
+			if axis ~= nil then
+				local spinAxis: Vector3 = axis
+				local function apply(angle: number)
+					spun:PivotTo(ToonSpinViewModel.turn(home, spinAxis, angle))
+					if onStage ~= nil then
+						onStage(angle)
 					end
 				end
-				if target ~= nil then
-					camera.CFrame = camera.CFrame:Lerp(target, math.min(1, dt * GROW_EASE))
+				applySpin.current = apply
+				if spinState.current.angle ~= 0 then
+					apply(spinState.current.angle)
 				end
-			end)
-		end
-		return function()
-			applySpin.current = nil
-			hero.current = nil
-			local stop = stopReaction.current
-			if stop ~= nil then
-				stop()
-				stopReaction.current = nil
 			end
-			resized:Disconnect()
-			if growing ~= nil then
-				growing:Disconnect()
+			camera.Parent = frame
+			frame.CurrentCamera = camera
+			local holder: Instance = frame
+			if moving then
+				local world = Instance.new("WorldModel")
+				world.Parent = frame
+				holder = world
 			end
-			for _, cleanup in cleanups do
-				cleanup()
-			end
-			for _, release in untrack do
-				release()
-			end
-			-- Frees a live slot at once: the rebuild that follows (another style, skin or framing) may need it now.
-			EmployeePreviewSystem.release(model)
+			model.Parent = holder
 			if stand ~= nil then
-				stand:Destroy()
+				stand.Parent = frame
 			end
-			if holder ~= frame then
-				holder:Destroy()
+			local untrack: { () -> () } = {}
+			if moving and who ~= nil then
+				table.insert(untrack, previewProps.track(model))
+				table.insert(untrack, previewFaces.track(model))
+				local idle = if props.outfit ~= nil then nil else props.idle
+				local stopReveal = if props.reveal == true
+					then EmployeePreviewSystem.playReveal(model, who, skin, idle)
+					else nil
+				if stopReveal ~= nil then
+					table.insert(untrack, stopReveal)
+				else
+					EmployeePreviewSystem.playIdle(model, who, skin, nil, idle)
+				end
+				local stopFidgets = EmployeePreviewSystem.playFidgets(model, who, skin, idle)
+				if stopFidgets ~= nil then
+					table.insert(untrack, stopFidgets)
+				end
+				if props.reveal ~= true then
+					hero.current = { model = model, who = who, skin = skin, idle = idle }
+					answerClick(false)
+				end
 			end
-			camera:Destroy()
+			local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+			-- A live full figure moves out of its rest-pose box (a reveal's raised arm or hop, an idle's ears): keep
+			-- measuring it and ease the camera out to take in all of it, never in (owner, 2026-11-12: never cut off).
+			local growing: RBXScriptConnection? = nil
+			-- (Not a spinning hero: its camera was fitted once to its measured reach and holds; owner, 2026-11-14.)
+			if moving and props.framing == "full" and bounds ~= nil and root == nil then
+				local live: Model = model
+				local target: CFrame? = nil
+				local since = 0
+				growing = RunService.Heartbeat:Connect(function(dt: number)
+					since += dt
+					local fitted = bounds
+					if since >= GROW_EVERY and fitted ~= nil then
+						since = 0
+						local seen = EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(live, nil))
+						local grown = if seen ~= nil then PortraitViewModel.grow(fitted, seen) else nil
+						if grown ~= nil then
+							bounds = grown
+							target = PortraitViewModel.camera(grown, props.framing, aspectOf(frame), props.turn).cframe
+						end
+					end
+					if target ~= nil then
+						camera.CFrame = camera.CFrame:Lerp(target, math.min(1, dt * GROW_EASE))
+					end
+				end)
+			end
+			return function()
+				applySpin.current = nil
+				hero.current = nil
+				local stop = stopReaction.current
+				if stop ~= nil then
+					stop()
+					stopReaction.current = nil
+				end
+				resized:Disconnect()
+				if growing ~= nil then
+					growing:Disconnect()
+				end
+				for _, cleanup in cleanups do
+					cleanup()
+				end
+				for _, release in untrack do
+					release()
+				end
+				-- Frees a live slot at once: the rebuild that follows (another style, skin or framing) may need it now.
+				EmployeePreviewSystem.release(model)
+				if stand ~= nil then
+					stand:Destroy()
+				end
+				if holder ~= frame then
+					holder:Destroy()
+				end
+				camera:Destroy()
+			end
+		end
+		-- A live model (a hero, an emote, a reveal) mounts now. A still card waits its turn on the build queue, so a
+		-- screen of cards clones about two models a frame instead of all of them in the frame it opens
+		-- (UIBuildQueueSystem; Lobby 2026-11-15: the Shop's 12 cards were one 60-100 ms frame).
+		if props.live == true then
+			return mount()
+		end
+		local unmount: (() -> ())? = nil
+		local cancel = UIBuildQueueSystem.enqueue(function()
+			unmount = mount()
+		end)
+		return function()
+			cancel()
+			local teardown = unmount
+			if teardown ~= nil then
+				teardown()
+			end
 		end
 	end, deps)
 
