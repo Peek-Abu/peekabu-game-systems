@@ -242,8 +242,6 @@ return table.freeze({
 	PAPERWORK_DISTANCE = 7,
 	PAPERWORK_REACH = table.freeze({ depth = 6, halfWidth = 4.5, below = 3, above = 1.5 }),
 	TICK_INTERVAL = 0.25,
-	-- How long the pacing notices stay up.
-	NOTICE_SECONDS = 6,
 	-- After Back to depot: how long the crew may still be here before the trip counts as failed and the next
 	-- shift may start. Queue's return trip makes up to 4 tries, each watched for QueueConstants.TELEPORT_WATCHDOG
 	-- (30 s), with 1 + 2 + 4 s between them: 127 s at worst. Only a crew still here waits it out.

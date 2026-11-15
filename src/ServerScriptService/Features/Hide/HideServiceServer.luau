@@ -56,7 +56,6 @@ local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServi
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServer)
 local SoundServiceServer = require(ServerScriptService.Features.Sound.SoundServiceServer)
-local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 -- The stealth source a hiding spot conceals its occupant under (NpcServiceServer:conceal).
 local CONCEAL_SOURCE = "hide"
@@ -248,11 +247,6 @@ local function leave(player: Player, reason: ExitReason): boolean
 	end
 	if reason == "cramped" then
 		tracker:cool(player.UserId, stay.spotId, os.clock() + HideConstants.SPOT_COOLDOWN_SECONDS)
-		ToastServiceServer:send(player, {
-			text = "Too cramped in there: you had to climb out.",
-			style = "sticky",
-			duration = 3,
-		})
 	end
 	counters[reason] = (counters[reason] or 0) + 1
 	exited:Fire(player, stay.spotId, reason)
@@ -403,7 +397,6 @@ local HideServiceServer: HideServiceServer = {
 		"DeathServiceServer",
 		"NpcServiceServer",
 		"SoundServiceServer",
-		"ToastServiceServer",
 	},
 	entered = entered,
 	exited = exited,

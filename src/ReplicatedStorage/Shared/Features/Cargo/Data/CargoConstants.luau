@@ -94,6 +94,8 @@ return table.freeze({
 	LOAD_DISTANCE = 20,
 	SEARCH_DISTANCE = 8,
 	SEARCH_HOLD = 0.8,
+	-- Told to a player whose search found nothing.
+	SEARCH_EMPTY_TEXT = "Nothing useful in here.",
 	-- The truck bed counts this far past its footprint, and this high above its top.
 	BED_TOLERANCE = 1.5,
 	LOAD_REACH = 4,

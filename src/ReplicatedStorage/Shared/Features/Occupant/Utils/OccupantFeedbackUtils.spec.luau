@@ -172,12 +172,9 @@ return function()
 			expect(names[1]).to.equal("Golden stapler")
 		end)
 
-		it("writes the hit toast without a back-in time", function()
-			expect(OccupantFeedbackUtils.hitText("Alex")).to.equal("Alex got caught!")
-		end)
-
-		it("writes the out toast when the last life is spent", function()
-			expect(OccupantFeedbackUtils.outText("Alex")).to.equal("Alex is out for the shift")
+		it("writes no crew toast for a catch (owner P1 11-14: the HUD and the scream tell it)", function()
+			expect(OccupantFeedbackUtils.hitText).to.equal(nil)
+			expect(OccupantFeedbackUtils.outText).to.equal(nil)
 		end)
 	end)
 end

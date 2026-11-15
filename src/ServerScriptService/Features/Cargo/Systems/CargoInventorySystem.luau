@@ -52,7 +52,6 @@ local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServi
 local CarrySpeedSystem = require(ServerScriptService.Features.Carry.Systems.CarrySpeedSystem)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
-local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -247,10 +246,8 @@ function CargoInventorySystem.new(deps: Deps): CargoInventorySystem
 				if defOf(target) == nil or deps.idOf(target) == nil then
 					return false
 				end
-				local ok, reason = self:pickUp(player, target)
-				if not ok and reason ~= nil then
-					ToastServiceServer:send(player, { text = reason, duration = 2 })
-				end
+				-- A refused pick-up says nothing (owner P1 11-14): the item just stays put.
+				self:pickUp(player, target)
 				return true
 			end)
 			CarrySpeedSystem.setLoadSource(function(player: Player): number?
@@ -265,10 +262,7 @@ function CargoInventorySystem.new(deps: Deps): CargoInventorySystem
 					if type(data) ~= "number" then
 						return
 					end
-					local ok, reason = self:select(player, data)
-					if not ok and reason ~= nil then
-						ToastServiceServer:send(player, { text = reason, duration = 2 })
-					end
+					self:select(player, data)
 				end,
 			})
 			local stopSelect = CargoEvents.packets.Select.listen(function(data: number, player: Player?)

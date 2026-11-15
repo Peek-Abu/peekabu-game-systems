@@ -27,7 +27,6 @@ export type Deps = {
 	},
 	-- After a Load: the deposit, where its swoop starts, the bed, the bonus credited, and who banked it.
 	announce: (CargoTypes.Deposit, Vector3, BasePart, number?, Player) -> (),
-	tell: ((Player, string) -> ())?,
 }
 export type Controller = {
 	load: (self: Controller, player: Player, bed: BasePart) -> (boolean, string?),
@@ -116,10 +115,8 @@ function CargoLoadSystem.new(deps: Deps): Controller
 			then
 				return false
 			end
-			local accepted, reason = self:landed(player, item, bed)
-			if not accepted and reason ~= nil and deps.tell ~= nil then
-				deps.tell(player, reason)
-			end
+			-- A refusal says nothing (owner P1 11-14): the item just stays on the bed.
+			self:landed(player, item, bed)
 			-- A refused deposit stays cargo on the bed; it must not spill after the refusal.
 			return true
 		end,

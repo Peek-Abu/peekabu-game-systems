@@ -124,15 +124,4 @@ function OccupantFeedbackUtils.droppedNames(
 	return names
 end
 
--- The crew's toast when a catch leaves someone a life (a hit: knocked down, up again in a moment, so there is no
--- "back in" time): "Alex got caught!".
-function OccupantFeedbackUtils.hitText(name: string): string
-	return `{name} got caught!`
-end
-
--- The crew's toast when someone's last life is spent: "Alex is out for the shift".
-function OccupantFeedbackUtils.outText(name: string): string
-	return `{name} is out for the shift`
-end
-
 return OccupantFeedbackUtils

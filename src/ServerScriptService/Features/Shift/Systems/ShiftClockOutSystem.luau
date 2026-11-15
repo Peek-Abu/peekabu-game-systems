@@ -10,8 +10,8 @@
 	crew in the server minus whoever is caught and spectating), records it, starts the truck's countdown at half and ends
 	the run at once when everyone still in has punched (a solo punch, or the last one inside caught or gone). The run
 	itself ends on the service's clock step (ShiftPhaseRules.tick, ShiftClockOutRules.countdownOver), the same path as
-	before, so overtime and the review are untouched. Everyone hears who punched and the count, and the countdown's
-	start (ShiftNoticeUtils); the sounds and the HUD board come from the snapshot on each client.
+	before, so overtime and the review are untouched. Only the countdown's start is stamped (ShiftNoticeUtils); who
+	punched and the count are the HUD board's, and the sounds come from the snapshot on each client.
 
 	Kept out of ShiftServiceServer (the service is at the 400-line cap). The decisions are the specced
 	ShiftClockOutRules and ShiftNoticeUtils; the shift's state is the service's, handed in as Deps, and the effects (Death,
@@ -180,21 +180,16 @@ function ShiftClockOutSystem.new(deps: Deps): ShiftClockOutSystem
 				-- Everyone still in has punched: the truck leaves now, and the review says the rest.
 				return true
 			end
-			local _, stillIn = count()
-			local punched, total = ShiftClockOutRules.tally(settled, stillIn)
-			local toasts = { ShiftNoticeUtils.punched(player.DisplayName, punched, total) }
+			-- A punch alone says nothing (the HUD counts it); the truck's countdown is stamped once it starts.
 			if started then
-				for _, toast in ShiftNoticeUtils.truckLeaving() do
-					table.insert(toasts, toast)
-				end
+				announce({ ShiftNoticeUtils.truckLeaving() })
 			end
-			announce(toasts)
 			return true
 		end,
 
 		settle = function()
 			if settleState() then
-				announce(ShiftNoticeUtils.truckLeaving())
+				announce({ ShiftNoticeUtils.truckLeaving() })
 			end
 		end,
 

@@ -17,8 +17,7 @@
 	  (OccupantEvents.CatchReport) for the OUT FOR THE SHIFT screen.
 
 	At the throw he says the line ("You're FIRED!", not during the scare; a kind with no voice, Bramble, says nothing), and `hooks.onCaught` does the rest:
-	`caught` counts the catch for Shift and toasts the crew ("got caught!" for a hit, "out for the shift" for the
-	last). The Rehired notice (`watchRehires`, `rehired`, `dropRehires`) is kept for a catch that publishes a
+	`caught` counts the catch for Shift (no crew text: owner P1 2026-11-14). The Rehired notice (`watchRehires`, `rehired`, `dropRehires`) is kept for a catch that publishes a
 	back-at time; afterCatch publishes none today. `standUpAll` gets everyone this system knocked down back up when
 	the shift ends. If the shift ended meanwhile (`hooks.stillOn`), the player is just released. He plays his grab
 	clip at the start and his throw clip at the launch when they are uploaded (OccupantAssets).
@@ -31,7 +30,7 @@
 	A kind whose catch style is "strike" (OccupantKindRegistry.catchStyleOf: Bramble, owner 11-13 "just do a sound and
 	take a life") skips all of that: the caught player hears its catch sound (OccupantEvents.Strike) and Shift spends
 	one life straight away, with no freeze, camera, lights out, throw or knockdown. The last life still puts them out
-	for the shift (killed where they stand, no launch, with the incident report), and `hooks.onCaught` still toasts.
+	for the shift (killed where they stand, no launch, with the incident report), and `hooks.onCaught` still counts it.
 
 	Called from the NPC think (onAttack), so `begin` itself never yields: the wait is a task.delay.
 
@@ -67,10 +66,8 @@ local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServi
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local TipServiceServer = require(ServerScriptService.Features.Tip.TipServiceServer)
-local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
 -- What the service knows about a would-be catch that the rig and the player do not say.
@@ -330,9 +327,8 @@ end
 local rehire: { [number]: boolean } = {}
 
 --[=[
-	A catch went through (the service's `onCaught` hook): Shift counts it (every catch, hit or not) and the crew is
-	told: "got caught!" for a hit, "out for the shift" when it knocked the player out (`knockedOut`); on a training
-	run only training's own line is sent (OccupantCatchUtils.feedback). The first-catch tip is the catching kind's
+	A catch went through (the service's `onCaught` hook): Shift counts it (every catch, hit or not). The crew gets no
+	text (owner P1 2026-11-14); on a training run only training's own line is sent (OccupantCatchUtils.feedback). The first-catch tip is the catching kind's
 	(OccupantKindRegistry.wordsOf: Harlow's "firstCatch", Bramble's own; nil reads as Harlow). The player is owed
 	the Rehired notice only when afterCatch says so (OccupantCatchUtils.afterCatch).
 ]=]
@@ -346,16 +342,6 @@ function OccupantCatchSystem.caught(player: Player, knockedOut: boolean, kind: O
 	ShiftServiceServer:noteCatch(player)
 	-- A training run sends its own one line (OccupantCatchUtils.feedback).
 	local feedback = OccupantCatchUtils.feedback(ShiftServiceServer:isTraining())
-	if feedback.crewToast then
-		local text = if after.toast == "out"
-			then OccupantFeedbackUtils.outText(player.DisplayName)
-			else OccupantFeedbackUtils.hitText(player.DisplayName)
-		ToastServiceServer:send("all", {
-			text = text,
-			style = ShiftConstants.TOAST_STICKY,
-			duration = 4,
-		})
-	end
 	if feedback.tip then
 		TipServiceServer:first(player, OccupantKindRegistry.wordsOf(kind or OccupantKindRegistry.DEFAULT).catchTip)
 	end

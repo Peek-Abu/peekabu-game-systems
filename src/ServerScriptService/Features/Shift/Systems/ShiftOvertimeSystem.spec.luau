@@ -18,7 +18,7 @@ end
 
 -- A system over a fake shift: `state` is what getState returns; every setState is recorded.
 local function harness(state, eligible, reaches)
-	local log = { state = state, sets = {}, announced = {}, enabled = {}, offered = {} }
+	local log = { state = state, sets = {}, enabled = {}, offered = {} }
 	local sheet = Instance.new("Part")
 	log.system = ShiftOvertimeSystem.new({
 		getState = function()
@@ -40,9 +40,6 @@ local function harness(state, eligible, reaches)
 		end,
 		setEnabled = function(target, enabled)
 			table.insert(log.enabled, { target = target, enabled = enabled })
-		end,
-		announce = function(text)
-			table.insert(log.announced, text)
 		end,
 		reaches = function()
 			return reaches ~= false
@@ -76,25 +73,22 @@ return function()
 			local log = harness(ShiftPhaseRules.markQuota(running(), 350, 150), true, false)
 			expect(log.system.sign(PLAYER, log.sheet)).to.equal(false)
 			expect(#log.sets).to.equal(0)
-			expect(#log.announced).to.equal(0)
 		end)
 	end)
 
 	describe("begin", function()
-		it("starts the overtime warning for the crew and says who signed", function()
+		it("starts the overtime warning for the crew, with no text (the PA chime tells it)", function()
 			local log = harness(ShiftPhaseRules.markQuota(running(), 350, 150))
 			expect(log.system.begin(PLAYER)).to.equal(true)
 			expect(#log.sets).to.equal(1)
 			expect(log.state.stage).to.equal("warning")
 			expect(log.state.stageEndsAt).to.equal(160 + ShiftConstants.WARNING_SECONDS)
-			expect(log.announced[1]).to.equal("Overtime Spec signed the overtime sheet!")
 		end)
 
 		it("refuses a player outside the crew without touching the shift", function()
 			local log = harness(ShiftPhaseRules.markQuota(running(), 350, 150), false)
 			expect(log.system.begin(PLAYER)).to.equal(false)
 			expect(#log.sets).to.equal(0)
-			expect(#log.announced).to.equal(0)
 		end)
 
 		it("refuses before the quota is met, and a second signature", function()

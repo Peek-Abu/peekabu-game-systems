@@ -110,12 +110,12 @@ function Placement.deliver(
 	floor: CFrame?,
 	spawner: SpawnSystem.CargoSpawnSystem,
 	appraisal: CargoTypes.Appraisal?
-): string
+): boolean
 	local def = if kind ~= nil then Registry.get(kind) else nil
 	if kind == nil or def == nil or parent == nil or floor == nil then
-		return "Nothing useful in here."
+		return false
 	end
 	spawner:spawn(kind, floor, parent, { source = "desk", appraisal = appraisal })
-	return `Found: {def.name}`
+	return true
 end
 return Placement

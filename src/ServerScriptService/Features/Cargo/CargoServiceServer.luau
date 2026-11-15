@@ -215,9 +215,6 @@ local loader = CargoLoadSystem.new({
 			inventory:take(userId)
 		end,
 	},
-	tell = function(player, text)
-		ToastServiceServer:send(player, { text = text, duration = 2 })
-	end,
 	announce = function(deposit, from, bed, credited, banker)
 		CargoEvents.packets.Banked.sendToAll(CargoFeedbackUtils.banked(deposit, from, bed.Position, bed.Size, credited))
 		counters.banked += 1
@@ -325,10 +322,8 @@ CargoServiceServer = {
 	start = function(self)
 		InteractionServiceServer:onInteract(CargoConstants.LOAD_KIND, function(player, target)
 			if target:IsA("BasePart") then
-				local ok, reason = self:load(player, target)
-				if not ok and reason ~= nil then
-					tell(player, reason)
-				end
+				-- A refused load says nothing (owner P1 11-14): the cargo just stays in your hands.
+				self:load(player, target)
 			end
 		end)
 		InteractionServiceServer:onInteract(CargoConstants.SEARCH_KIND, function(player, target)
@@ -446,7 +441,11 @@ CargoServiceServer = {
 		counters.searched += 1
 		searched:Fire(part)
 		noiseMade:Fire(part.Position, CargoConstants.SEARCH_NOISE, "search", { player.UserId })
-		tell(player, SearchPlacement.deliver(stocked.kind, container, landing, spawner, stocked.appraisal))
+		-- A find pops onto the floor with no text (owner P1 11-14); an empty search still says so (pending the owner's
+		-- pick on a sound for it).
+		if not SearchPlacement.deliver(stocked.kind, container, landing, spawner, stocked.appraisal) then
+			tell(player, CargoConstants.SEARCH_EMPTY_TEXT)
+		end
 		return true, nil
 	end,
 
