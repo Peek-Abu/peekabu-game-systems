@@ -130,6 +130,40 @@ return function()
 			expect(seenAt(95, 0, 70, 3)).to.equal(false)
 		end)
 
+		it("never counts what is behind the kid's own head (P1 11-14: it froze closing in from behind)", function()
+			-- A kid running down +Z with the default third-person camera 12.5 studs behind and 2 above their head.
+			-- Bramble chasing them sits between that camera and their back, so it shows on their screen from ~12 studs
+			-- behind them, far outside its 4.6-stud reach: counted, it froze there every time and never caught anyone.
+			local head = Vector3.new(0, 5, 0)
+			local camera = Vector3.new(0, 7, -12.5)
+			local look = (Vector3.new(0, 4, 10) - camera).Unit
+			local function watchedAt(z)
+				local point = Vector3.new(0, 4, z)
+				local v = viewer({
+					head = head,
+					report = report(camera, look),
+					sightlines = { { point = point, clear = true } },
+				})
+				return OccupantWatchRules.onScreen(v.report, point), OccupantWatchRules.watching(v, 100.1)
+			end
+			for _, z in { -11, -8, -4.6, -2, -0.5 } do
+				local shown, watched = watchedAt(z)
+				expect(shown).to.equal(true)
+				expect(watched).to.equal(false)
+			end
+			-- Beside or ahead of them it still counts, and so does a kid who turns their camera round to face it.
+			local _, beside = watchedAt(0.5)
+			expect(beside).to.equal(true)
+			local turned = Vector3.new(0, 7, 12.5)
+			local behind = Vector3.new(0, 4, -4)
+			local faced = viewer({
+				head = head,
+				report = report(turned, (behind - turned).Unit),
+				sightlines = { { point = behind, clear = true } },
+			})
+			expect(OccupantWatchRules.watching(faced, 100.1)).to.equal(true)
+		end)
+
 		it("takes the camera's own up (a rolled camera's screen turns with it)", function()
 			local camera = Vector3.new(0, 5, 0)
 			-- Rolled 90 degrees: the screen's long side now runs up and down, so 45 degrees up is on it.

@@ -65,15 +65,26 @@ end
 
 --[=[
 	The sounds one change of his mode makes for this client. `wasMine` / `isMine`: he was / is chasing you.
+	`chaseTells` (the kind's, OccupantKindRegistry.chaseTellsOf; nil reads as true): false drops the chase's sting and
+	its music start and end (Bramble, owner P1 11-14).
 ]=]
 function OccupantFeedbackUtils.cues(
 	beforeMode: string?,
 	afterMode: string?,
 	wasMine: boolean,
-	isMine: boolean
+	isMine: boolean,
+	chaseTells: boolean?
 ): { PresenceCue }
 	local list: { PresenceCue } = {}
 	local changed = afterMode ~= beforeMode
+	if chaseTells == false then
+		if changed and afterMode == "investigate" then
+			table.insert(list, "curious")
+		elseif changed and afterMode == "patrol" and (beforeMode == "search" or beforeMode == "investigate") then
+			table.insert(list, "giveUp")
+		end
+		return list
+	end
 	-- A chase starting on you always stings, even when he was already chasing someone else.
 	local onYou = isMine and not wasMine
 	if afterMode == "chase" and (changed or onYou) then

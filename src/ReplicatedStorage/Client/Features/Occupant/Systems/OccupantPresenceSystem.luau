@@ -4,7 +4,8 @@
 	is near but hasn't seen you; 3D footsteps and muttering through walls; '!' + sting + chase music when he spots
 	you; a sigh when he gives up"; "Voice": "pitched, distorted gibberish plus a speech bubble with the line").
 	- Each sound below is the rig's kind's (OccupantKindRegistry.soundsOf / voiceOf: Bramble has no voice and none of
-	  Harlow's sounds; the sting and the chase music are every kind's).
+	  Harlow's sounds; the sting and the chase music are every kind's whose chase has them: not Bramble's,
+	  OccupantKindRegistry.chaseTellsOf, owner P1 11-14).
 	- A muttering loop on his head. (His footsteps are FootstepServiceClient's, played as his feet land.)
 	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting whenever a chase starts
 	  (on you: the chase music's own sting bar, 2D, however it started; positional "spotted" otherwise), the chase music
@@ -53,6 +54,8 @@ type Harlow = {
 	-- The rig's kind's voice (nil: it never speaks) and own sounds (OccupantKindRegistry).
 	voice: OccupantKindRegistry.Voice?,
 	sounds: OccupantKindRegistry.Sounds,
+	-- Its chase has the sting and the chase music (OccupantKindRegistry.chaseTellsOf; Bramble's has neither).
+	chaseTells: boolean,
 }
 
 export type OccupantPresenceState = {
@@ -127,6 +130,7 @@ local function find(): Harlow?
 					head = head,
 					voice = OccupantKindRegistry.voiceOf(kind),
 					sounds = OccupantKindRegistry.soundsOf(kind),
+					chaseTells = OccupantKindRegistry.chaseTellsOf(kind),
 				}
 			end
 		end
@@ -145,13 +149,19 @@ local function distanceToMe(): number?
 	return (root.Position - harlow.root.Position).Magnitude
 end
 
-local function setMusic(on: boolean)
+-- `held`: a chase on you ended (the music holds, then fades: OccupantChaseMusicSystem.release); otherwise he is gone
+-- (it fades now).
+local function setMusic(on: boolean, held: boolean?)
 	if on and not ownsMusic then
 		ownsMusic = true
 		OccupantChaseMusicSystem.begin(distanceToMe)
 	elseif not on and ownsMusic then
 		ownsMusic = false
-		OccupantChaseMusicSystem.finish()
+		if held == true then
+			OccupantChaseMusicSystem.release()
+		else
+			OccupantChaseMusicSystem.finish()
+		end
 	end
 end
 
@@ -262,7 +272,7 @@ local function onCue(cue: string, harlow: Harlow, mine: boolean)
 	elseif cue == "chaseStart" then
 		setMusic(true)
 	elseif cue == "chaseEnd" then
-		setMusic(false)
+		setMusic(false, true)
 	end
 end
 
@@ -291,7 +301,7 @@ local function step()
 	local mode = if type(modeValue) == "string" then modeValue else nil
 	local mine = mode == "chase"
 		and harlow.model:GetAttribute(OccupantConstants.TARGET_ATTRIBUTE) == Players.LocalPlayer.UserId
-	for _, cue in OccupantFeedbackUtils.cues(lastMode, mode, lastMine, mine) do
+	for _, cue in OccupantFeedbackUtils.cues(lastMode, mode, lastMine, mine, harlow.chaseTells) do
 		onCue(cue, harlow, mine)
 	end
 	lastMode = mode

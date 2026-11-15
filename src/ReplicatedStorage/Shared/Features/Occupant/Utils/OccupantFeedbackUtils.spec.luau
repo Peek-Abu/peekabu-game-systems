@@ -116,6 +116,17 @@ return function()
 			expect(list[2]).to.equal("chaseStart")
 		end)
 
+		it("gives a kind with no chase tells (Bramble) no sting and no chase music, start or end", function()
+			expect(#OccupantFeedbackUtils.cues("patrol", "chase", false, true, false)).to.equal(0)
+			expect(#OccupantFeedbackUtils.cues("search", "chase", false, false, false)).to.equal(0)
+			expect(#OccupantFeedbackUtils.cues("chase", "chase", false, true, false)).to.equal(0)
+			expect(#OccupantFeedbackUtils.cues("chase", "search", true, false, false)).to.equal(0)
+			-- Its other cues are unchanged (it has no sounds for them, but the cue list is the same).
+			expect(OccupantFeedbackUtils.cues("patrol", "investigate", false, false, false)[1]).to.equal("curious")
+			-- Told explicitly, a kind with chase tells is unchanged.
+			expect(OccupantFeedbackUtils.cues("patrol", "chase", false, true, true)[2]).to.equal("chaseStart")
+		end)
+
 		it("does not sting again while the same chase on you carries on", function()
 			expect(#OccupantFeedbackUtils.cues("chase", "chase", true, true)).to.equal(0)
 		end)

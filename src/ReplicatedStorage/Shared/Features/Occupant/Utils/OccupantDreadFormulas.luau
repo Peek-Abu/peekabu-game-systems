@@ -44,6 +44,9 @@ export type StageInput = {
 	me: number,
 	proximity: number,
 	crew: number,
+	-- The kind's chase tells (OccupantKindRegistry.chaseTellsOf; nil reads as true). False: its chase never gives the
+	-- chase or crew look, only the aware dread by proximity (Bramble, owner P1 11-14).
+	chaseTells: boolean?,
 }
 
 local ZERO: DreadLook = table.freeze({
@@ -146,7 +149,7 @@ function OccupantDreadFormulas.stage(input: StageInput): DreadStage
 		return "none"
 	end
 	if not input.spectating then
-		if mode == "chase" and onMe then
+		if mode == "chase" and onMe and input.chaseTells ~= false then
 			return "chase"
 		end
 		if input.proximity > 0 and mode ~= nil then
@@ -158,7 +161,7 @@ function OccupantDreadFormulas.stage(input: StageInput): DreadStage
 			end
 		end
 	end
-	if input.crew > 0 and mode == "chase" then
+	if input.crew > 0 and mode == "chase" and input.chaseTells ~= false then
 		return "crew"
 	end
 	return "none"

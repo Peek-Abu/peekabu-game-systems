@@ -2,7 +2,7 @@
 --[=[
 	OccupantChaseMusicSystem: the chase music on the chased player's client (round-2 pick B: B minor, 144 bpm, 16 bars,
 	five stems from one score; docs: characters/audio/shipped-assets.md). OccupantPresenceSystem calls `begin` when a
-	chase starts on you and `finish` when it ends.
+	chase starts on you and `release` when it ends (`finish` when he is gone).
 
 	- `begin`: the chase sting (one bar on F dim7 that resolves into the loop's downbeat), then, CHASE_STING_LEAD
 	  seconds later, all five stems at once, looped, 2D: intensity 1 (ostinato + low) at full, intensity 2 (motif, ticks,
@@ -10,7 +10,12 @@
 	  jittery distance never pumps the music.
 	- The stems stay locked: any stem more than CHASE_STEM_DRIFT seconds off the ostinato's TimePosition is put back on it.
 	- Every stem plays DREAD.CHASE_MUSIC_GAIN louder than registered; `beatPosition` gives the dread the beat grid.
-	- `finish`: the stems fade out over CHASE_MUSIC_FADE (a chase that ends inside the sting bar never starts them).
+	- `release` (P1 11-14, "cutting in and out"): the music holds (OccupantTellRules.musicHold) until the chase on you
+	  has been off CHASE_MUSIC_HOLD seconds, then a master gain fades every stem out over CHASE_MUSIC_FADE
+	  (OccupantTellRules.musicGain) and the stems stop at silence. A chase back on you inside the hold changes nothing; one
+	  back inside the fade brings the same stems up over CHASE_MUSIC_FADE_IN: no new sting, no restart from bar one.
+	- `finish`: his rig is gone or the system stops: the stems fade out over `fade` now, no hold (a chase that ends
+	  inside the sting bar never starts them).
 	- A chase that flickers off and on inside the sting bar (measured live: three starts in 0.85 s at the edge of his
 	  sight) does not stack stings: the bar already sounding carries on, and the stems still start on its downbeat.
 	Pending stems (OccupantAssets) are skipped; a pending sting falls back to the library "spotted" sting.
@@ -34,6 +39,8 @@ type SoundHandle = SoundServiceClient.SoundHandle
 
 export type OccupantChaseMusicState = {
 	active: boolean,
+	held: boolean,
+	gain: number,
 	stems: number,
 	layer: number,
 	counters: { [string]: number },
@@ -46,7 +53,12 @@ type Stem = {
 	near: boolean,
 }
 
+-- A chase's music is sounding (from its sting until the stems fade to silence).
 local active = false
+-- Whether a chase on you wants it now (presence's begin / release), the hold over that, and the master gain.
+local wanted = false
+local hold: OccupantTellRules.MusicHold = OccupantTellRules.newMusicHold()
+local gain = 0
 -- When the stems start (os.clock()); nil once they have.
 local startAt: number? = nil
 -- When the last sting started (os.clock()).
@@ -57,7 +69,7 @@ local distanceOf: () -> number? = function(): number?
 	return nil
 end
 local connection: RBXScriptConnection? = nil
-local counters = { chases = 0, stings = 0, relocks = 0, pending = 0 }
+local counters = { chases = 0, stings = 0, relocks = 0, pending = 0, resumes = 0, holds = 0 }
 
 local function playStem(id: string, near: boolean)
 	if not SoundRegistry.has(id) then
@@ -70,10 +82,7 @@ local function playStem(id: string, near: boolean)
 	end
 	-- The chase plays louder than registered (DREAD.CHASE_MUSIC_GAIN: it was too quiet under his footsteps).
 	local volume = handle.sound.Volume * OccupantConstants.DREAD.CHASE_MUSIC_GAIN
-	handle.sound.Volume = volume
-	if near then
-		handle.sound.Volume = volume * layer
-	end
+	handle.sound.Volume = (if near then volume * layer else volume) * gain
 	table.insert(stems, { handle = handle, volume = volume, near = near })
 end
 
@@ -117,17 +126,34 @@ local function step(deltaTime: number)
 	if not active then
 		return
 	end
+	local clock = os.clock()
+	local wasHeld = hold.offSince ~= nil
+	hold = OccupantTellRules.musicHold(hold, wanted, clock)
+	if hold.offSince ~= nil and not wasHeld then
+		counters.holds += 1
+	end
+	gain = OccupantTellRules.musicGain(gain, hold.on, deltaTime)
+	if not hold.on and gain <= 0 then
+		-- Faded to silence: this chase's music is over.
+		active = false
+		startAt = nil
+		stopStems(0)
+		return
+	end
 	local distance = distanceOf()
 	local target = if distance ~= nil then OccupantTellRules.chaseLayer(distance) else layer
 	layer = OccupantTellRules.easeLayer(layer, target, deltaTime)
 	local due = startAt
-	if due ~= nil and os.clock() >= due then
-		startStems()
+	if due ~= nil and clock >= due then
+		if hold.on then
+			startStems()
+		else
+			-- The chase let go inside the sting bar: the stems never start.
+			startAt = nil
+		end
 	end
 	for _, stem in stems do
-		if stem.near then
-			stem.handle.sound.Volume = stem.volume * layer
-		end
+		stem.handle.sound.Volume = (if stem.near then stem.volume * layer else stem.volume) * gain
 	end
 	relock()
 end
@@ -154,12 +180,20 @@ end
 	A chase on you began: the sting now, the stems a bar later. `distance` reads his distance to you (nil: unknown).
 ]=]
 function OccupantChaseMusicSystem.begin(distance: () -> number?)
+	wanted = true
+	distanceOf = distance
 	if active then
+		-- Still sounding (held, or fading out): the same stems carry on or come back up; no sting, no restart.
+		if not hold.on or hold.offSince ~= nil then
+			counters.resumes += 1
+		end
+		hold = OccupantTellRules.musicHold(hold, true, os.clock())
 		return
 	end
 	active = true
+	hold = OccupantTellRules.musicHold(hold, true, os.clock())
+	gain = 1
 	counters.chases += 1
-	distanceOf = distance
 	local now = distance()
 	layer = if now ~= nil then OccupantTellRules.chaseLayer(now) else 0
 	local clock = os.clock()
@@ -177,10 +211,21 @@ function OccupantChaseMusicSystem.begin(distance: () -> number?)
 end
 
 --[=[
-	The chase on you ended: the stems fade out over `fade` (default CHASE_MUSIC_FADE).
+	The chase on you ended: the music holds CHASE_MUSIC_HOLD seconds (a chase back on you carries straight on), then
+	fades out over CHASE_MUSIC_FADE.
+]=]
+function OccupantChaseMusicSystem.release()
+	wanted = false
+end
+
+--[=[
+	He is gone (or this system stops): the stems fade out over `fade` (default CHASE_MUSIC_FADE) now, with no hold.
 ]=]
 function OccupantChaseMusicSystem.finish(fade: number?)
 	active = false
+	wanted = false
+	hold = OccupantTellRules.newMusicHold()
+	gain = 0
 	startAt = nil
 	stopStems(fade or OccupantConstants.CHASE_MUSIC_FADE)
 end
@@ -202,7 +247,14 @@ function OccupantChaseMusicSystem.beatPosition(): number?
 end
 
 function OccupantChaseMusicSystem.getState(): OccupantChaseMusicState
-	return { active = active, stems = #stems, layer = layer, counters = table.clone(counters) }
+	return {
+		active = active,
+		held = hold.offSince ~= nil,
+		gain = gain,
+		stems = #stems,
+		layer = layer,
+		counters = table.clone(counters),
+	}
 end
 
 return OccupantChaseMusicSystem

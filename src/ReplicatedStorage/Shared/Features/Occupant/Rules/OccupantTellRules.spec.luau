@@ -180,6 +180,72 @@ return function()
 		end)
 	end)
 
+	describe("chase music hold (P1 11-14: it cut in and out)", function()
+		local C = OccupantConstants
+		it("turns on at once when a chase on you starts", function()
+			local hold = OccupantTellRules.musicHold(OccupantTellRules.newMusicHold(), true, 10)
+			expect(hold.on).to.equal(true)
+			expect(hold.offSince).to.equal(nil)
+		end)
+
+		it("stays on through a chase that drops out for less than CHASE_MUSIC_HOLD", function()
+			local hold = OccupantTellRules.musicHold(OccupantTellRules.newMusicHold(), true, 10)
+			hold = OccupantTellRules.musicHold(hold, false, 11)
+			expect(hold.on).to.equal(true)
+			expect(hold.offSince).to.equal(11)
+			hold = OccupantTellRules.musicHold(hold, false, 11 + C.CHASE_MUSIC_HOLD - 0.01)
+			expect(hold.on).to.equal(true)
+			-- Back on inside the hold: nothing restarts, and the hold clock clears.
+			hold = OccupantTellRules.musicHold(hold, true, 12)
+			expect(hold.on).to.equal(true)
+			expect(hold.offSince).to.equal(nil)
+		end)
+
+		it("lets go once the chase has been off a whole CHASE_MUSIC_HOLD", function()
+			local hold = OccupantTellRules.musicHold(OccupantTellRules.newMusicHold(), true, 10)
+			hold = OccupantTellRules.musicHold(hold, false, 11)
+			hold = OccupantTellRules.musicHold(hold, false, 11 + C.CHASE_MUSIC_HOLD)
+			expect(hold.on).to.equal(false)
+			expect(hold.offSince).to.equal(nil)
+		end)
+
+		it("never flaps: a chase flickering every half second keeps it on the whole time", function()
+			local hold = OccupantTellRules.newMusicHold()
+			local flips = 0
+			local was = false
+			for tick = 0, 200 do
+				local now = tick * 0.05
+				hold = OccupantTellRules.musicHold(hold, math.floor(now / 0.5) % 2 == 0, now)
+				if hold.on ~= was then
+					flips += 1
+					was = hold.on
+				end
+			end
+			expect(flips).to.equal(1)
+		end)
+
+		it("never changes the hold it is given", function()
+			local hold = OccupantTellRules.musicHold(OccupantTellRules.newMusicHold(), true, 10)
+			OccupantTellRules.musicHold(hold, false, 11)
+			expect(hold.offSince).to.equal(nil)
+		end)
+
+		it("fades the music in over CHASE_MUSIC_FADE_IN and out over CHASE_MUSIC_FADE, never past 0..1", function()
+			expect(OccupantTellRules.musicGain(0, true, C.CHASE_MUSIC_FADE_IN / 2)).to.be.near(0.5, 1e-9)
+			expect(OccupantTellRules.musicGain(0, true, C.CHASE_MUSIC_FADE_IN * 2)).to.equal(1)
+			expect(OccupantTellRules.musicGain(1, false, C.CHASE_MUSIC_FADE / 2)).to.be.near(0.5, 1e-9)
+			expect(OccupantTellRules.musicGain(1, false, C.CHASE_MUSIC_FADE * 2)).to.equal(0)
+			expect(OccupantTellRules.musicGain(1, true, 0.1)).to.equal(1)
+			expect(OccupantTellRules.musicGain(0, false, 0.1)).to.equal(0)
+		end)
+
+		it("fades out slower than it fades in, over more than a bar", function()
+			expect(C.CHASE_MUSIC_FADE > C.CHASE_MUSIC_FADE_IN).to.equal(true)
+			expect(C.CHASE_MUSIC_FADE >= C.CHASE_STING_LEAD).to.equal(true)
+			expect(C.CHASE_MUSIC_HOLD >= C.CHASE_STING_LEAD).to.equal(true)
+		end)
+	end)
+
 	describe("desk sounds", function()
 		it("hears him sit when he reaches the chair and starts typing", function()
 			expect(OccupantTellRules.sat("toDesk", "type")).to.equal(true)

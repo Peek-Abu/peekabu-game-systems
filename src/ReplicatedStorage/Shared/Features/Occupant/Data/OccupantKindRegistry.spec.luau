@@ -99,6 +99,17 @@ return function()
 		end)
 	end)
 
+	describe("chaseTellsOf", function()
+		it("gives Harlow (and an unknown kind) the chase's sting, music and screen", function()
+			expect(OccupantKindRegistry.chaseTellsOf("harlow")).to.equal(true)
+			expect(OccupantKindRegistry.chaseTellsOf("nope")).to.equal(true)
+		end)
+
+		it("never gives Bramble a chase sting, chase music or chase screen (owner P1 11-14)", function()
+			expect(OccupantKindRegistry.chaseTellsOf("bramble")).to.equal(false)
+		end)
+	end)
+
 	describe("templatePaths", function()
 		it("is only Harlow's own template for Harlow (his path, unchanged)", function()
 			local paths = OccupantKindRegistry.templatePaths("harlow")

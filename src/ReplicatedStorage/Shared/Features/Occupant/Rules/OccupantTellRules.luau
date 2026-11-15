@@ -131,6 +131,46 @@ function OccupantTellRules.easeLayer(current: number, target: number, deltaTime:
 	return current + math.clamp(target - current, -most, most)
 end
 
+-- The chase music's hold: whether it is on, and since when the chase on you has been off while it stays on.
+export type MusicHold = {
+	on: boolean,
+	offSince: number?,
+}
+
+function OccupantTellRules.newMusicHold(): MusicHold
+	return { on = false }
+end
+
+--[=[
+	The chase music's hold after this frame at `now` (P1 11-14: it cut in and out): a chase on you (`chasingMe`) turns
+	it on at once; it stays on until the chase has been off CHASE_MUSIC_HOLD seconds without a break, so a chase that
+	flickers (a lost sight line, a target swap and back) never stops and restarts it. Returns a new hold.
+]=]
+function OccupantTellRules.musicHold(hold: MusicHold, chasingMe: boolean, now: number): MusicHold
+	if chasingMe then
+		return { on = true }
+	end
+	if not hold.on then
+		return { on = false }
+	end
+	local since = hold.offSince or now
+	if now - since >= OccupantConstants.CHASE_MUSIC_HOLD then
+		return { on = false }
+	end
+	return { on = true, offSince = since }
+end
+
+--[=[
+	The chase music's master gain one `deltaTime` step from `current`: up to 1 over CHASE_MUSIC_FADE_IN while `on`,
+	down to 0 over CHASE_MUSIC_FADE while off.
+]=]
+function OccupantTellRules.musicGain(current: number, on: boolean, deltaTime: number): number
+	if on then
+		return math.min(1, current + deltaTime / OccupantConstants.CHASE_MUSIC_FADE_IN)
+	end
+	return math.max(0, current - deltaTime / OccupantConstants.CHASE_MUSIC_FADE)
+end
+
 --[=[
 	Whether he just sat down at a desk: walking to it (`toDesk`), then typing.
 ]=]

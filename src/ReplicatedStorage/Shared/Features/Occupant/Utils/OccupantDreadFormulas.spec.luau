@@ -94,6 +94,28 @@ return function()
 			expect(OccupantDreadFormulas.stage(input({ mode = "chase", target = ME, proximity = 0 }))).to.equal("chase")
 		end)
 
+		it(
+			"never gives the chase or crew look for a kind with no chase tells (Bramble): only the aware dread",
+			function()
+				expect(OccupantDreadFormulas.stage(input({ mode = "chase", target = ME, chaseTells = false }))).to.equal(
+					"aware"
+				)
+				expect(
+					OccupantDreadFormulas.stage(
+						input({ mode = "chase", target = ME, proximity = 0, chaseTells = false })
+					)
+				).to.equal("none")
+				expect(
+					OccupantDreadFormulas.stage(
+						input({ mode = "chase", target = 99, proximity = 0, crew = 0.6, chaseTells = false })
+					)
+				).to.equal("none")
+				expect(OccupantDreadFormulas.stage(input({ mode = "chase", target = ME, chaseTells = true }))).to.equal(
+					"chase"
+				)
+			end
+		)
+
 		it("lets go while he is catching you (the jumpscare owns the screen)", function()
 			expect(OccupantDreadFormulas.stage(input({ mode = "catch", target = ME }))).to.equal("none")
 		end)

@@ -557,7 +557,12 @@ return table.freeze({
 	CHASE_STING_LEAD = 4 * 60 / 144,
 	CHASE_LAYER_SECONDS = 0.6,
 	CHASE_STEM_DRIFT = 0.04,
-	CHASE_MUSIC_FADE = 1.5,
+	-- P1 11-14 ("cutting in and out"): the music stays on until the chase on you has been off CHASE_MUSIC_HOLD seconds
+	-- (a lost sight line, a target swap and back), then fades out over CHASE_MUSIC_FADE (was 1.5); a chase back inside
+	-- the fade brings the same stems back up over CHASE_MUSIC_FADE_IN, no new sting, no restart from bar one.
+	CHASE_MUSIC_FADE = 2.5,
+	CHASE_MUSIC_FADE_IN = 0.5,
+	CHASE_MUSIC_HOLD = 4,
 	-- The truck box's PathfindingModifier label (Office builds it; his kind's pathCosts never enter it), and
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",

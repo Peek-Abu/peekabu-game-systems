@@ -41,6 +41,7 @@ local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local OccupantClient = ReplicatedStorage.Client.Features.Occupant
 local OccupantAssets = require(OccupantShared.Data.OccupantAssets)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
+local OccupantKindRegistry = require(OccupantShared.Data.OccupantKindRegistry)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
 local OccupantDreadFormulas = require(OccupantShared.Utils.OccupantDreadFormulas)
@@ -381,6 +382,8 @@ local function step(dt: number)
 		me = me.UserId,
 		proximity = proximity,
 		crew = crew,
+		-- Bramble's chase has no chase look (owner P1 11-14): only the aware dread by proximity.
+		chaseTells = harlow == nil or OccupantKindRegistry.chaseTellsOf(OccupantKindRegistry.kindOf(harlow)),
 	})
 	if nextStage ~= stage then
 		counters.stages += 1

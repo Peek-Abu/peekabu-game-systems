@@ -227,11 +227,16 @@ local function clearLine(from: Vector3, to: Vector3, params: RaycastParams): boo
 	return Workspace:Raycast(from, to - from, params) == nil
 end
 
--- The body points on the camera's screen and in range (only these are worth a ray).
-local function onScreen(report: Report, points: { Vector3 }): { Vector3 }
+-- The body points on the camera's screen and in range, and ahead of the viewer's head (`eyes`) when one is given (only
+-- these are worth a ray; OccupantWatchRules.ahead: nothing behind the kid's back counts).
+local function onScreen(report: Report, points: { Vector3 }, eyes: Vector3?): { Vector3 }
 	local shown: { Vector3 } = {}
 	for _, point in points do
-		if OccupantWatchRules.inRange(report.position, point) and OccupantWatchRules.onScreen(report, point) then
+		if
+			OccupantWatchRules.inRange(report.position, point)
+			and OccupantWatchRules.onScreen(report, point)
+			and (eyes == nil or OccupantWatchRules.ahead(eyes, report.look, point))
+		then
 			table.insert(shown, point)
 		end
 	end
@@ -371,7 +376,7 @@ local function watches(
 		or not OccupantWatchRules.eligible(viewer)
 		or not OccupantWatchRules.fresh(report, now)
 		or not OccupantWatchRules.cameraNear(viewer.head, report.position)
-		or not inView(report, points)
+		or #onScreen(report, points, viewer.head) == 0
 	then
 		return false
 	end
@@ -379,7 +384,7 @@ local function watches(
 	viewer.cameraClear = clearLine(viewer.head, report.position, params)
 	if viewer.cameraClear then
 		-- Rays only to the points on the screen, and none after the first clear one.
-		for _, point in onScreen(report, points) do
+		for _, point in onScreen(report, points, viewer.head) do
 			local clear = clearLine(report.position, point, params)
 			table.insert(viewer.sightlines, { point = point, clear = clear })
 			if clear then
