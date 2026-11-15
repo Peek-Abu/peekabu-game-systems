@@ -67,6 +67,18 @@ return function()
 		end)
 	end)
 
+	describe("motionScale", function()
+		it("is the player's shake setting, clamped to 0..1", function()
+			expect(CameraMotionFormulas.motionScale(0.4, false)).to.equal(0.4)
+			expect(CameraMotionFormulas.motionScale(2, false)).to.equal(1)
+			expect(CameraMotionFormulas.motionScale(-1, false)).to.equal(0)
+		end)
+
+		it("is 0 when the device asks for reduced motion, whatever the setting", function()
+			expect(CameraMotionFormulas.motionScale(1, true)).to.equal(0)
+		end)
+	end)
+
 	describe("smoothingAlpha", function()
 		it("is 0 for no time and approaches 1 for a long step", function()
 			expect(CameraMotionFormulas.smoothingAlpha(12, 0)).to.equal(0)

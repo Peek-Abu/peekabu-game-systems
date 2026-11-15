@@ -69,6 +69,14 @@ function CameraMotionFormulas.fovKickValue(kick: CameraTypes.FovKick): number
 end
 
 --[=[
+	How much camera shake and FOV kick to apply: the player's shake setting (0..1), or none at all when the device's
+	Reduced Motion setting is on (GuiService.ReducedMotionEnabled; P1 device check, 11-14).
+]=]
+function CameraMotionFormulas.motionScale(setting: number, reducedMotion: boolean): number
+	return if reducedMotion then 0 else math.clamp(setting, 0, 1)
+end
+
+--[=[
 	The fraction of the way to move toward a target this frame, for exponential smoothing.
 ]=]
 function CameraMotionFormulas.smoothingAlpha(sharpness: number, dt: number): number

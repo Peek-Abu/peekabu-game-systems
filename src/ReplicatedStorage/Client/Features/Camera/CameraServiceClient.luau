@@ -15,6 +15,7 @@
 	@class CameraServiceClient
 ]=]
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -252,7 +253,9 @@ local function step(dt: number)
 
 	effects:step(dt)
 	local pitch, yaw, roll = CameraMotionFormulas.shakeAngles(effects:trauma(), clock, SHAKE_CONFIG)
-	local offset = CFrame.Angles(pitch * shakeScale, yaw * shakeScale, roll * shakeScale)
+	-- The shake setting, or nothing under the device's Reduced Motion (which drops the FOV kicks below too).
+	local motion = CameraMotionFormulas.motionScale(shakeScale, GuiService.ReducedMotionEnabled)
+	local offset = CFrame.Angles(pitch * motion, yaw * motion, roll * motion)
 	for _, modifier in table.clone(modifiers) do
 		local ok, result = pcall(modifier, dt)
 		if ok then
@@ -265,7 +268,9 @@ local function step(dt: number)
 	if offset ~= CFrame.identity then
 		camera.CFrame *= offset
 	end
-	camera.FieldOfView = (modeFov or baseFov) + effects:fovOffset() + heldFov()
+	camera.FieldOfView = (modeFov or baseFov)
+		+ (if GuiService.ReducedMotionEnabled then 0 else effects:fovOffset())
+		+ heldFov()
 	-- Last, from the final camera position. An authored shot (or the first-person lock) leaves the character to its
 	-- owner: a hiding spot hides the body from its peek camera itself.
 	if engineView then
