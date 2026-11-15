@@ -261,7 +261,8 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			position = UDim2.fromScale(1, 0),
 			size = if phone then UDim2.fromOffset(176, 46) else UDim2.fromOffset(330, 82),
 		}),
-		-- Gloom, left of Credits on the same row: the same pill, the Gloom splat and the kit's Gloom number colour.
+		-- Gloom, left of Credits on the same row: the same pill, the Gloom splat and the kit's Gloom number colour. The
+		-- gap clears the Credits ticket, which hangs past its pill's left edge.
 		gloom = e(ToonPill, {
 			text = props.gloom,
 			meaning = "grape",
@@ -270,7 +271,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			iconSize = if phone then 60 else 108,
 			small = phone,
 			anchor = Vector2.new(1, 0),
-			position = if phone then UDim2.fromOffset(-188, 0) else UDim2.fromOffset(-354, 0),
+			position = if phone then UDim2.fromOffset(-216, 0) else UDim2.fromOffset(-404, 0),
 			size = if phone then UDim2.fromOffset(130, 46) else UDim2.fromOffset(240, 82),
 		}),
 		-- Gleam's sparkles over the counter (the kit marks what you earn).
