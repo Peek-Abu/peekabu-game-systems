@@ -207,12 +207,14 @@ end
 local measured: { [BasePart]: OccupantTypes.Perch } = {}
 setmetatable(measured, { __mode = "k" })
 
--- How far up a ceiling is looked for; how high over the top a landing's line out runs (about his body, clear of the
--- prop's own lip), and the radius of that line; how far down a floor is looked for; and how high over the top his body
--- sits (for sight checks and distances).
+-- How far up a ceiling is looked for; the heights over the top a landing's line out runs (just over the top surface,
+-- where his tucked feet start, and about his body), and the radius of those lines; how far down a floor is looked for;
+-- and how high over the top his body sits (for sight checks and distances). The low line rules out a landing along a
+-- bank of props: Shift run 11-14, a drop along the lockers passed just over the next locker's top (its hitbox stands
+-- 0.26 over the visible top he sits on).
 local CEILING_LOOK = 60
-local LANDING_LINE_HEIGHT = 2
 local LANDING_RADIUS = 1.2
+local LANDING_LINE_HEIGHTS = { LANDING_RADIUS + 0.05, 2 }
 local FLOOR_LOOK = 40
 local BODY_UP = 2
 
@@ -220,7 +222,8 @@ local BODY_UP = 2
 	Measures the perch spot of `instance` (a PERCH_TAG part, a child of its prop's proxy): the centre of the prop's
 	visible top (its ArtVisual's box, else the proxy's: the owner's play-check 11-14 had him floating over the hitbox),
 	the room over it to the ceiling, and its landings: each OccupantPerchRules.landingCandidate PERCH_LANDING_OUT past
-	the prop's edge with a clear, body-wide line out to it from over the top and a floor under it, lower than the top
+	the prop's edge with clear, body-wide lines out to it from just over the top and higher, and a floor under it, lower
+	than the top
 	(so the drop never passes through a wall or lands on another prop). Rays skip the prop itself, the rigs and the crew.
 ]=]
 local function measure(instance: BasePart, rig: Rig): OccupantTypes.Perch
@@ -252,14 +255,20 @@ local function measure(instance: BasePart, rig: Rig): OccupantTypes.Perch
 	params.RespectCanCollide = true
 	local up = Workspace:Raycast(top + Vector3.new(0, 0.05, 0), Vector3.new(0, CEILING_LOOK, 0), params)
 	local landings: { Vector3 } = {}
-	local lift = Vector3.new(0, LANDING_LINE_HEIGHT, 0)
 	local reach = math.max(size.X, size.Z) / 2 + OccupantConstants.PERCH_LANDING_OUT
 	for _, spot in OccupantPerchRules.landingCandidates(top, reach) do
 		local out = (spot - top) * Vector3.new(1, 0, 1)
-		if Workspace:Spherecast(top + lift, LANDING_RADIUS, out, params) ~= nil then
+		local clear = true
+		for _, height in LANDING_LINE_HEIGHTS do
+			if Workspace:Spherecast(top + Vector3.new(0, height, 0), LANDING_RADIUS, out, params) ~= nil then
+				clear = false
+				break
+			end
+		end
+		if not clear then
 			continue
 		end
-		local floor = Workspace:Raycast(spot + lift, Vector3.new(0, -FLOOR_LOOK, 0), params)
+		local floor = Workspace:Raycast(spot + Vector3.new(0, 2, 0), Vector3.new(0, -FLOOR_LOOK, 0), params)
 		if floor ~= nil and floor.Position.Y < top.Y - 1 then
 			table.insert(landings, floor.Position)
 		end
