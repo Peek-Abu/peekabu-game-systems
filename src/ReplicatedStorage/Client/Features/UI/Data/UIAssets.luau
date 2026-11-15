@@ -188,7 +188,9 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	friendsLockOpen = "rbxassetid://111986114299986",
 	invite = "rbxassetid://85689612944793",
 	trophy = "rbxassetid://123624581133724",
-	truck = "rbxassetid://114161028640916",
+	-- Today's truck (characters/truck v3, the purple WE CLEAN UP THE NIGHT band), rendered and ink-outlined like the
+	-- other kit icons (P1 placeholders, owner yes 2026-11-15; Icey Labs, decal 133086114130489).
+	truck = "rbxassetid://107674041401017",
 	vacuum = "rbxassetid://95204983643911",
 	vacuumBrass = "rbxassetid://70576303094914",
 	xp = "rbxassetid://77433204551858",
@@ -208,11 +210,17 @@ end
 -- Graded photos and cut-out renders (the map cards are 960x600, the portraits square, the cut-outs outlined PNGs).
 UIAssets.toonPhotos = table.freeze({
 	officeCard = "rbxassetid://130708209071391",
-	hospitalCard = "rbxassetid://76365174293518",
-	motelCard = "rbxassetid://104743022093430",
-	mallCard = "rbxassetid://108801045193529",
+	-- The three SOON places' cards: each front built from our own yard pieces in Studio, taped shut, shot at dusk and
+	-- graded like the School card (P1 placeholders, owner yes 2026-11-15; Icey Labs, decals 126741071058199 /
+	-- 101057075096880 / 124768571529726; source in characters/ui/implemented/upload/photos/sites-2026-11-15).
+	hospitalCard = "rbxassetid://70554632250088",
+	motelCard = "rbxassetid://106881096176586",
+	mallCard = "rbxassetid://120948393336511",
 	managerPortrait = "rbxassetid://136047524517573",
-	officeWide = "rbxassetid://105469082592765",
+	-- The Office's trip-card picture: a real Studio Play shot of today's Office, Pippa from behind with her vacuum and
+	-- the Manager across the open-plan room, graded 16:9 like schoolWide (P1 placeholders, owner yes 2026-11-15; Icey
+	-- Labs, decal 93654867486186; source in characters/ui/implemented/upload/photos/office-2026-11-15).
+	officeWide = "rbxassetid://112756914310404",
 	-- The School's trip-card picture (the Office's is officeWide): a real Studio shot of Pippa from behind with Bramble
 	-- down a Maple Hill locker hall, graded like officeWide (owner K5 yes 2026-11-13, replacing the AI picture; Icey
 	-- Labs, decal 93629730256648). An empty slot would draw the School map card's look instead (ShiftTransitViewModel.slip).
@@ -222,7 +230,8 @@ UIAssets.toonPhotos = table.freeze({
 	-- characters/ui/implemented/upload/photos/school-card-2026-11-13).
 	schoolCard = "rbxassetid://111071270210494",
 	pippaPortrait = "rbxassetid://100337810904422",
-	truckCut = "rbxassetid://72922265291902",
+	-- Today's truck, a big ink-outlined cut-out (P1 placeholders, owner yes 2026-11-15; Icey Labs, decal 122771971955055).
+	truckCut = "rbxassetid://108315866600994",
 	-- Today's coral Pippa cheering, both arms up, on the empty award card (owner 2026-11-13: the old salute pressed her
 	-- hand into her head; decal 102894946805091).
 	pippaCheerCut = "rbxassetid://89228375154099",
@@ -284,9 +293,10 @@ UIAssets.toon = table.freeze({
 	stamp = "rbxassetid://110715103243643",
 })
 
--- The CCTV overlay's scanlines (M3 UI). PENDING and not drawn yet.
+-- The CCTV feed's line strip (CatchCctvPanel): 16x12 px, a white line over a clear gap, tiled once per scan gap and
+-- tinted in game. In-house (P1 placeholders, owner yes 2026-11-15; Icey Labs, decal 94783442860335).
 UIAssets.cctv = table.freeze({
-	scanlines = "",
+	scanlines = "rbxassetid://88794528076200",
 })
 
 -- Cleanup Crew UI sounds (round-2/3 picks, in-house, the paperwork hierarchy: pitch up = yes, down = back, dull =

@@ -276,4 +276,37 @@ return function()
 			expect(nextKey).to.equal("→")
 		end)
 	end)
+
+	describe("scanTile", function()
+		it("repeats the line strip once per scan gap, the strip's own width across", function()
+			local tile = CatchViewModel.scanTile(6)
+			expect(tile.X.Offset).to.equal(CatchViewModel.SCAN_TILE_WIDTH)
+			expect(tile.Y.Offset).to.equal(6)
+			expect(tile.X.Scale).to.equal(0)
+			expect(tile.Y.Scale).to.equal(0)
+			expect(CatchViewModel.scanTile(4).Y.Offset).to.equal(4)
+		end)
+	end)
+
+	describe("rollBand", function()
+		local period = CatchViewModel.ROLL_PERIOD
+		local sweep = CatchViewModel.ROLL_SWEEP
+		local height = CatchViewModel.ROLL_HEIGHT
+
+		it("rolls one faint band from above the top to below the bottom, then rests", function()
+			expect(CatchViewModel.rollBand(0, false)).to.be.near(-height, 1e-6)
+			expect(CatchViewModel.rollBand(sweep / 2, false)).to.be.near((1 - height) / 2, 1e-6)
+			-- Resting: no band on the feed until the next period starts.
+			expect(CatchViewModel.rollBand(sweep, false)).to.equal(nil)
+			expect(CatchViewModel.rollBand(period - 0.01, false)).to.equal(nil)
+			expect(CatchViewModel.rollBand(period, false)).to.be.near(-height, 1e-6)
+			expect(sweep < period).to.equal(true)
+		end)
+
+		it("draws no band with Reduced Motion on", function()
+			for _, now in { 0, sweep / 2, period + 1 } do
+				expect(CatchViewModel.rollBand(now, true)).to.equal(nil)
+			end
+		end)
+	end)
 end

@@ -294,4 +294,36 @@ function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 	}
 end
 
+-- The CCTV feed's look (P1 placeholders, owner yes 2026-11-15): one tiny line strip (UIAssets.cctv.scanlines, 16 px
+-- wide: a white line over a clear gap) repeated down the screen, so the lines stay sharp on any screen shape; the
+-- dread vignette for the lens's dark edges; and one faint band that rolls down the feed and then rests.
+CatchViewModel.SCAN_TILE_WIDTH = 16
+-- One roll every ROLL_PERIOD seconds: the band crosses in ROLL_SWEEP, then the feed rests. ROLL_HEIGHT is the band's
+-- height as a share of the feed's.
+CatchViewModel.ROLL_PERIOD = 9
+CatchViewModel.ROLL_SWEEP = 4
+CatchViewModel.ROLL_HEIGHT = 0.2
+
+-- The tile the line strip repeats at: its own width across, one scan gap (design px) down.
+function CatchViewModel.scanTile(gap: number): UDim2
+	return UDim2.fromOffset(CatchViewModel.SCAN_TILE_WIDTH, gap)
+end
+
+--[=[
+	The rolling band's top at `now` (seconds), as a share of the feed's height: from -ROLL_HEIGHT (just above the top)
+	to 1 (just below the bottom) across ROLL_SWEEP seconds, then nil (no band) for the rest of the period. nil always
+	with Reduced Motion on.
+]=]
+function CatchViewModel.rollBand(now: number, reducedMotion: boolean): number?
+	if reducedMotion then
+		return nil
+	end
+	local phase = now % CatchViewModel.ROLL_PERIOD
+	if phase >= CatchViewModel.ROLL_SWEEP then
+		return nil
+	end
+	local height = CatchViewModel.ROLL_HEIGHT
+	return -height + (phase / CatchViewModel.ROLL_SWEEP) * (1 + height)
+end
+
 return CatchViewModel
