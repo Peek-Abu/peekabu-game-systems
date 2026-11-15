@@ -205,6 +205,22 @@ function OccupantTellRules.flicker(distance: number, now: number, seed: number, 
 	return math.noise(now * FLICKER_RATE, seed) > threshold
 end
 
+--[=[
+	Whether a light near a perch move is lit `elapsed` seconds after the move's blackout began (owner 11-14: the lights
+	go out, he moves, they come back with a normal flicker): dark for PERCH_DARK_SECONDS, flickering on and off for
+	PERCH_FLICKER_BACK_SECONDS (`seed` tells lights apart, `now` drives the flicker), then lit.
+]=]
+function OccupantTellRules.blackout(elapsed: number, now: number, seed: number): boolean
+	local dark = OccupantConstants.PERCH_DARK_SECONDS
+	if elapsed < dark then
+		return false
+	end
+	if elapsed >= dark + OccupantConstants.PERCH_FLICKER_BACK_SECONDS then
+		return true
+	end
+	return math.noise(now * FLICKER_RATE, seed, elapsed * 7) > -0.05
+end
+
 -- Only actual luminous panels or explicitly marked emitter geometry change, never the fixture housing.
 function OccupantTellRules.isEmitter(material: Enum.Material, explicit: boolean): boolean
 	return explicit or material == Enum.Material.Neon

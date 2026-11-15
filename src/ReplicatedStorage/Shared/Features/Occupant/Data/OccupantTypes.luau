@@ -100,11 +100,15 @@ export type Effect =
 	| { kind: "perch", top: Vector3, facing: Vector3 }
 	| { kind: "drop", position: Vector3 }
 
--- A high spot a perch kind may sit on (a tagged OccupantConstants.PERCH_TAG part on a tall prop): its id and the
--- centre of its top face.
+-- A high spot a perch kind may sit on (a tagged OccupantConstants.PERCH_TAG part on a prop), as measured on the
+-- map (OccupantWatchSystem): its id, the centre of the prop's visible top, the room above that top up to the ceiling
+-- (math.huge with none), and the checked floor points the drop may land on (OccupantPerchRules.landingCandidates that
+-- have a clear line from the top and a floor under them).
 export type Perch = {
 	id: string,
 	top: Vector3,
+	headroom: number,
+	landings: { Vector3 },
 }
 
 -- A perch this think: whether any crew camera sees its top right now (OccupantWatchSystem).
@@ -295,6 +299,9 @@ export type Senses = {
 	-- A perch kind (OccupantPerchRules): every perch on the map and whether a crew camera sees it, and when a crew
 	-- member last watched him (absent: never this run). Absent for kinds that never perch.
 	perches: { PerchView }?,
+	-- How tall his perched body stands (its lowest to its highest point in the perch pose, OccupantSeatSystem); absent:
+	-- no headroom check.
+	perchHeight: number?,
 	watchedAt: number?,
 }
 

@@ -6,13 +6,14 @@
 	- `ready`: he may perch when he is patrolling, investigating or searching; nobody has watched him for
 	  PERCH_UNSEEN_SECONDS (and that long has passed since the run began, `Mind.perchReadyAt`); the cooldown after his
 	  last drop is over; and no crew member is within PERCH_CREW_MIN studs of him.
-	- `pick`: of the perches no crew camera sees (Senses.perches, OccupantWatchSystem), the one nearest a crew member
-	  who is out (not hidden), but no nearer than PERCH_NEAR and no farther than PERCH_FAR.
+	- `pick`: of the perches no crew camera sees (Senses.perches, OccupantWatchSystem) that have a checked landing and
+	  room for his perched body under the ceiling (Senses.perchHeight + PERCH_HEAD_CLEAR), the one nearest a crew
+	  member who is out (not hidden), but no nearer than PERCH_NEAR and no farther than PERCH_FAR.
 	- `begin`: up he goes, unseen (the `perch` effect: OccupantSeatSystem puts him on its top), facing the nearest kid,
 	  standing still (mode "perch").
 	- `think`, up there: he stays still until someone watched him there and looked away (an unfreeze after he went up),
-	  someone comes within PERCH_DROP_RANGE, or PERCH_HOLD_MAX passes; then he drops to the route point nearest the
-	  perch (the `drop` effect) and patrols on, not to perch again for PERCH_COOLDOWN. A watched think never gets here:
+	  someone comes within PERCH_DROP_RANGE, or PERCH_HOLD_MAX passes; then he drops to the perch's checked landing
+	  nearest the crew (the `drop` effect, `floorFor`) and patrols on, not to perch again for PERCH_COOLDOWN. A watched think never gets here:
 	  frozen, the brain holds (OccupantBrainRules.hold).
 
 	Distances are flat (studs across the floor). Pure (see OccupantMindUtils).
@@ -65,9 +66,27 @@ local function nearestOut(senses: Senses, point: Vector3): (Glimpse?, number)
 end
 
 --[=[
-	The route point nearest `perch` (flat), where he lands; his own position when he has no route.
+	Where the drop off `perch` lands: of its checked landings, the one nearest the crew member who is out nearest the
+	perch (the first with nobody out). A perch with no landing (never picked, but the break can still drop him) falls
+	back to the route point nearest it.
 ]=]
 function OccupantPerchRules.floorFor(perch: Perch, senses: Senses): Vector3
+	if #perch.landings > 0 then
+		local kid = nearestOut(senses, perch.top)
+		if kid == nil then
+			return perch.landings[1]
+		end
+		local best = perch.landings[1]
+		local bestDistance = math.huge
+		for _, landing in perch.landings do
+			local distance = M.flat(landing, kid.position)
+			if distance < bestDistance then
+				best = landing
+				bestDistance = distance
+			end
+		end
+		return best
+	end
 	local best = senses.position
 	local bestDistance = math.huge
 	for _, point in senses.route do
@@ -81,12 +100,27 @@ function OccupantPerchRules.floorFor(perch: Perch, senses: Senses): Vector3
 end
 
 --[=[
-	Where the drop puts him `t` (0..1, clamped) of the way from `from` (on the perch) to `to` (the floor point): an even
-	pace across the floor, a `hop` studs hop up off the top, and a fall that gets faster and faster.
+	The spots to try for a perch's landings: eight points round `centre` (a prop's top), `reach` studs out across the
+	floor plan, at the top's height (OccupantWatchSystem checks a clear line out to each and a floor under it).
+]=]
+function OccupantPerchRules.landingCandidates(centre: Vector3, reach: number): { Vector3 }
+	local spots = {}
+	for i = 0, 7 do
+		local angle = i * math.pi / 4
+		table.insert(spots, centre + Vector3.new(math.cos(angle) * reach, 0, math.sin(angle) * reach))
+	end
+	return spots
+end
+
+--[=[
+	Where the drop puts him `t` (0..1, clamped) of the way from `from` (on the perch) to `to` (the landing): out past
+	the edge first (easing out across the floor plan), a `hop` studs hop up off the top, and a fall that gets faster
+	and faster.
 ]=]
 function OccupantPerchRules.fallAt(from: Vector3, to: Vector3, t: number, hop: number): Vector3
 	local x = math.clamp(t, 0, 1)
-	local across = from:Lerp(to, x)
+	local out = 1 - (1 - x) * (1 - x)
+	local across = from:Lerp(to, out)
 	local height = from.Y + (to.Y - from.Y) * x * x + hop * 4 * x * (1 - x) * (1 - x)
 	return Vector3.new(across.X, height, across.Z)
 end
@@ -117,7 +151,11 @@ function OccupantPerchRules.pick(senses: Senses): Perch?
 	local bestDistance = math.huge
 	local views: { OccupantTypes.PerchView } = senses.perches or {}
 	for _, view in views do
-		if view.seen then
+		if view.seen or #view.perch.landings == 0 then
+			continue
+		end
+		local height = senses.perchHeight
+		if height ~= nil and view.perch.headroom < height + OccupantConstants.PERCH_HEAD_CLEAR then
 			continue
 		end
 		local _, distance = nearestOut(senses, view.perch.top)

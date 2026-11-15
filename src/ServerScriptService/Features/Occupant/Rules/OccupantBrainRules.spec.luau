@@ -95,7 +95,12 @@ return function()
 		local function perchSenses(extra)
 			local value = {
 				players = { { userId = 7, position = KID, clear = false } },
-				perches = { { perch = { id = "lockers", top = TOP }, seen = false } },
+				perches = {
+					{
+						perch = { id = "lockers", top = TOP, headroom = 20, landings = { Vector3.new(120, 3, 104) } },
+						seen = false,
+					},
+				},
 			}
 			for key, item in extra or {} do
 				value[key] = item

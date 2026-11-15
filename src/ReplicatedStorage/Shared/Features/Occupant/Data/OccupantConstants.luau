@@ -96,19 +96,21 @@ local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
 -- names only, so any R15 rig takes them (a joint the rig lacks is skipped). Hip X > 0 swings the thigh forward, knee
 -- X < 0 folds the shin back, and the ankle undoes both so the feet stay flat (hip + knee + ankle = 0); the server
 -- lowers the root by the crouch's leg drop (OccupantGestureFormulas.crouchDrop), so the feet stay on the top.
--- Perched: a deep owl crouch, leaning out over the edge, head tipped down and cocked at the crew below, wings half
--- open. (Checked on Bramble's rig 11-14: a raised neck had it staring at the ceiling.)
+-- Perched: a low owl huddle (owner play-check 11-14: its head went through the ceiling and its feet hung over the
+-- top), legs folded tight under the body, hunched over the edge, head tipped to the crew below, wings held close. The
+-- server sets it down so the lowest point of this pose rests on the prop's visible top (OccupantSeatSystem.perch,
+-- measured with OccupantGestureFormulas.posedBounds on the rig's own parts).
 local PERCH_CROUCH: { [string]: Vector3 } = table.freeze({
-	Waist = Vector3.new(-24, 0, 0),
-	Neck = Vector3.new(-6, 0, 16),
-	LeftHip = Vector3.new(60, 0, 0),
-	RightHip = Vector3.new(60, 0, 0),
-	LeftKnee = Vector3.new(-95, 0, 0),
-	RightKnee = Vector3.new(-95, 0, 0),
-	LeftAnkle = Vector3.new(35, 0, 0),
-	RightAnkle = Vector3.new(35, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -20),
-	RightShoulder = Vector3.new(0, 0, 20),
+	Waist = Vector3.new(-38, 0, 0),
+	Neck = Vector3.new(20, 0, 12),
+	LeftHip = Vector3.new(100, 0, 0),
+	RightHip = Vector3.new(100, 0, 0),
+	LeftKnee = Vector3.new(-150, 0, 0),
+	RightKnee = Vector3.new(-150, 0, 0),
+	LeftAnkle = Vector3.new(50, 0, 0),
+	RightAnkle = Vector3.new(50, 0, 0),
+	LeftShoulder = Vector3.new(0, 0, -10),
+	RightShoulder = Vector3.new(0, 0, 10),
 })
 -- The drop: off the top with the legs tucked and the wings spread high, then a squash on landing. (Bramble's bind pose
 -- already holds its wings out, so the wing lifts stay small: at 75 they crossed behind its head.)
@@ -759,6 +761,21 @@ return table.freeze({
 	PERCH_DROP_RANGE = 10,
 	PERCH_HOLD_MAX = 20,
 	PERCH_COOLDOWN = 30,
+	-- (Owner play-check 11-14.) A perch is offered only where his perched body fits under the ceiling with
+	-- PERCH_HEAD_CLEAR studs to spare, and only with a checked landing PERCH_LANDING_OUT studs out past the prop's
+	-- edge (a clear line from the top and a floor under it), so the drop never goes through a wall.
+	PERCH_HEAD_CLEAR = 0.3,
+	PERCH_LANDING_OUT = 2.5,
+	-- The move up happens in the dark: the server marks the rig (PERCH_FLASH_ATTRIBUTE, a counter, and
+	-- PERCH_FLASH_TARGET_ATTRIBUTE, the perch top) and moves him PERCH_DARK_LEAD later. Every client darks the lights
+	-- within PERCH_BLACKOUT_RADIUS of where he was and of the perch for PERCH_DARK_SECONDS, then flickers them back on
+	-- over PERCH_FLICKER_BACK_SECONDS.
+	PERCH_FLASH_ATTRIBUTE = "OccupantPerchFlash",
+	PERCH_FLASH_TARGET_ATTRIBUTE = "OccupantPerchFlashAt",
+	PERCH_DARK_LEAD = 0.2,
+	PERCH_DARK_SECONDS = 0.7,
+	PERCH_FLICKER_BACK_SECONDS = 0.45,
+	PERCH_BLACKOUT_RADIUS = 30,
 	-- The drop's beats (see GESTURES.drop): the fall, the squash, the rise, all of them, and the hop up off the top.
 	DROP_FALL_SECONDS = DROP_FALL_SECONDS,
 	DROP_SQUASH_SECONDS = DROP_SQUASH_SECONDS,

@@ -41,6 +41,7 @@ local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local OccupantHeadRules = require(OccupantServer.Rules.OccupantHeadRules)
+local OccupantPerchRules = require(OccupantServer.Rules.OccupantPerchRules)
 local OccupantWatchRules = require(OccupantServer.Rules.OccupantWatchRules)
 local OccupantSightUtils = require(OccupantServer.Utils.OccupantSightUtils)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -202,8 +203,77 @@ local function inView(report: Report, points: { Vector3 }): boolean
 	return false
 end
 
+-- A perch spot as measured on the map, once per perch part (the props never move during a run).
+type Spot = { top: Vector3, headroom: number, landings: { Vector3 } }
+local spots: { [BasePart]: Spot } = {}
+setmetatable(spots, { __mode = "k" })
+
+-- How far up a ceiling is looked for, how high over the top a landing's line out runs (about his chest, clear of the
+-- prop's own lip), the radius of that line (about his body), and how far below the top a landing's floor may be.
+local CEILING_LOOK = 60
+local LANDING_LINE_HEIGHT = 2
+local LANDING_RADIUS = 1.2
+local LANDING_FLOOR_DEPTH = 40
+
 --[=[
-	Every perch on the map (OccupantConstants.PERCH_TAG parts in the Workspace; its top is the part's position) and
+	Measures the perch spot of `instance` (a PERCH_TAG part, a child of its prop's proxy): the prop's visible top (its
+	ArtVisual's top, else the proxy's top face; the owner's play-check 11-14 had him floating over the hitbox), the
+	room above it to the ceiling, and its landings: each OccupantPerchRules.landingCandidate PERCH_LANDING_OUT past the
+	prop's edge with a clear body-wide line out to it from over the top and a floor under it, lower than the top (so the
+	drop never passes through a wall or lands on another prop). Rays skip the prop itself, the rigs and the crew.
+]=]
+local function measure(instance: BasePart, rig: Rig): Spot
+	local known = spots[instance]
+	if known ~= nil then
+		return known
+	end
+	local proxy = instance.Parent
+	local exclude: { Instance } = { rig.model }
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		if character ~= nil then
+			table.insert(exclude, character)
+		end
+	end
+	local centre = instance.Position
+	local halfWidth = 1
+	if proxy ~= nil and proxy:IsA("BasePart") then
+		table.insert(exclude, proxy)
+		centre = (proxy.CFrame * CFrame.new(0, proxy.Size.Y / 2, 0)).Position
+		halfWidth = math.max(proxy.Size.X, proxy.Size.Z) / 2
+		local visual = proxy:FindFirstChild("ArtVisual")
+		if visual ~= nil and visual:IsA("Model") then
+			local frame, size = visual:GetBoundingBox()
+			centre = Vector3.new(centre.X, frame.Position.Y + size.Y / 2, centre.Z)
+			halfWidth = math.max(halfWidth, math.max(size.X, size.Z) / 2)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = exclude
+	params.RespectCanCollide = true
+	local up = Workspace:Raycast(centre + Vector3.new(0, 0.05, 0), Vector3.new(0, CEILING_LOOK, 0), params)
+	local headroom = if up ~= nil then up.Position.Y - centre.Y else math.huge
+	local landings: { Vector3 } = {}
+	local lift = Vector3.new(0, LANDING_LINE_HEIGHT, 0)
+	local reach = halfWidth + OccupantConstants.PERCH_LANDING_OUT
+	for _, spot in OccupantPerchRules.landingCandidates(centre, reach) do
+		local out = (spot - centre) * Vector3.new(1, 0, 1)
+		if Workspace:Spherecast(centre + lift, LANDING_RADIUS, out, params) ~= nil then
+			continue
+		end
+		local down = Workspace:Raycast(spot + lift, Vector3.new(0, -LANDING_FLOOR_DEPTH, 0), params)
+		if down ~= nil and down.Position.Y < centre.Y - 1 then
+			table.insert(landings, down.Position)
+		end
+	end
+	local measured: Spot = { top = centre, headroom = headroom, landings = landings }
+	spots[instance] = measured
+	return measured
+end
+
+--[=[
+	Every perch on the map (OccupantConstants.PERCH_TAG parts in the Workspace, measured once: `measure`) and
 	whether any crew camera sees it right now: a fresh camera report (anyone's, hidden or not) with the top in its look
 	cone and range and a clear ray to it (B4, OccupantPerchRules: he only goes up where nobody can see). Empty when
 	this system is not watching `rig`.
@@ -219,19 +289,25 @@ function OccupantWatchSystem.perches(rig: Rig): { OccupantTypes.PerchView }
 		if not instance:IsA("BasePart") or not instance:IsDescendantOf(Workspace) then
 			continue
 		end
-		local top = instance.Position
+		local spot = measure(instance, rig)
+		local top = spot.top
+		-- The camera ray ends a little over the top, never inside the prop's top face.
+		local seenPoint = top + Vector3.new(0, 0.5, 0)
 		local seen = false
 		for _, report in reports do
 			if
 				OccupantWatchRules.fresh(report, now)
-				and inView(report, { top })
-				and clearLine(report.position, top, params)
+				and inView(report, { seenPoint })
+				and clearLine(report.position, seenPoint, params)
 			then
 				seen = true
 				break
 			end
 		end
-		table.insert(views, { perch = { id = instance:GetFullName(), top = top }, seen = seen })
+		table.insert(views, {
+			perch = { id = instance:GetFullName(), top = top, headroom = spot.headroom, landings = spot.landings },
+			seen = seen,
+		})
 	end
 	return views
 end

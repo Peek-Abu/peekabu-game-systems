@@ -333,6 +333,7 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		-- A perch kind (B4): the map's perches, which a crew camera sees, and when he was last watched.
 		if OccupantKindRegistry.perches(currentKind) then
 			senses.perches = OccupantWatchSystem.perches(current)
+			senses.perchHeight = OccupantSeatSystem.perchHeight(current)
 			senses.watchedAt = freeze.lastWatchedAt
 		end
 	end

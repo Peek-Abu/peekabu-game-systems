@@ -177,6 +177,56 @@ function OccupantGestureFormulas.jointAt(keys: { OccupantConstants.GestureKey },
 	return previous
 end
 
+-- A rig's shape for `posedBounds`, as plain data: its root part's name, every part's size, and its joints (each
+-- Motor6D's name, its parts' names and its C0 / C1).
+export type RigMotor = { name: string, part0: string, part1: string, c0: CFrame, c1: CFrame }
+export type RigShape = { root: string, sizes: { [string]: Vector3 }, motors: { RigMotor } }
+
+--[=[
+	The lowest and highest point (studs, up from the root part's centre) of every part of `shape` but its root, posed
+	with `joints` (degrees per Motor6D name, as the gestures lay them: C0 * rotation * C1:Inverse()). Each part counts as
+	its box. Parts no joint chain reaches from the root are left out. With no part: 0, 0.
+]=]
+function OccupantGestureFormulas.posedBounds(shape: RigShape, joints: { [string]: Vector3 }): (number, number)
+	local frames: { [string]: CFrame } = { [shape.root] = CFrame.identity }
+	local placed = true
+	while placed do
+		placed = false
+		for _, motor in shape.motors do
+			-- (The table's type says every key is there; a part is placed only once a chain reaches it.)
+			local parent: CFrame? = frames[motor.part0]
+			local already: CFrame? = frames[motor.part1]
+			if parent ~= nil and already == nil then
+				local degrees: Vector3? = joints[motor.name]
+				local turn = if degrees ~= nil then rotation(degrees) else CFrame.identity
+				frames[motor.part1] = parent * motor.c0 * turn * motor.c1:Inverse()
+				placed = true
+			end
+		end
+	end
+	local low, high = math.huge, -math.huge
+	for name, frame in frames do
+		local size: Vector3? = shape.sizes[name]
+		if name == shape.root or size == nil then
+			continue
+		end
+		local half = size / 2
+		for _, sx in { -1, 1 } do
+			for _, sy in { -1, 1 } do
+				for _, sz in { -1, 1 } do
+					local y = (frame * Vector3.new(half.X * sx, half.Y * sy, half.Z * sz)).Y
+					low = math.min(low, y)
+					high = math.max(high, y)
+				end
+			end
+		end
+	end
+	if low > high then
+		return 0, 0
+	end
+	return low, high
+end
+
 --[=[
 	How far (studs) a leg of a `thigh` and a `shin` (hip to knee, knee to ankle), hanging straight at rest, lowers the
 	hip when the hip swings the thigh `hip` degrees forward and the knee folds the shin `knee` degrees (negative: back).

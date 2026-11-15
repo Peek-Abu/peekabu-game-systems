@@ -7,8 +7,18 @@ local C = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConsta
 -- He stands at the origin; one kid 60 studs off along +X (well past PERCH_CREW_MIN).
 local KID = Vector3.new(60, 0, 0)
 
-local function perch(id, x, seen)
-	return { perch = { id = id, top = Vector3.new(x, 8, 0) }, seen = seen == true }
+-- A perch on a top at height 8, with lots of headroom and one checked landing on the floor in front of it (+Z).
+local function perch(id, x, seen, extra)
+	local value = {
+		id = id,
+		top = Vector3.new(x, 8, 0),
+		headroom = 20,
+		landings = { Vector3.new(x, 0, 4) },
+	}
+	for key, item in extra or {} do
+		value[key] = item
+	end
+	return { perch = value, seen = seen == true }
 end
 
 local function senses(extra)
@@ -100,6 +110,24 @@ return function()
 			expect(OccupantPerchRules.pick(seenOnly)).to.equal(nil)
 		end)
 
+		it("never a perch with no checked landing (it could only drop through a wall)", function()
+			local stuck = senses({ perches = { perch("lockers", 30, false, { landings = {} }) } })
+			expect(OccupantPerchRules.pick(stuck)).to.equal(nil)
+		end)
+
+		it(
+			"never a perch whose headroom is too low for his perched body (his head would go through the ceiling)",
+			function()
+				local low = senses({ perches = { perch("lockers", 30, false, { headroom = 6 }) }, perchHeight = 7.5 })
+				expect(OccupantPerchRules.pick(low)).to.equal(nil)
+				local roomy = senses({
+					perches = { perch("lockers", 30, false, { headroom = 7.5 + C.PERCH_HEAD_CLEAR }) },
+					perchHeight = 7.5,
+				})
+				expect(OccupantPerchRules.pick(roomy).id).to.equal("lockers")
+			end
+		)
+
 		it("ignores hidden crew and nothing fits with nobody out", function()
 			local hidden = { { userId = 7, position = KID, clear = false, hidden = true } }
 			expect(OccupantPerchRules.pick(senses({ players = hidden }))).to.equal(nil)
@@ -130,7 +158,12 @@ return function()
 		local function perched()
 			return mind({
 				mode = "perch",
-				perch = { id = "lockers", top = Vector3.new(30, 8, 0) },
+				perch = {
+					id = "lockers",
+					top = Vector3.new(30, 8, 0),
+					headroom = 20,
+					landings = { Vector3.new(30, 0, 4), Vector3.new(30, 0, -4) },
+				},
 				perchedAt = 100,
 				since = 100,
 			})
@@ -143,7 +176,7 @@ return function()
 			expect(effectOf(step, "drop")).to.equal(nil)
 		end)
 
-		it("drops to the nearest route point once someone watched him up there and looked away", function()
+		it("drops to the checked landing nearest the kid once someone watched him up there and looked away", function()
 			local step = OccupantPerchRules.think(perched(), senses({ now = 106, unfrozenAt = 105.5 }))
 			expect(step.mind.mode).to.equal("patrol")
 			expect(step.mind.perch).to.equal(nil)
@@ -167,6 +200,36 @@ return function()
 		end)
 	end)
 
+	describe("floorFor and landingCandidates (where the drop lands)", function()
+		it("takes the checked landing nearest the nearest kid who is out", function()
+			local p = {
+				id = "a",
+				top = Vector3.new(0, 8, 0),
+				headroom = 20,
+				landings = { Vector3.new(0, 0, -4), Vector3.new(0, 0, 4) },
+			}
+			local kid = { { userId = 7, position = Vector3.new(0, 0, 30), clear = false } }
+			expect(OccupantPerchRules.floorFor(p, senses({ players = kid }))).to.equal(Vector3.new(0, 0, 4))
+			local other = { { userId = 7, position = Vector3.new(0, 0, -30), clear = false } }
+			expect(OccupantPerchRules.floorFor(p, senses({ players = other }))).to.equal(Vector3.new(0, 0, -4))
+		end)
+
+		it("falls back to the nearest route point only for a perch with no landing", function()
+			local p = { id = "a", top = Vector3.new(30, 8, 0), headroom = 20, landings = {} }
+			expect(OccupantPerchRules.floorFor(p, senses())).to.equal(Vector3.new(30, 0, 4))
+		end)
+
+		it("offers landing spots all round the top, `reach` out, at the top's height", function()
+			local centre = Vector3.new(10, 7, 5)
+			local spots = OccupantPerchRules.landingCandidates(centre, 3)
+			expect(#spots).to.equal(8)
+			for _, spot in spots do
+				expect(spot.Y).to.equal(7)
+				expect(math.abs((Vector3.new(spot.X, 7, spot.Z) - centre).Magnitude - 3) < 1e-6).to.equal(true)
+			end
+		end)
+	end)
+
 	describe("fallAt (the drop's path)", function()
 		local FROM = Vector3.new(0, 10, 0)
 		local TO = Vector3.new(8, 2, 0)
@@ -186,9 +249,9 @@ return function()
 			expect(b > a).to.equal(true)
 		end)
 
-		it("crosses the floor at an even pace", function()
+		it("moves out past the edge first, then down (it clears the top before it drops)", function()
 			local half = OccupantPerchRules.fallAt(FROM, TO, 0.5, 1.5)
-			expect(math.abs(half.X - 4) < 1e-6).to.equal(true)
+			expect(half.X > 4 + 1).to.equal(true)
 		end)
 	end)
 end

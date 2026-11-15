@@ -4,8 +4,10 @@
 	flicker"). Every TELL_INTERVAL:
 	- each office light (tag OfficeLight) within FLICKER_RADIUS of him flickers (OccupantTellRules.flicker);
 	  for TIER_FLICKER_SECONDS after a tier rise every light flickers; for LIGHTS_OUT_SECONDS after a catch the
-	  lights within LIGHTS_OUT_RADIUS of it are dark (the blackout is time-boxed on the tick, and `stop` clears
-	  it, so no light stays dark).
+	  lights within LIGHTS_OUT_RADIUS of it are dark; a perch kind's move onto a perch (its rig's PERCH_FLASH_ATTRIBUTE
+	  goes up) darks the lights within PERCH_BLACKOUT_RADIUS of where it was and of the perch, then flickers them back
+	  (OccupantTellRules.blackout). Each blackout is time-boxed on the tick, and `stop` clears it, so no light stays
+	  dark.
 	  through his slow turn or stare (behaviours design §11.2) the lights within SLOW_FLICKER_RADIUS flicker harder.
 	(The heartbeat and the screen's mood moved to OccupantDreadSystem, 2026-10-17.)
 	Real light brightness and visible emitter colour fade together; fixture housings retain their authored material. Client-local only.
@@ -31,6 +33,12 @@ type Lamp = { brightness: number, enabled: boolean, fade: Fade, destroying: RBXS
 type Fixture =
 	{ on: boolean, panels: { [BasePart]: Panel }, lamps: { [Light]: Lamp }, destroying: RBXScriptConnection? }
 export type LightController = { setLit: (root: BasePart, on: boolean) -> (), clear: () -> () }
+-- A perch move's blackout (owner 11-14): round where he was and round the perch, since when; and the rig's flash
+-- counter last seen (and for which rig).
+local blackoutAt: { Vector3 }? = nil
+local blackoutSince = 0
+local lastFlash: number? = nil
+local flashRig: Model? = nil
 local outAt: Vector3? = nil
 local outUntil = 0
 local flickerUntil = 0
@@ -214,11 +222,48 @@ local function slowTurning(harlow: BasePart?): boolean
 	)
 end
 
+-- His rig's perch flash counter (nil: none yet).
+local function flashOf(model: Instance): number?
+	local value = model:GetAttribute(OccupantConstants.PERCH_FLASH_ATTRIBUTE)
+	return if type(value) == "number" then value else nil
+end
+
+-- A new perch move (his rig's flash counter went up): the lights round him and round the perch go dark from now. A
+-- rig seen for the first time only remembers its counter.
+local function watchFlash(now: number, harlow: BasePart?)
+	local parent = if harlow ~= nil then harlow.Parent else nil
+	local model = if parent ~= nil and parent:IsA("Model") then parent else nil
+	if model ~= flashRig then
+		flashRig = model
+		lastFlash = if model ~= nil then flashOf(model) else nil
+		return
+	end
+	if model == nil or harlow == nil then
+		return
+	end
+	local flash = flashOf(model)
+	if flash ~= nil and flash ~= lastFlash then
+		local target = model:GetAttribute(OccupantConstants.PERCH_FLASH_TARGET_ATTRIBUTE)
+		local points = { harlow.Position }
+		if typeof(target) == "Vector3" then
+			table.insert(points, target)
+		end
+		blackoutAt = points
+		blackoutSince = now
+	end
+	lastFlash = flash
+end
+
 local function updateLights(now: number, harlow: BasePart?)
 	if now >= outUntil then
 		outAt = nil
 	end
 	local darkAround = outAt
+	local blackoutEnd = OccupantConstants.PERCH_DARK_SECONDS + OccupantConstants.PERCH_FLICKER_BACK_SECONDS
+	if blackoutAt ~= nil and now - blackoutSince >= blackoutEnd then
+		blackoutAt = nil
+	end
+	local blackout = blackoutAt
 	local everywhere = now < flickerUntil
 	local hard = slowTurning(harlow)
 	for _, instance in CollectionService:GetTagged(OccupantConstants.LIGHT_TAG) do
@@ -236,6 +281,14 @@ local function updateLights(now: number, harlow: BasePart?)
 				and (instance.Position - darkAround).Magnitude <= OccupantConstants.LIGHTS_OUT_RADIUS
 			then
 				on = false
+			end
+			if blackout ~= nil then
+				for _, point in blackout do
+					if (instance.Position - point).Magnitude <= OccupantConstants.PERCH_BLACKOUT_RADIUS then
+						on = on and OccupantTellRules.blackout(now - blackoutSince, now, seed)
+						break
+					end
+				end
 			end
 			lights.setLit(instance, on)
 		end
@@ -257,6 +310,7 @@ function OccupantTellSystem.start()
 		elapsed = 0
 		local now = os.clock()
 		local harlow = harlowRoot()
+		watchFlash(now, harlow)
 		updateLights(now, harlow)
 	end)
 end
@@ -274,6 +328,9 @@ function OccupantTellSystem.stop()
 	outAt = nil
 	outUntil = 0
 	flickerUntil = 0
+	blackoutAt = nil
+	lastFlash = nil
+	flashRig = nil
 	lights.clear()
 end
 

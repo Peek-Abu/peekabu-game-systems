@@ -147,6 +147,40 @@ local function legOf(rig: Rig): (number, number)
 	return (knee.C0.Position - hip.C1.Position).Magnitude, (ankle.C0.Position - knee.C1.Position).Magnitude
 end
 
+-- His shape as plain data (OccupantGestureFormulas.posedBounds), read once per rig.
+local shapes: { [Model]: OccupantGestureFormulas.RigShape } = {}
+setmetatable(shapes, { __mode = "k" })
+
+local function shapeOf(rig: Rig): OccupantGestureFormulas.RigShape
+	local known = shapes[rig.model]
+	if known ~= nil then
+		return known
+	end
+	local sizes: { [string]: Vector3 } = {}
+	local motors: { OccupantGestureFormulas.RigMotor } = {}
+	for _, item in rig.model:GetDescendants() do
+		if item:IsA("BasePart") then
+			sizes[item.Name] = item.Size
+		elseif item:IsA("Motor6D") then
+			local part0, part1 = item.Part0, item.Part1
+			if part0 ~= nil and part1 ~= nil then
+				table.insert(
+					motors,
+					{ name = item.Name, part0 = part0.Name, part1 = part1.Name, c0 = item.C0, c1 = item.C1 }
+				)
+			end
+		end
+	end
+	local shape: OccupantGestureFormulas.RigShape = { root = rig.root.Name, sizes = sizes, motors = motors }
+	shapes[rig.model] = shape
+	return shape
+end
+
+-- His perched body's lowest and highest point, up from his root (the perch gesture's pose on his own parts).
+local function perchBounds(rig: Rig): (number, number)
+	return OccupantGestureFormulas.posedBounds(shapeOf(rig), OccupantConstants.GESTURES.perch.joints)
+end
+
 -- How far his root stands above the floor.
 local function standHeight(rig: Rig): number
 	return rig.humanoid.HipHeight + rig.root.Size.Y / 2
@@ -249,12 +283,25 @@ function OccupantSeatSystem.plant(rig: Rig, frame: CFrame)
 end
 
 --[=[
-	Puts him at once (he is unseen) standing on a perch's `top`, held there (anchored), turned toward `facing` (B4,
-	OccupantPerchRules). The drop is `unstick` to a floor point.
+	How tall he is perched (his perch pose's lowest to highest point, measured on his own parts): the brain offers only
+	perches with that much room under the ceiling (Senses.perchHeight).
+]=]
+function OccupantSeatSystem.perchHeight(rig: Rig): number
+	local low, high = perchBounds(rig)
+	return high - low
+end
+
+--[=[
+	Moves him (unseen) up onto a perch's `top` (the prop's visible top), held there (anchored), turned toward `facing`
+	(B4, OccupantPerchRules), in the dark (owner play-check 11-14): it marks his rig (PERCH_FLASH_ATTRIBUTE and
+	PERCH_FLASH_TARGET_ATTRIBUTE) so every client darks the lights round where he is and round the perch
+	(OccupantTellSystem), and moves him PERCH_DARK_LEAD later. Set down so the lowest point of his perched body (the
+	perch pose, `perchBounds`) rests on the top. The drop is `drop`.
 ]=]
 function OccupantSeatSystem.perch(rig: Rig, top: Vector3, facing: Vector3)
 	local body = bodyOf(rig)
 	body.token += 1
+	local token = body.token
 	body.seat = nil
 	stopSitting(body, 0)
 	local running = body.tween
@@ -262,16 +309,25 @@ function OccupantSeatSystem.perch(rig: Rig, top: Vector3, facing: Vector3)
 		running:Cancel()
 		body.tween = nil
 	end
-	-- Lowered by the crouch's leg drop, so the perch gesture's bent legs keep his feet on the top.
-	local thigh, shin = legOf(rig)
-	local crouch = OccupantGestureFormulas.crouchDrop(thigh, shin, OccupantConstants.GESTURES.perch.joints)
-	local at = top + Vector3.new(0, standHeight(rig) - crouch, 0)
-	local toward = Vector3.new(facing.X, at.Y, facing.Z)
+	local flashes = rig.model:GetAttribute(OccupantConstants.PERCH_FLASH_ATTRIBUTE)
+	rig.model:SetAttribute(OccupantConstants.PERCH_FLASH_TARGET_ATTRIBUTE, top)
+	rig.model:SetAttribute(
+		OccupantConstants.PERCH_FLASH_ATTRIBUTE,
+		(if type(flashes) == "number" then flashes else 0) + 1
+	)
 	rig.root.Anchored = true
 	rig.root.AssemblyLinearVelocity = Vector3.zero
-	rig.root.CFrame = if (toward - at).Magnitude > 1e-3
-		then CFrame.lookAt(at, toward)
-		else CFrame.new(at) * rig.root.CFrame.Rotation
+	local low = perchBounds(rig)
+	local at = top - Vector3.new(0, low, 0)
+	task.delay(OccupantConstants.PERCH_DARK_LEAD, function()
+		if body.token ~= token or rig.model.Parent == nil then
+			return
+		end
+		local toward = Vector3.new(facing.X, at.Y, facing.Z)
+		rig.root.CFrame = if (toward - at).Magnitude > 1e-3
+			then CFrame.lookAt(at, toward)
+			else CFrame.new(at) * rig.root.CFrame.Rotation
+	end)
 end
 
 --[=[

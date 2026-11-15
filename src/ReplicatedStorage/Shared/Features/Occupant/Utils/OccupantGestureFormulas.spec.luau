@@ -206,6 +206,42 @@ return function()
 			expect(C.GESTURES.drop.seconds).to.be.near(C.DROP_SECONDS, 1e-6)
 		end)
 
+		it("posedBounds: the lowest and highest point of every body part, from the root, for a pose", function()
+			-- A root, a 2-tall torso on top, and a 2-tall arm hanging 1 off the torso's side from a shoulder at its top.
+			local shape = {
+				root = "Root",
+				sizes = { Root = Vector3.new(2, 2, 1), Torso = Vector3.new(2, 2, 1), Arm = Vector3.new(1, 2, 1) },
+				motors = {
+					{
+						name = "Waist",
+						part0 = "Root",
+						part1 = "Torso",
+						c0 = CFrame.new(0, 1, 0),
+						c1 = CFrame.new(0, -1, 0),
+					},
+					{
+						name = "Shoulder",
+						part0 = "Torso",
+						part1 = "Arm",
+						c0 = CFrame.new(1.5, 1, 0),
+						c1 = CFrame.new(0, 1, 0),
+					},
+				},
+			}
+			local low, high = OccupantGestureFormulas.posedBounds(shape, {})
+			-- The root never counts (it is the invisible HumanoidRootPart): the torso spans 1..3 on top of it, and the
+			-- arm hangs from the shoulder at the torso's top, 1..3 too.
+			expect(low).to.be.near(1, 1e-6)
+			expect(high).to.be.near(3, 1e-6)
+			-- The arm raised straight up (180 about Z) now reaches 2 above the shoulder.
+			local _, raised = OccupantGestureFormulas.posedBounds(shape, { Shoulder = Vector3.new(0, 0, 180) })
+			expect(raised).to.be.near(5, 1e-6)
+			-- The torso bent forward 90 about the waist (at 1): it lies flat, 0.5..1.5, the arm with it.
+			local bentLow, bentHigh = OccupantGestureFormulas.posedBounds(shape, { Waist = Vector3.new(-90, 0, 0) })
+			expect(bentLow).to.be.near(0.5, 1e-6)
+			expect(bentHigh).to.be.near(1.5, 1e-6)
+		end)
+
 		it("legDrop: how far a crouch lowers the hips", function()
 			expect(OccupantGestureFormulas.legDrop(1, 1, 0, 0)).to.be.near(0)
 			-- Thigh straight forward, shin straight back down: the thigh's whole length.

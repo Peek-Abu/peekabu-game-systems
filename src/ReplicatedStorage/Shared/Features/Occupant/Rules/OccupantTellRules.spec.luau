@@ -204,6 +204,27 @@ return function()
 			expect(OccupantTellRules.unfroze(nil, false)).to.equal(false)
 		end)
 
+		it("darks the lights around a perch move, then flickers them back on, then leaves them on", function()
+			local dark = OccupantConstants.PERCH_DARK_SECONDS
+			local back = OccupantConstants.PERCH_FLICKER_BACK_SECONDS
+			expect(OccupantTellRules.blackout(0, 5, 1)).to.equal(false)
+			expect(OccupantTellRules.blackout(dark - 0.01, 5, 1)).to.equal(false)
+			-- The flicker back is on and off, never all dark and never all lit.
+			local on, off = 0, 0
+			for i = 0, 40 do
+				local lit = OccupantTellRules.blackout(dark + back * i / 41, i * 0.05, 3)
+				if lit then
+					on += 1
+				else
+					off += 1
+				end
+			end
+			expect(on > 0 and off > 0).to.equal(true)
+			expect(OccupantTellRules.blackout(dark + back + 0.01, 5, 1)).to.equal(true)
+			-- The server waits PERCH_DARK_LEAD before it moves him, well inside the dark.
+			expect(OccupantConstants.PERCH_DARK_LEAD < dark).to.equal(true)
+		end)
+
 		it("hears the thump only as a perch kind leaves its perch", function()
 			expect(OccupantTellRules.dropped("perch", "patrol")).to.equal(true)
 			expect(OccupantTellRules.dropped("perch", "rest")).to.equal(true)
