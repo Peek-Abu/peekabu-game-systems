@@ -327,7 +327,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPullSystem"] = "Instance/RunService shell (the pile's lean, stretch and wobble are specced in VacuumFeelFormulas)",
 	["ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumCameraSystem"] = "Camera/RunService shell (the FOV, strain and punch amounts are specced in VacuumFeelFormulas)",
 	["ReplicatedStorage.Client.Features.Office.Systems.OfficeGlowSystem"] = "Instance/CollectionService/UserGameSettings shell (which rooms glow and the lanterns are specced in OfficeGlowRules)",
-	["ReplicatedStorage.Client.Features.Shift.Systems.ShiftOutlineSystem"] = "Highlight/Players/RunService shell (when and how strong are specced in ShiftOutlineRules)",
 	["ReplicatedStorage.Client.Features.Shift.Systems.ShiftPromptSystem"] = "ProximityPromptService/Instance shell (the chip's words are specced in ShiftHudViewModel.prompt, the bookkeeping in ShiftPromptStore)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftPromptChip"] = "React HUD widget (words, fill and hidden rule specced in ShiftHudViewModel.prompt)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewPanel"] = "presentational React component (review specced in ShiftReviewViewModel; story in ShiftReviewPanel.story)",
