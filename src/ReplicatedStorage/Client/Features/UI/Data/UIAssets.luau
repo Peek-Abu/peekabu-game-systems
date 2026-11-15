@@ -209,7 +209,10 @@ end
 
 -- Graded photos and cut-out renders (the map cards are 960x600, the portraits square, the cut-outs outlined PNGs).
 UIAssets.toonPhotos = table.freeze({
-	officeCard = "rbxassetid://130708209071391",
+	-- The Office's places card: a real Studio Play shot of today's Office, the Manager waiting in his office doorway
+	-- with the lights low, graded like the School card (P1 placeholders, owner pick "Lights low" 2026-11-15; Icey Labs,
+	-- decal 81502937170609; source in characters/ui/implemented/upload/photos/office-2026-11-15).
+	officeCard = "rbxassetid://98404010123546",
 	-- The three SOON places' cards: each front built from our own yard pieces in Studio, taped shut, shot at dusk and
 	-- graded like the School card (P1 placeholders, owner yes 2026-11-15; Icey Labs, decals 126741071058199 /
 	-- 101057075096880 / 124768571529726; source in characters/ui/implemented/upload/photos/sites-2026-11-15).
