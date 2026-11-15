@@ -42,6 +42,9 @@ export type TrainingCoachProps = {
 	onArea: ((area: Area?) -> ())?,
 	-- Who says the line (an EmployeeRegistry key: the card's name tab and portrait); nil = TrainingConstants.GUIDE_EMPLOYEE.
 	coach: string?,
+	-- Drawn on the card's top edge between the name tab and the tape (the run's stop dots, TrainingStopDots), at the
+	-- card's own ZIndex (the badge adds its layers on top of `zIndex`).
+	badge: ((zIndex: number) -> React.ReactNode)?,
 }
 
 export type Area = TrainingCoachStore.Area
@@ -264,6 +267,19 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 			zIndex = z + 8,
 		}),
 	}
+	local badge = props.badge
+	if badge ~= nil then
+		local badgeLeft = textLeft - math.floor(4 * k) + math.floor(118 * k) + math.floor(10 * k)
+		local badgeRight = card.X - math.floor(50 * k)
+		local badgeHeight = math.floor(40 * k)
+		children.badge = e("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.fromOffset(badgeLeft, cardTop),
+			Size = UDim2.fromOffset(badgeRight - badgeLeft, badgeHeight),
+			BackgroundTransparency = 1,
+			ZIndex = z + 6,
+		}, { dots = badge(z) })
+	end
 	if look.tapes > 1 then
 		-- The second strip on the diagonally opposite corner, bottom-left (owner, 11-10).
 		children.tapeLow = e(Tape, {

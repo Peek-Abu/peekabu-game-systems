@@ -1,9 +1,10 @@
 --!strict
 --[=[
-	TrainingGuideHud: the training run's guide on the HUD (tutorial v3): Pippa's coach bubble (bottom left on desktop,
-	under the goal bar on a phone, away from the thumbstick) and the catch beat (TrainingGuideRules.catchPhase): after
-	the grab, one coral card slides down under the goal bar (a gloomed heart breaking its edge: the hearts row under the
-	goal bar pops by itself), then the screen goes dark while the server moves the player back, then it clears and
+	TrainingGuideHud: the training run's guide on the HUD (tutorial v3): the coach's card (bottom left on desktop; on a
+	phone top centre in the Gloom meter's place, the hearts under it, since a run has no goal bar: owner 2026-11-15),
+	the five stop dots on its top edge (TrainingStopDots) and the catch beat (TrainingGuideRules.catchPhase): after
+	the grab, one coral card slides down under the hearts (a gloomed heart breaking its edge: the hearts row above it
+	pops by itself), then the screen goes dark while the server moves the player back, then it clears and
 	Pippa gives her tip. Off a run it draws nothing. A registered HUD widget (TrainingServiceClient); it ticks only
 	while a catch beat or a timed line runs. Presentational (exempt; the choices are the specced TrainingGuideRules
 	and TrainingCoachStore).
@@ -23,7 +24,9 @@ local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.Pa
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local CrewVM = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local TrainingCoach = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingCoach)
+local TrainingStopDots = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingStopDots)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
@@ -38,6 +41,10 @@ local BEAT = TrainingConstants.CATCH_BEAT
 local DARK_FADE = BEAT.fade
 -- The card's slide (seconds).
 local CARD_SLIDE = 0.18
+-- The phone coach card's width (TrainingCoach), and the crew list's inset from the right edge and the gap kept from it.
+local COACH_PHONE_WIDTH = 330
+local CREW_INSET = 10
+local CREW_GAP = 8
 
 -- Re-renders every frame while `running`.
 
@@ -136,18 +143,36 @@ local function TrainingGuideHud(): React.ReactNode
 	if stop == nil or finished then
 		return nil
 	end
+	local stopNow: number = stop
 	local line = TrainingCoachStore.line(now)
 	local elapsed = if catch ~= nil then now - catch.at else -1
 	local phase = TrainingGuideRules.catchPhase(elapsed)
 	local metrics = if phone then ShiftHudViewModel.METER.phone else ShiftHudViewModel.METER.desktop
-	local underBar = metrics.top + metrics.size.Y + (if phone then 34 else 70)
+	local viewport = hudScale.viewport
+	-- The catch card: under the hearts on a phone (they drop under the coach on a run), under the meter's place on
+	-- desktop.
+	local heartsAt, heartsSize = ShiftHudViewModel.livesFrame(layout, viewport, true)
+	local underBar = if phone then heartsAt.Y + heartsSize.Y + 10 else metrics.top + metrics.size.Y + 70
 	local children: { [string]: React.ReactNode } = {}
 	if line ~= nil and phase ~= "dark" and not touring then
+		-- Phone: in the Gloom meter's place, top centre (no goal bar on a run, owner 2026-11-15), pushed left of the
+		-- crew list on a narrow phone; desktop: bottom left. The stop dots ride the card's top edge.
+		local coachAt = UDim2.new(0, 24, 1, -170)
+		if phone then
+			local fit = CrewVM.phoneFit(viewport.X)
+			local rightEdge = viewport.X - CREW_INSET - fit.list - CREW_GAP
+			local left = math.min(viewport.X / 2 - COACH_PHONE_WIDTH / 2, rightEdge - COACH_PHONE_WIDTH)
+			coachAt = UDim2.fromOffset(left, metrics.top)
+		end
 		children.coach = e(TrainingCoach, {
 			line = line,
 			phone = phone,
-			position = if phone then UDim2.fromOffset(8, underBar + 120) else UDim2.new(0, 24, 1, -170),
+			position = coachAt,
+			anchor = if phone then Vector2.zero else nil,
 			onArea = guideArea,
+			badge = function(z: number): React.ReactNode
+				return e(TrainingStopDots, { stop = stopNow, phone = phone, zIndex = z })
+			end,
 		})
 	end
 	-- The card stays through the move back, so the player stands up at the stop start with it and Pippa's tip.

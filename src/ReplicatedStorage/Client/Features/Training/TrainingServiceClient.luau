@@ -11,7 +11,7 @@
 	  then run, then the power, in that order; the server decides when each is done).
 	- On a training run (tutorial v3): from the stop in the `training` world entry, the hall's lights out, creeping
 	  Gloom, red danger screen and glowing desk (TrainingHallSystem), the floor trail, arrow and ring
-	  (TrainingTrailSystem), and Pippa's lines and the goal bar (TrainingCoachStore, read by the TrainingGuideHud
+	  (TrainingTrailSystem), and the coach's lines and stop dots (TrainingCoachStore, read by the TrainingGuideHud
 	  widget and the HUD); all put back when the entry goes. A catch (TrainingEvents.Caught) plays the catch beat; the
 	  finish (TrainingEvents.Finish) shows the finish screen (the TrainingFinish widget).
 	- Back in the hub after PLAY AGAIN (TrainingEvents.Again): the arrow to the Training pad.

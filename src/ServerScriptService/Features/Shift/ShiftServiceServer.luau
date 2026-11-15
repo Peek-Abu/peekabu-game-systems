@@ -513,6 +513,9 @@ local ShiftServiceServer: ShiftServiceServer = {
 				worked = function()
 					return if results ~= nil then RankFormulas.workedIds(results) else {}
 				end,
+				training = function()
+					return training
+				end,
 			}, function(player, kind, amount)
 				WorkOrderServiceServer:record(player, kind, amount)
 			end)

@@ -403,12 +403,6 @@ return function()
 			expect(ShiftHudViewModel.prompt(prompt(), "monitor", 0, true)).to.equal(nil)
 			expect(ShiftHudViewModel.prompt(prompt(), "monitor", 0, false).text).to.equal("BANK monitor")
 		end)
-
-		it("lights LOAD only while the truck's Load prompt is shown", function()
-			expect(ShiftHudViewModel.loadReady(prompt())).to.equal(true)
-			expect(ShiftHudViewModel.loadReady(prompt({ kind = "shift-clockout" }))).to.equal(false)
-			expect(ShiftHudViewModel.loadReady(nil)).to.equal(false)
-		end)
 	end)
 
 	describe("key hints", function()
@@ -581,6 +575,26 @@ return function()
 				expect(at.X + size.X / 2).to.equal(case.viewport.X / 2)
 				expect(at.Y >= meter.top + meter.size.Y + 7).to.equal(true)
 			end
+		end)
+
+		it("drops 40 px on a phone training run, under Prickles' card in the meter's place", function()
+			local viewport = Vector2.new(667, 375)
+			local at = ShiftHudViewModel.livesFrame("phone", viewport)
+			local trainingAt, size = ShiftHudViewModel.livesFrame("phone", viewport, true)
+			expect(trainingAt.Y).to.equal(at.Y + ShiftHudViewModel.TRAINING_LIVES_DROP)
+			expect(ShiftHudViewModel.TRAINING_LIVES_DROP).to.equal(40)
+			expect(trainingAt.X).to.equal(at.X)
+			-- The coach card's foot (its top at the meter's top, TRAINING_COACH_TALL tall) stays above the hearts.
+			local meter = ShiftHudViewModel.METER.phone
+			expect(meter.top + ShiftHudViewModel.TRAINING_COACH_TALL.phone < trainingAt.Y).to.equal(true)
+			expect(trainingAt.Y + size.Y < 179).to.equal(true)
+		end)
+
+		it("stays put on desktop training runs (the coach stays bottom-left there)", function()
+			local viewport = Vector2.new(1920, 1080)
+			expect(ShiftHudViewModel.livesFrame("desktop", viewport, true)).to.equal(
+				(ShiftHudViewModel.livesFrame("desktop", viewport))
+			)
 		end)
 
 		it("never overlaps the meter, the crew list or the clock-out board", function()

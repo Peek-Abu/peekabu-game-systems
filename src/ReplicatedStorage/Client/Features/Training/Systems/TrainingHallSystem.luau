@@ -9,7 +9,7 @@
 	  goo blobs as children spreads them over the floor (TrainingCreepRules; the patch part itself stays unseen); a
 	  bare patch part fades and grows itself.
 	- Stop 4 ("hide"): red and dark (a second, redder screen request on top), and the hiding furniture glows red (a
-	  Highlight), so the way to hide is plain. (Tutorial v3: no hall signs; Pippa's lines and the goal bar say it.)
+	  Highlight), so the way to hide is plain. (Tutorial v3: no hall signs; the coach's lines say it.)
 	  Mr. Harlow's two doors (staffDoor, exitDoor) creak as they swing open and slam shut (their TrainingSwingOpen
 	  attribute, set by the server's TrainingHarlowSystem; 3D at the door); as the STAFF door opens the dark lifts (his
 	  light spills in; the red stays), so the player can watch him pass. Once he has gone (`setClear`): the relief

@@ -80,6 +80,8 @@ export type LocalProps = {
 	livesMax: number,
 	layout: "phone" | "desktop",
 	viewport: Vector2,
+	-- A training run: on a phone the hearts drop under Prickles' card (ShiftHudViewModel.livesFrame).
+	training: boolean?,
 }
 
 -- The local player's hearts under the Gloom meter (ShiftHudViewModel.livesFrame); the one(s) just gloomed pop.
@@ -101,7 +103,7 @@ function ShiftLivesPips.Local(props: LocalProps): React.ReactNode
 	local scale = alpha:map(function(t: number): number
 		return if loss.count == 0 then 1 else ShiftHudViewModel.lossPop(t)
 	end)
-	local at, size = ShiftHudViewModel.livesFrame(props.layout, props.viewport)
+	local at, size = ShiftHudViewModel.livesFrame(props.layout, props.viewport, props.training)
 	local sizes = if props.layout == "phone" then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
 	return ShiftLivesPips.pips({
 		lives = props.lives,

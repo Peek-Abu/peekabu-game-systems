@@ -35,6 +35,9 @@ return function()
 				worked = function()
 					return { 7 }
 				end,
+				training = function()
+					return false
+				end,
 			}
 			calls = {}
 			stop = System.start(source, function(p, kind, amount)
@@ -80,6 +83,29 @@ return function()
 			source.changed:Fire({ phase = "results", shift = 3 })
 			expect(#calls).to.equal(1)
 			expect(calls[1].kind).to.equal("shifts")
+		end)
+		it("counts nothing on a training run: piles, banked cargo (the mug too) or the finished run", function()
+			source.training = function()
+				return true
+			end
+			source.piles:Fire(Instance.new("Part"), { player })
+			-- The training mug: one small salvage item loaded at the truck.
+			source.loaded:Fire(player, 1, 1, 0)
+			source.loaded:Fire(player, 0, 0, 1)
+			source.changed:Fire({ phase = "results", shift = 4 })
+			expect(#calls).to.equal(0)
+		end)
+		it("reads the training flag at each event (the run is marked training after the system starts)", function()
+			local training = false
+			source.training = function()
+				return training
+			end
+			training = true
+			source.piles:Fire(Instance.new("Part"), { player })
+			expect(#calls).to.equal(0)
+			training = false
+			source.piles:Fire(Instance.new("Part"), { player })
+			expect(#calls).to.equal(1)
 		end)
 		it("disconnects every source on stop", function()
 			stop()

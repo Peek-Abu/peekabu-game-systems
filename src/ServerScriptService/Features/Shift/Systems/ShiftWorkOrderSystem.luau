@@ -1,5 +1,7 @@
 --!strict
 -- Authoritative progress adapter. Sources are injectable so lifecycle and duplicate guards are testable.
+-- A training run records nothing (owner 2026-11-15: training neither shows nor counts the daily goals); `training` is
+-- read at each event, since a run is marked training after this starts (ShiftServiceServer:setTraining).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -12,11 +14,16 @@ export type Source = {
 	crew: () -> { Player },
 	-- The userIds who worked the shift just reviewed (RankFormulas.workedIds); only they get "shifts" progress.
 	worked: () -> { number },
+	-- Whether this server's run is a training run (ShiftServiceServer:isTraining).
+	training: () -> boolean,
 }
 local System = {}
 function System.start(source: Source, record: (Player, Registry.Kind, number) -> ()): () -> ()
 	local completed: { [number]: boolean } = {}
 	local piles = source.piles:Connect(function(_pile, contributors)
+		if source.training() then
+			return
+		end
 		local seen: { [number]: boolean } = {}
 		for _, player in contributors do
 			if not seen[player.UserId] and player.Parent ~= nil and source.eligible(player) then
@@ -26,7 +33,7 @@ function System.start(source: Source, record: (Player, Registry.Kind, number) ->
 		end
 	end)
 	local loaded = source.loaded:Connect(function(player, items, _salvage, overtimeLoot)
-		if player.Parent == nil or not source.eligible(player) then
+		if source.training() or player.Parent == nil or not source.eligible(player) then
 			return
 		end
 		if items > 0 then
@@ -37,7 +44,7 @@ function System.start(source: Source, record: (Player, Registry.Kind, number) ->
 		end
 	end)
 	local changed = source.changed:Connect(function(state)
-		if state.phase ~= "results" or completed[state.shift] then
+		if state.phase ~= "results" or completed[state.shift] or source.training() then
 			return
 		end
 		completed[state.shift] = true

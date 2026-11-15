@@ -143,6 +143,11 @@ ShiftHudViewModel.METER = table.freeze({
 	desktop = table.freeze({ size = Vector2.new(620, 96), top = 40, icon = 100 }),
 })
 ShiftHudViewModel.METER_ICON_OVERHANG = 0.38
+-- A training run has no goal bar (owner 2026-11-15): on a phone Prickles' card takes the meter's place, its top at the
+-- meter's top and this tall (design px, its head and name tab included: TrainingCoach's phone card), and the hearts drop
+-- TRAINING_LIVES_DROP under it. On desktop the card stays bottom-left and the hearts stay put.
+ShiftHudViewModel.TRAINING_COACH_TALL = table.freeze({ phone = 115 })
+ShiftHudViewModel.TRAINING_LIVES_DROP = 40
 
 -- The local player's Gloom-life hearts, just under the meter (HUD design px): a heart's side (`pip`; never under 20),
 -- the gap between hearts (the phone's is negative: each heart overlaps the last by 6 px, the leftmost on top), the extra outline drawn around each (`stroke`: 0, the toon heart renders carry their ink
@@ -166,13 +171,18 @@ end
 	drop shadow. It sits in the band the clock-out board used to open at (see `boardTop`), clear of the crew list and the
 	open roster.
 ]=]
-function ShiftHudViewModel.livesFrame(layout: UIPaperConstants.Layout, viewport: Vector2): (Vector2, Vector2)
+function ShiftHudViewModel.livesFrame(
+	layout: UIPaperConstants.Layout,
+	viewport: Vector2,
+	training: boolean?
+): (Vector2, Vector2)
 	local lives = if layout == "phone" then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
 	local meter = if layout == "phone" then ShiftHudViewModel.METER.phone else ShiftHudViewModel.METER.desktop
 	local count = ShiftConstants.STARTING_LIVES
 	local box = lives.pip + 2 * lives.stroke
 	local size = Vector2.new(count * box + (count - 1) * lives.gap, box)
-	return Vector2.new(viewport.X / 2 - size.X / 2, meter.top + meter.size.Y + lives.below), size
+	local drop = if training == true and layout == "phone" then ShiftHudViewModel.TRAINING_LIVES_DROP else 0
+	return Vector2.new(viewport.X / 2 - size.X / 2, meter.top + meter.size.Y + lives.below + drop), size
 end
 
 --[=[

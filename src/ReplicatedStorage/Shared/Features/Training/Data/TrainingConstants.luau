@@ -260,7 +260,7 @@ local TrainingConstants = {
 	-- Who guides the tutorial on every card, in the hub and inside training (owner 11-12: Prickles, not Pippa).
 	GUIDE_EMPLOYEE = "Prickles",
 
-	-- The goal bar per stop (TrainingGoalBar), in place of the Gloom meter.
+	-- Each stop's goal words (TrainingGuideRules.goal; the goal bar that drew them is gone, owner 2026-11-15).
 	GOALS = table.freeze(GOALS),
 
 	-- A training trip's contract (in place of the night's client): the ride's route slip says where you are going.

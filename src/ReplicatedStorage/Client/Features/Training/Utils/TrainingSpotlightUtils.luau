@@ -133,6 +133,22 @@ end
 ]=]
 TrainingSpotlightUtils.PHONE_TOP = 44
 
+--[=[
+	A phone's tip during a real shift (owner 2026-11-15): one thin line, not the full coach card, so the first-trip tips
+	never cover the Gloom meter, the hearts or a button. Centred, `gap` px under the hearts' bottom edge (`heartsBottom`,
+	screen px), `width` wide but 16 px clear of either edge on a narrow screen.
+]=]
+TrainingSpotlightUtils.TIP_LINE = table.freeze({ width = 300, height = 36, gap = 8, margin = 16 })
+
+function TrainingSpotlightUtils.tipLine(screen: Vector2, heartsBottom: number): Rect
+	local spec = TrainingSpotlightUtils.TIP_LINE
+	local width = math.min(spec.width, screen.X - 2 * spec.margin)
+	return {
+		position = Vector2.new(screen.X / 2 - width / 2, heartsBottom + spec.gap),
+		size = Vector2.new(width, spec.height),
+	}
+end
+
 function TrainingSpotlightUtils.pinnedCoach(
 	screen: Vector2,
 	card: Vector2,

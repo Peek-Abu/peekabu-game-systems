@@ -15,10 +15,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local TrainingCoach = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingCoach)
 local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
@@ -46,7 +49,8 @@ export type TrainingSpotlightProps = {
 	coach: string?,
 	-- false: no shade around the hole (nothing dimmed, no click caught); nil = shaded.
 	dim: boolean?,
-	-- The card at COMPACT_SCALE (the hub's hint, owner 11-13); nil = full size.
+	-- The card at COMPACT_SCALE (the hub's hint, owner 11-13); on a phone a compact step without an action is one thin
+	-- line under the hearts instead (a real shift's tips, owner 2026-11-15); nil = full size.
 	compact: boolean?,
 	-- A small button just above the card's right end (the hub's SKIP TRAINING); nil = none.
 	action: { text: string, onPress: () -> () }?,
@@ -83,9 +87,58 @@ local function arrowAt(at: Vector2, rotation: number, bob: number): React.ReactN
 	})
 end
 
+-- A compact tip on a phone (a real shift's first-trip tips, owner 2026-11-15): one thin cream line under the hearts
+-- (TrainingSpotlightUtils.tipLine), not the full card, so it never covers the meter, the hearts or a button.
+local function TipLine(props: TrainingSpotlightProps): React.ReactNode
+	local heartsAt, heartsSize = ShiftHudViewModel.livesFrame("phone", props.screen)
+	local rect = TrainingSpotlightUtils.tipLine(props.screen, heartsAt.Y + heartsSize.Y)
+	local onArea = props.onArea
+	local placed = `{rect.position.X},{rect.position.Y},{rect.size.X},{rect.size.Y}`
+	-- Reports the line's place (the phone's sticky notes keep clear of it); `onArea` is a stable callback.
+	React.useEffect(function()
+		if onArea ~= nil then
+			onArea({
+				left = rect.position.X,
+				top = rect.position.Y,
+				right = rect.position.X + rect.size.X,
+				bottom = rect.position.Y + rect.size.Y,
+			})
+		end
+		return function()
+			if onArea ~= nil then
+				onArea(nil)
+			end
+		end
+	end, { placed })
+	local words: { [string]: React.ReactNode } = {
+		words = e(ToonText, {
+			text = props.line,
+			font = "body",
+			textSize = 14,
+			position = UDim2.fromOffset(12, 0),
+			size = UDim2.new(1, -24, 1, 0),
+			align = "center",
+			alignY = "center",
+			fit = true,
+			zIndex = 24,
+		}),
+	}
+	return e(ToonPanel, {
+		hue = "cream",
+		size = rect.size,
+		position = UDim2.fromOffset(rect.position.X, rect.position.Y),
+		radius = math.floor(rect.size.Y / 2),
+		zIndex = 22,
+		children = words,
+	})
+end
+
 -- Pippa says the line, placed near the layout's line spot and kept on the screen.
 local function Coach(props: TrainingSpotlightProps): React.ReactNode
-	local phone = props.screen.Y < 500
+	local phone: boolean = props.screen.Y < 500
+	if phone and props.compact == true and props.action == nil then
+		return e(TipLine, props)
+	end
 	-- The Coach layer is in screen px: the coach is drawn at the HUD's scale for this screen (desktop sizes are for
 	-- 1920x1080), never bigger than designed.
 	local scale = if phone then 1 else math.clamp(math.min(props.screen.X / 1920, props.screen.Y / 1080), 0.5, 1)
@@ -103,7 +156,7 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 	end
 	local card = e(TrainingCoach, {
 		line = { text = props.line, pose = "point" },
-		phone = phone,
+		phone = props.screen.Y < 500,
 		position = UDim2.fromOffset(x, bottom),
 		zIndex = 22,
 		scale = scale,
