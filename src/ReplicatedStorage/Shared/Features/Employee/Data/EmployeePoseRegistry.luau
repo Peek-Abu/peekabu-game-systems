@@ -27,9 +27,11 @@ local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data
 
 -- Where a portrait is shown: the hub's profile card, a crew roster or truck seat, the rank chart's step (`ladder`),
 -- the rehire notice, the results' featured award; the training coach, one per kind of line (go this way, careful,
--- cheer, shh, hide); the training finish screen's victory.
+-- cheer, shh, hide); the training finish screen's victory; `idle`, a still preview with no place of its own (the Shop,
+-- Inventory, the pick screen, the Locker and the deals: the employee held in its own idle).
 export type PortraitContext =
-	"profile"
+	"idle"
+	| "profile"
 	| "crew"
 	| "ladder"
 	| "caught"
@@ -67,6 +69,7 @@ export type PortraitSet = {
 }
 
 local CONTEXTS: { PortraitContext } = {
+	"idle",
 	"profile",
 	"crew",
 	"ladder",
@@ -232,6 +235,79 @@ local KIT_POSES: { [string]: PoseDef } = {
 -- A new pose at every rank (p075, owner yes 2026-11-14): the hub's profile card, the crew pictures and the rank
 -- chart all show the player's employee in their rank's pose, so ranking up visibly changes how you stand. One table,
 -- shared, so the three never disagree; a rank added later inherits the pose below it (EmployeePoseRules).
+-- A still preview's idle pose for an employee with none of its own (`IDLE_POSES`): the shared stand.
+KIT_POSES.idle = table.freeze({ name = "idle", face = KIT_POSES.stand.face, joints = KIT_POSES.stand.joints })
+
+--[=[
+	Each employee's own idle, held still (owner 2026-11-15: a still preview shows the employee in its default idle, not
+	the shared stand). Joint turns over the kit rig's rest, read from the FIRST keyframe of the employee's idle loop
+	(EmployeeRegistry locomotion.idle) with KeyframeSequenceProvider in Studio: Pose.CFrame:ToEulerAnglesXYZ() in
+	degrees, rounded to 0.1 (the root's small shift is left out: a still pose turns joints only). The live
+	preview starts its idle at that same frame, so swapping the still for the moving model never jumps. A new employee
+	(Morel, Bigsby) adds its entry here; without one it stands in the shared stand. Stored, never sampled at runtime
+	(perf 2026-11-15: no clip loading on a preview).
+]=]
+local IDLE_POSES: { [string]: { [string]: Vector3 } } = {
+	-- Pippa's idle: arms relaxed low, a soft knee bend (pippaidle, read 2026-11-15).
+	Pippa = {
+		Neck = Vector3.new(4.2, -5, 3.6),
+		Waist = Vector3.new(-1.5, -1.1, -0.2),
+		Root = Vector3.new(-1.5, -0.8, 0),
+		RightShoulder = Vector3.new(-22.4, -11.1, -57.3),
+		RightElbow = Vector3.new(-30.9, 78.3, 30.3),
+		RightWrist = Vector3.new(0.1, -3.7, 2),
+		LeftShoulder = Vector3.new(-21.4, 13.5, 58.6),
+		LeftElbow = Vector3.new(-33.8, -79.3, -33.3),
+		LeftWrist = Vector3.new(0.1, 3.7, -2),
+		RightHip = Vector3.new(26.5, 0.7, -0.3),
+		RightKnee = Vector3.new(-50.5, 0, 0),
+		RightAnkle = Vector3.new(25.5, 0, 0),
+		LeftHip = Vector3.new(25.9, 0.7, -0.3),
+		LeftKnee = Vector3.new(-50.5, 0, 0),
+		LeftAnkle = Vector3.new(26.1, 0, 0),
+	},
+	-- Cappy's idle: slouched, hands in his hoodie pocket (cappyidle, read 2026-11-15).
+	Cappy = {
+		Neck = Vector3.new(10.1, -4.6, 8.3),
+		Waist = Vector3.new(-6.1, -0.6, -3.7),
+		Root = Vector3.new(-4, -0.5, 3),
+		RightShoulder = Vector3.new(-23.2, 39.7, -49.2),
+		RightElbow = Vector3.new(-93.4, 29.8, 96.8),
+		RightWrist = Vector3.new(0, 0, 2),
+		LeftShoulder = Vector3.new(-22.6, -38.2, 49.5),
+		LeftElbow = Vector3.new(-95.5, -29.5, -101.1),
+		LeftWrist = Vector3.new(0, 0, -2),
+		RightHip = Vector3.new(26.1, -1.6, -8.4),
+		RightKnee = Vector3.new(-42.6, 0, 0),
+		RightAnkle = Vector3.new(20.5, -1.4, 5.4),
+		LeftHip = Vector3.new(31.1, -2.4, -8.5),
+		LeftKnee = Vector3.new(-53.4, 0, 0),
+		LeftAnkle = Vector3.new(26.3, -1.4, 5.7),
+	},
+	-- Prickles' idle: arms crossed (pricklesidle, read 2026-11-15).
+	Prickles = {
+		Neck = Vector3.new(-2.7, 0, 1.5),
+		Waist = Vector3.new(1.9, -0.1, -0.3),
+		Root = Vector3.new(0.1, 0.1, -0.1),
+		RightShoulder = Vector3.new(81.6, 59.2, -129.1),
+		RightElbow = Vector3.new(0, 38.3, 0),
+		RightWrist = Vector3.new(0, 48.5, -46.5),
+		LeftShoulder = Vector3.new(87.8, -67.3, 121.1),
+		LeftElbow = Vector3.new(0, -45.1, 0),
+		LeftWrist = Vector3.new(0, -57.1, 29.3),
+		RightHip = Vector3.new(12.5, 0.8, 3.4),
+		RightKnee = Vector3.new(-22.5, 0, 0),
+		RightAnkle = Vector3.new(9, -14, -3.5),
+		LeftHip = Vector3.new(10.2, -0.3, -1.6),
+		LeftKnee = Vector3.new(-22.8, 0, 0),
+		LeftAnkle = Vector3.new(12.3, 9.9, 1.7),
+	},
+}
+for name, joints in IDLE_POSES do
+	IDLE_POSES[name] = table.freeze(joints)
+end
+table.freeze(IDLE_POSES)
+
 local RANK_POSES: { [number]: string } = table.freeze({
 	[1] = "shy",
 	[2] = "wave",
@@ -245,6 +321,7 @@ local RANK_POSES: { [number]: string } = table.freeze({
 local KIT_SET: PortraitSet = {
 	poses = KIT_POSES,
 	contexts = {
+		idle = { pose = "idle" },
 		profile = { pose = "wave", byLevel = RANK_POSES },
 		crew = { pose = "stand", byLevel = RANK_POSES },
 		ladder = { pose = "proud", byLevel = RANK_POSES },
@@ -262,13 +339,15 @@ local KIT_SET: PortraitSet = {
 local EmployeePoseRegistry = {
 	CONTEXTS = CONTEXTS,
 	RANK_POSES = RANK_POSES,
+	IDLE_POSES = IDLE_POSES,
 	-- Top-level children of a character a portrait leaves out: equipment, not the look (Tools always go too).
 	STRIP = table.freeze({ "VacuumBackpack" }),
 	mirror = mirror,
 }
 
 -- Each employee's set, made once: the kit's poses, each wearing the employee's own face where its personality names
--- one (EmployeeRegistry `poseFaces`, worn when the model has it; the pose's face otherwise).
+-- one (EmployeeRegistry `poseFaces`, worn when the model has it; the pose's face otherwise), and its own idle pose
+-- (`IDLE_POSES`) where it has one.
 local SETS: { [string]: PortraitSet } = {}
 
 -- The employee's set: the kit's for every registered employee (without one, a stock avatar stays at rest).
@@ -278,17 +357,22 @@ function EmployeePoseRegistry.get(employee: string): PortraitSet?
 		return nil
 	end
 	local own = def.poseFaces
-	if own == nil then
+	local idle = IDLE_POSES[employee]
+	if own == nil and idle == nil then
 		return KIT_SET
 	end
 	local made = SETS[employee]
 	if made == nil then
 		local poses: { [string]: PoseDef } = {}
 		for name, kit in KIT_POSES do
-			local face = own[name]
+			local face = if own ~= nil then own[name] else nil
 			poses[name] = if face ~= nil
 				then table.freeze({ name = kit.name, face = kit.face, joints = kit.joints, look = face })
 				else kit
+		end
+		if idle ~= nil then
+			-- No face: the still keeps the face the employee's model wears, as its idle does.
+			poses.idle = table.freeze({ name = "idle", joints = idle })
 		end
 		made = table.freeze({ poses = table.freeze(poses), contexts = KIT_SET.contexts })
 		SETS[employee] = made

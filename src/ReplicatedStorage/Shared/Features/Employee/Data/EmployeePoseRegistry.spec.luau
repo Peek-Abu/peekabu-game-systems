@@ -33,7 +33,10 @@ return function()
 				local set = EmployeePoseRegistry.get(name)
 				expect(set.contexts).to.equal(pippa.contexts)
 				for poseName, pose in pippa.poses do
-					expect(set.poses[poseName].joints).to.equal(pose.joints)
+					-- The idle pose is each employee's own (their idle's first frame); every other pose is shared.
+					if poseName ~= "idle" then
+						expect(set.poses[poseName].joints).to.equal(pose.joints)
+					end
 				end
 			end
 		end)
@@ -72,6 +75,48 @@ return function()
 
 	-- Owner 11-10: the coach's hide (ears folded forward over her eyes) read wrong. It must work for any employee,
 	-- so it is a cower that does not lean on ear shape: ears pinned back flat (as in the sneak), never over the face.
+	describe("idle previews (owner 11-15: still previews show each employee's own idle)", function()
+		local KIT = { "Pippa", "Cappy", "Prickles" }
+
+		it("shows the idle pose wherever a preview has no context of its own", function()
+			for _, name in EmployeePoseRegistry.names() do
+				local set = EmployeePoseRegistry.get(name)
+				expect(set.contexts.idle.pose).to.equal("idle")
+				expect(set.contexts.idle.byLevel).never.to.be.ok()
+			end
+		end)
+
+		it("holds Pippa, Cappy and Prickles each in their own idle, never the shared stand", function()
+			local seen = {}
+			for _, name in KIT do
+				local idle = EmployeePoseRegistry.get(name).poses.idle
+				expect(idle.name).to.equal("idle")
+				expect(idle.joints).never.to.equal(EmployeePoseRegistry.get(name).poses.stand.joints)
+				expect(next(idle.joints)).to.be.ok()
+				expect(seen[idle.joints]).never.to.be.ok()
+				seen[idle.joints] = true
+			end
+		end)
+
+		it("keeps an employee without an idle pose of its own in the shared stand", function()
+			for _, name in EmployeePoseRegistry.names() do
+				local set = EmployeePoseRegistry.get(name)
+				if EmployeePoseRegistry.IDLE_POSES[name] == nil then
+					expect(set.poses.idle.joints).to.equal(set.poses.stand.joints)
+				else
+					expect(set.poses.idle.joints).to.equal(EmployeePoseRegistry.IDLE_POSES[name])
+				end
+			end
+		end)
+
+		it("leaves the rank places alone (profile, crew roster, ladder pose by rank)", function()
+			local set = EmployeePoseRegistry.get("Cappy")
+			for _, context in { "profile", "crew", "ladder" } do
+				expect(set.contexts[context].byLevel).to.equal(EmployeePoseRegistry.RANK_POSES)
+			end
+		end)
+	end)
+
 	describe("rank poses (p075: a new pose at every rank)", function()
 		local ORDER = { "shy", "wave", "proud", "point", "coachCheer", "cheer", "victory" }
 

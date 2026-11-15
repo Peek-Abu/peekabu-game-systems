@@ -4,7 +4,8 @@
 	model comes from EmployeePreviewSystem, dressed exactly as the server dresses a real character, and is framed by
 	PortraitViewModel.camera (refitted on resize without a rebuild).
 	- `live = false` (default, cards): a static posed copy, every part anchored, no Animator: drawn once, the cost of
-	  an image. The pose is the employee's `context` pose (EmployeePoseRules; default "crew").
+	  an image. The pose is the employee's `context` pose (EmployeePoseRules; default "idle": the employee held in its
+	  own idle).
 	- `live = true` (the hero): the model in a WorldModel with its idle loop playing (the skin's own showcase idle when
 	  it has one). Past the live cap (two at once) it quietly shows the static copy instead.
 	- `emote` (a Cosmetic emote id, live only; not while its screen is covered, ToonCoveredContext): the hero loops
@@ -196,7 +197,7 @@ end
 local function build(props: ToonViewportProps): (Model?, boolean)
 	local outfit = props.outfit
 	if outfit ~= nil then
-		local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(outfit.employee), props.context or "crew", {})
+		local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(outfit.employee), props.context or "idle", {})
 		local mine = Players.LocalPlayer
 		return EmployeePreviewSystem.outfit(
 			outfit,
@@ -220,7 +221,7 @@ local function build(props: ToonViewportProps): (Model?, boolean)
 			return model, true
 		end
 	end
-	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(employee), props.context or "crew", {})
+	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(employee), props.context or "idle", {})
 	return EmployeePreviewSystem.static(employee, props.skin, ReplicatedStorage, pose, props.style), false
 end
 
@@ -340,7 +341,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		local cleanups: { () -> () } = {}
 		local stageTurn: ((degrees: number) -> ())? = nil
 		local pose = if emote ~= nil and who ~= nil
-			then EmployeePoseRules.select(EmployeePoseRegistry.get(who), props.context or "crew", {})
+			then EmployeePoseRules.select(EmployeePoseRegistry.get(who), props.context or "idle", {})
 			else nil
 		-- The live model goes to the stage; until the stage is live (its assets loaded), this viewport shows a posed copy
 		-- of it on its own platform, dropped in the frame the stage takes over.

@@ -6,7 +6,7 @@
 	UIPreloadStore gets the bar's progress after each essential batch and `ready` once they are all in, or after
 	UIPreloadRules.ESSENTIAL_TIMEOUT seconds whatever is left (the rest keeps loading). Each batch's load time is logged,
 	so a slow join is visible in the output. Once every batch is done it warms the crew cards: every employee in every
-skin, in the "crew" pose the Shop's and the Inventory's cards use, built one a frame into EmployeePreviewSystem's
+skin, in the "idle" pose the Shop's and the Inventory's cards use, built one a frame into EmployeePreviewSystem's
 cache (EmployeePreviewSystem.warm), so the first open of those screens clones its cards.
 
 	`start` takes optional stand-ins (the art folder, the image ids, the loader, the timeout, the warm-up) for specs; the place's own
@@ -154,13 +154,14 @@ local function placePreload(items: { Instance | string })
 	end
 end
 
--- Every employee in every skin, in the pose their Shop and Inventory cards use ("crew"), warmed into the preview cache.
+-- Every employee in every skin, in the pose their Shop and Inventory cards use ("idle", ToonViewport's default),
+-- warmed into the preview cache.
 local function placeWarm(): () -> ()
 	local looks: { EmployeePreviewSystem.Look } = {}
 	for _, name in EmployeeRegistry.names() do
 		local def = EmployeeRegistry.get(name)
 		if def ~= nil then
-			local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(name), "crew", {})
+			local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(name), "idle", {})
 			table.insert(looks, { employee = name, pose = pose })
 			for key in def.skins do
 				table.insert(looks, { employee = name, skin = key, pose = pose })
