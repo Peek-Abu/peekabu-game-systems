@@ -154,17 +154,17 @@ local function placePreload(items: { Instance | string })
 	end
 end
 
--- Every employee in every skin, in the pose their Shop and Inventory cards use ("idle", ToonViewport's default),
--- warmed into the preview cache.
+-- Every employee in every skin, in the pose their Shop and Inventory cards use ("idle", ToonViewport's default) and
+-- without the rank lanyard (those cards show the item, not you: owner 11-15), warmed into the preview cache.
 local function placeWarm(): () -> ()
 	local looks: { EmployeePreviewSystem.Look } = {}
 	for _, name in EmployeeRegistry.names() do
 		local def = EmployeeRegistry.get(name)
 		if def ~= nil then
 			local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(name), "idle", {})
-			table.insert(looks, { employee = name, pose = pose })
+			table.insert(looks, { employee = name, pose = pose, lanyard = false })
 			for key in def.skins do
-				table.insert(looks, { employee = name, skin = key, pose = pose })
+				table.insert(looks, { employee = name, skin = key, pose = pose, lanyard = false })
 			end
 		end
 	end

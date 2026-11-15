@@ -112,6 +112,8 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 		model = e(ToonViewport, {
 			employee = entry.id,
 			skin = entry.skinKey,
+			-- An item's art shows the item, not you: no rank lanyard (owner 11-15).
+			lanyard = false,
 			framing = "full",
 			dim = locked,
 			position = UDim2.fromOffset(0, math.floor(artHeight * 0.06)),

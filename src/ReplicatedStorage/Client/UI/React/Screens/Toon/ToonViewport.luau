@@ -92,6 +92,9 @@ export type ToonViewportProps = {
 	style: number?,
 	-- A live hero's idle item (the key after the dot, one that fits the skin; nil = the skin's own idle).
 	idle: string?,
+	-- false: an employee preview without the rank lanyard (an item's card or page shows the item, not you: owner
+	-- 11-15). nil wears it. An outfit (your own look) always keeps what you wear.
+	lanyard: boolean?,
 	live: boolean?,
 	-- A Cosmetic emote id: a live hero loops it.
 	emote: string?,
@@ -217,13 +220,14 @@ local function build(props: ToonViewportProps): (Model?, boolean)
 			false
 	end
 	if props.live == true then
-		local model = EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage, props.style)
+		local model = EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage, props.style, props.lanyard)
 		if model ~= nil then
 			return model, true
 		end
 	end
 	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(employee), props.context or "idle", {})
-	return EmployeePreviewSystem.static(employee, props.skin, ReplicatedStorage, pose, props.style), false
+	return EmployeePreviewSystem.static(employee, props.skin, ReplicatedStorage, pose, props.style, props.lanyard),
+		false
 end
 
 -- What the model shows, as one string (the effect rebuilds only when it changes).
@@ -232,7 +236,8 @@ local function lookKey(props: ToonViewportProps): string
 	if outfit ~= nil then
 		return `{outfit.employee}|{outfit.look.skin}|{outfit.look.style}|{outfit.vacuum}`
 	end
-	return `{props.employee or ""}|{props.skin or ""}|{props.style or 1}|{props.vacuum or ""}`
+	local lanyard = if props.lanyard == false then "bare" else ""
+	return `{props.employee or ""}|{props.skin or ""}|{props.style or 1}|{props.vacuum or ""}|{lanyard}`
 end
 
 -- The live hero a reaction plays on.

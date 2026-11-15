@@ -120,6 +120,8 @@ local function art(card: VM.OfferCard, live: boolean?): React.ReactNode
 		employee = if vacuum ~= nil then nil else card.employee,
 		vacuum = if vacuum ~= nil then CosmeticRegistry.keyOf(vacuum) else nil,
 		skin = card.skinKey,
+		-- An item's art shows the item, not you: no rank lanyard (owner 11-15).
+		lanyard = false,
 		-- An idle's card plays it (live) on its employee in the Classic skin.
 		idle = card.idle,
 		framing = "full",

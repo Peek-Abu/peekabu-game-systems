@@ -4,16 +4,18 @@
 	later the Shop and reveals): any employee in any skin, built on the client from the art in ReplicatedStorage and
 	dressed by the same EmployeeSkinSystem the server dresses real characters with, so a preview never drifts.
 
-	- `static(employee, skin, source, pose?, style?)`: posed once and frozen (EmployeePortraitSystem.build): every part
+	- `static(employee, skin, source, pose?, style?, lanyard?)`: posed once and frozen (EmployeePortraitSystem.build): every part
 	  anchored, no Animator, no scripts. The engine renders it once: cards and grids. Each look (employee, skin, style,
 	  pose, the badge's rank, per source) is built once and kept: later calls get a Clone of it, so reopening the
 	  Shop or the Inventory, or a card rebuilt after an equip or a purchase, never dresses and poses it again (that
 	  ran the skin fitting, the lanyard and the pose for every card in one frame). `warm` builds looks ahead, one a
 	  frame (UIPreloadSystem warms every crew card after the art preload). `reset` empties the cache.
-	- `live(employee, skin, source, style?)`: the dressed model with its root held and the body free, an Animator, no
+	- `live(employee, skin, source, style?, lanyard?)`: the dressed model with its root held and the body free, an Animator, no
 	  scripts: put it in a WorldModel and `playIdle` it. At most LIVE_CAP exist at once (the hero and one hovered
 	  card); `live` returns nil past the cap. `release` destroys one and frees its slot at once (destroying it alone
 	  frees the slot a frame later).
+	- `lanyard` false leaves the rank lanyard off (Shop and Inventory items show the item, not you: owner 11-15); nil
+	  or true wears it, as the server dresses a real character.
 	- `skin` is an EmployeeRegistry skin key (nil = the default look); an unknown one falls back to the default.
 	  `style` is its colour style (nil = 1; clamped to one the skin has).
 	- `outfit(outfit, source, character, live, pose?)`: a whole player's look (CosmeticOutfitRules): a clone of
@@ -87,8 +89,9 @@ local function resolve(root: Instance, path: { string }): Instance?
 	return current
 end
 
--- A dressed clone of the employee's art (scripts removed) in colour style `style` (nil = 1), or nil.
-local function dressed(employee: string, skin: string?, source: Instance, style: number?): Model?
+-- A dressed clone of the employee's art (scripts removed) in colour style `style` (nil = 1), or nil. It wears the rank
+-- lanyard unless `lanyard` is false.
+local function dressed(employee: string, skin: string?, source: Instance, style: number?, lanyard: boolean?): Model?
 	local def = EmployeeRegistry.get(employee)
 	if def == nil then
 		return nil
@@ -115,14 +118,23 @@ local function dressed(employee: string, skin: string?, source: Instance, style:
 			resolve(source, EmployeeConstants.OUTFITS_PATH)
 		)
 	end
-	EmployeeLanyardSystem.attachPreview(model)
+	if lanyard ~= false then
+		EmployeeLanyardSystem.attachPreview(model)
+	end
 	return model
 end
 
 -- A static look's cache key: everything its build depends on.
-local function staticKey(employee: string, skin: string?, pose: EmployeePoseRegistry.PoseDef?, style: number?): string
+local function staticKey(
+	employee: string,
+	skin: string?,
+	pose: EmployeePoseRegistry.PoseDef?,
+	style: number?,
+	lanyard: boolean?
+): string
 	local poseName = if pose ~= nil then pose.name else ""
-	return `{employee}|{skin or ""}|{style or 1}|{poseName}|{EmployeeLanyardSystem.previewRank()}`
+	local rank = if lanyard == false then "bare" else tostring(EmployeeLanyardSystem.previewRank())
+	return `{employee}|{skin or ""}|{style or 1}|{poseName}|{rank}`
 end
 
 function EmployeePreviewSystem.static(
@@ -130,15 +142,16 @@ function EmployeePreviewSystem.static(
 	skin: string?,
 	source: Instance,
 	pose: EmployeePoseRegistry.PoseDef?,
-	style: number?
+	style: number?,
+	lanyard: boolean?
 ): Model?
-	local key = staticKey(employee, skin, pose, style)
+	local key = staticKey(employee, skin, pose, style, lanyard)
 	local builds = staticCache[source]
 	local cached = if builds ~= nil then builds[key] else nil
 	if cached ~= nil then
 		return cached:Clone()
 	end
-	local model = dressed(employee, skin, source, style)
+	local model = dressed(employee, skin, source, style, lanyard)
 	if model == nil then
 		return nil
 	end
@@ -164,8 +177,9 @@ function EmployeePreviewSystem.static(
 	return copy:Clone()
 end
 
--- One look `warm` builds ahead: an employee, a skin (nil = the default look) and the pose its cards use.
-export type Look = { employee: string, skin: string?, pose: EmployeePoseRegistry.PoseDef? }
+-- One look `warm` builds ahead: an employee, a skin (nil = the default look), the pose its cards use and whether they
+-- wear the rank lanyard (nil = yes).
+export type Look = { employee: string, skin: string?, pose: EmployeePoseRegistry.PoseDef?, lanyard: boolean? }
 
 --[=[
 	Builds `looks` into the static cache in the background, one per frame (starting the frame after the call), so the
@@ -180,7 +194,7 @@ function EmployeePreviewSystem.warm(looks: { Look }, source: Instance): () -> ()
 			if cancelled then
 				return
 			end
-			local copy = EmployeePreviewSystem.static(look.employee, look.skin, source, look.pose)
+			local copy = EmployeePreviewSystem.static(look.employee, look.skin, source, look.pose, nil, look.lanyard)
 			if copy ~= nil then
 				copy:Destroy()
 			end
@@ -230,11 +244,17 @@ function EmployeePreviewSystem.release(model: Model)
 	model:Destroy()
 end
 
-function EmployeePreviewSystem.live(employee: string, skin: string?, source: Instance, style: number?): Model?
+function EmployeePreviewSystem.live(
+	employee: string,
+	skin: string?,
+	source: Instance,
+	style: number?,
+	lanyard: boolean?
+): Model?
 	if liveCount >= LIVE_CAP then
 		return nil
 	end
-	local model = dressed(employee, skin, source, style)
+	local model = dressed(employee, skin, source, style, lanyard)
 	return if model ~= nil then makeLive(model) else nil
 end
 

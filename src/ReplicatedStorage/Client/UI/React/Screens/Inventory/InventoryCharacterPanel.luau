@@ -130,6 +130,8 @@ local function itemCard(
 			employee = if entry.vacuum then nil else props.employee,
 			vacuum = if entry.vacuum then VM.skinKey(entry.id) else nil,
 			skin = skinKey,
+			-- An item's art shows the item, not you: no rank lanyard (owner 11-15).
+			lanyard = false,
 			framing = "full",
 			dim = entry.dim,
 			position = UDim2.fromOffset(0, 6),
@@ -383,6 +385,7 @@ local function bundledTile(
 		art = e(ToonViewport, {
 			employee = item.employee or props.employee,
 			skin = VM.skinKey(item.id),
+			lanyard = false,
 			framing = "full",
 			size = UDim2.fromScale(1, 1),
 		})
@@ -396,6 +399,7 @@ local function bundledTile(
 		art = e(ToonViewport, {
 			employee = item.employee or props.employee,
 			framing = "bust",
+			lanyard = false,
 			size = UDim2.fromScale(1, 1),
 		})
 	end

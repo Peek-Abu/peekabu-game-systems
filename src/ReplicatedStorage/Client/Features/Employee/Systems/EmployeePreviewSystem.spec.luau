@@ -119,6 +119,48 @@ return function()
 		end)
 	end)
 
+	describe("the rank lanyard", function()
+		-- A template with an UpperTorso, so the preview's lanyard (EmployeeLanyardSystem.attachPreview) has a chest.
+		local function withChest(src, name)
+			local model = src.Assets.CleanupCrew.Characters[name]
+			local chest = part(model, "UpperTorso", 3)
+			chest.Size = Vector3.new(2, 1.6, 1)
+			return src
+		end
+
+		local function hasLanyard(model)
+			return model:FindFirstChild("LanyardV4") ~= nil
+		end
+
+		it("puts it on a static preview unless asked not to (owner 11-15: none on Shop and Inventory items)", function()
+			local src = withChest(source({ "Pippa" }), "Pippa")
+			local worn = EmployeePreviewSystem.static("Pippa", nil, src)
+			local bare = EmployeePreviewSystem.static("Pippa", nil, src, nil, nil, false)
+			expect(hasLanyard(worn)).to.equal(true)
+			expect(hasLanyard(bare)).to.equal(false)
+			-- cached apart: asking again in either order gives the same answer
+			local wornAgain = EmployeePreviewSystem.static("Pippa", nil, src, nil, nil, true)
+			local bareAgain = EmployeePreviewSystem.static("Pippa", nil, src, nil, nil, false)
+			expect(hasLanyard(wornAgain)).to.equal(true)
+			expect(hasLanyard(bareAgain)).to.equal(false)
+			for _, model in { worn, bare, wornAgain, bareAgain } do
+				model:Destroy()
+			end
+			src:Destroy()
+		end)
+
+		it("puts it on a live preview unless asked not to", function()
+			local src = withChest(source({ "Pippa" }), "Pippa")
+			local worn = EmployeePreviewSystem.live("Pippa", nil, src)
+			expect(hasLanyard(worn)).to.equal(true)
+			EmployeePreviewSystem.release(worn)
+			local bare = EmployeePreviewSystem.live("Pippa", nil, src, nil, false)
+			expect(hasLanyard(bare)).to.equal(false)
+			EmployeePreviewSystem.release(bare)
+			src:Destroy()
+		end)
+	end)
+
 	it("builds a static, posed copy: every part anchored, no Animator, no scripts", function()
 		local src = source({ "Pippa" })
 		local model = EmployeePreviewSystem.static("Pippa", nil, src)

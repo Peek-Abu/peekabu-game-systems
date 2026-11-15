@@ -95,6 +95,8 @@ local function insideRow(
 		else e(ToonViewport, {
 			employee = card.employee,
 			skin = if entry.kind == "Skin" then card.skinKey else nil,
+			-- An item's art shows the item, not you: no rank lanyard (owner 11-15).
+			lanyard = false,
 			framing = if entry.kind == "Skin" then "full" else "bust",
 			size = UDim2.fromScale(1, 1),
 		})
@@ -442,6 +444,8 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			model = e(ToonViewport, {
 				employee = if tryOn == nil then card.employee else nil,
 				outfit = tryOn,
+				-- The item's page shows the item: no rank lanyard (owner 11-15). A try-on is your own look and keeps it.
+				lanyard = false,
 				turn = if tryOn ~= nil then 150 else nil,
 				skin = card.skinKey,
 				style = style,
