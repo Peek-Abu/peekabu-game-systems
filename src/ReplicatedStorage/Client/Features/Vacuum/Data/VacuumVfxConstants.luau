@@ -3,7 +3,7 @@
 	VacuumVfxConstants: the vacuum's polished particles (VfxBurstRegistry bursts, played by VacuumVfxSystem). Sizes are
 	for a standard 4 x 1 x 4 pile at scale 1 (REFERENCE_SIZE across); a pile's pop is scaled by its own size.
 
-	- vacuumSuction (funnel): dust puffs and Gloom wisps (purple-black, turning teal at the nozzle) spiralling from the
+	- vacuumSuction (funnel): dust puffs and Gloom wisps (purple-black, turning lilac at the nozzle) spiralling from the
 	  pile into the floor head, the rate and spin rising with the suction's strength.
 	- vacuumGrimeSuction (funnel): grime flakes and a few wisps peeling off a valuable into the floor head.
 	- vacuumAir (funnel, P1 v2 2026-11-15): with VacuumAirSystem's spiral wind ribbons and goo blobs, the air the
@@ -31,6 +31,9 @@ local T = VfxAssets.TEXTURES
 local P = VfxConstants.PALETTE
 local seq = VfxFormulas.sequence
 local gradient = VfxFormulas.gradient
+-- Gloom's edge here is the UI's lilac rim (owner 2026-10-22: no teal), not the shared palette's teal gloomEdge, which
+-- also drew a teal ring round a dark wisp at the pop that read as an eye.
+local LILAC = Color3.fromRGB(180, 139, 255)
 
 -- Fade in quickly, hold, fade out: most layers.
 local SOFT = seq({ { 0, 1 }, { 0.12, 0.15 }, { 0.75, 0.3 }, { 1, 1 } })
@@ -57,7 +60,7 @@ local PRESETS: { [string]: Burst } = {
 			},
 			{
 				texture = T.wisp,
-				color = gradient({ P.gloom, P.gloomMid, P.gloomEdge }),
+				color = gradient({ P.gloom, P.gloomMid, LILAC }),
 				size = seq({ { 0, 1.5 }, { 0.7, 0.9 }, { 1, 0.25 } }),
 				transparency = seq({ { 0, 1 }, { 0.15, 0.1 }, { 0.8, 0.25 }, { 1, 1 } }),
 				lifetime = NumberRange.new(0.6),
@@ -87,7 +90,7 @@ local PRESETS: { [string]: Burst } = {
 			},
 			{
 				texture = T.wisp,
-				color = gradient({ P.gloom, P.gloomEdge }),
+				color = gradient({ P.gloom, LILAC }),
 				size = seq({ { 0, 1 }, { 1, 0.2 } }),
 				transparency = seq({ { 0, 1 }, { 0.2, 0.2 }, { 0.8, 0.35 }, { 1, 1 } }),
 				lifetime = NumberRange.new(0.6),
@@ -175,7 +178,7 @@ local PRESETS: { [string]: Burst } = {
 			{
 				-- The pop: one short ring, gone in a quarter second.
 				texture = T.ring,
-				color = gradient({ P.gloomEdge }),
+				color = gradient({ LILAC }),
 				size = seq({ { 0, 0.6 }, { 1, 2.8 } }),
 				transparency = seq({ { 0, 0.15 }, { 1, 1 } }),
 				lifetime = NumberRange.new(0.25),
@@ -186,9 +189,9 @@ local PRESETS: { [string]: Burst } = {
 				zOffset = 0.5,
 			},
 			{
-				-- The last of the Gloom escapes, purple-black to teal.
+				-- The last of the Gloom escapes, purple-black to lilac.
 				texture = T.wisp,
-				color = gradient({ P.gloom, P.gloomMid, P.gloomEdge }),
+				color = gradient({ P.gloom, P.gloomMid, LILAC }),
 				size = seq({ { 0, 0.9 }, { 1, 0.3 } }),
 				transparency = seq({ { 0, 0.1 }, { 0.7, 0.35 }, { 1, 1 } }),
 				lifetime = NumberRange.new(0.7, 0.9),
@@ -205,7 +208,7 @@ local PRESETS: { [string]: Burst } = {
 			{
 				-- Clean bubbles.
 				texture = T.bubble,
-				color = gradient({ P.sparkle, P.gloomEdge }),
+				color = gradient({ P.sparkle, LILAC }),
 				size = twinkle(0.75),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
 				lifetime = NumberRange.new(0.5, 0.8),

@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VfxBurstRegistry = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxBurstRegistry)
+local VfxConstants = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxConstants)
 local VacuumVfxConstants = require(script.Parent.VacuumVfxConstants)
 
 return function()
@@ -23,6 +24,21 @@ return function()
 		for _, id in { "vacuumPuff", "vacuumPop", "vacuumShine", "vacuumShineSparkle" } do
 			for _, layer in VacuumVfxConstants.PRESETS[id].layers do
 				expect(layer.count ~= nil and layer.rate == nil).to.equal(true)
+			end
+		end
+	end)
+
+	it("draws no teal: Gloom fades to the UI's lilac rim, never VfxConstants' teal gloomEdge (P1 v2)", function()
+		local teal = VfxConstants.PALETTE.gloomEdge
+		for id, preset in VacuumVfxConstants.PRESETS do
+			for _, layer in preset.layers do
+				for _, key in layer.color.Keypoints do
+					local c = key.Value
+					local same = math.abs(c.R - teal.R) < 1e-3
+						and math.abs(c.G - teal.G) < 1e-3
+						and math.abs(c.B - teal.B) < 1e-3
+					expect(`{id} {same}`).to.equal(`{id} false`)
+				end
 			end
 		end
 	end)
