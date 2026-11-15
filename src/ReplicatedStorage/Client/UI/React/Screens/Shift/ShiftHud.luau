@@ -35,16 +35,18 @@ local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shif
 local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
 local SprintViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintViewModel)
 local ToonBar = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonBar)
+local UIGamepadStore = require(ReplicatedStorage.Client.Features.UI.State.UIGamepadStore)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
 
--- Each hint action's keyboard bindings, read fresh so a rebind shows on the next render.
-local function keyBindings(): ShiftHudViewModel.KeyBindings
+-- Each hint action's keyboard bindings, or its gamepad bindings for a controller player, read fresh so a rebind shows
+-- on the next render.
+local function keyBindings(gamepad: boolean): ShiftHudViewModel.KeyBindings
 	local bindings: ShiftHudViewModel.KeyBindings = {}
 	for _, action in ShiftHudViewModel.HINT_ACTIONS do
-		local found = InputServiceClient:bindingsFor(action)
-		bindings[action] = if found ~= nil then found.keyboard else nil
+		local found = InputServiceClient:bindingsFor(if gamepad then ShiftHudViewModel.padAction(action) else action)
+		bindings[action] = if found == nil then nil elseif gamepad then found.gamepad else found.keyboard
 	end
 	return bindings
 end
@@ -68,6 +70,7 @@ local function ShiftHud(): React.ReactNode
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
 	local staminaShown = useAtom(SprintStore.shown)
+	local gamepad = useAtom(UIGamepadStore.active)
 	-- The desktop HUD is drawn scaled to the window; `viewport` is the window in HUD design px.
 	local hudScale = usePaperHudScale()
 	local crewOpen = useAtom(ShiftStore.crewOpen)
@@ -117,14 +120,15 @@ local function ShiftHud(): React.ReactNode
 		now,
 		snapshot.punched
 	)
-	local bindings = keyBindings()
+	local bindings = keyBindings(gamepad)
 	local panel = e(ShiftCompactHudPanel, {
 		view = view,
 		roster = roster,
 		layout = layout,
 		viewport = hudScale.viewport,
 		myId = player.UserId,
-		bindings = if UserInputService.KeyboardEnabled then bindings else {},
+		bindings = if gamepad or UserInputService.KeyboardEnabled then bindings else {},
+		gamepad = gamepad,
 		stamina = if staminaShown then e(StaminaBar) else nil,
 		live = true,
 		crewOpen = crewOpen,

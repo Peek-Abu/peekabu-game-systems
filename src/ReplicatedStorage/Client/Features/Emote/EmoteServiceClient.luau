@@ -2,7 +2,7 @@
 --[=[
 	EmoteServiceClient: the emote wheel on this client (Character step 5; owner, 25 Oct: hold B, emotes everywhere).
 
-	- Hold the `emoteWheel` action (B, or L1 on a gamepad) to open the wheel (its scene is registered here, at init);
+	- Hold the `emoteWheel` action (B, or L2 on a gamepad) to open the wheel (its scene is registered here, at init);
 	  let go over a slot
 	  to play it. A click or tap on a slot plays it too (`play`), and the phone's HUD button opens the wheel.
 	- `play(slot)` asks the server (EmoteEvents.PlayRequest); the server decides and grants the replicated clip.

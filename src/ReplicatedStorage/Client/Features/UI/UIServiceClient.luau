@@ -37,6 +37,7 @@ local SceneHost = require(ReplicatedStorage.Client.UI.React.SceneHost)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
 local UIPreloadSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UIPreloadSystem)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
+local UIGamepadFocusSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UIGamepadFocusSystem)
 
 local log = Logger.new("UIServiceClient")
 
@@ -131,6 +132,7 @@ local UIServiceClient: UIServiceClient = {
 
 		log:debug("HUD, Panel and Wheel SceneHosts mounted")
 		UISoundSystem.start()
+		UIGamepadFocusSystem.start()
 	end,
 
 	--[=[
@@ -146,6 +148,7 @@ local UIServiceClient: UIServiceClient = {
 		UISuppression.reconcile({})
 		janitor:Cleanup()
 		UISoundSystem.stop()
+		UIGamepadFocusSystem.stop()
 		UIPreloadSystem.stop()
 		self._hudMounted = false
 	end,

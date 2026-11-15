@@ -112,6 +112,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Debugger.DebugPanelScreen"] = "throwaway harness screen proving the SceneHost render path (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hud.HudRoot"] = "React composition root — composes the HUD widgets + hide gate (no logic)",
 	["ReplicatedStorage.Client.Features.UI.Data.UIAssets"] = "static image- and sound-asset registry; registers the UI sounds at load (no logic)",
+	["ReplicatedStorage.Client.Features.UI.Systems.UIGamepadFocusSystem"] = "GuiService/PlayerGui focus shell (what to select or clear is specced in UIGamepadRules)",
 	["ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem"] = "ProximityPromptService/Sound shell (tiers, hold speed and the CTA are specced in UISoundFormulas)",
 
 	-- Client services: thin, network/Cmdr-bound shells whose behavior only manifests against a live

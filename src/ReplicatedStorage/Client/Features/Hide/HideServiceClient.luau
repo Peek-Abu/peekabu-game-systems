@@ -47,6 +47,8 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local HideChip = require(ReplicatedStorage.Client.UI.React.Screens.Hide.HideChip)
 local HidePeekOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Hide.HidePeekOverlay)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local UIGamepadStore = require(ReplicatedStorage.Client.Features.UI.State.UIGamepadStore)
 
 local player = Players.LocalPlayer
 local stoppers: { () -> () } = {}
@@ -379,7 +381,11 @@ local HideServiceClient: HideServiceClient = {
 				id = ids[prompt],
 				action = prompt.ActionText,
 				noun = if type(noun) == "string" then noun else prompt.ObjectText,
-				key = prompt.KeyboardKeyCode.Name,
+				key = ShiftHudViewModel.promptKey(
+					prompt.KeyboardKeyCode,
+					prompt.GamepadKeyCode,
+					UIGamepadStore.active()
+				),
 				hold = prompt.HoldDuration,
 			})
 		end)

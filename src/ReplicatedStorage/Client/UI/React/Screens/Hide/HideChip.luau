@@ -37,6 +37,8 @@ local UIToonConstants = require(Toon.UIToonConstants)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local HideViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Hide.HideViewModel)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local UIGamepadStore = require(ReplicatedStorage.Client.Features.UI.State.UIGamepadStore)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -77,6 +79,7 @@ end
 local function HideChip(props: HideChipProps?): React.ReactNode
 	local prompt = useAtom(HideStore.prompt)
 	local hidden = useAtom(HideStore.hidden)
+	local gamepad = useAtom(UIGamepadStore.active)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
 	local hudScale = usePaperHudScale()
@@ -97,7 +100,9 @@ local function HideChip(props: HideChipProps?): React.ReactNode
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
 	local caught = me ~= nil and me[DeathConstants.PUBLIC_FIELD] == true
-	local chip = HideViewModel.chip(prompt, hidden, HideConstants.KEYBOARD_KEY.Name, now, scaring or caught)
+	-- The key cap names the controller's button for a controller player (LB), the key otherwise (C).
+	local key = ShiftHudViewModel.promptKey(HideConstants.KEYBOARD_KEY, HideConstants.GAMEPAD_KEY, gamepad)
+	local chip = HideViewModel.chip(prompt, hidden, key, now, scaring or caught)
 	local drawnId = if hidden ~= nil then -1 elseif prompt ~= nil then prompt.id else 0
 	React.useEffect(function()
 		return function()

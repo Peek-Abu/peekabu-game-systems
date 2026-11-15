@@ -10,7 +10,8 @@ return table.freeze({
 	-- Hold to open the current employee's emote wheel (4 slots: CosmeticConstants.WHEEL_SLOTS).
 	WHEEL_ACTION = "emoteWheel",
 	WHEEL_KEY = Enum.KeyCode.B,
-	WHEEL_GAMEPAD = Enum.KeyCode.ButtonL1,
+	-- L2, not L1: L1 is the hiding spot's key, and emotes work in shifts (both fired at once beside a spot).
+	WHEEL_GAMEPAD = Enum.KeyCode.ButtonL2,
 	-- Seconds between two emotes from one player (the server's rate limit).
 	COOLDOWN = 1.5,
 	-- How hard the keys or stick must push (the Humanoid's MoveDirection length, 0-1) to stop the emote.

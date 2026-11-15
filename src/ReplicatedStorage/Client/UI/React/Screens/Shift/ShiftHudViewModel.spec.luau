@@ -440,6 +440,42 @@ return function()
 			expect(hints[4].label).to.equal("bank / search")
 		end)
 
+		it("names gamepad buttons the way a controller prints them", function()
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.ButtonX)).to.equal("X")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.ButtonR1)).to.equal("RB")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.ButtonR2)).to.equal("RT")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.ButtonL1)).to.equal("LB")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.ButtonL2)).to.equal("LT")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.ButtonL3)).to.equal("L3")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.DPadDown)).to.equal("D↓")
+		end)
+
+		it("prints a prompt's gamepad button for a controller player and its key otherwise", function()
+			expect(ShiftHudViewModel.promptKey(Enum.KeyCode.E, Enum.KeyCode.ButtonX, true)).to.equal("X")
+			expect(ShiftHudViewModel.promptKey(Enum.KeyCode.E, Enum.KeyCode.ButtonX, false)).to.equal("E")
+			expect(ShiftHudViewModel.promptKey(Enum.KeyCode.C, Enum.KeyCode.ButtonL1, true)).to.equal("LB")
+		end)
+
+		it("reads each hint's gamepad bindings for a controller player, crouch from its toggle", function()
+			local hints = ShiftHudViewModel.keyHints({
+				vacuum = { Enum.KeyCode.ButtonR2 },
+				drop = { Enum.KeyCode.DPadDown },
+				crouch = { Enum.KeyCode.ButtonB },
+			}, true)
+			expect(#hints).to.equal(3)
+			expect(hints[1].key).to.equal("RT")
+			expect(hints[1].prefix).to.equal("Hold")
+			expect(hints[2].key).to.equal("D↓")
+			-- On a gamepad crouch is a toggle (crouchToggle), not a hold.
+			expect(hints[3].key).to.equal("B")
+			expect(hints[3].prefix).to.equal(nil)
+		end)
+
+		it("names the gamepad action each hint reads (crouch reads its toggle)", function()
+			expect(ShiftHudViewModel.padAction("crouch")).to.equal("crouchToggle")
+			expect(ShiftHudViewModel.padAction("drop")).to.equal("drop")
+		end)
+
 		it("skips an action with no binding", function()
 			expect(#ShiftHudViewModel.keyHints({ drop = { Enum.KeyCode.G } })).to.equal(1)
 		end)

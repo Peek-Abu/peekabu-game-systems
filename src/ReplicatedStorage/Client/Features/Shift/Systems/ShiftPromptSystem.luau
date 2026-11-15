@@ -31,6 +31,7 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local UIGamepadStore = require(ReplicatedStorage.Client.Features.UI.State.UIGamepadStore)
 
 -- Adopted prompts, each with the watch that forgets it when it leaves the game.
 local watches: { [ProximityPrompt]: RBXScriptConnection? } = {}
@@ -191,7 +192,7 @@ local function onShown(prompt: ProximityPrompt)
 		target = targetOf(prompt),
 		action = prompt.ActionText,
 		object = prompt.ObjectText,
-		key = ShiftHudViewModel.keyName(prompt.KeyboardKeyCode),
+		key = ShiftHudViewModel.promptKey(prompt.KeyboardKeyCode, prompt.GamepadKeyCode, UIGamepadStore.active()),
 		hold = prompt.HoldDuration,
 		kind = kindOf(prompt),
 	})

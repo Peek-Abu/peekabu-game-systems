@@ -54,6 +54,8 @@ export type Props = {
 	-- A hotbar slot was tapped or clicked: ask for that slot.
 	onSelect: ((slot: number) -> ())?,
 	bindings: VM.KeyBindings?,
+	-- The bindings are the gamepad's (a controller player): the hints print controller buttons.
+	gamepad: boolean?,
 	-- The sprint's stamina bar while it is not full (Sprint): ShiftHud's live bar element, which reads the stamina
 	-- itself so a draining bar re-renders only the bar, not this panel.
 	stamina: React.ReactElement?,
@@ -148,7 +150,7 @@ end
 local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	local view = props.view
 	local phone = props.layout == "phone"
-	local compact = VM.compact(view, props.bindings or {})
+	local compact = VM.compact(view, props.bindings or {}, props.gamepad)
 	local inset = if phone then 10 else 24
 	-- The stopwatch render breaks the meter's top-right corner (24 / 34 px above it): the meter sits low enough that
 	-- the render stays on the screen (the HUD layer spans the whole viewport, top bar included).
