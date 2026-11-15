@@ -89,10 +89,8 @@ local function Card(props: CardProps): React.ReactNode
 	local slot = props.slot
 	local size = ShiftHotbarViewModel.metrics(props.phone)
 	local side = size.width
-	local icon: UIAssets.ToonIcon? = if slot.vacuum
-		then "vacuum"
-		elseif slot.kind ~= nil then ShiftHotbarViewModel.iconFor(slot.kind)
-		else nil
+	-- The vacuum is the kit render; every item draws its live model (one look for all of them).
+	local icon: UIAssets.ToonIcon? = if slot.vacuum then "vacuum" else nil
 	local kind = slot.kind
 	local art: React.ReactNode = nil
 	if icon == nil and kind ~= nil then

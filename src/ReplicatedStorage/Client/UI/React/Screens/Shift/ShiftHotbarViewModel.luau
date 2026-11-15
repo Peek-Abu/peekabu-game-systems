@@ -19,7 +19,6 @@ local CargoInventoryRules = require(CargoShared.Rules.CargoInventoryRules)
 local CargoAppraisalFormulas = require(CargoShared.Utils.CargoAppraisalFormulas)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
-local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
 -- One hotbar slot (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §4): slot 1 the vacuum
 -- (the contract's progress as the tag, "340/500"), slots 2-5 the item slots (an item's name and tag: its Credits once
@@ -106,18 +105,6 @@ local PHONE: Metrics = table.freeze({
 })
 
 local ShiftHotbarViewModel = {}
-
--- The kit renders (UIAssets.toonIcons) of the cargo kinds that have one; the rest draw their live model.
-local ICONS: { [string]: UIAssets.ToonIcon } = {}
-ICONS.monitor = "monitor"
-ICONS.fishTank = "fishtank"
-ICONS.goldenStapler = "stapler"
-ICONS.snowGlobe = "globe"
-ICONS.keyring = "key"
-
-function ShiftHotbarViewModel.iconFor(kind: string): UIAssets.ToonIcon?
-	return ICONS[kind]
-end
 
 --[=[
 	The hotbar card's measurements on phone or desktop (HUD design px).

@@ -3,8 +3,7 @@
 	OccupantScareSystem: the catch scare on this client (Cleanup Crew spec §4 "Catch" step 1: "camera snaps to his
 	face ~0.6 s, nearby lights die, distorted sting, stretched-grin face"; kid-safe). `snap` (on CatchCam, which
 	only the caught player gets) plays the distorted sting and, for SNAP_SECONDS, on the fallback body only (the Smile
-	Mask shows its own Hunting face), puts a grin over his face that stretches wide: the uploaded grin image (OccupantAssets.IMAGES.grin) or, while it is pending, a cartoon grin
-	built from frames (white eyes, a wide toothy mouth). `lightsOut` (everyone) plays the power-down and his grab
+	Mask shows its own Hunting face), puts a grin over his face that stretches wide: a cartoon grin built from frames (white eyes, a wide toothy mouth). `lightsOut` (everyone) plays the power-down and his grab
 	where it happened. Every sound is the running rig's kind's (OccupantKindRegistry.soundsOf): Bramble's catch is its
 	own empty slot, and it has no stamp, grab or power-down. The camera, the red screen and the dark lights are M2's (OccupantServiceClient,
 	OccupantTellSystem).
@@ -91,7 +90,7 @@ local function frame(parent: Instance, size: UDim2, position: UDim2, color: Colo
 	return item
 end
 
--- The frame-built grin (while the image is pending); returns the mouth, which stretches.
+-- The frame-built grin; returns the mouth, which stretches.
 local function drawGrin(gui: BillboardGui): Frame
 	local white = OccupantConstants.GRIN_WHITE
 	local ink = OccupantConstants.GRIN_INK
@@ -149,29 +148,13 @@ function OccupantScareSystem.snap()
 	gui.AlwaysOnTop = true
 	gui.LightInfluence = 0
 	local stretch = TweenInfo.new(OccupantConstants.SNAP_SECONDS, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-	local image = OccupantAssets.IMAGES.grin
-	if image ~= OccupantAssets.PENDING then
-		local picture = Instance.new("ImageLabel")
-		picture.AnchorPoint = Vector2.new(0.5, 0.5)
-		picture.Position = UDim2.fromScale(0.5, 0.5)
-		picture.Size = UDim2.fromScale(0.7, 0.7)
-		picture.BackgroundTransparency = 1
-		picture.Image = image
-		picture.Parent = gui
-		if GuiService.ReducedMotionEnabled then
-			picture.Size = UDim2.fromScale(1, 0.85)
-		else
-			TweenService:Create(picture, stretch, { Size = UDim2.fromScale(1, 0.85) }):Play()
-		end
+	local mouth = drawGrin(gui)
+	local stretched = UDim2.fromScale(OccupantConstants.GRIN_STRETCH, 0.2)
+	-- Reduced Motion (the device setting): the grin is shown stretched, without the snap.
+	if GuiService.ReducedMotionEnabled then
+		mouth.Size = stretched
 	else
-		local mouth = drawGrin(gui)
-		local stretched = UDim2.fromScale(OccupantConstants.GRIN_STRETCH, 0.2)
-		-- Reduced Motion (the device setting): the grin is shown stretched, without the snap.
-		if GuiService.ReducedMotionEnabled then
-			mouth.Size = stretched
-		else
-			TweenService:Create(mouth, stretch, { Size = stretched }):Play()
-		end
+		TweenService:Create(mouth, stretch, { Size = stretched }):Play()
 	end
 	-- Under his head on this client only (a client-made child of a replicated part never replicates).
 	gui.Parent = head

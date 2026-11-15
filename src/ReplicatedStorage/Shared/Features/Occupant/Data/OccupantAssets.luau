@@ -1,11 +1,10 @@
 --!strict
 --[=[
 	OccupantAssets: every asset id Mr. Harlow uses (Cleanup Crew spec §7: "Asset id literals live only in each
-	feature's Data/<Feature>Assets"): his sounds, his grin image, his animation slots, and his body: the art-owned
+	feature's Data/<Feature>Assets"): his sounds, his dread overlay images, his animation slots, and his body: the art-owned
 	"A - Smile Mask" template in the place (characters/manager: a very tall porcelain-faced manager in a too-small
 	suit, a long neck the head turns on, one SurfaceAppearance per painted face in its `Faces` folder). An id is PENDING ("") until the developer uploads the
-	staged file (the M3 plan's "Asset staging" appendix). A pending sound is never registered (silent); a pending
-	grin falls back to a grin built from frames (OccupantScareSystem); a pending animation is left out of the
+	staged file (the M3 plan's "Asset staging" appendix). A pending sound is never registered (silent); a pending animation is left out of the
 	`occupant` animation domain, so he keeps the base clips (OccupantAnimationUtils). Registers the uploaded sounds
 	at load on whichever realm requires this first (guarded).
 
@@ -260,9 +259,9 @@ local SWIVEL: { SwivelLayer } = {
 
 local GIBBERISH: { string } = { "harlowGibberish1", "harlowGibberish2", "harlowGibberish3", "harlowGibberish4" }
 
--- The stretched grin shown over his face for the catch (Flux; transparent PNG).
-local IMAGES: { grin: string, dreadVignette: string, dreadGrain: string } = {
-	grin = PENDING,
+-- His images. (The catch grin's picture slot was dropped, owner P1 11-14: the Smile Mask shows its own Hunting face,
+-- and a stand-in body gets OccupantScareSystem's frame-built grin.)
+local IMAGES: { dreadVignette: string, dreadGrain: string } = {
 	-- The dread overlay (DreadOverlay): a white radial vignette mask (tinted in game: the dark vignette and the red and
 	-- cyan edge fringe) and a 256 px film-grain tile. In-house, Icey Labs, 2026-10-17. The Image ids (type 1) under
 	-- the uploaded Decals 73191148809863 / 71580114541626.
