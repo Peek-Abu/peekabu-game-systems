@@ -119,4 +119,16 @@ return function()
 			expect(AbilityRules.plantEnds(plant({ caught = true, moved = 5 }))).to.equal("caught")
 		end)
 	end)
+
+	describe("coolingDown", function()
+		it("is cooling down until readyAt, and ready from it on", function()
+			expect(AbilityRules.coolingDown(99, 100)).to.equal(true)
+			expect(AbilityRules.coolingDown(100, 100)).to.equal(false)
+			expect(AbilityRules.coolingDown(101, 100)).to.equal(false)
+		end)
+
+		it("is never cooling down with no cooldown spent yet (readyAt 0)", function()
+			expect(AbilityRules.coolingDown(5, 0)).to.equal(false)
+		end)
+	end)
 end

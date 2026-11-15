@@ -16,6 +16,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -31,6 +32,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local AbilityButton = require(ReplicatedStorage.Client.UI.React.Screens.Ability.AbilityButton)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local AbilityStore = require(ReplicatedStorage.Client.Features.Ability.State.AbilityStore)
+local AbilityRules = require(ReplicatedStorage.Shared.Features.Ability.Rules.AbilityRules)
 local AbilitySpotSystem = require(ReplicatedStorage.Client.Features.Ability.Systems.AbilitySpotSystem)
 local AbilityVfxSystem = require(ReplicatedStorage.Client.Features.Ability.Systems.AbilityVfxSystem)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
@@ -203,10 +205,17 @@ local AbilityServiceClient: AbilityServiceClient = {
 
 	--[=[
 		Asks the server to use the ability (the ability key, the phone's button). The server decides; a refusal comes
-		back as a toast.
+		back as a toast, except a press while the power cools down: that plays the "nope" here at once (the HUD ring
+		shows the wait).
 	]=]
 	use = function(_self)
 		counters.used += 1
+		if
+			AbilityStore.abilityId() ~= nil
+			and AbilityRules.coolingDown(Workspace:GetServerTimeNow(), AbilityStore.readyAt())
+		then
+			SoundServiceClient:play(AbilityAssets.NOT_READY)
+		end
 		AbilityEvents.packets.Use.send(true)
 	end,
 

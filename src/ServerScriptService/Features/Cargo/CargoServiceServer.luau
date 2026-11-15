@@ -62,7 +62,6 @@ local CargoLoadSystem = require(CargoServer.Systems.CargoLoadSystem)
 local CargoTraitSystem = require(CargoServer.Systems.CargoTraitSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
-local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
 -- Registered at load, before any item spawns or any desk is tagged.
@@ -296,10 +295,6 @@ export type CargoServiceServer = {
 local SearchPlacement = require(CargoServer.Systems.CargoSearchPlacementSystem)
 local CargoServiceServer: CargoServiceServer
 
-local function tell(player: Player, text: string)
-	ToastServiceServer:send(player, { text = text, duration = 2 })
-end
-
 CargoServiceServer = {
 	dependencies = {
 		"CarryServiceServer",
@@ -441,11 +436,9 @@ CargoServiceServer = {
 		counters.searched += 1
 		searched:Fire(part)
 		noiseMade:Fire(part.Position, CargoConstants.SEARCH_NOISE, "search", { player.UserId })
-		-- A find pops onto the floor with no text (owner P1 11-14); an empty search still says so (pending the owner's
-		-- pick on a sound for it).
-		if not SearchPlacement.deliver(stocked.kind, container, landing, spawner, stocked.appraisal) then
-			tell(player, CargoConstants.SEARCH_EMPTY_TEXT)
-		end
+		-- No text, found or empty (owner P1 11-14): the rummage sound plays on every search (the "search" noise,
+		-- CargoTraitSystem) and a find pops onto the floor.
+		SearchPlacement.deliver(stocked.kind, container, landing, spawner, stocked.appraisal)
 		return true, nil
 	end,
 

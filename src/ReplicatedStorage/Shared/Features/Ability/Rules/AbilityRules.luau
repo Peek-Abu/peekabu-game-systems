@@ -48,6 +48,13 @@ export type PlantInput = {
 local AbilityRules = {}
 
 --[=[
+	Whether the power is still cooling down at `now` (`readyAt` from the last use; 0 = never used).
+]=]
+function AbilityRules.coolingDown(now: number, readyAt: number): boolean
+	return now < readyAt
+end
+
+--[=[
 	Whether the use is allowed; else the first reason it is not.
 ]=]
 function AbilityRules.canUse(input: UseInput): (boolean, AbilityTypes.Reason?)
@@ -64,7 +71,7 @@ function AbilityRules.canUse(input: UseInput): (boolean, AbilityTypes.Reason?)
 		return false, "caught"
 	elseif input.hidden then
 		return false, "hidden"
-	elseif input.now < input.readyAt then
+	elseif AbilityRules.coolingDown(input.now, input.readyAt) then
 		return false, "cooldown"
 	elseif def.id == "pottedPlant" and not input.grounded then
 		return false, "airborne"

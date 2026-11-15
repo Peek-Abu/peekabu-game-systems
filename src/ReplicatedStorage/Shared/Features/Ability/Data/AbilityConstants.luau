@@ -5,9 +5,9 @@
 	@class AbilityConstants
 ]=]
 
--- The words a refused use or an ended plant shows (kid reading level). A reason without words shows nothing.
+-- The words a refused use or an ended plant shows (kid reading level). A reason without words shows nothing; a press
+-- while the power cools down has no words but the client's "nope" sound (AbilityAssets.NOT_READY).
 local REASON_WORDS: { [string]: string } = {
-	cooldown = "Not ready yet!",
 	nothing = "Nothing to find!",
 	holding = "Put that down first!",
 	airborne = "Land first!",
