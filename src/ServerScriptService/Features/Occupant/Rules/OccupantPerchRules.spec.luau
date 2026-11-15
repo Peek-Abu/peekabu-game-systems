@@ -7,18 +7,26 @@ local C = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConsta
 -- He stands at the origin; one kid 60 studs off along +X (well past PERCH_CREW_MIN).
 local KID = Vector3.new(60, 0, 0)
 
--- A perch on a top at height 8, with lots of headroom and one checked landing on the floor in front of it (+Z).
-local function perch(id, x, seen, extra)
+-- A cling spot on the front (+Z) face of a 7-tall locker bank at `x`: its top edge, where his chest hangs, the checked
+-- landing in front, lots of headroom over the edge and the edge 7 over the floor.
+local function face(id, x, extra)
 	local value = {
 		id = id,
-		top = Vector3.new(x, 8, 0),
-		headroom = 20,
-		landings = { Vector3.new(x, 0, 4) },
+		edge = Vector3.new(x, 7, 0),
+		normal = Vector3.zAxis,
+		at = Vector3.new(x, 5, 1),
+		landing = Vector3.new(x, 0, 4),
+		headroom = 6,
+		floorDrop = 7,
 	}
 	for key, item in extra or {} do
 		value[key] = item
 	end
-	return { perch = value, seen = seen == true }
+	return value
+end
+
+local function perch(id, x, seen, extra)
+	return { perch = face(id, x, extra), seen = seen == true }
 end
 
 local function senses(extra)
@@ -98,6 +106,31 @@ return function()
 		end)
 	end)
 
+	describe("fits (owner play-check 11-14: clinging to a face, never through the ceiling or the floor)", function()
+		it("fits when his head clears the ceiling over the edge and his body clears the floor below it", function()
+			expect(OccupantPerchRules.fits(face("a", 0), 6)).to.equal(true)
+		end)
+
+		it("never where the ceiling is closer over the edge than his peek and the spare room", function()
+			local low = face("a", 0, { headroom = C.PERCH_CLING_PEEK + C.PERCH_HEAD_CLEAR - 0.01 })
+			expect(OccupantPerchRules.fits(low, 6)).to.equal(false)
+			local ok = face("a", 0, { headroom = C.PERCH_CLING_PEEK + C.PERCH_HEAD_CLEAR })
+			expect(OccupantPerchRules.fits(ok, 6)).to.equal(true)
+		end)
+
+		it("never where his hanging body would reach into the floor (a prop too low for him)", function()
+			-- Hanging, his lowest point is floorDrop + PERCH_CLING_PEEK - height over the floor.
+			local height = 7 + C.PERCH_CLING_PEEK - C.PERCH_FLOOR_CLEAR
+			expect(OccupantPerchRules.fits(face("a", 0), height)).to.equal(true)
+			expect(OccupantPerchRules.fits(face("a", 0), height + 0.01)).to.equal(false)
+			expect(OccupantPerchRules.fits(face("table", 0, { floorDrop = 3 }), 6)).to.equal(false)
+		end)
+
+		it("checks only the ceiling when his height is unknown", function()
+			expect(OccupantPerchRules.fits(face("table", 0, { floorDrop = 3 }), nil)).to.equal(true)
+		end)
+	end)
+
 	describe("pick", function()
 		it("takes the unseen perch nearest a crew member, but no nearer than PERCH_NEAR", function()
 			local picked = OccupantPerchRules.pick(senses())
@@ -110,23 +143,12 @@ return function()
 			expect(OccupantPerchRules.pick(seenOnly)).to.equal(nil)
 		end)
 
-		it("never a perch with no checked landing (it could only drop through a wall)", function()
-			local stuck = senses({ perches = { perch("lockers", 30, false, { landings = {} }) } })
-			expect(OccupantPerchRules.pick(stuck)).to.equal(nil)
+		it("never a perch his body does not fit", function()
+			local low = senses({ perches = { perch("lockers", 30, false, { headroom = 0.5 }) } })
+			expect(OccupantPerchRules.pick(low)).to.equal(nil)
+			local short = senses({ perches = { perch("table", 30, false, { floorDrop = 2 }) }, perchHeight = 8 })
+			expect(OccupantPerchRules.pick(short)).to.equal(nil)
 		end)
-
-		it(
-			"never a perch whose headroom is too low for his perched body (his head would go through the ceiling)",
-			function()
-				local low = senses({ perches = { perch("lockers", 30, false, { headroom = 6 }) }, perchHeight = 7.5 })
-				expect(OccupantPerchRules.pick(low)).to.equal(nil)
-				local roomy = senses({
-					perches = { perch("lockers", 30, false, { headroom = 7.5 + C.PERCH_HEAD_CLEAR }) },
-					perchHeight = 7.5,
-				})
-				expect(OccupantPerchRules.pick(roomy).id).to.equal("lockers")
-			end
-		)
 
 		it("ignores hidden crew and nothing fits with nobody out", function()
 			local hidden = { { userId = 7, position = KID, clear = false, hidden = true } }
@@ -135,7 +157,7 @@ return function()
 	end)
 
 	describe("begin", function()
-		it("goes up onto the picked perch unseen, facing the nearest kid, standing still", function()
+		it("clings to the picked face unseen, facing out from it, standing still", function()
 			local step = OccupantPerchRules.begin(mind(), senses())
 			expect(step).to.be.ok()
 			expect(step.mind.mode).to.equal("perch")
@@ -144,8 +166,9 @@ return function()
 			expect(step.mind.target).to.equal(nil)
 			expect(step.intent.kind).to.equal("idle")
 			local up = effectOf(step, "perch")
-			expect(up.top).to.equal(Vector3.new(30, 8, 0))
-			expect(up.facing).to.equal(KID)
+			expect(up.edge).to.equal(Vector3.new(30, 7, 0))
+			expect(up.normal).to.equal(Vector3.zAxis)
+			expect(up.at).to.equal(Vector3.new(30, 5, 1))
 		end)
 
 		it("is nil when not ready or nothing fits", function()
@@ -158,12 +181,7 @@ return function()
 		local function perched()
 			return mind({
 				mode = "perch",
-				perch = {
-					id = "lockers",
-					top = Vector3.new(30, 8, 0),
-					headroom = 20,
-					landings = { Vector3.new(30, 0, 4), Vector3.new(30, 0, -4) },
-				},
+				perch = face("lockers", 30),
 				perchedAt = 100,
 				since = 100,
 			})
@@ -176,7 +194,7 @@ return function()
 			expect(effectOf(step, "drop")).to.equal(nil)
 		end)
 
-		it("drops to the checked landing nearest the kid once someone watched him up there and looked away", function()
+		it("drops to the face's checked landing once someone watched him up there and looked away", function()
 			local step = OccupantPerchRules.think(perched(), senses({ now = 106, unfrozenAt = 105.5 }))
 			expect(step.mind.mode).to.equal("patrol")
 			expect(step.mind.perch).to.equal(nil)
@@ -200,32 +218,31 @@ return function()
 		end)
 	end)
 
-	describe("floorFor and landingCandidates (where the drop lands)", function()
-		it("takes the checked landing nearest the nearest kid who is out", function()
-			local p = {
-				id = "a",
-				top = Vector3.new(0, 8, 0),
-				headroom = 20,
-				landings = { Vector3.new(0, 0, -4), Vector3.new(0, 0, 4) },
-			}
-			local kid = { { userId = 7, position = Vector3.new(0, 0, 30), clear = false } }
-			expect(OccupantPerchRules.floorFor(p, senses({ players = kid }))).to.equal(Vector3.new(0, 0, 4))
-			local other = { { userId = 7, position = Vector3.new(0, 0, -30), clear = false } }
-			expect(OccupantPerchRules.floorFor(p, senses({ players = other }))).to.equal(Vector3.new(0, 0, -4))
+	describe("faces (where a prop can be clung to)", function()
+		it("offers the four side faces of a box: each one's top-edge centre and outward normal", function()
+			local frame = CFrame.new(10, 3.5, 5)
+			local faces = OccupantPerchRules.faces(frame, Vector3.new(4, 7, 2))
+			expect(#faces).to.equal(4)
+			local found = {}
+			for _, item in faces do
+				expect(item.edge.Y).to.be.near(7, 1e-6)
+				expect(math.abs(item.normal.Magnitude - 1) < 1e-6).to.equal(true)
+				expect(item.normal.Y).to.be.near(0, 1e-6)
+				found[string.format("%d,%d", math.round(item.normal.X), math.round(item.normal.Z))] = item.edge
+			end
+			expect(found["0,1"]).to.equal(Vector3.new(10, 7, 6))
+			expect(found["0,-1"]).to.equal(Vector3.new(10, 7, 4))
+			expect(found["1,0"]).to.equal(Vector3.new(12, 7, 5))
+			expect(found["-1,0"]).to.equal(Vector3.new(8, 7, 5))
 		end)
 
-		it("falls back to the nearest route point only for a perch with no landing", function()
-			local p = { id = "a", top = Vector3.new(30, 8, 0), headroom = 20, landings = {} }
-			expect(OccupantPerchRules.floorFor(p, senses())).to.equal(Vector3.new(30, 0, 4))
-		end)
-
-		it("offers landing spots all round the top, `reach` out, at the top's height", function()
-			local centre = Vector3.new(10, 7, 5)
-			local spots = OccupantPerchRules.landingCandidates(centre, 3)
-			expect(#spots).to.equal(8)
-			for _, spot in spots do
-				expect(spot.Y).to.equal(7)
-				expect(math.abs((Vector3.new(spot.X, 7, spot.Z) - centre).Magnitude - 3) < 1e-6).to.equal(true)
+		it("turns them with a turned box", function()
+			local faces =
+				OccupantPerchRules.faces(CFrame.new(0, 1, 0) * CFrame.Angles(0, math.pi / 2, 0), Vector3.new(4, 2, 2))
+			for _, item in faces do
+				local flat = Vector3.new(item.edge.X, 0, item.edge.Z)
+				local expected = if math.abs(item.normal.X) > 0.5 then 1 else 2
+				expect(flat.Magnitude).to.be.near(expected, 1e-6)
 			end
 		end)
 	end)
@@ -249,7 +266,7 @@ return function()
 			expect(b > a).to.equal(true)
 		end)
 
-		it("moves out past the edge first, then down (it clears the top before it drops)", function()
+		it("moves out from the face first, then down (it clears the prop before it drops)", function()
 			local half = OccupantPerchRules.fallAt(FROM, TO, 0.5, 1.5)
 			expect(half.X > 4 + 1).to.equal(true)
 		end)

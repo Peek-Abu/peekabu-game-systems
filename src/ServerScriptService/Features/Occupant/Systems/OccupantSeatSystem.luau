@@ -15,8 +15,8 @@
 	  clip: at once.
 	- `plant`: anchored and slid onto a frame (staring at a spot, perfectly still); `release` lets go.
 	- `unstick`: let go and lifted onto a route point (stuck where no path starts: OccupantStuckRules).
-	- `perch` / `drop`: a perch kind put (unseen) on a perch's top, crouched, and its hop, fall, squash and rise back
-	  down to a floor point (B4, OccupantPerchRules).
+	- `perch` / `drop`: a perch kind hung (unseen, in a blackout) on a prop's side face, and its hop, fall, squash and
+	  rise back down to the face's checked landing (B4, OccupantPerchRules).
 	- `look`: turning him while he looks around on arriving somewhere (investigate, search), per frame.
 	- `jerk`: his body snapping round to his already-turned head as a slow turn ends in a chase (behaviours design
 	  §11.4: OccupantTurnRules.jerkYaw over JERK_SECONDS from when his root is free), per frame.
@@ -147,7 +147,7 @@ local function legOf(rig: Rig): (number, number)
 	return (knee.C0.Position - hip.C1.Position).Magnitude, (ankle.C0.Position - knee.C1.Position).Magnitude
 end
 
--- His shape as plain data (OccupantGestureFormulas.posedBounds), read once per rig.
+-- His shape as plain data (OccupantGestureFormulas.posedBox), read once per rig.
 local shapes: { [Model]: OccupantGestureFormulas.RigShape } = {}
 setmetatable(shapes, { __mode = "k" })
 
@@ -176,10 +176,13 @@ local function shapeOf(rig: Rig): OccupantGestureFormulas.RigShape
 	return shape
 end
 
--- His perched body's lowest and highest point, up from his root (the perch gesture's pose on his own parts).
-local function perchBounds(rig: Rig): (number, number)
-	return OccupantGestureFormulas.posedBounds(shapeOf(rig), OccupantConstants.GESTURES.perch.joints)
+-- The box round his perched body, in his root's space (the perch gesture's pose on his own parts).
+local function perchBox(rig: Rig): (Vector3, Vector3)
+	return OccupantGestureFormulas.posedBox(shapeOf(rig), OccupantConstants.GESTURES.perch.joints)
 end
+
+-- How far his back stays off the face he clings to.
+local CLING_GAP = 0.05
 
 -- How far his root stands above the floor.
 local function standHeight(rig: Rig): number
@@ -283,22 +286,23 @@ function OccupantSeatSystem.plant(rig: Rig, frame: CFrame)
 end
 
 --[=[
-	How tall he is perched (his perch pose's lowest to highest point, measured on his own parts): the brain offers only
-	perches with that much room under the ceiling (Senses.perchHeight).
+	How tall he is perched (his cling pose's lowest to highest point, measured on his own parts): the brain offers only
+	faces he hangs on clear of the floor (Senses.perchHeight, OccupantPerchRules.fits).
 ]=]
 function OccupantSeatSystem.perchHeight(rig: Rig): number
-	local low, high = perchBounds(rig)
-	return high - low
+	local low, high = perchBox(rig)
+	return high.Y - low.Y
 end
 
 --[=[
-	Moves him (unseen) up onto a perch's `top` (the prop's visible top), held there (anchored), turned toward `facing`
-	(B4, OccupantPerchRules), in the dark (owner play-check 11-14): it marks his rig (PERCH_FLASH_ATTRIBUTE and
-	PERCH_FLASH_TARGET_ATTRIBUTE) so every client darks the lights round where he is and round the perch
-	(OccupantTellSystem), and moves him PERCH_DARK_LEAD later. Set down so the lowest point of his perched body (the
-	perch pose, `perchBounds`) rests on the top. The drop is `drop`.
+	Hangs him (unseen) on a perch face (B4, owner pick 11-14 "cling to locker side"): its top `edge` and outward
+	`normal`, measured on the prop's visible art. He faces out along the normal, the back of his cling pose (`perchBox`)
+	CLING_GAP off the face and its highest point PERCH_CLING_PEEK over the edge, held there (anchored). It happens in
+	the dark (owner play-check 11-14): it marks his rig (PERCH_FLASH_ATTRIBUTE, and PERCH_FLASH_TARGET_ATTRIBUTE = `at`,
+	where his chest will hang) so every client darks the lights round where he is and round the face
+	(OccupantTellSystem), and moves him PERCH_DARK_LEAD later. The drop is `drop`.
 ]=]
-function OccupantSeatSystem.perch(rig: Rig, top: Vector3, facing: Vector3)
+function OccupantSeatSystem.perch(rig: Rig, edge: Vector3, normal: Vector3, at: Vector3)
 	local body = bodyOf(rig)
 	body.token += 1
 	local token = body.token
@@ -310,23 +314,24 @@ function OccupantSeatSystem.perch(rig: Rig, top: Vector3, facing: Vector3)
 		body.tween = nil
 	end
 	local flashes = rig.model:GetAttribute(OccupantConstants.PERCH_FLASH_ATTRIBUTE)
-	rig.model:SetAttribute(OccupantConstants.PERCH_FLASH_TARGET_ATTRIBUTE, top)
+	rig.model:SetAttribute(OccupantConstants.PERCH_FLASH_TARGET_ATTRIBUTE, at)
 	rig.model:SetAttribute(
 		OccupantConstants.PERCH_FLASH_ATTRIBUTE,
 		(if type(flashes) == "number" then flashes else 0) + 1
 	)
 	rig.root.Anchored = true
 	rig.root.AssemblyLinearVelocity = Vector3.zero
-	local low = perchBounds(rig)
-	local at = top - Vector3.new(0, low, 0)
+	local _, high = perchBox(rig)
+	-- His root's +Z is his back: facing out along the normal, the back reaches high.Z behind the root.
+	local position = edge
+		+ normal * (high.Z + CLING_GAP)
+		+ Vector3.new(0, OccupantConstants.PERCH_CLING_PEEK - high.Y, 0)
+	local frame = CFrame.lookAt(position, position + normal)
 	task.delay(OccupantConstants.PERCH_DARK_LEAD, function()
 		if body.token ~= token or rig.model.Parent == nil then
 			return
 		end
-		local toward = Vector3.new(facing.X, at.Y, facing.Z)
-		rig.root.CFrame = if (toward - at).Magnitude > 1e-3
-			then CFrame.lookAt(at, toward)
-			else CFrame.new(at) * rig.root.CFrame.Rotation
+		rig.root.CFrame = frame
 	end)
 end
 

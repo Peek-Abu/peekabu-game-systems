@@ -96,22 +96,27 @@ export type Effect =
 	| { kind: "door", spotId: string, open: boolean }
 	-- Stuck where no path starts: lifted to this route point (OccupantStuckRules).
 	| { kind: "unstick", position: Vector3 }
-	-- Up onto a perch's top, unseen, facing `facing`; and back down to a floor point (OccupantPerchRules).
-	| { kind: "perch", top: Vector3, facing: Vector3 }
+	-- Onto a perch face, unseen (its top edge, outward normal and where his chest hangs); and back down to a floor
+	-- point (OccupantPerchRules).
+	| { kind: "perch", edge: Vector3, normal: Vector3, at: Vector3 }
 	| { kind: "drop", position: Vector3 }
 
--- A high spot a perch kind may sit on (a tagged OccupantConstants.PERCH_TAG part on a prop), as measured on the
--- map (OccupantWatchSystem): its id, the centre of the prop's visible top, the room above that top up to the ceiling
--- (math.huge with none), and the checked floor points the drop may land on (OccupantPerchRules.landingCandidates that
--- have a clear line from the top and a floor under them).
+-- A spot a perch kind may cling to (owner pick 11-14, "cling to locker side"): one side face of a tagged prop
+-- (OccupantConstants.PERCH_TAG), as measured on the map (OccupantWatchSystem): the centre of the face's top edge on the
+-- prop's visible art, its outward normal (flat), where his chest hangs (`at`, for sight checks and distances), the
+-- checked floor point in front that the drop lands on, the room over the edge up to the ceiling (math.huge with none)
+-- and how high the edge is over that floor.
 export type Perch = {
 	id: string,
-	top: Vector3,
+	edge: Vector3,
+	normal: Vector3,
+	at: Vector3,
+	landing: Vector3,
 	headroom: number,
-	landings: { Vector3 },
+	floorDrop: number,
 }
 
--- A perch this think: whether any crew camera sees its top right now (OccupantWatchSystem).
+-- A perch face this think: whether any crew camera sees where his chest would hang right now (OccupantWatchSystem).
 export type PerchView = {
 	perch: Perch,
 	seen: boolean,

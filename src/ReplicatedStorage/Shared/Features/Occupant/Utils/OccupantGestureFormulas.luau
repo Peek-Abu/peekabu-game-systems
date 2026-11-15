@@ -9,7 +9,8 @@
 	- "under": the sit-in, his head tipping down beside his knees, upside down, under the desk;
 	- "perch": a perch kind's owl crouch up on a perch, and "drop" its keyed leap, squash and rise off one (B4);
 	  `legDrop` / `crouchDrop` say how far a crouch lowers the hips and `jointAt` follows one joint along a keyed path,
-	  so the server keeps the feet on the top and on the floor;
+	  so the server keeps the feet on the floor through the drop; `posedBox` measures a pose on a rig's own parts (how
+	  the server hangs a perch kind on a face);
 	- "" lets go.
 
 	`pose` is a gesture's joint offsets, `progress` its eased settle (quad out) over its seconds (GESTURE_RELEASE for
@@ -177,17 +178,17 @@ function OccupantGestureFormulas.jointAt(keys: { OccupantConstants.GestureKey },
 	return previous
 end
 
--- A rig's shape for `posedBounds`, as plain data: its root part's name, every part's size, and its joints (each
+-- A rig's shape for `posedBox`, as plain data: its root part's name, every part's size, and its joints (each
 -- Motor6D's name, its parts' names and its C0 / C1).
 export type RigMotor = { name: string, part0: string, part1: string, c0: CFrame, c1: CFrame }
 export type RigShape = { root: string, sizes: { [string]: Vector3 }, motors: { RigMotor } }
 
 --[=[
-	The lowest and highest point (studs, up from the root part's centre) of every part of `shape` but its root, posed
-	with `joints` (degrees per Motor6D name, as the gestures lay them: C0 * rotation * C1:Inverse()). Each part counts as
-	its box. Parts no joint chain reaches from the root are left out. With no part: 0, 0.
+	The box round every part of `shape` but its root (its min and max corner, in the root part's own space: +Y up, -Z
+	forward), posed with `joints` (degrees per Motor6D name, as the gestures lay them: C0 * rotation * C1:Inverse()).
+	Each part counts as its box. Parts no joint chain reaches from the root are left out. With no part: zero, zero.
 ]=]
-function OccupantGestureFormulas.posedBounds(shape: RigShape, joints: { [string]: Vector3 }): (number, number)
+function OccupantGestureFormulas.posedBox(shape: RigShape, joints: { [string]: Vector3 }): (Vector3, Vector3)
 	local frames: { [string]: CFrame } = { [shape.root] = CFrame.identity }
 	local placed = true
 	while placed do
@@ -204,7 +205,8 @@ function OccupantGestureFormulas.posedBounds(shape: RigShape, joints: { [string]
 			end
 		end
 	end
-	local low, high = math.huge, -math.huge
+	local low = Vector3.one * math.huge
+	local high = -Vector3.one * math.huge
 	for name, frame in frames do
 		local size: Vector3? = shape.sizes[name]
 		if name == shape.root or size == nil then
@@ -214,15 +216,15 @@ function OccupantGestureFormulas.posedBounds(shape: RigShape, joints: { [string]
 		for _, sx in { -1, 1 } do
 			for _, sy in { -1, 1 } do
 				for _, sz in { -1, 1 } do
-					local y = (frame * Vector3.new(half.X * sx, half.Y * sy, half.Z * sz)).Y
-					low = math.min(low, y)
-					high = math.max(high, y)
+					local corner = frame * Vector3.new(half.X * sx, half.Y * sy, half.Z * sz)
+					low = low:Min(corner)
+					high = high:Max(corner)
 				end
 			end
 		end
 	end
-	if low > high then
-		return 0, 0
+	if low.Y > high.Y then
+		return Vector3.zero, Vector3.zero
 	end
 	return low, high
 end

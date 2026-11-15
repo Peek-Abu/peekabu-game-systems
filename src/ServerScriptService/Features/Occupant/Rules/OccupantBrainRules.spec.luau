@@ -97,7 +97,15 @@ return function()
 				players = { { userId = 7, position = KID, clear = false } },
 				perches = {
 					{
-						perch = { id = "lockers", top = TOP, headroom = 20, landings = { Vector3.new(120, 3, 104) } },
+						perch = {
+							id = "lockers",
+							edge = TOP,
+							normal = Vector3.zAxis,
+							at = TOP + Vector3.new(0, -2, 1),
+							landing = Vector3.new(120, 3, 104),
+							headroom = 6,
+							floorDrop = 6,
+						},
 						seen = false,
 					},
 				},

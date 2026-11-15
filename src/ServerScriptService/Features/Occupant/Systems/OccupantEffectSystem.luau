@@ -62,7 +62,7 @@ function OccupantEffectSystem.apply(
 			OccupantSeatSystem.unstick(rig, effect.position)
 		elseif effect.kind == "perch" then
 			counters.perches += 1
-			OccupantSeatSystem.perch(rig, effect.top, effect.facing)
+			OccupantSeatSystem.perch(rig, effect.edge, effect.normal, effect.at)
 		elseif effect.kind == "drop" then
 			counters.drops += 1
 			OccupantSeatSystem.drop(rig, effect.position)
