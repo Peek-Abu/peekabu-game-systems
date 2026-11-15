@@ -62,6 +62,8 @@ export type ProductGrant = (player: Player, receipt: Receipt) -> { TransactionOp
 local log = Logger.new("MarketplaceServiceServer")
 
 local productGranted: SignalTyped.Signal<Player, string> = SignalTyped.new()
+-- (player, pass key) when Roblox reports the player just bought a pass (never on a join-time ownership check).
+local passBought: SignalTyped.Signal<Player, string> = SignalTyped.new()
 local premiumChanged: SignalTyped.Signal<CurrencyConstants.CurrencyChange> = SignalTyped.new()
 local productHandlers: { [string]: ProductGrant } = {}
 local passHandlers: { [string]: { (player: Player) -> () } } = {}
@@ -216,6 +218,7 @@ end
 export type MarketplaceServiceServer = {
 	dependencies: { string },
 	productGranted: SignalTyped.Signal<Player, string>,
+	passBought: SignalTyped.Signal<Player, string>,
 	premiumChanged: SignalTyped.Signal<CurrencyConstants.CurrencyChange>,
 
 	start: (self: MarketplaceServiceServer) -> (),
@@ -252,6 +255,7 @@ export type MarketplaceServiceServer = {
 local MarketplaceServiceServer: MarketplaceServiceServer = {
 	dependencies = { "PlayerDataServiceServer", "StateSyncServiceServer" },
 	productGranted = productGranted,
+	passBought = passBought,
 	premiumChanged = premiumChanged,
 
 	--[=[
@@ -280,6 +284,7 @@ local MarketplaceServiceServer: MarketplaceServiceServer = {
 				local key = MarketplaceRegistry.passKeyFor(passId)
 				if wasPurchased and key ~= nil then
 					grantPass(player, key)
+					passBought:Fire(player, key)
 				end
 			end
 		)

@@ -144,7 +144,12 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local noScale: UIScale? = nil
 	local pop, setPop = React.useState(noScale)
 
-	local key = if reveal ~= nil then table.concat(reveal.ids, ",") else ""
+	local bought = if reveal ~= nil then reveal.purchase else nil
+	local key = if reveal ~= nil
+		then table.concat(reveal.ids, ",") .. (if bought ~= nil
+			then `#{bought.kind}:{bought.key}:{bought.amount}`
+			else "")
+		else ""
 	-- Which item is in front (a buy with more than one), for the reveal it was tapped on (a new reveal starts at 1).
 	local focused, setFocused = React.useState({ key = "", focus = 1 })
 	local focus = if focused.key == key then focused.focus else 1
@@ -289,9 +294,18 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				return if alpha <= 0 then 0.01 else ToonMotionViewModel.pop(alpha)
 			end),
 		}),
-		-- A sticker pack shows its stickers; anything else the model.
-		model = if view.stickers
+		-- A purchase shows its picture (the Gleam pack, the pass, the cup); a sticker pack its stickers; anything else
+		-- the model.
+		model = if view.art ~= nil
 			then e(ToonIcon, {
+				icon = view.art.icon,
+				image = view.art.image,
+				anchor = Vector2.new(0.5, 0.5),
+				position = UDim2.fromScale(0.5, 0.42),
+				size = UDim2.fromScale(0.8, 0.6),
+				zIndex = 3,
+			})
+			elseif view.stickers then e(ToonIcon, {
 				icon = "stickers",
 				anchor = Vector2.new(0.5, 0.5),
 				position = UDim2.fromScale(0.5, 0.42),
@@ -445,6 +459,31 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				}),
 			})
 		end
+	elseif view.line ~= nil then
+		-- A purchase: what it does, on a cream card.
+		local words: string = view.line
+		local lineHeight = (size + 6) * 2
+		local face: Nodes = {
+			line = e(ToonText, {
+				text = words,
+				textSize = size + 4,
+				meaning = "grape",
+				position = UDim2.fromOffset(18, if phone then 12 else 20),
+				size = UDim2.new(1, -36, 0, lineHeight),
+				wrapped = true,
+				fit = true,
+			}),
+		}
+		nodes.also = e(ToonSurface, {
+			hue = "cream",
+			pattern = "rings",
+			radius = 22,
+			anchor = Vector2.new(0, 1),
+			position = UDim2.new(0, margin, 1, -(if phone then 12 else 50)),
+			size = UDim2.fromOffset(leftWidth, lineHeight + (if phone then 30 else 48)),
+			zIndex = 4,
+			children = face,
+		})
 	elseif view.multi then
 		local tile = if phone then 44 else 96
 		local tiles: Nodes = {

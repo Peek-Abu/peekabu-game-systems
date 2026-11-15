@@ -3,7 +3,7 @@
 	ShopEvents: the ByteNet packets for the Shop. Client → server: buy an offer (a discrete REQUEST). Server →
 	client: the result (bought, or why not: owned / short / not on sale / locked during a shift), so the button can
 	say so. What was granted rides the charm-sync spine (`entitlements`), and the reveal comes from
-	CosmeticEvents.Granted.
+	CosmeticEvents.Granted (a cosmetic) or Purchased (a Robux buy of Gleam, a pass or coffee).
 
 	Payloads are `ByteNet.unknown` going up (ShopRequestRules enforces the shape at the trust boundary) and typed
 	coming down. Boot timing as CosmeticEvents.
@@ -40,6 +40,16 @@ local ShopEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.struct({
 					offer = ByteNet.string,
 					reason = ByteNet.string,
+				}),
+				reliabilityType = "reliable",
+			}),
+			-- server -> client: a Robux buy that is not a cosmetic was granted (Gleam, a pass, coffee): the client
+			-- plays the "You bought it!" screen (shape checked by ShopPurchaseRules.parse).
+			Purchased = ByteNet.definePacket({
+				value = ByteNet.struct({
+					kind = ByteNet.string,
+					key = ByteNet.string,
+					amount = ByteNet.uint32,
 				}),
 				reliabilityType = "reliable",
 			}),

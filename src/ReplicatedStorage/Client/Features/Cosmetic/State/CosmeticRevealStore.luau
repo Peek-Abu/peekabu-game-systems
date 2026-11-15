@@ -3,7 +3,7 @@
 	CosmeticRevealStore: the reveals this client has to show, one at a time. `current` is a Charm atom the reveal
 	scene reads; `push` takes a grant from the server (CosmeticEvents.Granted) and shows it at once or queues it
 	behind the one on screen (at most MAX_QUEUED wait; the oldest waiting one is dropped); `next` moves on when the
-	player closes a reveal. A mirror of what the server sent; nothing here is sent back.
+	player closes a reveal. A Robux purchase of Gleam, a pass or coffee rides the same queue (`purchase`, no items). A mirror of what the server sent; nothing here is sent back.
 
 	@class CosmeticRevealStore
 ]=]
@@ -11,6 +11,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
+local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 
 export type Reveal = {
 	ids: { string },
@@ -19,6 +20,8 @@ export type Reveal = {
 	duplicate: boolean?,
 	refund: number?,
 	currency: ("gloom" | "gleam")?,
+	-- A Robux buy that is not a cosmetic (Gleam, a pass, coffee): the "You bought it!" screen, with no items.
+	purchase: ShopTypes.Purchase?,
 }
 
 local MAX_QUEUED = 4
@@ -33,7 +36,7 @@ local CosmeticRevealStore = {
 }
 
 function CosmeticRevealStore.push(reveal: Reveal)
-	if #reveal.ids == 0 then
+	if #reveal.ids == 0 and reveal.purchase == nil then
 		return
 	end
 	local copy: Reveal = {
@@ -42,6 +45,7 @@ function CosmeticRevealStore.push(reveal: Reveal)
 		duplicate = reveal.duplicate,
 		refund = reveal.refund,
 		currency = reveal.currency,
+		purchase = if reveal.purchase ~= nil then table.clone(reveal.purchase) else nil,
 	}
 	if current() == nil then
 		current(copy)

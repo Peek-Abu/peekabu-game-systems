@@ -6,21 +6,28 @@
 	and the reveal (CosmeticEvents.Granted). Fire-and-forget: the server is authoritative. At start it asks Roblox for
 	each registered game pass's price, icon and name (MarketplaceService product info, a few tries) for the Passes
 	tab, into ShopStore.passInfo, and each Gleam bundle's developer product price and icon, into ShopStore.bundleInfo
-	(so the bundle cards show what the Roblox prompt and store page show).
+	(so the bundle cards show what the Roblox prompt and store page show). A Robux buy of Gleam, coffee or a pass that
+	the server has granted (ShopEvents.Purchased) goes into CosmeticRevealStore for the "You bought it!" screen, except
+	a coffee bought outside the hub (ShopPurchaseRules.shows).
 
 	@class ShopServiceClient
 ]=]
 
 local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shop = ReplicatedStorage.Shared.Features.Shop
 local ShopEvents = require(Shop.Net.ShopEvents)
 local ShopRegistry = require(Shop.Data.ShopRegistry)
+local ShopPurchaseRules = require(Shop.Rules.ShopPurchaseRules)
 local ShopRequestRules = require(Shop.Rules.ShopRequestRules)
 local ShopRotationUtils = require(Shop.Utils.ShopRotationUtils)
 local ShopTypes = require(Shop.Data.ShopTypes)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
+local CosmeticRevealStore = require(ReplicatedStorage.Client.Features.Cosmetic.State.CosmeticRevealStore)
+local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
@@ -105,6 +112,19 @@ local ShopServiceClient: ShopServiceClient = {
 				ShopStore.setResult({ offer = data.offer, reason = data.reason })
 				-- The buy's answer is heard: the purchase when it went through, the error when it was refused.
 				UISoundSystem.play(UISoundFormulas.buyTier(data.reason))
+			end)
+		)
+		table.insert(
+			stoppers,
+			ShopEvents.packets.Purchased.listen(function(data: ShopPurchaseRules.Wire)
+				local purchase = ShopPurchaseRules.parse(data)
+				if purchase == nil then
+					return
+				end
+				local inHub = DepotHubViewModel.visible(ShiftStore.snapshot(), Players.LocalPlayer.UserId)
+				if ShopPurchaseRules.shows(purchase, inHub) then
+					CosmeticRevealStore.push({ ids = {}, source = "robux", purchase = purchase })
+				end
 			end)
 		)
 	end,

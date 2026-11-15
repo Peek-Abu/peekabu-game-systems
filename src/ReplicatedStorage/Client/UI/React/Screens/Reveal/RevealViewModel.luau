@@ -12,7 +12,9 @@
 	otherwise. A buy with more than one item (a bundle, a deal) shows every item as a tile: tap one to put it in front
 	with its own button; the screen stays open after you use something and leaves only on Done (a single item closes
 	on its button, Later leaves it). An employee is a hire: "YOU'RE HIRED!", their ID card and ability, Start! after
-	the first-join pick, Equip! + Later after a purchase.
+	the first-join pick, Equip! + Later after a purchase. A Robux buy that is not a cosmetic (owner 11-15: Fortnite and
+	Marvel Rivals both thank you) is "+600 GLEAM!" with the bundle's art, a pass's card (YOU GOT IT!), or COFFEE TIME!
+	with the cup: a gold screen, Thank you!, and one Nice! that closes it.
 
 	@class RevealViewModel
 ]=]
@@ -25,6 +27,8 @@ local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.C
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
+local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
+local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
@@ -35,7 +39,11 @@ export type Reveal = {
 	duplicate: boolean?,
 	refund: number?,
 	currency: ("gloom" | "gleam")?,
+	purchase: ShopTypes.Purchase?,
 }
+
+-- A purchase's picture: a kit icon or an image id (a Gleam bundle's product icon).
+export type Art = { icon: UIAssets.ToonIcon?, image: string? }
 
 -- `foil`: a bright sweep across the screen as it opens (Legendary, Odd and hires).
 export type Effects = {
@@ -65,7 +73,7 @@ export type Context = {
 }
 
 export type View = {
-	kind: "hire" | "item",
+	kind: "hire" | "item" | "purchase",
 	title: string,
 	rarity: CosmeticTypes.Rarity,
 	ribbon: string,
@@ -101,6 +109,9 @@ export type View = {
 	-- A hire's ID card line and ability.
 	job: string,
 	ability: { name: string, line: string, image: string? }?,
+	-- A purchase: its picture, and what it does (under the name).
+	art: Art?,
+	line: string?,
 }
 
 local TITLE: { [CosmeticTypes.Rarity]: string } = {
@@ -140,6 +151,57 @@ local DONE_WORD: { [CosmeticTypes.Kind]: string? } = {
 }
 
 local VM = { SCENE = "reveal" }
+
+-- A pass's picture on the purchase screen, by MarketplaceRegistry key (a pass not listed shows the Shop icon).
+local PASS_ICON: { [string]: UIAssets.ToonIcon } = { bigCrew = "truck" }
+
+-- The "You bought it!" screen for a Robux buy of Gleam, a pass or coffee.
+local function purchaseView(purchase: ShopTypes.Purchase): View
+	local title, name, line = "YOU GOT IT!", purchase.key, nil
+	local art: Art = { icon = "shop" }
+	if purchase.kind == "gleam" then
+		local amount = ToonStyleViewModel.grouped(purchase.amount)
+		title, name, line = `+{amount} GLEAM!`, `{amount} Gleam`, "Spend it in the Shop!"
+		art = { icon = "gleamPile" }
+		for _, bundle in ShopConstants.BUNDLES do
+			if bundle.key == purchase.key then
+				art = { image = bundle.image }
+			end
+		end
+	elseif purchase.kind == "coffee" then
+		title, name = "COFFEE TIME!", "Coffee for the crew"
+		line = `2x Credits for your crew for {purchase.amount} minutes of shifts!`
+		art = { icon = "coffee" }
+	else
+		local copy = ShopConstants.PASS_COPY[purchase.key]
+		if copy ~= nil then
+			name, line = copy.name, copy.line
+		end
+		art = { icon = PASS_ICON[purchase.key] or "shop" }
+	end
+	return {
+		kind = "purchase",
+		title = title,
+		rarity = "legendary",
+		ribbon = "Thank you!",
+		name = name,
+		employee = CosmeticConstants.DEFAULT_EMPLOYEE,
+		stickers = false,
+		items = {},
+		multi = false,
+		effects = { rays = true, stripes = false, sparkles = false, confetti = true, goo = false, foil = true },
+		primary = "Nice!",
+		changes = {},
+		done = false,
+		stays = false,
+		later = false,
+		leave = "Later",
+		styles = {},
+		job = "",
+		art = art,
+		line = line,
+	}
+end
 
 -- What putting `item` on would send, and how the button reads: the changes still allowed, whether it is already on,
 -- and the words.
@@ -209,6 +271,10 @@ end
 
 function VM.view(reveal: Reveal, given: Context?): View
 	local context: Context = given or { loadout = CosmeticConstants.defaultLoadout(), owns = everything }
+	local purchase = reveal.purchase
+	if purchase ~= nil and #reveal.ids == 0 then
+		return purchaseView(purchase)
+	end
 	local focus = context.focus or 1
 	if reveal.ids[focus] == nil then
 		focus = 1

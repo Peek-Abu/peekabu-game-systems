@@ -11,6 +11,8 @@
 	The buy request is rate-limited and shape-checked (ShopRequestRules); the result goes back as
 	ShopEvents.BuyResult. Gleam bundles (Robux developer products) register with the Marketplace receipts only once
 	their product ids exist (ShopConstants.PRODUCT_IDS); each receipt adds its Gleam once.
+	Once a Robux buy of Gleam, coffee or a game pass is granted (MarketplaceServiceServer.productGranted / passBought),
+	the buyer gets ShopEvents.Purchased (ShopPurchaseRules) for the "You bought it!" screen.
 
 	@class ShopServiceServer
 ]=]
@@ -29,6 +31,7 @@ local ShopEvents = require(Shop.Net.ShopEvents)
 local ShopRegistry = require(Shop.Data.ShopRegistry)
 local ShopRequestRules = require(Shop.Rules.ShopRequestRules)
 local ShopPriceRules = require(Shop.Rules.ShopPriceRules)
+local ShopPurchaseRules = require(Shop.Rules.ShopPurchaseRules)
 local ShopRules = require(Shop.Rules.ShopRules)
 local ShopTopUpRules = require(Shop.Rules.ShopTopUpRules)
 local ShopTypes = require(Shop.Data.ShopTypes)
@@ -259,6 +262,15 @@ local function registerBundles()
 	end
 end
 
+-- The "You bought it!" screen for a Robux buy that is not a cosmetic (owner 11-15): sent only once the grant has
+-- landed (a product after its receipt's save, a pass after Roblox reports the buy), never on the client's prompt alone.
+local function sendPurchase(player: Player, purchase: ShopTypes.Purchase?)
+	if purchase == nil or player.Parent == nil then
+		return
+	end
+	ShopEvents.packets.Purchased.sendTo({ kind = purchase.kind, key = purchase.key, amount = purchase.amount }, player)
+end
+
 export type ShopServiceServer = {
 	dependencies: { string },
 	init: (self: ShopServiceServer) -> (),
@@ -298,6 +310,18 @@ local ShopServiceServer: ShopServiceServer = {
 
 	init = function(_self)
 		registerBundles()
+		janitor:Add(
+			MarketplaceServiceServer.productGranted:Connect(function(player: Player, key: string)
+				sendPurchase(player, ShopPurchaseRules.forProduct(key))
+			end),
+			"Disconnect"
+		)
+		janitor:Add(
+			MarketplaceServiceServer.passBought:Connect(function(player: Player, key: string)
+				sendPurchase(player, ShopPurchaseRules.forPass(key))
+			end),
+			"Disconnect"
+		)
 		-- The places menu's School unlock pays the Shop's way (Credits, Gleam for the rest). Depot cannot require the
 		-- Shop (the Shop reaches Depot through Cosmetic and Shift), so the Shop hands it the payment.
 		DepotServiceServer:setPlacePayer(function(userId, price, gleam)

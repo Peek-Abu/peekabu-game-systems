@@ -351,4 +351,55 @@ return function()
 		expect(view.primary).to.equal("Nice!")
 		expect(view.later).to.equal(false)
 	end)
+
+	describe("a Robux purchase (owner 11-15: a You bought it! screen)", function()
+		it("Gleam: shouts the amount and shows the bundle's art", function()
+			local view =
+				VM.view({ ids = {}, source = "robux", purchase = { kind = "gleam", key = "gleam600", amount = 600 } })
+			expect(view.kind).to.equal("purchase")
+			expect(view.title).to.equal("+600 GLEAM!")
+			expect(view.ribbon).to.equal("Thank you!")
+			expect(view.name).to.equal("600 Gleam")
+			expect(view.art).to.be.ok()
+			expect(view.art.image).to.be.a("string")
+			expect(view.primary).to.equal("Nice!")
+			expect(view.later).to.equal(false)
+			expect(#view.changes).to.equal(0)
+			expect(view.effects.confetti).to.equal(true)
+			expect(view.effects.sparkles).to.equal(false)
+		end)
+
+		it("groups a big Gleam amount", function()
+			local view =
+				VM.view({ ids = {}, source = "robux", purchase = { kind = "gleam", key = "gleam1500", amount = 1500 } })
+			expect(view.title).to.equal("+1,500 GLEAM!")
+		end)
+
+		it("a pass: its name and line, and the truck for Big Crew", function()
+			local view =
+				VM.view({ ids = {}, source = "robux", purchase = { kind = "pass", key = "bigCrew", amount = 1 } })
+			expect(view.kind).to.equal("purchase")
+			expect(view.title).to.equal("YOU GOT IT!")
+			expect(view.name).to.equal("Big Crew")
+			expect(view.line).to.equal("Your truck holds 6 friends! Only you need it.")
+			expect(view.art.icon).to.equal("truck")
+		end)
+
+		it("coffee: the cup, and what it does", function()
+			local view =
+				VM.view({ ids = {}, source = "robux", purchase = { kind = "coffee", key = "coffeeCrew", amount = 30 } })
+			expect(view.title).to.equal("COFFEE TIME!")
+			expect(view.name).to.equal("Coffee for the crew")
+			expect(view.line).to.equal("2x Credits for your crew for 30 minutes of shifts!")
+			expect(view.art.icon).to.equal("coffee")
+		end)
+
+		it("closes on its button", function()
+			local view =
+				VM.view({ ids = {}, source = "robux", purchase = { kind = "coffee", key = "coffeeCrew", amount = 30 } })
+			expect(view.stays).to.equal(false)
+			expect(view.picker).to.equal(nil)
+			expect(#VM.wear(view, 1)).to.equal(0)
+		end)
+	end)
 end

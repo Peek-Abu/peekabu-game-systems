@@ -51,4 +51,9 @@ export type GleamBundle = {
 	image: string,
 }
 
+-- What a Robux buy that is not a cosmetic gave, for the "You bought it!" screen (ShopPurchaseRules): Gleam (`amount`
+-- Gleam), a game pass (`key` is its MarketplaceRegistry key, `amount` 1) or coffee (`amount` minutes).
+export type PurchaseKind = "gleam" | "pass" | "coffee"
+export type Purchase = { kind: PurchaseKind, key: string, amount: number }
+
 return {}

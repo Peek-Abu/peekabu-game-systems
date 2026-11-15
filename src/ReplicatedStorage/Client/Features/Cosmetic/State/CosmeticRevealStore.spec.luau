@@ -28,4 +28,16 @@ return function()
 		CosmeticRevealStore.push({ ids = {}, source = "shop" })
 		expect(CosmeticRevealStore.current()).to.equal(nil)
 	end)
+
+	it("shows a Robux purchase with no items (Gleam, a pass, coffee)", function()
+		CosmeticRevealStore.push({
+			ids = {},
+			source = "robux",
+			purchase = { kind = "gleam", key = "gleam600", amount = 600 },
+		})
+		local shown = CosmeticRevealStore.current()
+		expect(shown).to.be.ok()
+		expect(shown.purchase.kind).to.equal("gleam")
+		expect(shown.purchase.amount).to.equal(600)
+	end)
 end
