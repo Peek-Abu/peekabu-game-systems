@@ -62,7 +62,8 @@ return function()
 			expect(frame.position.Y.Scale).to.equal(0)
 			-- At the very top: over the card body's top edge (12 px down) and the window's corner, never lower.
 			expect(frame.position.Y.Offset <= 4).to.equal(true)
-			expect(frame.size <= (if phone then 40 else 64)).to.equal(true)
+			expect(frame.size >= (if phone then 44 else 64)).to.equal(true)
+			expect(frame.size <= (if phone then 56 else 84)).to.equal(true)
 			expect(children.Pippa.props.children.tag).to.equal(nil)
 		end
 	end)

@@ -222,7 +222,8 @@ function VM.crewTagFrame(phone: boolean): TagFrame
 	return {
 		anchor = Vector2.new(1, 0),
 		position = UDim2.new(1, 14, 0, 0),
-		size = if phone then 36 else 56,
+		-- The size the owner picked from (Studio mock 11-15): about the You! flag's height.
+		size = if phone then 50 else 76,
 	}
 end
 
