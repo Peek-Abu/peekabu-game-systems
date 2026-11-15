@@ -142,26 +142,29 @@ return function()
 			return (a.Position - b.Position).Magnitude < 1e-3 and (a.LookVector - b.LookVector).Magnitude < 1e-3
 		end
 
-		it(
-			"keeps ELEVATOR_POINT, +Z facing world +X, in a layout with no elevator facade (the authored boot layout)",
-			function()
-				local point = require(
-					game:GetService("ReplicatedStorage").Shared.Features.Office.Data.OfficeDecorConstants
-				).ELEVATOR_POINT
-				local boot = ORIGIN * CFrame.new(point) * CFrame.Angles(0, math.pi / 2, 0)
-				expect(same(OfficeDoorUtils.elevatorFrameFor({ rooms = { KIT }, doors = {} }, ORIGIN), boot)).to.equal(
-					true
-				)
-				local stairOnly = {
-					rooms = { KIT },
-					doors = {},
-					facades = { { room = "kit", x = 10, z = 10, width = 6, kind = "stairwell" } },
-				}
-				local frame = OfficeDoorUtils.elevatorFrameFor(stairOnly, ORIGIN)
-				expect(same(frame, boot)).to.equal(true)
-				expect(close((frame * CFrame.new(0, 0, 1)).Position.X - frame.Position.X, 1)).to.equal(true)
-			end
-		)
+		it("keeps ELEVATOR_POINT, +Z facing world +X, in the authored boot layout (no facades at all)", function()
+			local point =
+				require(game:GetService("ReplicatedStorage").Shared.Features.Office.Data.OfficeDecorConstants).ELEVATOR_POINT
+			local boot = ORIGIN * CFrame.new(point) * CFrame.Angles(0, math.pi / 2, 0)
+			local frame = OfficeDoorUtils.elevatorFrameFor({ rooms = { KIT }, doors = {} }, ORIGIN)
+			expect(frame ~= nil and same(frame, boot)).to.equal(true)
+			expect(frame ~= nil and close((frame * CFrame.new(0, 0, 1)).Position.X - frame.Position.X, 1)).to.equal(
+				true
+			)
+		end)
+
+		it("has no elevator in a generated map without an elevator facade (P1: School's stood mid-hall)", function()
+			-- The School generates facades = {}: the Office's boot spot (ELEVATOR_POINT) is in one of its halls.
+			expect(OfficeDoorUtils.elevatorFrameFor({ rooms = { KIT }, doors = {}, facades = {} }, ORIGIN)).to.equal(
+				nil
+			)
+			local stairOnly = {
+				rooms = { KIT },
+				doors = {},
+				facades = { { room = "kit", x = 10, z = 10, width = 6, kind = "stairwell" } },
+			}
+			expect(OfficeDoorUtils.elevatorFrameFor(stairOnly, ORIGIN)).to.equal(nil)
+		end)
 
 		it("stands on the layout's first elevator facade", function()
 			local first = { room = "kit", x = 10, z = 10, width = 6, kind = "elevator" }

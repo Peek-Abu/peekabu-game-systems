@@ -522,6 +522,16 @@ return function()
 			expect(doors).to.equal(2)
 		end)
 
+		it("builds no elevator in a generated map that has no elevator facade (the School)", function()
+			local layout = propLayout({})
+			layout.facades = {}
+			local decor = decorOf(layout)
+			expect(decor:FindFirstChild("ElevatorFront")).to.equal(nil)
+			expect(decor:FindFirstChild("ElevatorDoor")).to.equal(nil)
+			expect(decor:FindFirstChild("ElevatorLamp")).to.equal(nil)
+			expect(decor:FindFirstChild("Ambient (elevator)")).to.equal(nil)
+		end)
+
 		it("records the room-type variant key a prop attached", function()
 			template("furniture", "sofa_breakout")
 			local layout = propLayout({ { id = "a.prop.1", room = "a", kind = "prop", art = "sofa", x = 20, z = 20 } })

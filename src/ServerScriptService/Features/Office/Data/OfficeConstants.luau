@@ -412,6 +412,9 @@ return table.freeze({
 	OVERTIME_LOOT_SHARE = 0.5,
 	DESK_SIZE = Vector3.new(5, 3, 3) * HIDE_FURNITURE_SCALE,
 	LOCKER_SIZE = Vector3.new(2.5, 7, 2.5),
+	-- How far (degrees) a searched locker's door stands open round its hinge (OfficeSearchedDressingSystem): a little
+	-- past square, out in front. A half turn folded it flat over the next locker of a School bank (P1, 2026-11-14).
+	SEARCHED_LOCKER_DOOR_SWING = 100,
 	-- The truck bed is a platform this tall; the cab sits behind it.
 	BED_HEIGHT = 3,
 	CAB_SIZE = Vector3.new(12, 8, 6),

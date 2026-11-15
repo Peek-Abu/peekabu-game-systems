@@ -625,8 +625,12 @@ function OfficeDecorSystem.build(
 		end
 		OfficeBuildPaceTracker.step()
 	end
-	-- On the layout's elevator facade; the authored boot layout has none and keeps ELEVATOR_POINT.
-	elevator(OfficeDoorUtils.elevatorFrameFor(layout, origin), folder, art)
+	-- On the layout's elevator facade; the authored boot layout keeps ELEVATOR_POINT; a generated map with no
+	-- elevator facade (the School) has none.
+	local elevatorFrame = OfficeDoorUtils.elevatorFrameFor(layout, origin)
+	if elevatorFrame ~= nil then
+		elevator(elevatorFrame, folder, art)
+	end
 	folder.Parent = parent
 	return folder
 end

@@ -138,12 +138,16 @@ function OfficeDoorUtils.elevatorFrame(facade: Facade, room: Room, origin: CFram
 end
 
 --[=[
-	Where the elevator front stands in `layout` (relative to `origin`): on its first elevator facade (`elevatorFrame`),
-	else, in a layout with none (the authored boot layout), at OfficeDecorConstants.ELEVATOR_POINT with local +Z
-	facing world +X, its fixed pose before elevators stood on facades.
+	Where the elevator front stands in `layout` (relative to `origin`): on its first elevator facade (`elevatorFrame`).
+	The authored boot layout (no `facades` at all) keeps OfficeDecorConstants.ELEVATOR_POINT with local +Z facing
+	world +X, its fixed pose before elevators stood on facades. A generated map without an elevator facade (the
+	School) has no elevator: nil. That fixed point lies in one of its halls (P1, 2026-11-14).
 ]=]
-function OfficeDoorUtils.elevatorFrameFor(layout: OfficeTypes.Layout, origin: CFrame): CFrame
-	local facades: { Facade } = layout.facades or {}
+function OfficeDoorUtils.elevatorFrameFor(layout: OfficeTypes.Layout, origin: CFrame): CFrame?
+	local facades = layout.facades
+	if facades == nil then
+		return origin * CFrame.new(OfficeDecorConstants.ELEVATOR_POINT) * CFrame.Angles(0, math.pi / 2, 0)
+	end
 	for _, facade in facades do
 		if facade.kind == "elevator" then
 			local room = OfficeLayoutUtils.room(layout, facade.room)
@@ -154,7 +158,7 @@ function OfficeDoorUtils.elevatorFrameFor(layout: OfficeTypes.Layout, origin: CF
 			break
 		end
 	end
-	return origin * CFrame.new(OfficeDecorConstants.ELEVATOR_POINT) * CFrame.Angles(0, math.pi / 2, 0)
+	return nil
 end
 
 --[=[

@@ -62,9 +62,49 @@ return function()
 		expect(door ~= nil).to.equal(true)
 		expect(interior ~= nil).to.equal(true)
 		expect(interior.CanCollide).to.equal(false)
-		-- Fully open along the cabinet side rather than protruding across its approach.
-		expect(door.CFrame.LookVector.Z > 0.99).to.equal(true)
-		expect(door.Position.Z < -0.5).to.equal(true)
+		-- Wide open: turned SEARCHED_LOCKER_DOOR_SWING round its hinge, its face now looking sideways, out in front.
+		local swing = math.rad(OfficeConstants.SEARCHED_LOCKER_DOOR_SWING)
+		expect(math.abs(door.CFrame.LookVector.X) - math.sin(swing) > -1e-3).to.equal(true)
+		expect(math.abs(door.CFrame.LookVector.Z - -math.cos(swing)) < 1e-3).to.equal(true)
+		expect(door.Position.Z < -OfficeConstants.LOCKER_SIZE.Z / 2).to.equal(true)
+	end)
+	-- Every corner of every moving door piece, in the locker's space.
+	local function doorCorners(locker, model)
+		local corners = {}
+		for _, piece in model:GetDescendants() do
+			if piece:IsA("BasePart") and piece:GetAttribute("SearchComponent") == "door" then
+				local half = piece.Size / 2
+				for _, sx in { -1, 1 } do
+					for _, sy in { -1, 1 } do
+						for _, sz in { -1, 1 } do
+							local world = piece.CFrame * Vector3.new(sx * half.X, sy * half.Y, sz * half.Z)
+							table.insert(corners, locker.CFrame:PointToObjectSpace(world))
+						end
+					end
+				end
+			end
+		end
+		return corners
+	end
+	it("never swings into the next locker of a bank, on either hinge side (P1: School lockers)", function()
+		-- School halls stand lockers side by side (SchoolHallUtils.lockers): the next locker starts right at this
+		-- one's side, so an open door may only reach past the side out in front of the bank's face.
+		local size = OfficeConstants.LOCKER_SIZE
+		for _, side in { -1, 1 } do
+			local locker = proxy("Locker", size)
+			locker:SetAttribute("OfficeDoorHingeSide", side)
+			local dressing = Dressing.new(0)
+			dressing.apply(locker, "locker")
+			local corners = doorCorners(locker, checkClean(locker))
+			expect(#corners > 0).to.equal(true)
+			for _, corner in corners do
+				local inside = math.abs(corner.X) <= size.X / 2 + 1e-3
+				local inFront = corner.Z < -size.Z / 2 - 1e-3
+				expect(`side {side} {inside or inFront}`).to.equal(`side {side} true`)
+			end
+			dressing.clear()
+			locker:Destroy()
+		end
 	end)
 	it("replaces the previous overlay when applied twice", function()
 		local desk = proxy("Desk", OfficeConstants.DESK_SIZE)
@@ -169,7 +209,7 @@ return function()
 		dressing.apply(locker, "locker")
 		local door = checkClean(locker):FindFirstChild("SearchDoor")
 		local position = locker.CFrame:PointToObjectSpace(door.Position)
-		expect(position.X > locker.Size.X / 2).to.equal(true)
-		expect(door.CFrame.LookVector.Z > 0.99).to.equal(true)
+		expect(position.X > 0).to.equal(true)
+		expect(door.CFrame.LookVector.X > 0.9).to.equal(true)
 	end)
 end

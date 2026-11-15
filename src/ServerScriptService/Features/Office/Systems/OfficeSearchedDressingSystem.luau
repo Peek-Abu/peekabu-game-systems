@@ -295,10 +295,12 @@ function System.new(duration: number?): Controller
 			end
 			local doorTransform = CFrame.identity
 			if leaf then
-				-- Choose the hinge furthest from the adjacent room wall; swing outward and fold flat.
+				-- Choose the hinge furthest from the adjacent room wall; swing outward, a little past square. Never a
+				-- half turn: that folds the door flat over the next locker of a bank (School halls).
 				local side = if root:GetAttribute("OfficeDoorHingeSide") == 1 then 1 else -1
 				local hinge = leaf.CFrame * CFrame.new(side * leaf.Size.X / 2, 0, 0)
-				doorTransform = hinge * CFrame.Angles(0, -side * math.pi, 0) * hinge:Inverse()
+				local swing = math.rad(Constants.SEARCHED_LOCKER_DOOR_SWING)
+				doorTransform = hinge * CFrame.Angles(0, -side * swing, 0) * hinge:Inverse()
 			end
 			for _, o in rig:GetDescendants() do
 				if o:IsA("BasePart") then
