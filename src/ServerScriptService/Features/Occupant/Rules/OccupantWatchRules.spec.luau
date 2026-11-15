@@ -133,7 +133,8 @@ return function()
 		it("never counts what is behind the kid's own head (P1 11-14: it froze closing in from behind)", function()
 			-- A kid running down +Z with the default third-person camera 12.5 studs behind and 2 above their head.
 			-- Bramble chasing them sits between that camera and their back, so it shows on their screen from ~12 studs
-			-- behind them, far outside its 4.6-stud reach: counted, it froze there every time and never caught anyone.
+			-- behind them (its head; its chest at y 4 from 9.3), far outside its 4.6-stud reach: counted, it froze there
+			-- every time and never caught anyone.
 			local head = Vector3.new(0, 5, 0)
 			local camera = Vector3.new(0, 7, -12.5)
 			local look = (Vector3.new(0, 4, 10) - camera).Unit
@@ -146,7 +147,7 @@ return function()
 				})
 				return OccupantWatchRules.onScreen(v.report, point), OccupantWatchRules.watching(v, 100.1)
 			end
-			for _, z in { -11, -8, -4.6, -2, -0.5 } do
+			for _, z in { -9, -8, -4.6, -2, -0.5 } do
 				local shown, watched = watchedAt(z)
 				expect(shown).to.equal(true)
 				expect(watched).to.equal(false)
