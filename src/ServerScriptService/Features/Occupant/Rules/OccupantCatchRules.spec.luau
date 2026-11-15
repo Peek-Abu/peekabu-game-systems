@@ -72,6 +72,17 @@ return function()
 			end
 		)
 
+		it(
+			"shrinks the grab with a smaller monster (Bramble at 0.9): his arm's range scales, the slack does not",
+			function()
+				local small = OccupantConstants.CATCH_RANGE * 0.9 + OccupantConstants.CATCH_SLACK
+				expect(OccupantCatchRules.reach(false, 0.9)).to.be.near(small, 1e-9)
+				expect(OccupantCatchRules.reach(true, 0.9)).to.be.near(small + OccupantConstants.FOUND_REACH, 1e-9)
+				expect(OccupantCatchRules.canCatch(input({ distance = small - 0.05, scale = 0.9 }))).to.equal(true)
+				refused({ distance = small + 0.05, scale = 0.9 }, "too far")
+			end
+		)
+
 		it("refuses a NaN distance", function()
 			refused({ distance = 0 / 0 }, "too far")
 		end)

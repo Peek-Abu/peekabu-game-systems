@@ -104,7 +104,9 @@ local function generate(): Model
 	return model
 end
 
--- The kind's body: the template's clone, else the fallback; named, with no Animate script.
+-- The kind's body: the template's clone, else the fallback; named, with no Animate script; at the kind's size
+-- (Model:ScaleTo scales the parts, joints, attachments and HipHeight, and the Humanoid's WalkSpeed and jump, which are
+-- put back: his speeds are the brain's tuning).
 local function body(kind: OccupantKindRegistry.KindId): Model
 	local art = template(kind)
 	local model = if art ~= nil then art:Clone() else generate()
@@ -112,6 +114,19 @@ local function body(kind: OccupantKindRegistry.KindId): Model
 	local animate = model:FindFirstChild("Animate")
 	if animate ~= nil then
 		animate:Destroy()
+	end
+	local scale = OccupantKindRegistry.scaleOf(kind)
+	if scale ~= 1 then
+		local humanoid = model:FindFirstChildOfClass("Humanoid")
+		local walkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil
+		local jumpPower = if humanoid ~= nil then humanoid.JumpPower else nil
+		local jumpHeight = if humanoid ~= nil then humanoid.JumpHeight else nil
+		model:ScaleTo(model:GetScale() * scale)
+		if humanoid ~= nil and walkSpeed ~= nil and jumpPower ~= nil and jumpHeight ~= nil then
+			humanoid.WalkSpeed = walkSpeed
+			humanoid.JumpPower = jumpPower
+			humanoid.JumpHeight = jumpHeight
+		end
 	end
 	return model
 end

@@ -104,6 +104,10 @@ export type Kind = {
 	voice: Voice?,
 	sounds: Sounds,
 	catchStyle: CatchStyle,
+	-- Its size: the rig is built at this Model:ScaleTo scale (1: as the template is). Everything that measures him
+	-- follows it: his strides (NpcStrideFormulas), his reach (the Npc attack range, OccupantCatchRules.reach), his
+	-- footsteps (the feet), his perch fit (OccupantSeatSystem.perchHeight).
+	scale: number,
 }
 
 local HARLOW: Kind = {
@@ -138,6 +142,7 @@ local HARLOW: Kind = {
 		footsteps = "harlow",
 	},
 	catchStyle = "sequence",
+	scale = 1,
 }
 
 local BRAMBLE: Kind = {
@@ -178,6 +183,9 @@ local BRAMBLE: Kind = {
 	},
 	-- Owner 11-13: "just do a sound and take a life": no freeze, camera, lights out or knockdown.
 	catchStyle = "strike",
+	-- Owner OK 11-14 ("10% should still be big enough to cause terror"): 0.9 everywhere, so it fits on a 7-stud locker
+	-- under a 13-stud ceiling when it perches.
+	scale = 0.9,
 }
 
 local IDS: { KindId } = { "bramble", "harlow" }
@@ -258,6 +266,14 @@ end
 function OccupantKindRegistry.catchStyleOf(id: string): CatchStyle
 	local kind = OccupantKindRegistry.get(id)
 	return if kind ~= nil then kind.catchStyle else HARLOW.catchStyle
+end
+
+--[=[
+	Kind `id`'s size (the Model:ScaleTo scale its rig is built at); 1 for an unknown id.
+]=]
+function OccupantKindRegistry.scaleOf(id: string): number
+	local kind = OccupantKindRegistry.get(id)
+	return if kind ~= nil then kind.scale else 1
 end
 
 function OccupantKindRegistry.freezes(id: string): boolean

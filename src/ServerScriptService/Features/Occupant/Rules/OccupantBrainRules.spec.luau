@@ -99,12 +99,10 @@ return function()
 					{
 						perch = {
 							id = "lockers",
-							edge = TOP,
-							normal = Vector3.zAxis,
-							at = TOP + Vector3.new(0, -2, 1),
-							landing = Vector3.new(120, 3, 104),
-							headroom = 6,
-							floorDrop = 6,
+							top = TOP,
+							at = TOP + Vector3.new(0, 2, 0),
+							headroom = 20,
+							landings = { Vector3.new(120, 3, 104) },
 						},
 						seen = false,
 					},

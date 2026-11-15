@@ -19,6 +19,12 @@ return function()
 			expect(NpcStrideFormulas.rate(500, 10)).to.equal(NpcConstants.STRIDE_MAX_RATE)
 		end)
 
+		it("plants a scaled NPC's feet: its clip covers plantedSpeed x scale studs a second at 1x", function()
+			expect(NpcStrideFormulas.rate(9, 10, 0.9)).to.be.near(1, 1e-9)
+			expect(NpcStrideFormulas.rate(10, 10, 1)).to.be.near(1, 1e-9)
+			expect(NpcStrideFormulas.rate(10, 10, nil)).to.be.near(1, 1e-9)
+		end)
+
 		it("plays at 1x when the clip names no planted speed", function()
 			expect(NpcStrideFormulas.rate(14, nil)).to.equal(1)
 			expect(NpcStrideFormulas.rate(14, 0)).to.equal(1)

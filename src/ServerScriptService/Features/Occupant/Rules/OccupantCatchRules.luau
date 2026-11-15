@@ -47,7 +47,7 @@ function OccupantCatchRules.canCatch(input: OccupantTypes.CatchInput): (boolean,
 	if input.glassed == true then
 		return false, "behind glass"
 	end
-	if not (input.distance <= OccupantCatchRules.reach(input.found == true)) then
+	if not (input.distance <= OccupantCatchRules.reach(input.found == true, input.scale)) then
 		return false, "too far"
 	end
 	return true, nil
@@ -56,10 +56,11 @@ end
 --[=[
 	The flat studs a catch may reach: CATCH_RANGE plus CATCH_SLACK, and FOUND_REACH more for a hider he found at their
 	spot (`found`: the check, the cabinet he opened, the sit-in), whose stand point can sit a little further off than a
-	chase's grab (the straight-out stand point beside a cabinet or a table).
+	chase's grab (the straight-out stand point beside a cabinet or a table). A scaled monster (`scale`, its
+	Model:GetScale(); Bramble 0.9) reaches CATCH_RANGE x scale: his arm scales, the slack does not.
 ]=]
-function OccupantCatchRules.reach(found: boolean): number
-	local range = OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
+function OccupantCatchRules.reach(found: boolean, scale: number?): number
+	local range = OccupantConstants.CATCH_RANGE * (scale or 1) + OccupantConstants.CATCH_SLACK
 	return if found then range + OccupantConstants.FOUND_REACH else range
 end
 

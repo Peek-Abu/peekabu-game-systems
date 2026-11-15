@@ -96,27 +96,25 @@ export type Effect =
 	| { kind: "door", spotId: string, open: boolean }
 	-- Stuck where no path starts: lifted to this route point (OccupantStuckRules).
 	| { kind: "unstick", position: Vector3 }
-	-- Onto a perch face, unseen (its top edge, outward normal and where his chest hangs); and back down to a floor
+	-- Up onto a perch's visible top, unseen, facing `facing` (`at`: where his body sits); and back down to a floor
 	-- point (OccupantPerchRules).
-	| { kind: "perch", edge: Vector3, normal: Vector3, at: Vector3 }
+	| { kind: "perch", top: Vector3, facing: Vector3, at: Vector3 }
 	| { kind: "drop", position: Vector3 }
 
--- A spot a perch kind may cling to (owner pick 11-14, "cling to locker side"): one side face of a tagged prop
--- (OccupantConstants.PERCH_TAG), as measured on the map (OccupantWatchSystem): the centre of the face's top edge on the
--- prop's visible art, its outward normal (flat), where his chest hangs (`at`, for sight checks and distances), the
--- checked floor point in front that the drop lands on, the room over the edge up to the ceiling (math.huge with none)
--- and how high the edge is over that floor.
+-- A high spot a perch kind may sit on (a tagged OccupantConstants.PERCH_TAG prop), as measured on the map
+-- (OccupantWatchSystem): its id, the centre of the prop's visible top, where his body sits up there (`at`, for sight
+-- checks and distances), the room over the top up to the ceiling (math.huge with none), and the checked floor points
+-- round it that the drop may land on (OccupantPerchRules.landingCandidates with a clear line out from the top and a
+-- floor under them).
 export type Perch = {
 	id: string,
-	edge: Vector3,
-	normal: Vector3,
+	top: Vector3,
 	at: Vector3,
-	landing: Vector3,
 	headroom: number,
-	floorDrop: number,
+	landings: { Vector3 },
 }
 
--- A perch face this think: whether any crew camera sees where his chest would hang right now (OccupantWatchSystem).
+-- A perch this think: whether any crew camera sees where his body would sit up there right now (OccupantWatchSystem).
 export type PerchView = {
 	perch: Perch,
 	seen: boolean,
@@ -328,6 +326,8 @@ export type CatchInput = {
 	hidden: boolean?,
 	-- A hider he found at their spot (the check, a cabinet he opened, a sit-in): he may reach FOUND_REACH further.
 	found: boolean?,
+	-- His size (Model:GetScale(); absent: 1): a smaller monster grabs from less far (OccupantCatchRules.reach).
+	scale: number?,
 }
 
 -- What the caught player is told (OccupantEvents.CatchReport, M3 UI incident report): the room, the shift clock's

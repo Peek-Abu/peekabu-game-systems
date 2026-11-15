@@ -270,7 +270,7 @@ function OccupantCatchSystem.attempt(
 			root.Position,
 			Sense.feetY(root, humanoid),
 			rig.head.Position.Y + rig.head.Size.Y / 2,
-			OccupantCatchRules.reach(attempt.found)
+			OccupantCatchRules.reach(attempt.found, rig.model:GetScale())
 		),
 		clear = attempt.inView,
 		glassed = attempt.glassed,
@@ -284,6 +284,7 @@ function OccupantCatchSystem.attempt(
 		resting = attempt.resting,
 		zone = attempt.zone,
 		found = attempt.found,
+		scale = rig.model:GetScale(),
 	})
 	if not ok then
 		return false, reason

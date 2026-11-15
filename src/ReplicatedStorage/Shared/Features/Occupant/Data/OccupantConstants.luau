@@ -96,22 +96,22 @@ local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
 -- names only, so any R15 rig takes them (a joint the rig lacks is skipped). Hip X > 0 swings the thigh forward, knee
 -- X < 0 folds the shin back, and the ankle undoes both so the feet stay flat (hip + knee + ankle = 0). Every pose
 -- here is in place: it never moves the body across the floor (the server moves the root, on checked paths).
--- Perched: clinging gargoyle-style to a prop's side face (owner pick 11-14, "cling to locker side"), its back
--- flat to the face and facing out, its head over the top edge tipped down at the crew and cocked, its wings spread
--- up and out against the face, its legs tucked up under it. The server hangs it with its highest point
--- PERCH_CLING_PEEK over the edge (OccupantSeatSystem.perch, measured with OccupantGestureFormulas.posedBox on the
--- rig's own parts).
+-- Perched: the flattest owl crouch on a prop's top (owner play-check 11-14: on top, never through the ceiling), body
+-- hunched low over the edge, legs tucked under it, face tipped about 60 degrees down at the crew, wings held close.
+-- The server sets its lowest point on the prop's visible top (OccupantSeatSystem.perch, measured with
+-- OccupantGestureFormulas.posedBox on the rig's own parts); Bramble's 0.9 scale makes it fit a 7-stud locker under a
+-- 13-stud ceiling.
 local PERCH_CROUCH: { [string]: Vector3 } = table.freeze({
-	Waist = Vector3.new(6, 0, 0),
-	Neck = Vector3.new(-16, 0, 12),
-	LeftHip = Vector3.new(75, 0, 0),
-	RightHip = Vector3.new(75, 0, 0),
-	LeftKnee = Vector3.new(-115, 0, 0),
-	RightKnee = Vector3.new(-115, 0, 0),
-	LeftAnkle = Vector3.new(40, 0, 0),
-	RightAnkle = Vector3.new(40, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -115),
-	RightShoulder = Vector3.new(0, 0, 115),
+	Waist = Vector3.new(-70, 0, 0),
+	Neck = Vector3.new(10, 0, 8),
+	LeftHip = Vector3.new(150, 0, 0),
+	RightHip = Vector3.new(150, 0, 0),
+	LeftKnee = Vector3.new(-150, 0, 0),
+	RightKnee = Vector3.new(-150, 0, 0),
+	LeftAnkle = Vector3.new(0, 0, 0),
+	RightAnkle = Vector3.new(0, 0, 0),
+	LeftShoulder = Vector3.new(0, 0, -10),
+	RightShoulder = Vector3.new(0, 0, 10),
 })
 -- The drop: off the top with the legs tucked and the wings spread high, then a squash on landing. (Bramble's bind pose
 -- already holds its wings out, so the wing lifts stay small: at 75 they crossed behind its head.)
@@ -189,9 +189,9 @@ local GESTURES: { [string]: Gesture } = {
 		exit = { key(0.3, 2.8, UNDER_FOLD), key(0.8, 2.8, REST), key(1, 0, REST) },
 		exitSeconds = 1,
 	},
-	-- A perch kind on a perch (mode "perch"): it settles into the cling.
+	-- A perch kind on a perch (mode "perch"): it settles into the crouch.
 	perch = { seconds = 0.3, joints = PERCH_CROUCH },
-	-- Its drop (DROP_SECONDS from when it left the perch): from the cling, the leap (tucked, wings high) through the
+	-- Its drop (DROP_SECONDS from when it left the perch): from the crouch, the leap (tucked, wings high) through the
 	-- fall, the squash as it lands, held, then the rise to standing. The server moves the root along the same beats.
 	drop = {
 		seconds = DROP_SECONDS,
@@ -762,13 +762,10 @@ return table.freeze({
 	PERCH_DROP_RANGE = 10,
 	PERCH_HOLD_MAX = 20,
 	PERCH_COOLDOWN = 30,
-	-- (Owner play-check and pick 11-14: "cling to locker side".) He clings to a prop's side face with his highest point
-	-- PERCH_CLING_PEEK studs over its top edge and his body hanging down the face. A face is offered only where that
-	-- leaves PERCH_HEAD_CLEAR studs under the ceiling and his lowest point PERCH_FLOOR_CLEAR over the floor, and only
-	-- with a clear, checked landing PERCH_LANDING_OUT studs out in front of it, so the drop never goes through a wall.
-	PERCH_CLING_PEEK = 2.2,
+	-- (Owner play-check 11-14.) A perch is offered only where his perched body (Senses.perchHeight) fits under the
+	-- ceiling with PERCH_HEAD_CLEAR studs to spare, and only with a checked landing PERCH_LANDING_OUT studs past the
+	-- prop's edge (a clear line out from over the top and a floor under it), so the drop never goes through a wall.
 	PERCH_HEAD_CLEAR = 0.3,
-	PERCH_FLOOR_CLEAR = 0.3,
 	PERCH_LANDING_OUT = 2.5,
 	-- The move up happens in the dark: the server marks the rig (PERCH_FLASH_ATTRIBUTE, a counter, and
 	-- PERCH_FLASH_TARGET_ATTRIBUTE, the perch top) and moves him PERCH_DARK_LEAD later. Every client darks the lights

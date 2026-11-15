@@ -6,17 +6,16 @@
 	- `ready`: he may perch when he is patrolling, investigating or searching; nobody has watched him for
 	  PERCH_UNSEEN_SECONDS (and that long has passed since the run began, `Mind.perchReadyAt`); the cooldown after his
 	  last drop is over; and no crew member is within PERCH_CREW_MIN studs of him.
-	- A perch is a prop's side face he clings to (owner pick 11-14, "cling to locker side"): `faces` lists a box's four
-	  side faces; OccupantWatchSystem measures which are clear and their landing, headroom and height over the floor.
-	- `fits`: his head clears the ceiling over the edge and his hanging body clears the floor (Senses.perchHeight).
-	- `pick`: of the faces no crew camera sees (Senses.perches) that he `fits`, the one nearest a crew member who is
+	- `fits`: a perch with a checked landing and room for his perched body under the ceiling (Senses.perchHeight +
+	  PERCH_HEAD_CLEAR); OccupantWatchSystem measures the prop's visible top, the headroom and the landings.
+	- `pick`: of the perches no crew camera sees (Senses.perches) that he `fits`, the one nearest a crew member who is
 	  out (not hidden), but no nearer than PERCH_NEAR and no farther than PERCH_FAR.
-	- `begin`: up he goes, unseen and in a lights-out blackout (the `perch` effect: OccupantSeatSystem hangs him on the
-	  face, facing out from it), still (mode "perch").
+	- `begin`: up he goes, unseen and in a lights-out blackout (the `perch` effect: OccupantSeatSystem sets his crouch
+	  on the top), facing the nearest kid, still (mode "perch").
 	- `think`, up there: he stays still until someone watched him there and looked away (an unfreeze after he went up),
-	  someone comes within PERCH_DROP_RANGE, or PERCH_HOLD_MAX passes; then he drops to the face's checked landing (the
-	  `drop` effect, `floorFor`, along `fallAt`) and patrols on, not to perch again for PERCH_COOLDOWN. A watched
-	  think never gets here: frozen, the brain holds (OccupantBrainRules.hold).
+	  someone comes within PERCH_DROP_RANGE, or PERCH_HOLD_MAX passes; then he drops to the checked landing nearest the
+	  crew (the `drop` effect, `floorFor`, along `fallAt`: out past the edge, then down) and patrols on, not to perch
+	  again for PERCH_COOLDOWN. A watched think never gets here: frozen, the brain holds (OccupantBrainRules.hold).
 
 	Distances are flat (studs across the floor). Pure (see OccupantMindUtils).
 
@@ -68,45 +67,62 @@ local function nearestOut(senses: Senses, point: Vector3): (Glimpse?, number)
 end
 
 --[=[
-	Where the drop off `perch` lands: its face's checked landing.
+	Where the drop off `perch` lands: of its checked landings, the one nearest the crew member who is out nearest it
+	(the first with nobody out). A perch with no landing (never picked, but the break can still drop him) falls back to
+	the route point nearest it.
 ]=]
-function OccupantPerchRules.floorFor(perch: Perch): Vector3
-	return perch.landing
-end
-
---[=[
-	Whether he fits clinging to `perch` (owner play-check 11-14): with his highest point PERCH_CLING_PEEK over the edge
-	there is PERCH_HEAD_CLEAR left under the ceiling, and his hanging body, `height` studs from its lowest to its highest
-	point (Senses.perchHeight; nil: unknown, only the ceiling is checked), keeps PERCH_FLOOR_CLEAR over the floor.
-]=]
-function OccupantPerchRules.fits(perch: Perch, height: number?): boolean
-	if perch.headroom < OccupantConstants.PERCH_CLING_PEEK + OccupantConstants.PERCH_HEAD_CLEAR then
-		return false
+function OccupantPerchRules.floorFor(perch: Perch, senses: Senses): Vector3
+	if #perch.landings > 0 then
+		local kid = nearestOut(senses, perch.at)
+		if kid == nil then
+			return perch.landings[1]
+		end
+		local best = perch.landings[1]
+		local bestDistance = math.huge
+		for _, landing in perch.landings do
+			local distance = M.flat(landing, kid.position)
+			if distance < bestDistance then
+				best = landing
+				bestDistance = distance
+			end
+		end
+		return best
 	end
-	if height == nil then
-		return true
-	end
-	return perch.floorDrop + OccupantConstants.PERCH_CLING_PEEK - height >= OccupantConstants.PERCH_FLOOR_CLEAR
-end
-
-export type Face = { edge: Vector3, normal: Vector3 }
-
---[=[
-	The four side faces of a box (its `frame` and `size`, a prop's visible art): each one's top-edge centre and its
-	outward normal, flat (OccupantWatchSystem measures which can be clung to).
-]=]
-function OccupantPerchRules.faces(frame: CFrame, size: Vector3): { Face }
-	local half = size / 2
-	local result: { Face } = {}
-	for _, side in { Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis } do
-		local edge = frame * Vector3.new(side.X * half.X, half.Y, side.Z * half.Z)
-		local normal = frame:VectorToWorldSpace(side)
-		local flat = Vector3.new(normal.X, 0, normal.Z)
-		if flat.Magnitude > 1e-6 then
-			table.insert(result, { edge = edge, normal = flat.Unit })
+	local best = senses.position
+	local bestDistance = math.huge
+	for _, point in senses.route do
+		local distance = M.flat(point, perch.top)
+		if distance < bestDistance then
+			best = point
+			bestDistance = distance
 		end
 	end
-	return result
+	return best
+end
+
+--[=[
+	Whether he fits on `perch` (owner play-check 11-14): it has a checked landing, and his perched body, `height` studs
+	from its lowest to its highest point (Senses.perchHeight; nil: unknown, not checked), fits the room over its top
+	with PERCH_HEAD_CLEAR to spare.
+]=]
+function OccupantPerchRules.fits(perch: Perch, height: number?): boolean
+	if #perch.landings == 0 then
+		return false
+	end
+	return height == nil or height + OccupantConstants.PERCH_HEAD_CLEAR <= perch.headroom
+end
+
+--[=[
+	The spots to try for a perch's landings: eight points round `centre` (a prop's top), `reach` studs out across the
+	floor plan, at the top's height (OccupantWatchSystem checks a clear line out to each and a floor under it).
+]=]
+function OccupantPerchRules.landingCandidates(centre: Vector3, reach: number): { Vector3 }
+	local spots = {}
+	for i = 0, 7 do
+		local angle = i * math.pi / 4
+		table.insert(spots, centre + Vector3.new(math.cos(angle) * reach, 0, math.sin(angle) * reach))
+	end
+	return spots
 end
 
 --[=[
@@ -177,9 +193,11 @@ function OccupantPerchRules.begin(mind: Mind, senses: Senses): Step?
 	nextMind.steer = nil
 	nextMind.perch = perch
 	nextMind.perchedAt = senses.now
+	local kid = nearestOut(senses, perch.at)
+	local facing = if kid ~= nil then kid.position else senses.position
 	return M.addEffect(
 		{ mind = nextMind, intent = M.IDLE },
-		{ kind = "perch", edge = perch.edge, normal = perch.normal, at = perch.at }
+		{ kind = "perch", top = perch.top, facing = facing, at = perch.at }
 	)
 end
 
@@ -205,7 +223,7 @@ function OccupantPerchRules.think(mind: Mind, senses: Senses): Step
 	nextMind.perchedAt = nil
 	nextMind.perchReadyAt = now + OccupantConstants.PERCH_COOLDOWN
 	nextMind.droppedAt = now
-	local floor = if perch ~= nil then OccupantPerchRules.floorFor(perch) else senses.position
+	local floor = if perch ~= nil then OccupantPerchRules.floorFor(perch, senses) else senses.position
 	return M.addEffect({ mind = nextMind, intent = M.IDLE }, { kind = "drop", position = floor })
 end
 

@@ -203,29 +203,27 @@ local function inView(report: Report, points: { Vector3 }): boolean
 	return false
 end
 
--- Every cling face of a perch part, as measured on the map, once per part (the props never move during a run).
-local measured: { [BasePart]: { OccupantTypes.Perch } } = {}
+-- Every perch part's spot, as measured on the map, once per part (the props never move during a run).
+local measured: { [BasePart]: OccupantTypes.Perch } = {}
 setmetatable(measured, { __mode = "k" })
 
--- How far up a ceiling is looked for; the heights under the edge (his hanging chest and lower body) where the room in
--- front of a face must be clear, and the radius of that check (about his body); how far down a floor is looked for;
--- and where his chest hangs (out from the face, under the edge) for sight checks and distances.
+-- How far up a ceiling is looked for; how high over the top a landing's line out runs (about his body, clear of the
+-- prop's own lip), and the radius of that line; how far down a floor is looked for; and how high over the top his body
+-- sits (for sight checks and distances).
 local CEILING_LOOK = 60
-local CLEAR_DEPTHS = { 1.5, 4 }
-local CLEAR_RADIUS = 1.2
+local LANDING_LINE_HEIGHT = 2
+local LANDING_RADIUS = 1.2
 local FLOOR_LOOK = 40
-local CHEST_OUT = 1.5
-local CHEST_DOWN = 2
+local BODY_UP = 2
 
 --[=[
-	Measures the cling faces of `instance` (a PERCH_TAG part, a child of its prop's proxy), owner pick 11-14 "cling to
-	locker side": the four side faces of the prop's visible art (its ArtVisual's box, else the proxy's: the play-check
-	had him placed off the hitbox), each kept only when the room in front of it is clear (body-wide checks out from the
-	face under its top edge: a wall, a neighbouring locker or a shelf there rules it out) and a floor lies in front of
-	it lower than the edge (its landing, PERCH_LANDING_OUT out). Each kept face carries its headroom over the edge and
-	the edge's height over that floor, for OccupantPerchRules.fits. Rays skip the prop itself, the rigs and the crew.
+	Measures the perch spot of `instance` (a PERCH_TAG part, a child of its prop's proxy): the centre of the prop's
+	visible top (its ArtVisual's box, else the proxy's: the owner's play-check 11-14 had him floating over the hitbox),
+	the room over it to the ceiling, and its landings: each OccupantPerchRules.landingCandidate PERCH_LANDING_OUT past
+	the prop's edge with a clear, body-wide line out to it from over the top and a floor under it, lower than the top
+	(so the drop never passes through a wall or lands on another prop). Rays skip the prop itself, the rigs and the crew.
 ]=]
-local function measure(instance: BasePart, rig: Rig): { OccupantTypes.Perch }
+local function measure(instance: BasePart, rig: Rig): OccupantTypes.Perch
 	local known = measured[instance]
 	if known ~= nil then
 		return known
@@ -247,48 +245,38 @@ local function measure(instance: BasePart, rig: Rig): { OccupantTypes.Perch }
 			frame, size = visual:GetBoundingBox()
 		end
 	end
+	local top = (frame * CFrame.new(0, size.Y / 2, 0)).Position
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = exclude
 	params.RespectCanCollide = true
-	local perches: { OccupantTypes.Perch } = {}
-	for index, face in OccupantPerchRules.faces(frame, size) do
-		local edge, normal = face.edge, face.normal
-		local clear = true
-		for _, depth in CLEAR_DEPTHS do
-			local start = edge + normal * (CLEAR_RADIUS + 0.05) - Vector3.new(0, depth, 0)
-			if
-				Workspace:Spherecast(start, CLEAR_RADIUS, normal * OccupantConstants.PERCH_LANDING_OUT, params) ~= nil
-			then
-				clear = false
-				break
-			end
-		end
-		if not clear then
+	local up = Workspace:Raycast(top + Vector3.new(0, 0.05, 0), Vector3.new(0, CEILING_LOOK, 0), params)
+	local landings: { Vector3 } = {}
+	local lift = Vector3.new(0, LANDING_LINE_HEIGHT, 0)
+	local reach = math.max(size.X, size.Z) / 2 + OccupantConstants.PERCH_LANDING_OUT
+	for _, spot in OccupantPerchRules.landingCandidates(top, reach) do
+		local out = (spot - top) * Vector3.new(1, 0, 1)
+		if Workspace:Spherecast(top + lift, LANDING_RADIUS, out, params) ~= nil then
 			continue
 		end
-		local out = edge + normal * OccupantConstants.PERCH_LANDING_OUT
-		local floor = Workspace:Raycast(out, Vector3.new(0, -FLOOR_LOOK, 0), params)
-		if floor == nil or floor.Position.Y > edge.Y - 1 then
-			continue
+		local floor = Workspace:Raycast(spot + lift, Vector3.new(0, -FLOOR_LOOK, 0), params)
+		if floor ~= nil and floor.Position.Y < top.Y - 1 then
+			table.insert(landings, floor.Position)
 		end
-		local up = Workspace:Raycast(edge + normal + Vector3.new(0, 0.05, 0), Vector3.new(0, CEILING_LOOK, 0), params)
-		table.insert(perches, {
-			id = `{instance:GetFullName()}#{index}`,
-			edge = edge,
-			normal = normal,
-			at = edge + normal * CHEST_OUT - Vector3.new(0, CHEST_DOWN, 0),
-			landing = floor.Position,
-			headroom = if up ~= nil then up.Position.Y - edge.Y else math.huge,
-			floorDrop = edge.Y - floor.Position.Y,
-		})
 	end
-	measured[instance] = perches
-	return perches
+	local perch: OccupantTypes.Perch = {
+		id = instance:GetFullName(),
+		top = top,
+		at = top + Vector3.new(0, BODY_UP, 0),
+		headroom = if up ~= nil then up.Position.Y - top.Y else math.huge,
+		landings = landings,
+	}
+	measured[instance] = perch
+	return perch
 end
 
 --[=[
-	Every cling face on the map (of OccupantConstants.PERCH_TAG parts in the Workspace, measured once: `measure`) and
+	Every perch on the map (OccupantConstants.PERCH_TAG parts in the Workspace, measured once: `measure`) and
 	whether any crew camera sees it right now: a fresh camera report (anyone's, hidden or not) with the top in its look
 	cone and range and a clear ray to it (B4, OccupantPerchRules: he only goes up where nobody can see). Empty when
 	this system is not watching `rig`.
@@ -304,20 +292,19 @@ function OccupantWatchSystem.perches(rig: Rig): { OccupantTypes.PerchView }
 		if not instance:IsA("BasePart") or not instance:IsDescendantOf(Workspace) then
 			continue
 		end
-		for _, perch in measure(instance, rig) do
-			local seen = false
-			for _, report in reports do
-				if
-					OccupantWatchRules.fresh(report, now)
-					and inView(report, { perch.at })
-					and clearLine(report.position, perch.at, params)
-				then
-					seen = true
-					break
-				end
+		local perch = measure(instance, rig)
+		local seen = false
+		for _, report in reports do
+			if
+				OccupantWatchRules.fresh(report, now)
+				and inView(report, { perch.at })
+				and clearLine(report.position, perch.at, params)
+			then
+				seen = true
+				break
 			end
-			table.insert(views, { perch = perch, seen = seen })
 		end
+		table.insert(views, { perch = perch, seen = seen })
 	end
 	return views
 end

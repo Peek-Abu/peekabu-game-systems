@@ -3,7 +3,8 @@
 	NpcStrideFormulas: how fast an NPC's walk or run clip plays. A locomotion clip plants its feet at one speed at
 	1x (`NpcAnimations.walkPlantedSpeed` / `runPlantedSpeed`); played at speed / plantedSpeed the feet stay planted
 	whatever speed the NPC moves at (a tier's faster patrol, a slow corner). Clamped to STRIDE_MIN_RATE ..
-	STRIDE_MAX_RATE; 1x when the clip names no planted speed. Pure.
+	STRIDE_MAX_RATE; 1x when the clip names no planted speed. A scaled NPC (Model:ScaleTo, `scale`) takes strides that
+	much shorter, so its clip plants at plantedSpeed x scale. Pure.
 
 	@class NpcStrideFormulas
 ]=]
@@ -14,11 +15,12 @@ local NpcConstants = require(ServerScriptService.Features.Npc.Data.NpcConstants)
 
 local NpcStrideFormulas = {}
 
-function NpcStrideFormulas.rate(speed: number, plantedSpeed: number?): number
+function NpcStrideFormulas.rate(speed: number, plantedSpeed: number?, scale: number?): number
 	if plantedSpeed == nil or plantedSpeed <= 0 then
 		return 1
 	end
-	return math.clamp(speed / plantedSpeed, NpcConstants.STRIDE_MIN_RATE, NpcConstants.STRIDE_MAX_RATE)
+	local planted = plantedSpeed * (if scale ~= nil and scale > 0 then scale else 1)
+	return math.clamp(speed / planted, NpcConstants.STRIDE_MIN_RATE, NpcConstants.STRIDE_MAX_RATE)
 end
 
 return NpcStrideFormulas

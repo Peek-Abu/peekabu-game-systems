@@ -171,7 +171,7 @@ function NpcBehaviourSystem.updatePose(agent: Agent, stride: boolean)
 	if handle ~= nil and pose ~= "idle" then
 		local planted = if pose == "walk" then animations.walkPlantedSpeed else animations.runPlantedSpeed
 		if planted ~= nil then
-			handle:adjustSpeed(NpcStrideFormulas.rate(speed, planted))
+			handle:adjustSpeed(NpcStrideFormulas.rate(speed, planted, agent.model:GetScale()))
 		end
 	end
 end
@@ -306,7 +306,9 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 		if victim ~= nil then
 			agent.humanoid.WalkSpeed = def.runSpeed
 			-- A game's brain may name any victim: only attack within range (as the default brain does), else close in.
-			if NpcBrainRules.inAttackRange(position, victim.position, def.attackRange, intent.verticalReach) then
+			-- A scaled NPC (Model:ScaleTo) reaches that much less (or more).
+			local range = def.attackRange * agent.model:GetScale()
+			if NpcBrainRules.inAttackRange(position, victim.position, range, intent.verticalReach) then
 				attack(agent, victim, now, deps)
 			else
 				agent.mover:moveTo(victim.position, now, lineOfSight(agent, victim))

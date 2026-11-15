@@ -348,7 +348,7 @@ local function think(mind: Mind, senses: Senses): Step
 			nextMind.perch = nil
 			nextMind.perchedAt = nil
 			nextMind.droppedAt = now
-			local floor = OccupantPerchRules.floorFor(perch)
+			local floor = OccupantPerchRules.floorFor(perch, senses)
 			return M.addEffect({ mind = nextMind, intent = IDLE, cue = cue }, { kind = "drop", position = floor })
 		end
 		if M.flat(senses.position, senses.restPoint) <= OccupantConstants.REACHED_DISTANCE then
