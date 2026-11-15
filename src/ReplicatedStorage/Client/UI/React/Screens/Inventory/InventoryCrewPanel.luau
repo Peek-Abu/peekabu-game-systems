@@ -4,7 +4,7 @@
 	employee in their colour: a bright art window with rays and the employee in 3D in the skin they wear (a static
 	ToonViewport), the skin's name on a ribbon over the window's top edge, "You!" on the one you play; under it the
 	name, "Bunny · Crew speedster", the ability chip with its render, and the buttons for the card's state (Wearing +
-	Skins, Equip + Skins, or locked: an interactive hire price + Look, with the night padlock on the art). Then the "???" card.
+	Skins, Equip + Skins, or locked: an interactive hire price + Look; a price tag on the card's top-right corner, never over the art). Then the "???" card.
 	The cards come from InventoryViewModel.crew; nothing here is per character. Presentational (exempt; story in
 	InventoryScreen.story).
 
@@ -83,6 +83,18 @@ local function window(color: Tint, size: Vector2, children: { [string]: React.Re
 	}, nodes)
 end
 
+local function hireTag(phone: boolean): React.ReactNode
+	local frame = VM.crewTagFrame(phone)
+	return e(ToonIcon, {
+		icon = "priceTag",
+		anchor = frame.anchor,
+		position = frame.position,
+		size = UDim2.fromOffset(frame.size, frame.size),
+		drop = 4,
+		zIndex = 6,
+	})
+end
+
 local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: number): React.ReactNode
 	local layout = props.layout
 	local phone = layout.phone
@@ -107,18 +119,6 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 			zIndex = 2,
 		}),
 	}
-	if locked then
-		local lock = math.floor(w * 0.3)
-		-- Not hired yet: a price tag (you can hire them for Credits).
-		art.lock = e(ToonIcon, {
-			icon = "priceTag",
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromScale(0.5, 0.62),
-			size = UDim2.fromOffset(lock, lock),
-			drop = 4,
-			zIndex = 3,
-		})
-	end
 
 	local face: { [string]: React.ReactNode } = {
 		window = window(entry.color, Vector2.new(w - 20, artHeight), art),
@@ -268,6 +268,8 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 				zIndex = 5,
 			})
 			else nil,
+		-- Not hired yet: the price tag on the top-right corner, never over the portrait (owner pick 11-15, Option 2).
+		tag = if locked then hireTag(phone) else nil,
 		you = if wearing
 			then e(ToonFlag, {
 				text = "You!",

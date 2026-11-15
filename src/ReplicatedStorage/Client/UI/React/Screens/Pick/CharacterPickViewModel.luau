@@ -133,4 +133,19 @@ function VM.header(phone: boolean): Header
 	}
 end
 
+export type TagFrame = { anchor: Vector2, position: UDim2, size: number }
+
+--[=[
+	Where a locked employee's hire tag sits on its pick-list row (`height`: the row plate's design height; owner pick
+	2026-11-15, Option 2): the row's top-right corner, where the free employee's FREE flag sits, never over the portrait
+	at the row's left. `size` is the square tag's side (design px).
+]=]
+function VM.tagFrame(height: number): TagFrame
+	return {
+		anchor = Vector2.new(1, 0),
+		position = UDim2.new(1, 10, 0, math.floor(height * 0.08)),
+		size = math.max(24, math.floor(height * 0.62)),
+	}
+end
+
 return VM

@@ -113,4 +113,25 @@ return function()
 			expect(width <= h.subWidth - 48).to.equal(true)
 		end)
 	end)
+	describe("tagFrame", function()
+		-- Owner pick 2026-11-15 (Option 2): the hire tag sits on the row's top-right corner, where Pippa's FREE flag
+		-- sits, never over the portrait at the row's left.
+		it("hangs on the row's top-right corner", function()
+			for _, height in { 46, 72 } do
+				local frame = VM.tagFrame(height)
+				expect(frame.anchor).to.equal(Vector2.new(1, 0))
+				expect(frame.position.X.Scale).to.equal(1)
+				expect(frame.position.Y.Scale).to.equal(0)
+				expect(frame.position.Y.Offset <= height * 0.2).to.equal(true)
+			end
+		end)
+
+		it("stays a small mark, about the FREE flag's height", function()
+			for _, height in { 46, 72 } do
+				local size = VM.tagFrame(height).size
+				expect(size >= 24).to.equal(true)
+				expect(size <= height * 0.7).to.equal(true)
+			end
+		end)
+	end)
 end

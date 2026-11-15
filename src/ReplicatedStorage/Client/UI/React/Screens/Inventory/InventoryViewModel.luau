@@ -211,6 +211,21 @@ function VM.skinKey(id: string): string
 	return string.match(id, "^[^%.]+%.(.+)$") or id
 end
 
+export type TagFrame = { anchor: Vector2, position: UDim2, size: number }
+
+--[=[
+	Where a locked employee's hire tag hangs on its Crew card (owner pick 2026-11-15, Option 2): the card's top-right
+	corner, where the wearer's "You!" flag sits (anchor top-right, 14 px past the edge), never over the portrait.
+	`size` is the square tag's side (design px).
+]=]
+function VM.crewTagFrame(phone: boolean): TagFrame
+	return {
+		anchor = Vector2.new(1, 0),
+		position = UDim2.new(1, 14, 0, 0),
+		size = if phone then 36 else 56,
+	}
+end
+
 -- The mark on a locked item card: a price tag when its band is a price (you can buy it), else the lock (owner pick
 -- 2026-11-13: the price tag only on what you can buy).
 function VM.lockIcon(card: { band: Band? }): UIAssets.ToonIcon
