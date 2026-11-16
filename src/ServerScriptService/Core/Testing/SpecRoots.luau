@@ -130,9 +130,12 @@ function SpecRoots.assertAllSpecsCovered(roots: { Instance })
 	end
 end
 
--- The modules allowed without a spec sibling, each with its reason: SpecExemptionsReplicated and
--- SpecExemptionsServer, joined (split by realm so neither list is over the file-length cap).
+-- The modules allowed without a spec sibling, each with its reason: SpecExemptionsReplicated, SpecExemptionsUI and
+-- SpecExemptionsServer, joined (split by realm, and the UI tree apart, so no list is over the file-length cap).
 local EXEMPT_MODULES: { [string]: string } = table.clone(require(script.Parent.SpecExemptionsReplicated))
+for name, reason in require(script.Parent.SpecExemptionsUI) do
+	EXEMPT_MODULES[name] = reason
+end
 for name, reason in require(script.Parent.SpecExemptionsServer) do
 	EXEMPT_MODULES[name] = reason
 end
@@ -188,7 +191,7 @@ function SpecRoots.assertAllModulesSpecced(roots: { Instance })
 			`{#missing} module(s) have no .spec sibling and are not exempt: `
 				.. table.concat(missing, ", ")
 				.. ". Add a <name>.spec.luau next to each (write the spec first — see docs/testing.md), "
-				.. "or, if a unit test would be tautological, add it to SpecExemptionsReplicated or SpecExemptionsServer (Core/Testing) with a reason."
+				.. "or, if a unit test would be tautological, add it to SpecExemptionsReplicated, SpecExemptionsUI or SpecExemptionsServer (Core/Testing) with a reason."
 		)
 	end
 end

@@ -16,6 +16,7 @@
 local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Core.Testing.SpecExemptionsReplicated"] = "static data: the exemption list itself (no logic)",
 	["ServerScriptService.Core.Testing.SpecExemptionsServer"] = "static data: the exemption list itself (no logic)",
+	["ServerScriptService.Core.Testing.SpecExemptionsUI"] = "static data: the exemption list itself (no logic)",
 	["ServerScriptService.Features.Npc.Data.NpcTypes"] = "type definitions only (no runtime logic)",
 	["ServerScriptService.Features.Npc.Data.NpcConstants"] = "static names and tuning (no logic)",
 	["ServerScriptService.Features.Badge.Systems.BadgeMilestoneSystem"] = "signal shell (BadgeMilestoneRules and OccupantEscapeRules are specced)",
