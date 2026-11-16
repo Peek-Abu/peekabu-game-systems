@@ -1,0 +1,55 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local OfficeDoorLeafSystem = require(script.Parent.OfficeDoorLeafSystem)
+local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local Visuals = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
+
+local CollectionService = game:GetService("CollectionService")
+
+return function()
+	local parent
+
+	beforeEach(function()
+		parent = Instance.new("Folder")
+	end)
+
+	afterEach(function()
+		parent:Destroy()
+	end)
+
+	describe("leafPart", function()
+		it("builds an anchored, colliding, queryable wooden leaf under the parent", function()
+			local leaf = OfficeDoorLeafSystem.leafPart("DoorLeaf", Vector3.new(4, 7, 0.5), false, parent)
+			expect(leaf.Name).to.equal("DoorLeaf")
+			expect(leaf.Parent).to.equal(parent)
+			expect(leaf.Size).to.equal(Vector3.new(4, 7, 0.5))
+			expect(leaf.Anchored).to.equal(true)
+			expect(leaf.CanCollide).to.equal(true)
+			expect(leaf.CanQuery).to.equal(true)
+			expect(leaf.CanTouch).to.equal(false)
+			expect(leaf.Color).to.equal(OfficeConstants.DOOR_COLOR)
+			expect(leaf.Material).to.equal(Enum.Material.WoodPlanks)
+			expect(CollectionService:HasTag(leaf, OccupantConstants.SIGHT_THROUGH_TAG)).to.equal(false)
+		end)
+
+		it("makes a glass leaf half see-through and tags it SightThrough", function()
+			local leaf = OfficeDoorLeafSystem.leafPart("Glass", Vector3.new(4, 7, 0.5), true, parent)
+			expect(leaf.Material).to.equal(Enum.Material.Glass)
+			expect(leaf.Transparency).to.equal(0.5)
+			expect(CollectionService:HasTag(leaf, OccupantConstants.SIGHT_THROUGH_TAG)).to.equal(true)
+		end)
+	end)
+
+	describe("dress", function()
+		it("is false and leaves the greybox leaf when the kit has no door template", function()
+			local art = Visuals.new(Instance.new("Folder"))
+			local solid = OfficeDoorLeafSystem.leafPart("DoorLeaf", Vector3.new(4, 7, 0.5), false, parent)
+			local glass = OfficeDoorLeafSystem.leafPart("Glass", Vector3.new(4, 7, 0.5), true, parent)
+			expect(OfficeDoorLeafSystem.dress(art, solid, false)).to.equal(false)
+			expect(OfficeDoorLeafSystem.dress(art, glass, true)).to.equal(false)
+			expect(solid.Material).to.equal(Enum.Material.WoodPlanks)
+		end)
+	end)
+end

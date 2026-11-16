@@ -46,6 +46,11 @@
 	model(s)" when there were any): a transit whose reset errored (it runs guarded) must never leave an old office,
 	with its door leaves, standing beside the new one. `stop` still destroys the tracked model.
 
+	Split out of this file: OfficeRebuildSystem (layout generation with retries, the generated-layout checks, the
+	piecewise teardown), OfficeShiftSpawnSystem (the spawn roll and placing it, the overtime batch, hidden-item reveals
+	and searched dressing) and OfficeSiteUtils (the world answers: spawn frame, route, rest point, safe zone, loading
+	bay, whereIs, outdoors, entrances; an authored site's when one stands in).
+
 	Spec-exempt shell (Instances, signals); the decisions are the specced OfficeLayoutRules, OfficeLayoutUtils,
 	OfficeSpawnUtils and OfficeSpawnRules.
 
@@ -57,9 +62,6 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeServer = ServerScriptService.Features.Office
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
-local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
-local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
-local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local OfficeAnomalyConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeAnomalyConstants)
@@ -67,17 +69,12 @@ local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeLayoutConstants = require(OfficeServer.Data.OfficeLayoutConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutRules = require(OfficeServer.Rules.OfficeLayoutRules)
-local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
-local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
-local SchoolLayoutGenerationUtils = require(ServerScriptService.Features.School.Utils.SchoolLayoutGenerationUtils)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
-local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
-local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeFurniturePlacementUtils = require(OfficeServer.Utils.OfficeFurniturePlacementUtils)
-local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
+local OfficeSiteUtils = require(OfficeServer.Utils.OfficeSiteUtils)
 local OfficeLootUtils = require(OfficeServer.Utils.OfficeLootUtils)
 local OfficeOozeSystem = require(OfficeServer.Systems.OfficeOozeSystem)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
@@ -85,9 +82,10 @@ local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
 local OfficeDoorSystem = require(OfficeServer.Systems.OfficeDoorSystem)
 local OfficeDressingSystem = require(OfficeServer.Systems.OfficeDressingSystem)
 local OfficeSearchedDressingSystem = require(OfficeServer.Systems.OfficeSearchedDressingSystem)
+local OfficeRebuildSystem = require(OfficeServer.Systems.OfficeRebuildSystem)
+local OfficeShiftSpawnSystem = require(OfficeServer.Systems.OfficeShiftSpawnSystem)
 local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
-local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -97,16 +95,7 @@ type Marker = OfficeTypes.Marker
 
 local log = Logger.new("OfficeServiceServer")
 
--- Desks and break tables grew (HIDE_FURNITURE_SCALE): any that no longer fit where it stands is removed.
-local function fitted(layout: OfficeTypes.Layout): OfficeTypes.Layout
-	local kept, dropped = OfficeLayoutUtils.dropUnfit(layout, OfficeLayoutRules)
-	if dropped > 0 then
-		log:info(`dropped {dropped} desk(s) and table(s) that no longer fit`)
-	end
-	return kept
-end
-
-local LAYOUT = fitted(OfficeFurniturePlacementUtils.normalize(OfficeLayoutConstants.LAYOUT))
+local LAYOUT = OfficeRebuildSystem.fitted(OfficeFurniturePlacementUtils.normalize(OfficeLayoutConstants.LAYOUT))
 local depths = OfficeLayoutUtils.depths(LAYOUT)
 
 local markerById: { [string]: Marker } = {}
@@ -138,37 +127,7 @@ local ready: SignalTyped.Signal<Folder> = SignalTyped.new()
 -- An authored site standing in for the generated office (useSite; the Training map); nil: the office.
 local site: OfficeTypes.Site? = nil
 
--- The floor point under a marker, in the world.
-local function floorAt(marker: Marker): CFrame
-	return OfficeConstants.ORIGIN * CFrame.new(marker.x, 0, marker.z)
-end
-
--- Where an item stands: furniture tops for surface markers, the floor otherwise.
-local function spotFrame(marker: Marker): CFrame
-	local top = OfficeLayoutUtils.surfaceTopFor(marker)
-	if top ~= nil then
-		local current = built
-		if current ~= nil then
-			for _, part in current.model:GetDescendants() do
-				if
-					part:IsA("BasePart")
-					and (
-						part:GetAttribute("OfficeMarkerId") == marker.id
-						or part:GetAttribute("OfficeDeskMarker") == marker.id
-					)
-				then
-					local support = part:GetAttribute("ArtSupportSurfaceY")
-					local onArt = OfficeSurfaceUtils.surfaceOnPart(part.CFrame, part.Size, support)
-					if onArt ~= nil then
-						return onArt
-					end
-				end
-			end
-		end
-		return OfficeConstants.ORIGIN * CFrame.new(marker.x, top, marker.z)
-	end
-	return floorAt(marker)
-end
+local floorAt = OfficeSiteUtils.floorAt
 
 -- Harlow's route in the world, in walking order, and his rest point (M2).
 local routePoints: { Vector3 } = {}
@@ -180,56 +139,10 @@ for _, id in LAYOUT.route do
 end
 local restMarker = markerById[LAYOUT.rest]
 
--- Seeds tried after the shift's own when generation fails (each the next seed up), before the error is raised.
-local GENERATE_RETRIES = 3
-
--- The layout of `map` generated from `seed`, or, when generation errors (every attempt invalid), from the next seed
--- up, up to GENERATE_RETRIES more times, so a shift still starts; then the last error is raised. Returns the seed used.
-local function generateLayout(seed: number, map: ShiftTypes.MapId): (OfficeTypes.Layout, number)
-	local generate = if map == "school"
-		then SchoolLayoutGenerationUtils.generate
-		else OfficeLayoutGenerationUtils.generate
-	local lastError = ""
-	for retry = 0, GENERATE_RETRIES do
-		local tried = seed + retry
-		local ok, result = pcall(generate, OfficeLayoutConstants.LAYOUT, tried)
-		if ok then
-			return result, tried
-		end
-		lastError = tostring(result)
-		log:warn(`{map} generation from seed {tried} failed: {lastError}`)
-	end
-	error(`{map} generation failed from seed {seed} to {seed + GENERATE_RETRIES}: {lastError}`, 0)
-end
-
--- Destroys `instance` a piece at a time (each folder's children, then the folder), stepping the build's pace between
--- pieces: destroying a whole office in one call removes thousands of parts in one unyielding step.
-local function teardown(instance: Instance)
-	for _, child in instance:GetChildren() do
-		if child:IsA("Folder") then
-			teardown(child)
-		else
-			child:Destroy()
-		end
-		OfficeBuildPaceTracker.step()
-	end
-	instance:Destroy()
-end
-
 local function rebuild(requested: number, map: ShiftTypes.MapId)
-	local layout, seed = generateLayout(requested, map)
+	local layout, seed = OfficeRebuildSystem.generateLayout(requested, map)
 	OfficeBuildPaceTracker.step()
-	local ok, errors = OfficeLayoutRules.validate(layout)
-	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)
-	local capacity, reason = OfficeLayoutRules.checkCapacity(layout)
-	assert(capacity, reason or "generated layout capacity")
-	local routeOk, routeReason = OfficeLayoutRules.checkRoute(layout)
-	assert(routeOk, routeReason or "generated layout route")
-	local hideOk, hideReason = OfficeLayoutRules.checkHideSpots(layout)
-	assert(hideOk, hideReason or "generated layout hide spots")
-	local walkOk, walkReason =
-		OfficeLayoutRules.checkWalk(layout, OfficeConstants.WALK_SPEED * OfficeConstants.MAX_WALK_SECONDS)
-	assert(walkOk, walkReason or "generated layout walk")
+	OfficeRebuildSystem.checkGenerated(layout)
 	OfficeBuildPaceTracker.step()
 	LAYOUT = layout
 	depths = OfficeLayoutUtils.depths(layout)
@@ -250,7 +163,7 @@ local function rebuild(requested: number, map: ShiftTypes.MapId)
 		-- Gone before the (yielding) build starts: nothing reads a destroyed office while the new one goes up.
 		built = nil
 		old.doors.destroy()
-		teardown(old.model)
+		OfficeRebuildSystem.teardown(old.model)
 	end
 	-- Guard: any other office model in Workspace (one a past cleanup missed) goes too, with a warning as evidence.
 	OfficeBuildSystem.clearStrays()
@@ -267,40 +180,6 @@ local function rebuild(requested: number, map: ShiftTypes.MapId)
 	layoutMap = map
 	OfficeBuildPaceTracker.step()
 	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model, nil, seed)
-end
-
--- A rolled valuable as it spawns (fully grimy, unappraised); nil for trash.
-local function fresh(roll: CargoTypes.AppraisalRoll?): CargoTypes.Appraisal?
-	return if roll ~= nil then CargoAppraisalFormulas.fresh(roll) else nil
-end
-
-local function rollPlan(
-	options: { seed: number, variant: string, quota: number, map: ShiftTypes.MapId }
-): OfficeTypes.SpawnPlan
-	-- The map's own spawn numbers: the School rolls more mess and richer valuables than the Office.
-	local byMap = OfficeConstants.SPAWN_BY_MAP
-	local spawn = if options.map == "school" then byMap.school else byMap.office
-	local rollOptions: OfficeTypes.RollOptions = {
-		quota = options.quota,
-		variant = options.variant,
-		dirtyRooms = spawn.dirtyRooms,
-		pilesPerRoom = spawn.pilesPerRoom,
-		valuables = spawn.valuables,
-		valueScale = spawn.valueScale,
-		topUpMax = spawn.topUpMax,
-	}
-	local plan: OfficeTypes.SpawnPlan
-	for attempt = 0, OfficeConstants.ROLL_ATTEMPTS - 1 do
-		local seed = options.seed + attempt
-		plan = OfficeSpawnUtils.roll(LAYOUT, rollOptions, Random.new(seed))
-		local ok, reason = OfficeSpawnRules.check(plan, LAYOUT, options.quota)
-		if ok then
-			return plan
-		end
-		log:warn(`spawn roll {seed} missed a guarantee: {reason or "?"}`)
-	end
-	log:warn(`no spawn roll from seed {options.seed} met the guarantees; using the last one`)
-	return plan
 end
 
 export type OfficeServiceServer = {
@@ -388,27 +267,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		built = current
 		-- The office at night (exit signs, blue monitors, the elevator, ambience emitters), once.
 		OfficeDecorSystem.build(LAYOUT, OfficeConstants.ORIGIN, current.model)
-		local cleared = VacuumServiceServer.pileCleared:Connect(function(pile)
-			local item: BasePart? = hidden[pile]
-			hidden[pile] = nil
-			if item ~= nil and item.Parent ~= nil then
-				CargoServiceServer:reveal(item)
-			end
-		end)
-		table.insert(stoppers, function()
-			cleared:Disconnect()
-		end)
-		-- Searched desks and lockers stay visibly open until the shift ends.
-		local dressed = CargoServiceServer.searched:Connect(function(part)
-			if part.Name == "Desk" then
-				dressing.apply(part, "desk")
-			elseif part.Name == "Locker" then
-				dressing.apply(part, "locker")
-			end
-		end)
-		table.insert(stoppers, function()
-			dressed:Disconnect()
-		end)
+		OfficeShiftSpawnSystem.watch(hidden, dressing, stoppers)
 	end,
 
 	stop = function(self)
@@ -460,7 +319,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		end
 		local current = built
 		assert(current ~= nil, "OfficeServiceServer:beginShift before start")
-		local plan = rollPlan(options)
+		local plan = OfficeShiftSpawnSystem.roll(LAYOUT, options)
 		local folder = Instance.new("Folder")
 		folder.Name = OfficeConstants.SHIFT_FOLDER_NAME
 		folder.Parent = current.model
@@ -468,42 +327,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		shiftFolder = folder
 		CargoServiceServer:useContainer(folder)
 
-		for _, pilePlan in plan.piles do
-			local marker = markerById[pilePlan.marker]
-			if marker ~= nil then
-				local floor = floorAt(marker)
-				local pile = VacuumServiceServer:spawnPile(pilePlan.kind, floor, folder)
-				local hides = pilePlan.hides
-				if hides ~= nil then
-					hidden[pile] = CargoServiceServer:spawnItem(
-						hides,
-						floor,
-						folder,
-						{ hidden = true, appraisal = fresh(pilePlan.appraisal) }
-					)
-					pile:SetAttribute(CargoConstants.BURIED_ATTRIBUTE, true)
-				end
-			end
-			OfficeBuildPaceTracker.step()
-		end
-		for _, itemPlan in plan.items do
-			local marker = markerById[itemPlan.marker]
-			if marker ~= nil then
-				CargoServiceServer:spawnItem(
-					itemPlan.kind,
-					spotFrame(marker),
-					folder,
-					{ appraisal = fresh(itemPlan.appraisal) }
-				)
-			end
-			OfficeBuildPaceTracker.step()
-		end
-		for _, search in plan.searchables do
-			local part: BasePart? = current.searchables[search.marker]
-			if part ~= nil then
-				CargoServiceServer:stockSearchable(part, search.kind, fresh(search.appraisal))
-			end
-		end
+		OfficeShiftSpawnSystem.place(plan, current, folder, markerById, hidden)
 		lastPlan = plan
 		current.doors.openAtStart(layoutSeed)
 		OfficeDressingSystem.build(LAYOUT, plan, layoutSeed, OfficeConstants.ORIGIN, current.model)
@@ -528,19 +352,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		end
 		overtimeSpawned = true
 		local batch = OfficeSpawnUtils.rollOvertime(LAYOUT, plan, Random.new())
-		local spawned = 0
-		for _, itemPlan in batch do
-			local marker = markerById[itemPlan.marker]
-			if marker ~= nil then
-				CargoServiceServer:spawnItem(
-					itemPlan.kind,
-					spotFrame(marker),
-					folder,
-					{ appraisal = fresh(itemPlan.appraisal), overtime = true }
-				)
-				spawned += 1
-			end
-		end
+		local spawned = OfficeShiftSpawnSystem.placeOvertime(batch, built, folder, markerById)
 		log:info(`overtime loot: {spawned} items`)
 		return spawned
 	end,
@@ -604,11 +416,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		(OfficeLoadingBayUtils.arrivalFrame). Shift arrivals, the shift start and crew respawns all land here.
 	]=]
 	spawnCFrame = function(_self, index)
-		local authored = site
-		if authored ~= nil then
-			return authored.spawnCFrame(index)
-		end
-		return OfficeConstants.ORIGIN * OfficeLoadingBayUtils.arrivalFrame(LAYOUT.truck, index)
+		return OfficeSiteUtils.spawnCFrame(site, LAYOUT, index)
 	end,
 
 	container = function(_self)
@@ -619,25 +427,14 @@ local OfficeServiceServer: OfficeServiceServer = {
 		Harlow's patrol points in the world, in walking order (a loop).
 	]=]
 	route = function(_self)
-		local authored = site
-		if authored ~= nil then
-			return authored.route()
-		end
-		return table.clone(routePoints)
+		return OfficeSiteUtils.route(site, routePoints)
 	end,
 
 	--[=[
 		Where Harlow takes his break (the break room).
 	]=]
 	restPoint = function(_self)
-		local authored = site
-		if authored ~= nil then
-			return authored.restPoint()
-		end
-		if restMarker == nil then
-			error("OfficeServiceServer:restPoint: the layout has no rest marker")
-		end
-		return floorAt(restMarker).Position
+		return OfficeSiteUtils.restPoint(site, restMarker)
 	end,
 
 	--[=[
@@ -645,30 +442,14 @@ local OfficeServiceServer: OfficeServiceServer = {
 		or walks into.
 	]=]
 	safeZone = function(_self)
-		local authored = site
-		if authored ~= nil then
-			return authored.safeZone()
-		end
-		local min, max = OfficeLoadingBayUtils.truckBox(LAYOUT.truck)
-		local low = OfficeConstants.ORIGIN:PointToWorldSpace(min)
-		local high = OfficeConstants.ORIGIN:PointToWorldSpace(max)
-		return low:Min(high), low:Max(high)
+		return OfficeSiteUtils.safeZone(site, LAYOUT)
 	end,
 
 	--[=[
 		The loading bay in the world: its min and max corners, floor to wall top. Harlow may walk it, but never lingers.
 	]=]
 	loadingBay = function(_self)
-		local authored = site
-		if authored ~= nil then
-			return authored.loadingBay()
-		end
-		local start = OfficeLayoutUtils.room(LAYOUT, LAYOUT.startRoom)
-		if start == nil then
-			error("OfficeServiceServer:loadingBay: the layout has no start room")
-		end
-		local min, max = OfficeLayoutUtils.bounds(start, OfficeConstants.WALL_HEIGHT)
-		return OfficeConstants.ORIGIN:PointToWorldSpace(min), OfficeConstants.ORIGIN:PointToWorldSpace(max)
+		return OfficeSiteUtils.loadingBay(site, LAYOUT)
 	end,
 
 	--[=[
@@ -677,20 +458,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		elsewhere.
 	]=]
 	whereIs = function(_self, position)
-		local authored = site
-		if authored ~= nil then
-			return authored.whereIs(position)
-		end
-		local localPoint = OfficeConstants.ORIGIN:PointToObjectSpace(position)
-		local room, index = OfficeLayoutUtils.roomAt(LAYOUT, localPoint.X, localPoint.Z)
-		if room == nil then
-			local ground = OfficeGroundsUtils.groundAt(LAYOUT.grounds or {}, localPoint.X, localPoint.Z)
-			if ground ~= nil then
-				return ground.name, 0, nil
-			end
-			return nil, nil, nil
-		end
-		return room.name, depths[room.id], index
+		return OfficeSiteUtils.whereIs(site, LAYOUT, depths, position)
 	end,
 
 	--[=[
@@ -698,19 +466,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		volumes). Empty when the layout has no grounds (the boot layout).
 	]=]
 	outdoors = function(_self)
-		local boxes: { { min: Vector3, max: Vector3 } } = {}
-		if site ~= nil then
-			return boxes
-		end
-		local grounds: { OfficeTypes.Room } = LAYOUT.grounds or {}
-		for _, ground in grounds do
-			local low = OfficeConstants.ORIGIN:PointToWorldSpace(Vector3.new(ground.minX, 0, ground.minZ))
-			local high = OfficeConstants.ORIGIN:PointToWorldSpace(
-				Vector3.new(ground.maxX, OfficeConstants.OUTSIDE.VOLUME_HEIGHT, ground.maxZ)
-			)
-			table.insert(boxes, { min = low:Min(high), max = low:Max(high) })
-		end
-		return boxes
+		return OfficeSiteUtils.outdoors(site, LAYOUT)
 	end,
 
 	--[=[
@@ -718,18 +474,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		its exit's room (insideFrame). Nil, nil when the layout has no such entrance (or its exit's room is missing).
 	]=]
 	entrance = function(_self, id)
-		if site ~= nil then
-			return nil, nil
-		end
-		local entrances: { OfficeTypes.Entrance } = LAYOUT.entrances or {}
-		for _, entrance in entrances do
-			local room = OfficeLayoutUtils.room(LAYOUT, entrance.exit.a)
-			if entrance.id == id and room ~= nil then
-				return OfficeConstants.ORIGIN * OfficeGroundsUtils.outsideFrame(entrance),
-					OfficeConstants.ORIGIN * OfficeGroundsUtils.insideFrame(entrance, room)
-			end
-		end
-		return nil, nil
+		return OfficeSiteUtils.entrance(site, LAYOUT, id)
 	end,
 
 	--[=[
