@@ -58,6 +58,16 @@ return function()
 			expect(PaperHudScaleViewModel.scale(Vector2.new(1192, 548), "phone")).to.equal(1)
 		end)
 
+		it('shrinks to 73% on a short laptop (owner 11-16: "do 73% size")', function()
+			expect(UIPaperConstants.HUD_SCALE_MIN).to.equal(0.73)
+			expect(PaperHudScaleViewModel.scale(Vector2.new(1280, 720), "desktop")).to.equal(0.73)
+			expect(PaperHudScaleViewModel.scale(Vector2.new(1366, 768), "desktop")).to.equal(0.73)
+		end)
+
+		it("keeps the smallest desktop text at 17 design px, so 0.73 still draws it at 12 px or more", function()
+			expect(UIPaperConstants.TEXT_MIN.desktop).to.equal(17)
+		end)
+
 		it("keeps the smallest desktop text readable at the minimum", function()
 			-- The kit's smallest desktop text (UIPaperConstants.TEXT_MIN) drawn at the minimum scale.
 			local drawn = UIPaperConstants.TEXT_MIN.desktop * UIPaperConstants.HUD_SCALE_MIN

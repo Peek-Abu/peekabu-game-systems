@@ -166,7 +166,7 @@ local function offerCard(
 			text = card.line,
 			font = "body",
 			color = COLOR.white,
-			textSize = math.max(if phone then 11 else 16, nameSize - 8),
+			textSize = math.max(if phone then 11 else 17, nameSize - 8),
 			anchor = Vector2.new(0, 1),
 			position = UDim2.new(0, 12, 1, -DEPTH.lip - 4),
 			size = UDim2.new(0.62, -12, 0, nameSize),

@@ -201,7 +201,7 @@ local function EmoteWheelScreen(props: EmoteWheelScreenProps): React.ReactNode
 			then e(ToonButton, {
 				variant = "sky",
 				text = "CHAT",
-				textSize = 16,
+				textSize = 17,
 				anchor = Vector2.new(1, 0.5),
 				position = UDim2.new(1, -12, 0.42, 0),
 				size = UDim2.fromOffset(112, 48),

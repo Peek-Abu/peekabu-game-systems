@@ -149,7 +149,8 @@ local UIPaperConstants = {
 	-- The desktop UI scales with the window (PaperHudScaleViewModel): never below HUD_SCALE_MIN (a small laptop or a
 	-- tablet still draws TEXT_MIN.desktop at READABLE_PX) and never above HUD_SCALE_MAX (a 4K monitor draws the
 	-- 1920x1080 design at 2x).
-	HUD_SCALE_MIN = 0.75,
+	-- 0.73: owner 11-16 ("do 73% size"); TEXT_MIN.desktop is 17 so the smallest text still draws at 12.4 px.
+	HUD_SCALE_MIN = 0.73,
 	HUD_SCALE_MAX = 2,
 	-- The tallest desktop column (the hub's profile card and four menu tiles) in design px: a window too short to
 	-- hold it at HUD_SCALE_MIN is drawn smaller, down to HUD_SCALE_FLOOR, rather than cutting the column off.
@@ -157,8 +158,8 @@ local UIPaperConstants = {
 	HUD_SCALE_FLOOR = 0.4,
 	-- The smallest real px any text is drawn at: the floor of fitted (TextScaled) text (PaperScaleContext.floor).
 	READABLE_PX = 12,
-	-- The smallest design text size per layout: desktop text is drawn at >= 0.75 of it, phone text at 1.
-	TEXT_MIN = table.freeze({ desktop = 16, phone = 12 }),
+	-- The smallest design text size per layout: desktop text is drawn at >= HUD_SCALE_MIN of it, phone text at 1.
+	TEXT_MIN = table.freeze({ desktop = 17, phone = 12 }),
 	-- Every tilt the kit uses, in degrees.
 	STAMP_TILT = -3,
 	STICKY_TILT = 2,

@@ -180,7 +180,7 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 		if soon then
 			-- Over the tab's top-right corner, kept inside the bar (the screen's edge would cut a flag above it),
 			-- and wide enough for the whole word next to the notch. In a scroller it sits on the tab's top edge.
-			local flagText = if phone then 13 else 16
+			local flagText = if phone then 13 else 17
 			tabNodes[`soon{index}`] = e(ToonFlag, {
 				text = "Soon",
 				hue = "coral",

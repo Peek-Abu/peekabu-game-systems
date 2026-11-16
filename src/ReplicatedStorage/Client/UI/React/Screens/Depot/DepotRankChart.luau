@@ -59,7 +59,7 @@ local DESKTOP: Layout = {
 	bar = 34,
 	-- The staircase ends ~50 px inside the panel, so Big Boss's figure and YOU! pill keep clear of the right edge.
 	stairs = { x = 540, floor = 818, width = 108, gap = 12, base = 120, step = 46 },
-	stepText = { name = 22, longName = 19, level = 16 },
+	stepText = { name = 22, longName = 19, level = 17 },
 	badge = Vector2.new(70, 150),
 	portrait = Vector2.new(210, 250),
 	pill = { w = 104, h = 44, size = 28 },

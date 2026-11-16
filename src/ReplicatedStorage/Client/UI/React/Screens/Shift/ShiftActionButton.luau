@@ -73,7 +73,7 @@ local function ShiftActionButton(props: ShiftActionButtonProps): React.ReactNode
 	local face: { [string]: React.ReactNode } = {
 		label = e(ToonText, {
 			text = props.label,
-			textSize = if props.large then 24 else 16,
+			textSize = if props.large then 24 else 17,
 			position = UDim2.fromOffset(6, 0),
 			size = UDim2.new(1, -12, 1, 0),
 			align = "center",

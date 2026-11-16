@@ -113,7 +113,7 @@ local function ShiftClockOutBoard(props: ShiftClockOutBoardProps): React.ReactNo
 			text = view.hint,
 			font = "body",
 			color = UIToonConstants.shade("lilac").hi,
-			textSize = if phone then 12 else 16,
+			textSize = if phone then 12 else 17,
 			position = UDim2.fromOffset(left, if phone then 25 else 36),
 			size = UDim2.fromOffset(width - left - 24, if phone then 15 else 19),
 			fit = true,
@@ -122,7 +122,7 @@ local function ShiftClockOutBoard(props: ShiftClockOutBoardProps): React.ReactNo
 		tally = e(ToonPill, {
 			text = view.tally,
 			hue = if view.punched >= view.total then "mint" else "cream",
-			textSize = if phone then 12 else 16,
+			textSize = if phone then 12 else 17,
 			anchor = Vector2.new(1, 1),
 			position = UDim2.new(1, -12, 1, if phone then -6 else -9),
 			size = UDim2.fromOffset(if phone then 128 else 176, if phone then 24 else 32),
@@ -145,7 +145,7 @@ local function ShiftClockOutBoard(props: ShiftClockOutBoardProps): React.ReactNo
 			local nodes: { [string]: React.ReactNode } = {}
 			nodes.out = e(ToonText, {
 				text = "OUT",
-				textSize = if phone then 12 else 16,
+				textSize = if phone then 12 else 17,
 				size = UDim2.fromScale(1, 1),
 				align = "center",
 				fit = true,

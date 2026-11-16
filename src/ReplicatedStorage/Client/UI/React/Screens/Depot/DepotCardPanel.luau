@@ -170,7 +170,7 @@ local function arrivalCard(view: DepotCardViewModel.ArrivalView): React.ReactNod
 		contractName = e(ToonPill, {
 			text = view.slip,
 			hue = "grape",
-			textSize = 16,
+			textSize = 17,
 			tilt = -3,
 			position = UDim2.fromOffset(44, 160),
 			size = UDim2.fromOffset(176, 32),

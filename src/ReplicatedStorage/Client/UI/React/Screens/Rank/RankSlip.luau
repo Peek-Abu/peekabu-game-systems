@@ -128,7 +128,7 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 				text = if incident ~= nil then incident else breakdown or "",
 				font = "body",
 				color = if incident ~= nil then UIToonConstants.shade("coral").lo else UIToonConstants.COLOR.ink,
-				textSize = 16,
+				textSize = 17,
 				position = UDim2.fromOffset(left, 92),
 				size = UDim2.fromOffset(size.X - left - 20, 22),
 				fit = true,

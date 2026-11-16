@@ -71,7 +71,7 @@ local function SocialAskCard(props: Props): React.ReactNode
 		later = e(Button, {
 			variant = "secondary",
 			text = "NOT NOW",
-			textSize = if phone then 13 else 16,
+			textSize = if phone then 13 else 17,
 			small = true,
 			sound = "back",
 			position = UDim2.new(0.55, 4, 1, if phone then -40 else -52),

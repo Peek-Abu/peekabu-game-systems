@@ -93,7 +93,7 @@ local function Panel(props: Props): React.ReactNode
 		hide = e(Button, {
 			variant = "danger",
 			text = "X",
-			textSize = if phone then 13 else 16,
+			textSize = if phone then 13 else 17,
 			layout = "inline",
 			small = true,
 			sound = "back",
