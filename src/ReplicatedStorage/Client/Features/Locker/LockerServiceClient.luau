@@ -8,6 +8,8 @@
 	- When `LockerEvents.Opened` arrives, registers and opens the stage-1 opening scene (`LockerOpeningScreen`); when
 	  the opening finishes (or is skipped), pushes the rolled item into `CosmeticRevealStore` so `RevealScreen` shows
 	  it with its rarity fanfare (and duplicate refund ribbon if already owned).
+	- Ducks the hub music (an EqualizerSoundEffect on the Music group, like the shift's results duck) while an opening
+	  plays and its reveal is up (LockerViewModel.musicDucked), then eases it back: the track never stops (owner 11-16).
 	- The opening scene leaving the stack any other way (Escape or gamepad B pops it, the depot closing removes it) settles
 	  the opening the same way, so the reveal still shows and the Shop (hidden while an opening plays) comes back
 	  (owner check 11-16: Esc mid-opening lost the reveal and left the Shop blank with the HUD hidden).
@@ -16,6 +18,8 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local React = require(ReplicatedStorage.Packages.React)
@@ -36,6 +40,50 @@ local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 type LockerId = LockerTypes.LockerId
 
 local stoppers: { () -> () } = {}
+
+local musicDuck: EqualizerSoundEffect? = nil
+
+-- Eases the Music group down (on) or back up and away (off).
+local function setMusicDucked(on: boolean)
+	local current = musicDuck
+	if on then
+		if current ~= nil then
+			return
+		end
+		local group = SoundService:FindFirstChild("Music")
+		if group == nil or not group:IsA("SoundGroup") then
+			return
+		end
+		local duck = Instance.new("EqualizerSoundEffect")
+		duck.Name = "LockerDuck"
+		duck.LowGain = 0
+		duck.MidGain = 0
+		duck.HighGain = 0
+		duck.Parent = group
+		musicDuck = duck
+		local level = LockerViewModel.MUSIC_DUCK_DB
+		TweenService:Create(
+			duck,
+			TweenInfo.new(LockerViewModel.MUSIC_DUCK_IN),
+			{ LowGain = level, MidGain = level, HighGain = level }
+		):Play()
+	elseif current ~= nil then
+		musicDuck = nil
+		local up = TweenService:Create(
+			current,
+			TweenInfo.new(LockerViewModel.MUSIC_DUCK_OUT),
+			{ LowGain = 0, MidGain = 0, HighGain = 0 }
+		)
+		up.Completed:Once(function()
+			current:Destroy()
+		end)
+		up:Play()
+	end
+end
+
+local function syncMusic()
+	setMusicDucked(LockerViewModel.musicDucked(LockerStore.opening(), CosmeticRevealStore.current()))
+end
 
 -- Ends the opening in progress (if any) and queues its reveal.
 local function settleOpening()
@@ -102,6 +150,8 @@ local LockerServiceClient: LockerServiceClient = {
 
 	init = function(_self)
 		ensureScene()
+		table.insert(stoppers, Charm.subscribe(LockerStore.opening, syncMusic))
+		table.insert(stoppers, Charm.subscribe(CosmeticRevealStore.current, syncMusic))
 		table.insert(
 			stoppers,
 			Charm.subscribe(UIStore.sceneStack, function(stack: { string })
@@ -158,6 +208,7 @@ local LockerServiceClient: LockerServiceClient = {
 			stop()
 		end
 		table.clear(stoppers)
+		setMusicDucked(false)
 	end,
 
 	requestOpen = function(_self, lockerId)

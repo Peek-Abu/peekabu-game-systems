@@ -256,6 +256,11 @@ local VM = {
 	SKIP_AFTER = 1.0,
 	BURST_SECONDS = BURST_SECONDS,
 	GLIMPSE_SECONDS = GLIMPSE_SECONDS,
+	-- The hub music's duck while a Locker opens (owner 11-16: "Yes, fade it"): dB on the Music group, eased down over
+	-- MUSIC_DUCK_IN seconds and back over MUSIC_DUCK_OUT once the reveal closes. The track keeps playing underneath.
+	MUSIC_DUCK_DB = -30,
+	MUSIC_DUCK_IN = 0.6,
+	MUSIC_DUCK_OUT = 1.5,
 	RARITY_FX = RARITY_FX,
 	STAGE_ORIGIN = CFrame.new(3000, 0, 0),
 }
@@ -263,6 +268,12 @@ local VM = {
 -- The whole opening's length for a prize of `rarity` (about 4 seconds for Uncommon).
 function VM.openingDuration(rarity: Rarity): number
 	return ESTABLISH_SECONDS + APPROACH_SECONDS + KEY_SECONDS + RARITY_FX[rarity].hold + BURST_SECONDS
+end
+
+-- Whether the hub music is ducked: while a Locker opening plays (`opening`) and while its reveal is up (`reveal` from a
+-- Locker); any other reveal leaves the music alone.
+function VM.musicDucked(opening: LockerTypes.Outcome?, reveal: CosmeticRevealStore.Reveal?): boolean
+	return opening ~= nil or (reveal ~= nil and reveal.source == "locker")
 end
 
 -- When Skip shows (owner pick 11-16): a second into your first ever open, at once after that. `opened` is the

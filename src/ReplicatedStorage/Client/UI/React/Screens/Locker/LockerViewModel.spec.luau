@@ -377,4 +377,26 @@ return function()
 			expect(VM.skipAfter(40)).to.equal(0)
 		end)
 	end)
+
+	-- Owner 11-16 ("Yes, fade it"): the hub music fades out while a Locker opens and comes back after its reveal.
+	describe("musicDucked", function()
+		local outcome = {
+			locker = "gloom",
+			item = "Pippa.GloomTouched",
+			rarity = "uncommon",
+			duplicate = false,
+			refund = 0,
+			guaranteed = false,
+			pity = 1,
+		}
+
+		it("ducks the music while an opening plays and while its reveal is up, not otherwise", function()
+			expect(VM.musicDucked(nil, nil)).to.equal(false)
+			expect(VM.musicDucked(outcome, nil)).to.equal(true)
+			expect(VM.musicDucked(nil, { ids = { "Pippa.GloomTouched" }, source = "locker" })).to.equal(true)
+			-- Another reveal (a Shop buy, a grant) leaves the music alone.
+			expect(VM.musicDucked(nil, { ids = { "Pippa.GloomTouched" }, source = "shop" })).to.equal(false)
+			expect(VM.MUSIC_DUCK_DB < -20).to.equal(true)
+		end)
+	end)
 end
