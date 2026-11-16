@@ -57,7 +57,16 @@ export type Tuning = {
 	-- old plan (the left hand left off the wand).
 	leftSlide: boolean?,
 	maxShift: number?,
+	-- Launch IK fix (2026-11-16, owner: hands went INSIDE the body): when the planned right forearm runs into the
+	-- holder's body (its real surface, `BodySlice`s), the hold moves forward just until it clears by `armClear`
+	-- studs, at most `maxClear` of the right arm's reach; nil: never moved.
+	armClear: number?,
+	maxClear: number?,
 }
+
+-- One slice of a body's real surface, root space at rest (AnimationCarryMeasureSystem.slices): an ellipse
+-- `radii.X` x `radii.Z` round `centre`, `radii.Y` tall.
+export type BodySlice = { centre: Vector3, radii: Vector3 }
 
 export type Hold = {
 	-- Root-space frame for the RightGripAttachment (an IK target): the hand's wrap point on the wand's GripUpper.
@@ -224,13 +233,98 @@ local function nearest(from: Vector3, along: Vector3, point: Vector3): Vector3
 	return from + along * math.max(0, (point - from):Dot(along))
 end
 
+-- How finely `clearForward` steps the hold out (fractions of the arm's reach).
+local CLEAR_STEP = 0.02
+
+local function inSlice(point: Vector3, slice: BodySlice, margin: number): boolean
+	local d = point - slice.centre
+	if math.abs(d.Y) > slice.radii.Y / 2 then
+		return false
+	end
+	local x, z = d.X / (slice.radii.X + margin), d.Z / (slice.radii.Z + margin)
+	return x * x + z * z < 1
+end
+
 --[=[
-	The hold for a holder's arms (root space) over a floor `floorY` below the root.
+	Whether an arm holding `target` (its elbow bent toward `pole`, a direction) runs within `margin` studs of `body`:
+	its forearm anywhere, or its upper arm past the first 70% (the shoulder joint itself sits inside the body).
 ]=]
-function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: WandDims, tuning: Tuning): Hold
+function VacuumHoldFormulas.armClips(
+	shoulder: Vector3,
+	target: Vector3,
+	upper: number,
+	lower: number,
+	pole: Vector3,
+	body: { BodySlice },
+	margin: number
+): boolean
+	local elbow = VacuumHoldFormulas.elbow(shoulder, target, upper, lower, pole)
+	local points: { Vector3 } = {}
+	for i = 0, 10 do
+		table.insert(points, elbow:Lerp(target, i / 10))
+	end
+	for i = 7, 10 do
+		table.insert(points, shoulder:Lerp(elbow, i / 10))
+	end
+	for _, point in points do
+		for _, slice in body do
+			if inSlice(point, slice, margin) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- How far forward (studs) the right hand's `target` must move for its arm to clear `body`: the smallest step that
+-- clears (pushed too far, the arm straightens and its elbow swings back into the body), 0 when it clears already or
+-- no step within `maxClear` of the reach does.
+local function clearForward(right: Arm, target: Vector3, body: { BodySlice }?, tuning: Tuning): number
+	local most, margin = tuning.maxClear, tuning.armClear
+	if body == nil or most == nil or margin == nil or most <= 0 then
+		return 0
+	end
+	local reach = right.upper + right.lower
+	local function clips(distance: number): boolean
+		return VacuumHoldFormulas.armClips(
+			right.shoulder,
+			target - Vector3.new(0, 0, distance),
+			right.upper,
+			right.lower,
+			RIGHT_POLE,
+			body,
+			margin
+		)
+	end
+	if not clips(0) then
+		return 0
+	end
+	local steps = math.floor(most / CLEAR_STEP + 1e-6)
+	for k = 1, steps do
+		local distance = k * CLEAR_STEP * reach
+		if not clips(distance) then
+			return distance
+		end
+	end
+	return 0
+end
+
+--[=[
+	The hold for a holder's arms (root space) over a floor `floorY` below the root, its right hand moved out of `body`
+	(its real surface; nil: not checked) as `tuning` allows.
+]=]
+function VacuumHoldFormulas.hold(
+	right: Arm,
+	left: Arm?,
+	floorY: number,
+	wand: WandDims,
+	tuning: Tuning,
+	body: { BodySlice }?
+): Hold
 	local reach = right.upper + right.lower
 	local along = VacuumHoldFormulas.axis(tuning.angle, tuning.yaw)
-	local target = right.shoulder + Vector3.new(tuning.out, -tuning.down, -tuning.forward) * reach
+	local planned = right.shoulder + Vector3.new(tuning.out, -tuning.down, -tuning.forward) * reach
+	local target = planned - Vector3.new(0, 0, clearForward(right, planned, body, tuning))
 	-- Batch 2.6: a left paw that reaches neither GripLower nor any other point of the wand moves the whole hold
 	-- toward its shoulder (a hold it reaches is never moved).
 	if left ~= nil and tuning.leftSlide == true then

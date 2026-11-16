@@ -39,6 +39,7 @@ local VacuumMountFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Uti
 local VacuumMountSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMountSystem)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
+local AnimationCarryMeasureSystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarryMeasureSystem)
 local Constants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
 local VacuumHoldFormulas = require(ServerScriptService.Features.Vacuum.Utils.VacuumHoldFormulas)
 local VacuumKitUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumKitUtils)
@@ -155,6 +156,8 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 		return nil
 	end
 	local tuning = Constants.hold
+	-- The body's real surface at rest, so the hold keeps the right forearm out of a round belly or a hoodie.
+	local measured = AnimationCarryMeasureSystem.measure(holder)
 	return VacuumHoldFormulas.hold(
 		right,
 		VacuumRigUtils.arm(holder, "Left"),
@@ -170,7 +173,10 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 			minTube = tuning.minTube * size,
 			leftSlide = tuning.leftSlide,
 			maxShift = tuning.maxShift,
-		}
+			armClear = tuning.armClear * size,
+			maxClear = tuning.maxClear,
+		},
+		if measured ~= nil then measured.body else nil
 	)
 end
 

@@ -267,6 +267,88 @@ return function()
 		end)
 	end)
 
+	describe("a round belly in the forearm's way (launch IK fix 2026-11-16)", function()
+		-- Body slices of the real surface (AnimationCarryMeasureSystem): a belly reaching 0.95 in front of the root at
+		-- the grip's height, which the planned right forearm runs into (Cappy's hoodie, Prickles' round body), and a
+		-- slim chest it clears (Pippa).
+		local BELLY = { { centre = Vector3.new(0.1, 1, -0.2), radii = Vector3.new(0.6, 0.4, 0.75) } }
+		local SLIM = { { centre = Vector3.new(0, 1, 0), radii = Vector3.new(0.5, 0.4, 0.4) } }
+		local HUGE = { { centre = Vector3.new(0, 1, -1), radii = Vector3.new(3, 3, 3) } }
+		local CLEAR = { maxClear = 0.3, armClear = 0.08 }
+		local function tuned(extra)
+			local t = table.clone(TUNING)
+			for key, value in extra do
+				t[key] = value
+			end
+			return t
+		end
+		local plain = VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, TUNING)
+		local pole = plain.rightPole - RIGHT.shoulder
+
+		it("sees the planned forearm run into the belly, and not into a slim chest", function()
+			local target = plain.rightAt
+			expect(VacuumHoldFormulas.armClips(RIGHT.shoulder, target, RIGHT.upper, RIGHT.lower, pole, BELLY, 0.08)).to.equal(
+				true
+			)
+			expect(VacuumHoldFormulas.armClips(RIGHT.shoulder, target, RIGHT.upper, RIGHT.lower, pole, SLIM, 0.08)).to.equal(
+				false
+			)
+		end)
+
+		it("moves the hold forward just until the forearm clears the belly, never past its most", function()
+			local hold = VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, tuned(CLEAR), BELLY)
+			local moved = plain.rightAt.Z - hold.rightAt.Z
+			expect(moved > 0).to.equal(true)
+			expect(moved <= CLEAR.maxClear * (RIGHT.upper + RIGHT.lower) + 1e-6).to.equal(true)
+			expect(hold.rightAt.X).to.be.near(plain.rightAt.X, 1e-6)
+			expect(hold.rightAt.Y).to.be.near(plain.rightAt.Y, 1e-6)
+			expect(
+				VacuumHoldFormulas.armClips(RIGHT.shoulder, hold.rightAt, RIGHT.upper, RIGHT.lower, pole, BELLY, 0.08)
+			).to.equal(false)
+			-- The smallest move that clears: a step (2% of the reach) less still clips.
+			local less = hold.rightAt + Vector3.new(0, 0, 0.02 * (RIGHT.upper + RIGHT.lower))
+			expect(VacuumHoldFormulas.armClips(RIGHT.shoulder, less, RIGHT.upper, RIGHT.lower, pole, BELLY, 0.08)).to.equal(
+				true
+			)
+		end)
+
+		it("keeps the plan exactly for a body the forearm already clears, or with no body or no limit", function()
+			for _, hold in
+				{
+					VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, tuned(CLEAR), SLIM),
+					VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, tuned(CLEAR), nil),
+					VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, TUNING, BELLY),
+				}
+			do
+				expect((hold.rightAt - plain.rightAt).Magnitude).to.be.near(0, 1e-6)
+			end
+		end)
+
+		it("keeps the plan when no move within its most clears the body (never makes it worse)", function()
+			local hold = VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, tuned(CLEAR), HUGE)
+			expect((hold.rightAt - plain.rightAt).Magnitude).to.be.near(0, 1e-6)
+		end)
+
+		it("plans the left paw on the moved wand (it slides to where it reaches)", function()
+			local hold = VacuumHoldFormulas.hold(
+				RIGHT,
+				LEFT,
+				FLOOR,
+				WAND,
+				tuned({
+					maxClear = 0.3,
+					armClear = 0.08,
+					leftSlide = true,
+					maxShift = 0.3,
+				}),
+				BELLY
+			)
+			expect(hold.left ~= nil).to.equal(true)
+			local left = hold.leftAt
+			expect((left - LEFT.shoulder).Magnitude <= (LEFT.upper + LEFT.lower) * 0.95 + 1e-6).to.equal(true)
+		end)
+	end)
+
 	describe("axis", function()
 		it("leans forward by the angle and turns its lower end toward the left by the yaw", function()
 			local axis = VacuumHoldFormulas.axis(math.rad(35), math.rad(40))

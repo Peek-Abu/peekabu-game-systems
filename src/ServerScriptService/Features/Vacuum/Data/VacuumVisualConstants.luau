@@ -145,6 +145,14 @@ return table.freeze({
 		-- arm's reach (Cappy's left paw had no hold at all). false restores the old plan exactly.
 		leftSlide = true,
 		maxShift = 0.3,
+		-- Launch IK fix (2026-11-16, owner: hands went INSIDE Cappy's and others' bodies): the hold moves forward
+		-- until the right forearm clears the body's real surface by `armClear` studs (as modelled), at most
+		-- `maxClear` of the arm's reach. Measured in Shift Play with the camera swept through every look: a 0.35-stud
+		-- move took Cappy's clipping poses 5/84 -> 0 and Prickles' 50/84 -> 6, but the same move for every body pulled
+		-- Pippa's left paw off the wand; planned per body, Pippa (already clear) is not moved. maxClear 0 restores
+		-- the old plan exactly.
+		armClear = 0.08,
+		maxClear = 0.3,
 	}),
 	-- Where a paw holds the wand (VacuumHoldFormulas.Arm.wrap): this far from its wrist toward its grip attachment.
 	-- Pippa's grip attachments sit on the very tip of her paws (0.34 stud from the paw's middle), so a hold on them
