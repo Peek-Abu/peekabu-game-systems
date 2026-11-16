@@ -221,7 +221,7 @@ local function buildLeak(
 	local light = Instance.new("PointLight")
 	light.Name = "LeakLight"
 	light.Color = Color3.new(1, 1, 1)
-	light.Range = 8 + fx.brightness
+	light.Range = 6 + fx.brightness * 0.5
 	light.Brightness = 0
 	light.Parent = cavity
 	folder.Parent = lockerModel
@@ -236,7 +236,8 @@ local function buildLeak(
 			shaft.Color = color
 		end
 		light.Color = color
-		light.Brightness = fx.brightness * 0.4 * amount
+		-- Dim: the seams and shafts carry the leak; a bright light here lit the whole locker up like neon (Play check).
+		light.Brightness = fx.brightness * 0.18 * amount
 	end
 	local function cleanup()
 		folder:Destroy()
@@ -325,6 +326,24 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 		if keyModel ~= nil then
 			soften(keyModel)
 		end
+		-- A soft warm fill over the camera side: with the neon gone the room went dark before the rattle (Play check
+		-- 11-16). It goes with the stage copy.
+		local fill = Instance.new("Part")
+		fill.Name = "CutsceneFill"
+		fill.Anchored = true
+		fill.CanCollide = false
+		fill.CanQuery = false
+		fill.Transparency = 1
+		fill.Size = Vector3.new(0.2, 0.2, 0.2)
+		local lx = if outcome.locker == "gleam" then -6.5 else 6.5
+		fill.CFrame = LockerViewModel.STAGE_ORIGIN * CFrame.new(lx - 1, 9, -3)
+		local fillLight = Instance.new("PointLight")
+		fillLight.Color = Color3.fromRGB(255, 236, 210)
+		fillLight.Brightness = 0.8
+		fillLight.Range = 18
+		fillLight.Shadows = false
+		fillLight.Parent = fill
+		fill.Parent = stage
 	end
 	local leakUpdate, leakCleanup = buildLeak(lockerModel, fx)
 	local white = Color3.new(1, 1, 1)

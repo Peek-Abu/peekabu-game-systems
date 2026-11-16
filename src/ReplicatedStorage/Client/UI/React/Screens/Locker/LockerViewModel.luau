@@ -600,7 +600,8 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 		local t = (seconds - rattleAt) / fx.hold
 		-- Builds up: a faint, gentle rattle that grows to the rarity's full shake and glow.
 		local grow = 0.25 + 0.75 * t ^ 1.5
-		camPos = Vector3.new(lx - 0.6, 5.6, -5.2):Lerp(Vector3.new(lx - 0.4, 5.7, -4.2), t)
+		-- From the hinge side, so the employee stands clear of the latch seam where the light leaks (Play check 11-16).
+		camPos = Vector3.new(lx - 1.3, 5.6, -5.2):Lerp(Vector3.new(lx - 1.1, 5.7, -4.2), t)
 		camLook = Vector3.new(lx, 5.1, 4.0)
 		fov = 44
 		keyPos = keyIn
