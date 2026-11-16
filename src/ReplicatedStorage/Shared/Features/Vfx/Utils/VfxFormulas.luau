@@ -260,4 +260,14 @@ function VfxFormulas.gradient(colors: { Color3 }): ColorSequence
 	return ColorSequence.new(keypoints)
 end
 
+--[=[
+	Whether `colour` is a teal, cyan or sea-green hue (hue 140-205 degrees, saturation over 0.3, value over 0.3): the
+	colour the owner ruled out of every effect (2026-10-22, "no teal": Gloom's edge is the UI's lilac rim). Greys and
+	near-whites with a faint cool tint pass.
+]=]
+function VfxFormulas.teal(colour: Color3): boolean
+	local hue, saturation, value = colour:ToHSV()
+	return hue >= 140 / 360 and hue <= 205 / 360 and saturation > 0.3 and value > 0.3
+end
+
 return VfxFormulas

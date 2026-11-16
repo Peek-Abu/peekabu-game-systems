@@ -32,12 +32,13 @@ return table.freeze({
 	WRITE_THRESHOLD = 0.03,
 	-- Graphics quality at or below which burst lights are skipped.
 	LIGHT_MIN_QUALITY = 4,
-	-- Cleanup Crew's palette: Gloom is dark purple-black smoke with teal edges; Gleam is warm gold; dust is a warm
-	-- grey-beige; porcelain is cream with a lilac shade; paper is a warm cream.
+	-- Odd Hours' palette (= the UI tokens): Gloom is dark violet with the UI's lilac rim at its edge (owner 2026-10-22:
+	-- no teal; it was (70, 214, 196)); Gleam is warm gold; dust is a warm grey-beige; porcelain is cream with a lilac
+	-- shade; paper is a warm cream; sparkle (bubble highlights) is a warm near-white (it was a mint (226, 255, 246)).
 	PALETTE = table.freeze({
 		gloom = Color3.fromRGB(46, 26, 64),
 		gloomMid = Color3.fromRGB(72, 40, 98),
-		gloomEdge = Color3.fromRGB(70, 214, 196),
+		gloomEdge = Color3.fromRGB(180, 139, 255),
 		gleam = Color3.fromRGB(255, 206, 92),
 		gleamLight = Color3.fromRGB(255, 236, 168),
 		gleamDeep = Color3.fromRGB(240, 160, 52),
@@ -47,7 +48,7 @@ return table.freeze({
 		porcelain = Color3.fromRGB(250, 246, 236),
 		porcelainShade = Color3.fromRGB(206, 196, 232),
 		paper = Color3.fromRGB(250, 244, 226),
-		sparkle = Color3.fromRGB(226, 255, 246),
+		sparkle = Color3.fromRGB(255, 249, 232),
 		pippa = Color3.fromRGB(178, 128, 255),
 	}),
 })

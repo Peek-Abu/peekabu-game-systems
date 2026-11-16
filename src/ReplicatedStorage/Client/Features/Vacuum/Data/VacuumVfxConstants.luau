@@ -31,9 +31,9 @@ local T = VfxAssets.TEXTURES
 local P = VfxConstants.PALETTE
 local seq = VfxFormulas.sequence
 local gradient = VfxFormulas.gradient
--- Gloom's edge here is the UI's lilac rim (owner 2026-10-22: no teal), not the shared palette's teal gloomEdge, which
--- also drew a teal ring round a dark wisp at the pop that read as an eye.
-local LILAC = Color3.fromRGB(180, 139, 255)
+-- Gloom's edge is the UI's lilac rim (owner 2026-10-22: no teal; the old teal edge also drew a ring round a dark
+-- wisp at the pop that read as an eye), now the shared palette's gloomEdge too.
+local LILAC = P.gloomEdge
 
 -- Fade in quickly, hold, fade out: most layers.
 local SOFT = seq({ { 0, 1 }, { 0.12, 0.15 }, { 0.75, 0.3 }, { 1, 1 } })

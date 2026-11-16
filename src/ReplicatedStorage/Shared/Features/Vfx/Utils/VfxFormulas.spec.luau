@@ -267,4 +267,27 @@ return function()
 			expect(VfxFormulas.gradient({ red }).Keypoints[1].Value).to.equal(red)
 		end)
 	end)
+
+	describe("teal", function()
+		it("flags teal and cyan hues, the colour the owner ruled out of every effect (2026-10-22)", function()
+			expect(VfxFormulas.teal(Color3.fromRGB(70, 214, 196))).to.equal(true)
+			expect(VfxFormulas.teal(Color3.fromRGB(40, 200, 230))).to.equal(true)
+			expect(VfxFormulas.teal(Color3.fromRGB(60, 190, 120))).to.equal(true)
+		end)
+
+		it("passes the game's tokens: lilac, violet, gold, cream, dust and near-white", function()
+			for _, colour in
+				{
+					Color3.fromRGB(180, 139, 255),
+					Color3.fromRGB(46, 26, 64),
+					Color3.fromRGB(255, 206, 92),
+					Color3.fromRGB(250, 246, 236),
+					Color3.fromRGB(196, 178, 150),
+					Color3.fromRGB(235, 250, 246),
+				}
+			do
+				expect(VfxFormulas.teal(colour)).to.equal(false)
+			end
+		end)
+	end)
 end

@@ -8,7 +8,7 @@
 	- cargoAppraise: an appraisal: a few paper slips pop up off the item and flutter down, with a small paper puff.
 	- cargoJackpot: a jackpot appraisal: a short gold flash, gold sparks and coins that flip and fall, with one warm
 	  light; big but over in about a second.
-	- cargoBankRefine: a valuable landing in the truck bed: Gloom wisps rise and turn teal, then gold (refined into
+	- cargoBankRefine: a valuable landing in the truck bed: Gloom wisps rise and turn lilac, then gold (refined into
 	  Gleam), then gold bubbles stream up out of the bed and a few coins pop.
 
 	@class CargoVfxConstants
