@@ -70,6 +70,8 @@ local function ensureScene()
 		},
 		suppress = { mouse = true },
 		hud = "hidden",
+		-- No menu swipe as the cutscene starts: the Open button already played the buy (owner pick B, 11-16).
+		quietOpen = true,
 	})
 end
 

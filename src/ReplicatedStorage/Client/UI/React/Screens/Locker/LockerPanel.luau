@@ -262,6 +262,8 @@ local function lockerCardView(
 			content = openContent,
 			textSize = if phone then 16 else 28,
 			disabled = not card.button.enabled,
+			-- Paying for an open plays the Shop's buy sound (owner pick B, 11-16), not the plain confirm.
+			sound = if card.button.kind == "buy" or card.button.kind == "key" then "purchase" else nil,
 			small = phone,
 			anchor = Vector2.new(0, 1),
 			position = UDim2.new(0, rightX, 1, -DEPTH.lip - (if phone then 8 else 14)),

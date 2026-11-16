@@ -71,6 +71,8 @@ export type SceneDef = {
 	covers: boolean?,
 	-- A key that toggles this scene (UIServiceClient binds it). Two scenes may not share one.
 	toggleKey: Enum.KeyCode?,
+	-- Opens without the menu "open" sound (UISoundSystem): for a scene whose own trigger already played one.
+	quietOpen: boolean?,
 }
 
 local registry: { [string]: SceneDef } = {}

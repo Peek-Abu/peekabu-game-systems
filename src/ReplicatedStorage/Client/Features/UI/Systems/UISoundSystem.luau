@@ -31,6 +31,7 @@ local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.Sound
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
+local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
 local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 
 type Tier = UISoundFormulas.Tier
@@ -162,11 +163,14 @@ function UISoundSystem.start()
 		triggered:Disconnect()
 		releaseHold(0)
 	end)
-	-- Every menu / scene opening plays the open (SceneStack pushes grow the stack).
+	-- Every menu / scene opening plays the open (SceneStack pushes grow the stack), unless it opens quietly.
 	table.insert(
 		stoppers,
 		Charm.subscribe(UIStore.sceneStack, function(stack: { string }, previous: { string }?)
-			if UISoundFormulas.stackTier(if previous ~= nil then #previous else 0, #stack) == "open" then
+			local top = stack[#stack]
+			local def = if top ~= nil then SceneRegistry.get(top) else nil
+			local quiet = def ~= nil and def.quietOpen == true
+			if UISoundFormulas.stackTier(if previous ~= nil then #previous else 0, #stack, quiet) == "open" then
 				shotTier("open")
 			end
 		end)

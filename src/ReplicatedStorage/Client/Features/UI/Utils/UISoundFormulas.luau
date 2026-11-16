@@ -77,10 +77,11 @@ end
 
 --[=[
 	What a change of the scene stack plays: the open when a scene is pushed (the stack grows from `before` to `after`
-	scenes), else nothing (closing is the back / close button's own sound, and Escape stays quiet).
+	scenes), else nothing (closing is the back / close button's own sound, and Escape stays quiet). A scene that opens
+	quietly (`quiet`, SceneRegistry `quietOpen`: the Locker cutscene, whose button already played its sound) plays nothing.
 ]=]
-function UISoundFormulas.stackTier(before: number, after: number): Tier?
-	return if after > before then "open" else nil
+function UISoundFormulas.stackTier(before: number, after: number, quiet: boolean?): Tier?
+	return if after > before and quiet ~= true then "open" else nil
 end
 
 --[=[

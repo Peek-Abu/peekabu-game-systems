@@ -72,6 +72,12 @@ return function()
 			expect(UISoundFormulas.stackTier(1, 0)).to.equal(nil)
 			expect(UISoundFormulas.stackTier(1, 1)).to.equal(nil)
 		end)
+
+		-- Owner 11-16: no menu swipe when the Locker cutscene starts (its Open button plays the buy instead).
+		it("stays quiet when the scene pushed opens quietly", function()
+			expect(UISoundFormulas.stackTier(1, 2, true)).to.equal(nil)
+			expect(UISoundFormulas.stackTier(1, 2, false)).to.equal("open")
+		end)
 	end)
 
 	describe("buying", function()
