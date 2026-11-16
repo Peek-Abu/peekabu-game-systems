@@ -401,6 +401,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopProductPanel"] = "presentational React component (product page specced in ShopViewModel; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopScene"] = "scene registration at require (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickScene"] = "scene registration at require (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickCard"] = "presentational React card, split out of CharacterPickScreen (card values and tag frame specced in CharacterPickViewModel; story in CharacterPickScreen.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickAboutCard"] = "presentational React card, split out of CharacterPickScreen (stats specced in InventoryViewModel.stats; story in CharacterPickScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryCharacterPanel"] = "presentational React component (cards, detail and stats specced in InventoryViewModel; story in InventoryScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScreen"] = "React screen wiring the loadout, entitlements and Credits stores (values and layout specced in InventoryViewModel; story in InventoryScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScene"] = "scene registration at require (no logic)",
@@ -440,6 +442,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: catch screens (M3 UI)
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay"] = "React HUD widget (CCTV lines specced in CatchViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchCctvPanel"] = "presentational React component (story in CatchCctvPanel.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchCctvScanlines"] = "presentational React component, split out of CatchCctvPanel (the rolling band's timing and tile size specced in CatchViewModel; story in CatchCctvPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard"] = "React HUD widget (notice specced in CatchViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredPanel"] = "presentational React component (story in CatchRehiredPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.useSpectateTarget"] = "React hook polling DeathServiceClient:spectating() (no logic)",

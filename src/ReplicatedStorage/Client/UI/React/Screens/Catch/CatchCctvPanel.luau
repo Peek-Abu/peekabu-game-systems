@@ -9,19 +9,17 @@
 	coral pill breaking its top-left corner. Desktop draws the previous / next teammate key caps under the countdown; the
 	phone draws two round PREV / NEXT buttons at the sides instead (`onPrev` / `onNext`), clear of the engine's Jump
 	button (`jump`, from ShiftHudViewModel.arcFor). Every string comes
-	from the specced CatchViewModel. Presentational.
+	from the specced CatchViewModel. Presentational. The feed's surface (wash, scanlines, lens, rolling band) is
+	CatchCctvScanlines, split out of this file.
 
 	@class CatchCctvPanel
 ]=]
 
-local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local React = require(ReplicatedStorage.Packages.React)
-local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
-local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
+local CatchCctvScanlines = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchCctvScanlines)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -133,11 +131,6 @@ local COLOR = UIToonConstants.COLOR
 -- The feed's own light: scanlines and brackets in white, a night wash at 25%, the carrying line at 85%; the lens's
 -- dark edges in the night shade at 55%, the rolling band a faint white.
 local FEED = COLOR.white
-local WASH = UIToonConstants.shade("night").lo
-local SCAN_TRANSPARENCY = 0.93
-local WASH_TRANSPARENCY = 0.75
-local LENS_TRANSPARENCY = 0.45
-local BAND_TRANSPARENCY = 0.94
 local DETAILS_TRANSPARENCY = 0.15
 -- The desktop key caps: 12 px from cap to label, 120 px between the two hints, 50 px under the countdown.
 local CHIP_SIZE = 22
@@ -148,75 +141,6 @@ local CHIPS_BELOW_BACK = 50
 local BUTTON_SIZE = 76
 local BUTTON_TEXT = 18
 local BUTTON_ABOVE_JUMP = 28
--- The faint band that rolls down the feed every few seconds (CatchViewModel.rollBand), hidden while it rests and
--- always with Reduced Motion on. It owns its per-frame binding, so the panel never re-renders for it.
-local function RollBand(): React.ReactNode
-	local top, setTop = React.useBinding(CatchViewModel.rollBand(os.clock(), GuiService.ReducedMotionEnabled))
-	React.useEffect(function(): () -> ()
-		local connection = RunService.RenderStepped:Connect(function()
-			setTop(CatchViewModel.rollBand(os.clock(), GuiService.ReducedMotionEnabled))
-		end)
-		return function()
-			connection:Disconnect()
-		end
-	end, {})
-	return e("Frame", {
-		Position = top:map(function(value: number?): UDim2
-			return UDim2.fromScale(0, value or 0)
-		end),
-		Visible = top:map(function(value: number?): boolean
-			return value ~= nil
-		end),
-		Size = UDim2.fromScale(1, CatchViewModel.ROLL_HEIGHT),
-		BackgroundColor3 = FEED,
-		BackgroundTransparency = BAND_TRANSPARENCY,
-		BorderSizePixel = 0,
-	}, {
-		-- Soft at both edges, brightest through the middle.
-		fade = e("UIGradient", {
-			Rotation = 90,
-			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 1),
-				NumberSequenceKeypoint.new(0.5, 0),
-				NumberSequenceKeypoint.new(1, 1),
-			}),
-		}),
-	})
-end
-
--- The feed's surface: the night wash, the line strip repeated once per `gap` (sharp on any screen shape), the lens's
--- dark edges, and the rolling band.
-local function scanlines(gap: number, bleed: number): React.ReactNode
-	return e("Frame", {
-		-- The wash covers the whole screen, top bar included: it reaches `bleed` above the panel.
-		Position = UDim2.fromOffset(0, -bleed),
-		Size = UDim2.new(1, 0, 1, bleed),
-		ZIndex = 0,
-		BackgroundColor3 = WASH,
-		BackgroundTransparency = WASH_TRANSPARENCY,
-		BorderSizePixel = 0,
-		ClipsDescendants = true,
-	}, {
-		lines = e("ImageLabel", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			Image = UIAssets.cctv.scanlines,
-			ImageColor3 = FEED,
-			ImageTransparency = SCAN_TRANSPARENCY,
-			ScaleType = Enum.ScaleType.Tile,
-			TileSize = CatchViewModel.scanTile(gap),
-		}),
-		lens = e("ImageLabel", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			Image = OccupantAssets.IMAGES.dreadVignette,
-			ImageColor3 = WASH,
-			ImageTransparency = LENS_TRANSPARENCY,
-			ScaleType = Enum.ScaleType.Stretch,
-		}),
-		band = e(RollBand),
-	})
-end
 
 -- One L-shaped bracket in the corner `corner` ((0, 0) top-left ... (1, 1) bottom-right).
 local function bracket(spec: Spec, corner: Vector2): React.ReactNode
@@ -407,7 +331,7 @@ local function CatchCctvPanel(props: CatchCctvPanelProps): React.ReactNode
 	local bleed = props.bleedTop or 0
 	local linesDeps: { unknown } = { spec.scanGap, bleed }
 	local lines = React.useMemo(function(): React.ReactNode
-		return scanlines(spec.scanGap, bleed)
+		return CatchCctvScanlines(spec.scanGap, bleed)
 	end, linesDeps)
 	local backWidth = math.ceil((utf8.len(view.back) or #view.back) * spec.backSize * 0.62 + 48)
 

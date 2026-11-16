@@ -29,6 +29,8 @@
 	   VacuumMotionFormulas.turnLimit) and how far out the floor head sits on average (the camera tilt's travel).
 	`format` prints the report; the spec asserts it. Needs a real runtime (TestEZ in Studio): run it with
 	`Workspace.RunTests = true`, or from a server Script: `print(Harness.format(Harness.run({})))`.
+	The layers are AnimationVacuumLayerHarness and the measurements AnimationVacuumMeasureHarness (both split out of
+	this file).
 
 	@class AnimationVacuumHarness
 ]=]
@@ -44,11 +46,21 @@ local VacuumMotionRigSystem = require(ReplicatedStorage.Shared.Features.Vacuum.S
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 local AnimationCarryClipHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryClipHarness)
 local AnimationCarryRigHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryRigHarness)
+local AnimationVacuumLayerHarness = require(ServerScriptService.Features.Animation.Testing.AnimationVacuumLayerHarness)
+local AnimationVacuumMeasureHarness =
+	require(ServerScriptService.Features.Animation.Testing.AnimationVacuumMeasureHarness)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumRigUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumRigUtils)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 
 type Carrier = AnimationCarryRigHarness.Carrier
+local LAYERS = AnimationVacuumLayerHarness.LAYERS
+local descendant = AnimationVacuumMeasureHarness.descendant
+local handOf = AnimationVacuumMeasureHarness.handOf
+local onPaw = AnimationVacuumMeasureHarness.onPaw
+local armClip = AnimationVacuumMeasureHarness.armClip
+local outOf = AnimationVacuumMeasureHarness.outOf
+local clearance = AnimationVacuumMeasureHarness.clearance
 
 export type Frame = {
 	state: string,
@@ -90,72 +102,6 @@ local GRIP_TOLERANCE = 0.05
 local LEFT_TOLERANCE = GRIP_TOLERANCE + VacuumMotionConstants.reachSlack
 -- How far the floor head's lowest corner may dip under the floor (studs).
 local FLOOR_TOLERANCE = 0.02
--- Each motion layer at its extremes (VacuumMotionFormulas.Layers), laid on every frame.
--- A layers' state: every layer off but those given (the shimmy as a fraction of its amplitude, each way).
-type Given = {
-	raise: number?,
-	reach: number?,
-	brace: number?,
-	kick: number?,
-	shimmy: number?,
-	swayYaw: number?,
-	swayPitch: number?,
-	-- The look's heading off the body (radians, left positive): the wand aims at it, the upper body twists toward it.
-	look: number?,
-}
-local function layered(given: Given): VacuumMotionFormulas.Layers
-	local shimmy = given.shimmy or 0
-	return {
-		raise = given.raise or 0,
-		reach = given.reach or 0,
-		brace = given.brace or 0,
-		kick = given.kick or 0,
-		shimmyYaw = shimmy * VacuumMotionConstants.shimmy.yaw,
-		shimmyRoll = shimmy * VacuumMotionConstants.shimmy.roll,
-		swayYaw = given.swayYaw or 0,
-		swayPitch = given.swayPitch or 0,
-		lookYaw = given.look or 0,
-	}
-end
-local UP = VacuumMotionConstants.aim.maxUp
--- The biggest kick (a pile at maxScale, at its peak).
-local KICK = VacuumMotionConstants.kick.maxScale
-local SWAY_YAW = VacuumMotionConstants.sway.maxYaw
-local SWAY_PITCH = VacuumMotionConstants.sway.maxPitch
-local LOOK = VacuumMotionConstants.aim.maxLook
-local LAYERS: { { name: string, layers: VacuumMotionFormulas.Layers } } = {
-	{ name = "rest", layers = layered({}) },
-	{ name = "aim up", layers = layered({ raise = UP }) },
-	{ name = "aim out", layers = layered({ reach = 1 }) },
-	{ name = "aim in", layers = layered({ reach = -1 }) },
-	{ name = "brace", layers = layered({ brace = 1 }) },
-	{ name = "brace+out", layers = layered({ reach = 1, brace = 1 }) },
-	{ name = "brace+in", layers = layered({ reach = -1, brace = 1 }) },
-	{ name = "brace+up", layers = layered({ raise = UP, brace = 1 }) },
-	-- The pop: the kick's peak, and the spring's rebound the other way.
-	{ name = "recoil", layers = layered({ brace = 1, kick = KICK }) },
-	{ name = "recoil back", layers = layered({ reach = 1, brace = 1, kick = -0.4 * KICK }) },
-	{ name = "recoil+up", layers = layered({ raise = UP, kick = KICK }) },
-	-- The shimmy at its full amplitude, each way.
-	{ name = "shimmy+", layers = layered({ reach = 1, brace = 1, shimmy = 1 }) },
-	{ name = "shimmy-", layers = layered({ brace = 1, shimmy = -1 }) },
-	-- The wand's lag at its most: swung each way on a turn, slid on at a stop, trailing while aimed up.
-	{ name = "sway left", layers = layered({ swayYaw = SWAY_YAW }) },
-	{ name = "sway right", layers = layered({ swayYaw = -SWAY_YAW, reach = 1 }) },
-	{ name = "sway stop", layers = layered({ swayPitch = SWAY_PITCH, swayYaw = SWAY_YAW }) },
-	{ name = "sway+up", layers = layered({ raise = UP, swayPitch = -SWAY_PITCH, swayYaw = -SWAY_YAW }) },
-	-- Aimed at the look point at its most each way (aim fix 2026-11-06: the floor head points at it, the upper
-	-- body twists toward it), and braced.
-	{ name = "aim left", layers = layered({ look = LOOK }) },
-	{ name = "aim right", layers = layered({ look = -LOOK }) },
-	{ name = "brace+left", layers = layered({ look = LOOK, brace = 1 }) },
-	{ name = "brace+right", layers = layered({ look = -LOOK, brace = 1, reach = 1 }) },
-	-- Everything at once.
-	{
-		name = "all",
-		layers = layered({ raise = UP, brace = 1, kick = KICK, shimmy = 1, swayYaw = SWAY_YAW, swayPitch = SWAY_PITCH }),
-	},
-}
 -- Frames to let the Animator settle after a change.
 local SETTLE = 4
 -- The pose the plan is read in: the stock fall (AnimationLocomotionRegistry), at this fraction of the clip.
@@ -178,93 +124,6 @@ local DEFAULT_RIGS = { "Pippa", "Cappy" }
 local USE_CLIP = "cleanupVacuumUse"
 
 type Sample = { state: string, name: string, id: string?, at: number, over: string? }
-
-local function descendant(container: Instance, name: string): Attachment?
-	local found = container:FindFirstChild(name, true)
-	return if found ~= nil and found:IsA("Attachment") then found else nil
-end
-
-local function handOf(model: Model, side: string): BasePart?
-	local found = model:FindFirstChild(side .. "Hand")
-	return if found ~= nil and found:IsA("BasePart") then found else nil
-end
-
--- How far the paw's wrap point (hand space) is from the grip on the wand, and whether the grip is inside the paw.
-local function onPaw(hand: BasePart?, wrap: Vector3?, grip: Attachment?): (number?, boolean)
-	if hand == nil or wrap == nil or grip == nil then
-		return nil, false
-	end
-	local inHand = hand.CFrame:PointToObjectSpace(grip.WorldPosition)
-	local half = hand.Size / 2
-	local inside = math.abs(inHand.X) <= half.X and math.abs(inHand.Y) <= half.Y and math.abs(inHand.Z) <= half.Z
-	return (hand.CFrame:PointToWorldSpace(wrap) - grip.WorldPosition).Magnitude, inside
-end
-
--- How deep the deepest hand or forearm point sits inside the torso (studs): each arm part's centre and the ends of
--- its long axis, against an ellipsoid filling each torso part (round bodies).
-local function armClip(model: Model): number
-	local deepest = 0
-	local torsos: { BasePart } = {}
-	for _, name in { "UpperTorso", "LowerTorso" } do
-		local part = model:FindFirstChild(name)
-		if part ~= nil and part:IsA("BasePart") then
-			table.insert(torsos, part)
-		end
-	end
-	for _, name in { "RightHand", "RightLowerArm", "LeftHand", "LeftLowerArm" } do
-		local part = model:FindFirstChild(name)
-		if part ~= nil and part:IsA("BasePart") then
-			local size = part.Size
-			local along = if size.Y >= size.X and size.Y >= size.Z
-				then Vector3.new(0, size.Y / 2, 0)
-				elseif size.X >= size.Z then Vector3.new(size.X / 2, 0, 0)
-				else Vector3.new(0, 0, size.Z / 2)
-			for _, offset in { Vector3.zero, along, -along } do
-				local point = part.CFrame:PointToWorldSpace(offset)
-				for _, torso in torsos do
-					local local_ = torso.CFrame:PointToObjectSpace(point)
-					local half = torso.Size / 2
-					local reach = (local_.X / half.X) ^ 2 + (local_.Y / half.Y) ^ 2 + (local_.Z / half.Z) ^ 2
-					if reach < 1 then
-						local smallest = math.min(half.X, half.Y, half.Z)
-						deepest = math.max(deepest, (1 - math.sqrt(reach)) * smallest)
-					end
-				end
-			end
-		end
-	end
-	return deepest
-end
-
--- How far out the floor head sits from `model`'s root, flat (studs).
-local function outOf(model: Model, head: BasePart?): number?
-	local root = model:FindFirstChild("HumanoidRootPart")
-	if head == nil or root == nil or not root:IsA("BasePart") then
-		return nil
-	end
-	local flat = root.CFrame:PointToObjectSpace(head.Position)
-	return Vector2.new(flat.X, flat.Z).Magnitude
-end
-
--- The floor head's lowest corner over the floor under `model`'s root (studs).
-local function clearance(model: Model, head: BasePart?): number?
-	local root = model:FindFirstChild("HumanoidRootPart")
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if head == nil or root == nil or not root:IsA("BasePart") or humanoid == nil then
-		return nil
-	end
-	local floor = root.Position.Y - (root.Size.Y / 2 + humanoid.HipHeight)
-	local half = head.Size / 2
-	local low = math.huge
-	for _, x in { -1, 1 } do
-		for _, y in { -1, 1 } do
-			for _, z in { -1, 1 } do
-				low = math.min(low, head.CFrame:PointToWorldSpace(Vector3.new(half.X * x, half.Y * y, half.Z * z)).Y)
-			end
-		end
-	end
-	return low - floor
-end
 
 --[=[
 	The pose VacuumMotionSystem lays on a bound rig for `layers` (its springs settled there): the wand aimed at the
