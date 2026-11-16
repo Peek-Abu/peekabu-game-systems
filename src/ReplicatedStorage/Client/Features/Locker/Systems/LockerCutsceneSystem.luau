@@ -15,6 +15,7 @@
 	  with the prize's colour leaking from its seams -> door bursts open, out toward the camera, with rarity cavity
 	  light and volumetric neon beams). The rarer the prize, the longer the rattle, the more and brighter the leaking
 	  light shafts and the burst's rays (LockerViewModel.RARITY_FX; owner picks 11-16).
+	- Takes the ball-and-stick goo off the locker on its own copy (owner pick 11-16: a clean locker for launch).
 	- Softens the stage's neon on its own client copy (key and lockers: Neon -> SmoothPlastic) and keeps the added
 	  light (leak, rays) dim, so nothing blooms to white (owner 11-16: "lights are very neon on key / cutscene").
 	- The leak is plain white through the hold and turns the prize's rarity colour in its last half second (pose
@@ -322,6 +323,11 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 	local duration = LockerViewModel.openingDuration(outcome.rarity)
 	local glowActive = false
 	if ownedStage then
+		-- Owner pick 11-16: the ball-and-stick goo comes off for launch (a clean locker); real goo comes after launch.
+		local goo = lockerModel:FindFirstChild("Goo")
+		if goo ~= nil then
+			goo:Destroy()
+		end
 		soften(lockerModel)
 		if keyModel ~= nil then
 			soften(keyModel)
