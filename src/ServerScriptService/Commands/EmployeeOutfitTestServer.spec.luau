@@ -126,7 +126,7 @@ return function()
 			outfit:SetAttribute("SoloMeshes", "SS_Coat")
 			expect(
 				command({ Executor = player(nil) }, OUTFIT_NAME, "sideways", player(character)):find(
-					"unknown mode",
+					"Unknown mode",
 					1,
 					true
 				)
