@@ -14,43 +14,36 @@
 	- Runs the sleeping badge sway spring (`RenderStepped` only while accelerating; zero cost at rest).
 	- Rebuilds cleanly (with ticket cancellation and `EditableMesh:Destroy()`) when the player's general rank changes.
 
-	Instance/EditableMesh/RunService shell (exempt; ribbon geometry, widths and spring specced in
-	`EmployeeLanyardFormulas.spec`).
+	The strap build lives in EmployeeLanyardStrapSystem, the front info card in EmployeeLanyardCardSystem, the sway
+	spring in EmployeeLanyardSwaySystem, the shared part helpers in EmployeeLanyardPartUtils and the `Handle` type in
+	EmployeeLanyardTypes (all split out of this module). This is the bind/attach shell (exempt; ribbon geometry,
+	widths and spring specced in `EmployeeLanyardFormulas.spec`).
 
 	@class EmployeeLanyardSystem
 ]=]
 
-local AssetService = game:GetService("AssetService")
 local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local TextService = game:GetService("TextService")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
 local EmployeeConstants = require(EmployeeShared.Data.EmployeeConstants)
 local EmployeeLanyardConstants = require(EmployeeShared.Data.EmployeeLanyardConstants)
 local EmployeeLanyardFormulas = require(EmployeeShared.Utils.EmployeeLanyardFormulas)
-local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
+local EmployeeClient = ReplicatedStorage.Client.Features.Employee
+local EmployeeLanyardTypes = require(EmployeeClient.Data.EmployeeLanyardTypes)
+local EmployeeLanyardPartUtils = require(EmployeeClient.Utils.EmployeeLanyardPartUtils)
+local EmployeeLanyardCardSystem = require(EmployeeClient.Systems.EmployeeLanyardCardSystem)
+local EmployeeLanyardStrapSystem = require(EmployeeClient.Systems.EmployeeLanyardStrapSystem)
+local EmployeeLanyardSwaySystem = require(EmployeeClient.Systems.EmployeeLanyardSwaySystem)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 
 type Fit = EmployeeLanyardFormulas.Fit
-type CardLayout = EmployeeLanyardConstants.CardLayout
 
-export type Handle = {
-	folder: Folder,
-	strap: MeshPart?,
-	badgeWeld: Weld?,
-	badgeRoot: BasePart?,
-	badgeTurn: CFrame,
-	-- Local z of the plane the info card sits on: in front of the badge's own front-most part (nil without a badge).
-	cardZ: number?,
-	scale: number,
-	destroy: () -> (),
-}
+export type Handle = EmployeeLanyardTypes.Handle
 
 local LEGACY_UNIFORM: { [string]: boolean } = {
 	PippaVest = true,
@@ -61,22 +54,8 @@ local preloaded = false
 
 local EmployeeLanyardSystem = {}
 
-local function v3(t: { number }): Vector3
-	return Vector3.new(t[1], t[2], t[3])
-end
-
-local function rgb(c: { number }): Color3
-	return Color3.fromRGB(c[1], c[2], c[3])
-end
-
-local function quiet(part: BasePart)
-	part.Anchored = false
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.Massless = true
-	part.CastShadow = false
-end
+local v3 = EmployeeLanyardPartUtils.v3
+local quiet = EmployeeLanyardPartUtils.quiet
 
 local function badgeFolder(): Instance?
 	local current: Instance? = ReplicatedStorage
@@ -117,106 +96,6 @@ local function preloadBadgesOnce()
 	end)
 end
 
-local function buildStrapMesh(fit: Fit, rank: number, scale: number, ut: BasePart): (MeshPart?, EditableMesh?)
-	local g = EmployeeLanyardFormulas.geometry(fit, EmployeeLanyardFormulas.width(fit, rank), scale)
-	local lo = { math.huge, math.huge, math.huge }
-	local hi = { -math.huge, -math.huge, -math.huge }
-	for _, p in g.pos do
-		for a = 1, 3 do
-			lo[a] = math.min(lo[a], p[a])
-			hi[a] = math.max(hi[a], p[a])
-		end
-	end
-	local cx, cy, cz = (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2, (lo[3] + hi[3]) / 2
-	local createdEm: EditableMesh? = nil
-	local ok, mp = pcall(function(): MeshPart
-		local em = AssetService:CreateEditableMesh()
-		createdEm = em
-		local ids = table.create(#g.pos)
-		for i, p in g.pos do
-			ids[i] = em:AddVertex(Vector3.new(p[1] - cx, p[2] - cy, p[3] - cz))
-		end
-		local col = EmployeeLanyardConstants.COLOURS[rank] or EmployeeLanyardConstants.COLOURS[1]
-		local cMain = em:AddColor(rgb(col.main), 1)
-		local cEdge = em:AddColor(rgb(col.edge or col.main), 1)
-		for t, tri in g.tris do
-			local f = em:AddTriangle(ids[tri[1]], ids[tri[2]], ids[tri[3]])
-			local c = if g.triBand[t] == 1 then cEdge else cMain
-			em:SetFaceColors(f, { c, c, c })
-		end
-		return AssetService:CreateMeshPartAsync(Content.fromObject(em), {
-			CollisionFidelity = Enum.CollisionFidelity.Box,
-			RenderFidelity = Enum.RenderFidelity.Precise,
-		})
-	end)
-	if not ok or not mp then
-		if createdEm ~= nil then
-			pcall(function()
-				createdEm:Destroy()
-			end)
-		end
-		return nil, nil
-	end
-	mp.Name = EmployeeConstants.LANYARD_STRAP
-	mp.Material = Enum.Material.SmoothPlastic
-	mp.Color = Color3.new(1, 1, 1)
-	quiet(mp)
-	mp.CFrame = ut.CFrame * CFrame.new(cx, cy, cz)
-	local w = Instance.new("WeldConstraint")
-	w.Part0, w.Part1 = ut, mp
-	w.Parent = mp
-	return mp, createdEm
-end
-
--- Synchronous 3D part-ribbon fallback along the fitted stations: renders in both Workspace and ViewportFrames even
--- when EditableMesh is disabled in Experience Settings -> Security. One Part per straight run within `tolerance` studs
--- of the fitted strap (EmployeeLanyardFormulas.ribbonRuns), not one per station: 96 Parts became 8-67.
-local function fallbackRibbonParts(
-	fit: Fit,
-	rank: number,
-	scale: number,
-	ut: BasePart,
-	parent: Instance,
-	tolerance: number
-)
-	local rb = fit.ribbon
-	local col = EmployeeLanyardConstants.COLOURS[rank] or EmployeeLanyardConstants.COLOURS[1]
-	local color = rgb(col.main)
-	local width = EmployeeLanyardFormulas.width(fit, rank)
-	local w = width * scale
-	local thickness = math.max(0.012, EmployeeLanyardConstants.STRAP_T * scale * 2)
-	for _, run in EmployeeLanyardFormulas.ribbonRuns(fit, width, tolerance) do
-		local i, j = run[1], run[2]
-		local p0 = (v3(rb.centre[i]) + v3(rb.offset[i][3])) * scale
-		local p1 = (v3(rb.centre[j]) + v3(rb.offset[j][3])) * scale
-		local delta = p1 - p0
-		local len = delta.Magnitude
-		if len > 1e-4 then
-			local mid = (p0 + p1) * 0.5
-			local nrm = (v3(rb.normal[i]) + v3(rb.normal[j])).Unit
-			local tan = delta / len
-			local bin = tan:Cross(nrm)
-			if bin.Magnitude < 1e-4 then
-				bin = v3(rb.binormal[i]).Unit
-			else
-				bin = bin.Unit
-			end
-			local trueNrm = bin:Cross(tan).Unit
-			local seg = Instance.new("Part")
-			seg.Name = EmployeeConstants.LANYARD_STRAP
-			seg.Material = Enum.Material.SmoothPlastic
-			seg.Color = color
-			seg.Size = Vector3.new(w, thickness, len + 0.008 * scale)
-			quiet(seg)
-			seg.CFrame = ut.CFrame * CFrame.fromMatrix(mid + trueNrm * (thickness * 0.5), bin, trueNrm, -tan)
-			local wc = Instance.new("WeldConstraint")
-			wc.Part0, wc.Part1 = ut, seg
-			wc.Parent = seg
-			seg.Parent = parent
-		end
-	end
-end
-
 function EmployeeLanyardSystem.attach(
 	character: Model,
 	fit: Fit,
@@ -235,7 +114,7 @@ function EmployeeLanyardSystem.attach(
 	local strap: MeshPart? = nil
 	local em: EditableMesh? = nil
 	if not syncOnly then
-		strap, em = buildStrapMesh(fit, rank, scale, ut)
+		strap, em = EmployeeLanyardStrapSystem.buildStrapMesh(fit, rank, scale, ut)
 	end
 	if strap ~= nil then
 		strap.Parent = folder
@@ -244,7 +123,7 @@ function EmployeeLanyardSystem.attach(
 		local tolerance = if syncOnly
 			then EmployeeLanyardConstants.PREVIEW_RIBBON_TOLERANCE
 			else EmployeeLanyardConstants.PART_RIBBON_TOLERANCE
-		fallbackRibbonParts(fit, rank, scale, ut, folder, tolerance)
+		EmployeeLanyardStrapSystem.fallbackRibbonParts(fit, rank, scale, ut, folder, tolerance)
 	end
 	local badgeWeld: Weld? = nil
 	local badgeRoot: BasePart? = nil
@@ -308,202 +187,6 @@ function EmployeeLanyardSystem.attach(
 			end
 		end,
 	}
-end
-
-local function oneLine(label: TextLabel, text: string, font: Enum.Font, w: number, h: number, maxSize: number)
-	local size = math.floor(math.min(maxSize, h))
-	while size > 4 and TextService:GetTextSize(text, size, font, Vector2.new(10000, 10000)).X > w do
-		size -= 1
-	end
-	label.Text = text
-	label.Font = font
-	label.TextSize = size
-	label.TextScaled = false
-	label.TextWrapped = false
-end
-
-local function px(box: { number }, canvas: { number }): (UDim2, UDim2)
-	return UDim2.fromScale(box[1] / canvas[1], box[2] / canvas[2]),
-		UDim2.fromScale(box[3] / canvas[1], box[4] / canvas[2])
-end
-
-local function mountPortrait(character: Model, parent: Instance, lay: CardLayout)
-	local pos, size = px(lay.portrait, lay.canvas)
-	local ring = Instance.new("Frame")
-	ring.Name = "PortraitRing"
-	ring.Position, ring.Size = pos, size
-	ring.BackgroundColor3 = Color3.fromHex(lay.ringColour)
-	ring.BorderSizePixel = 0
-	Instance.new("UICorner", ring).CornerRadius = UDim.new(0.5, 0)
-	ring.Parent = parent
-
-	local vf = Instance.new("ViewportFrame")
-	vf.Name = "Portrait"
-	local inset = lay.ring / lay.portrait[3]
-	vf.Position = UDim2.fromScale(inset, inset)
-	vf.Size = UDim2.fromScale(1 - 2 * inset, 1 - 2 * inset)
-	vf.BackgroundColor3 = Color3.fromHex(lay.backdrop)
-	vf.BackgroundTransparency = 0
-	vf.BorderSizePixel = 0
-	vf.Ambient = Color3.fromRGB(190, 190, 190)
-	vf.LightColor = Color3.new(1, 1, 1)
-	vf.LightDirection = Vector3.new(-0.4, -0.6, 0.7)
-	Instance.new("UICorner", vf).CornerRadius = UDim.new(0.5, 0)
-	vf.Parent = ring
-
-	local copy = EmployeePortraitSystem.build(character, nil)
-	if copy == nil then
-		return
-	end
-	for _, n in { EmployeeConstants.LANYARD_FOLDER, "VacuumBackpack" } do
-		local x = copy:FindFirstChild(n, true)
-		if x ~= nil then
-			x:Destroy()
-		end
-	end
-	local head = copy:FindFirstChild("Head")
-	if head == nil or not head:IsA("BasePart") then
-		copy:Destroy()
-		return
-	end
-	local lo, hi = head.Position - head.Size / 2, head.Position + head.Size / 2
-	local reach = head.Size.Magnitude * 1.2
-	local neckY = head.Position.Y - head.Size.Y / 2
-	for _, p in copy:GetDescendants() do
-		if
-			p:IsA("BasePart")
-			and p ~= head
-			and p.Transparency < 1
-			and p.Position.Y > neckY
-			and (p.Position - head.Position).Magnitude < reach
-		then
-			lo = lo:Min(p.Position - p.Size / 2)
-			hi = hi:Max(p.Position + p.Size / 2)
-		end
-	end
-	local centre = (lo + hi) / 2
-	local half = math.max(hi.Y - lo.Y, hi.X - lo.X) / 2
-	local cam = Instance.new("Camera")
-	cam.FieldOfView = 28
-	local dist = half / math.tan(math.rad(14)) * 1.1
-	cam.CFrame = CFrame.lookAt(centre + Vector3.new(0, 0, -dist), centre)
-	cam.Parent = vf
-	vf.CurrentCamera = cam
-	copy.Parent = vf
-end
-
-local function mountInfoCard(character: Model, handle: Handle, rank: number, holderName: string)
-	local badgeRoot = handle.badgeRoot
-	local localPlayer = Players.LocalPlayer
-	local playerGui = if localPlayer ~= nil then localPlayer:FindFirstChildOfClass("PlayerGui") else nil
-	if badgeRoot == nil or playerGui == nil then
-		return
-	end
-	local lay = EmployeeLanyardConstants.INFO_FRONT[rank] or EmployeeLanyardConstants.INFO_FRONT[1]
-	local s = handle.scale
-	local thickness = 0.001 * s
-	local host = Instance.new("Part")
-	host.Name = "InfoCardHost"
-	host.Size = Vector3.new(lay.size[1] * s, lay.size[2] * s, thickness)
-	host.Transparency = 1
-	quiet(host)
-	-- On the badge's own front-most face (per rank), not at the model origin: the badge body is up to 0.02 studs
-	-- deep, so the old fixed depth buried the card and its portrait inside it and they vanished as the camera
-	-- came close. The SurfaceGui draws on the host's Front (-Z) face, half a thickness in front of its centre.
-	local plane = handle.cardZ or lay.centre[3] * s
-	host.CFrame = badgeRoot.CFrame
-		* handle.badgeTurn
-		* CFrame.new(lay.centre[1] * s, lay.centre[2] * s, plane + thickness / 2)
-	local wc = Instance.new("WeldConstraint")
-	wc.Part0, wc.Part1 = badgeRoot, host
-	wc.Parent = host
-
-	local gui = Instance.new("SurfaceGui")
-	gui.Name = "InfoCard"
-	gui.Face = Enum.NormalId.Front
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
-	gui.CanvasSize = Vector2.new(lay.canvas[1], lay.canvas[2])
-	gui.LightInfluence = 1
-	gui.Adornee = host
-	gui.ResetOnSpawn = false
-	gui.Parent = playerGui
-	host.Destroying:Connect(function()
-		gui:Destroy()
-	end)
-
-	mountPortrait(character, gui, lay)
-
-	local npos, nsize = px(lay.name, lay.canvas)
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Name = "Name"
-	nameLabel.Position, nameLabel.Size = npos, nsize
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromHex("#1E0F3A")
-	oneLine(nameLabel, string.upper(holderName), Enum.Font.LuckiestGuy, lay.name[3], lay.name[4], lay.nameMax)
-	nameLabel.Parent = gui
-
-	local lpos, lsize = px(lay.line, lay.canvas)
-	local pill = Instance.new("TextLabel")
-	pill.Name = "RankLine"
-	pill.Position, pill.Size = lpos, lsize
-	pill.BackgroundColor3 = Color3.fromHex(lay.fill)
-	pill.BorderSizePixel = 0
-	pill.TextColor3 = Color3.fromHex(lay.ink)
-	local rankTitle = EmployeeLanyardConstants.RANK_NAMES[rank] or "NEW KID"
-	local line = `RANK {rank} \u{00B7} {rankTitle}`
-	oneLine(pill, line, Enum.Font.FredokaOne, lay.line[3] * 0.88, lay.line[4] * 0.8, lay.lineMax)
-	Instance.new("UICorner", pill).CornerRadius = UDim.new(0.5, 0)
-	pill.Parent = gui
-	host.Parent = handle.folder
-end
-
-local function sway(character: Model, fit: Fit, rank: number, handle: Handle): () -> ()
-	local hum = character:FindFirstChildOfClass("Humanoid")
-	local ut = character:FindFirstChild("UpperTorso")
-	local weld = handle.badgeWeld
-	if hum == nil or ut == nil or not ut:IsA("BasePart") or weld == nil then
-		return function() end
-	end
-	local scale = ut.Size.X / fit.ut_size[1]
-	local pv = v3(fit.pivot_rbx) * scale
-	local spring = EmployeeLanyardFormulas.newSpring()
-	local conn: RBXScriptConnection? = nil
-	local lastV = ut.CFrame:VectorToObjectSpace(ut.AssemblyLinearVelocity)
-	local still = 0
-	local function frame(dt: number)
-		local v = ut.CFrame:VectorToObjectSpace(ut.AssemblyLinearVelocity)
-		local acc = (v - lastV) / math.max(dt, 1 / 240)
-		lastV = v
-		local p, r, y, moving =
-			EmployeeLanyardFormulas.step(fit, rank, spring, { acc.X, acc.Y, acc.Z }, math.min(dt, 1 / 30))
-		weld.C0 = CFrame.new(pv)
-			* CFrame.Angles(math.rad(p), 0, 0)
-			* CFrame.Angles(0, 0, math.rad(r))
-			* CFrame.Angles(0, math.rad(y), 0)
-		still = if moving then 0 else still + dt
-		if still > 0.4 and conn ~= nil then
-			conn:Disconnect()
-			conn = nil
-		end
-	end
-	local function wake()
-		if conn == nil then
-			still = 0
-			lastV = ut.CFrame:VectorToObjectSpace(ut.AssemblyLinearVelocity)
-			conn = RunService.RenderStepped:Connect(frame)
-		end
-	end
-	local c1 = hum.Running:Connect(wake)
-	local c2 = hum.StateChanged:Connect(wake)
-	local c3 = hum:GetPropertyChangedSignal("MoveDirection"):Connect(wake)
-	return function()
-		c1:Disconnect()
-		c2:Disconnect()
-		c3:Disconnect()
-		if conn ~= nil then
-			conn:Disconnect()
-		end
-	end
 end
 
 local function resolveRank(player: Player?, character: Model): number
@@ -659,11 +342,11 @@ function EmployeeLanyardSystem.bind(player: Player?, character: Model): () -> ()
 				return
 			end
 			local holderName = if player ~= nil then player.DisplayName else character.Name
-			mountInfoCard(character, handle, rank, holderName)
+			EmployeeLanyardCardSystem.mountInfoCard(character, handle, rank, holderName)
 			currentHandle = handle
 			currentRank = rank
 			currentFlip = flipped
-			stopSway = sway(character, fit, rank, handle)
+			stopSway = EmployeeLanyardSwaySystem.sway(character, fit, rank, handle)
 			done()
 		end)
 	end

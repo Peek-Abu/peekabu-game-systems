@@ -23,18 +23,17 @@
 	  comes along (the rank lanyard and badge, the vacuum pack), else the dressed template; then the outfit's vacuum
 	  goes on the pack (VacuumPreviewSystem.swap). Live (and its second result true) when asked and a slot is free,
 	  else posed and frozen like `static`.
+	- `idleOf` / `reachOf` / `fidgetOf` / `revealOf` / `reactionOf` / `emoteOf` (which clip a preview plays) live in
+	  EmployeePreviewClipUtils, and `playIdle` / `playReveal` / `playReaction` / `playFidgets` / `playEmote` in
+	  EmployeePreviewPlaySystem (both split out of this module); they are re-exported here under the same names.
 
 	@class EmployeePreviewSystem
 ]=]
 
-local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
-local AnimationPlayerEngineSystem =
-	require(ReplicatedStorage.Shared.Features.Animation.Systems.AnimationPlayerEngineSystem)
-local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local EmployeeConstants = require(EmployeeShared.Data.EmployeeConstants)
 local EmployeePoseRegistry = require(EmployeeShared.Data.EmployeePoseRegistry)
 local EmployeeRegistry = require(EmployeeShared.Data.EmployeeRegistry)
@@ -43,31 +42,31 @@ local EmployeeSkinSystem = require(EmployeeShared.Systems.EmployeeSkinSystem)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
-local AnimationFidgetSystem = require(ReplicatedStorage.Client.Features.Animation.Systems.AnimationFidgetSystem)
-local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
-local EmployeeLanyardSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeLanyardSystem)
+local EmployeeClient = ReplicatedStorage.Client.Features.Employee
+local EmployeePreviewClipUtils = require(EmployeeClient.Utils.EmployeePreviewClipUtils)
+local EmployeePortraitSystem = require(EmployeeClient.Systems.EmployeePortraitSystem)
+local EmployeeLanyardSystem = require(EmployeeClient.Systems.EmployeeLanyardSystem)
+local EmployeePreviewPlaySystem = require(EmployeeClient.Systems.EmployeePreviewPlaySystem)
 local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
 
 local LIVE_CAP = 2
--- Seconds an emote preview rests on the idle between two plays.
-local EMOTE_PAUSE = 1
--- The longest a reveal waits for its faces to load before it starts anyway.
-local REVEAL_PRELOAD = 2
--- Seconds a menu reaction fades in; a click lands anywhere in the idle's loop, up to 29 degrees from the reaction's
--- first pose at a joint (measured 2026-10-30).
-local REACTION_FADE = 0.25
--- Seconds a reaction blends into a showcase idle before it ends: it lands on the employee's own idle, up to 75 degrees
--- from the showcase idle's first pose at a joint (measured 2026-10-30).
-local SHOWCASE_RETURN = 0.4
--- Seconds a reveal crossfades into a skin's own idle (owner, 2026-11-03: a fade, not a new reveal ending per skin). The
--- reveal lands on the employee's idle, up to 94 degrees at a joint from a showcase idle's first pose; over 0.5 s the
--- arms move at most 4.5 degrees a frame, calmer than the reveal itself (measured on Sheriff Prickles, 2026-11-03).
-local REVEAL_FADE = 0.5
 
 local EmployeePreviewSystem = {
 	LIVE_CAP = LIVE_CAP,
-	EMOTE_PAUSE = EMOTE_PAUSE,
-	REVEAL_FADE = REVEAL_FADE,
+	EMOTE_PAUSE = EmployeePreviewPlaySystem.EMOTE_PAUSE,
+	REVEAL_FADE = EmployeePreviewPlaySystem.REVEAL_FADE,
+	-- The clip lookups (EmployeePreviewClipUtils) and the players (EmployeePreviewPlaySystem), under their old names.
+	idleOf = EmployeePreviewClipUtils.idleOf,
+	reachOf = EmployeePreviewClipUtils.reachOf,
+	fidgetOf = EmployeePreviewClipUtils.fidgetOf,
+	revealOf = EmployeePreviewClipUtils.revealOf,
+	reactionOf = EmployeePreviewClipUtils.reactionOf,
+	emoteOf = EmployeePreviewClipUtils.emoteOf,
+	playIdle = EmployeePreviewPlaySystem.playIdle,
+	playReveal = EmployeePreviewPlaySystem.playReveal,
+	playReaction = EmployeePreviewPlaySystem.playReaction,
+	playFidgets = EmployeePreviewPlaySystem.playFidgets,
+	playEmote = EmployeePreviewPlaySystem.playEmote,
 }
 
 local live: { [Model]: RBXScriptConnection } = {}
@@ -316,333 +315,6 @@ function EmployeePreviewSystem.outfit(
 	local copy = EmployeePortraitSystem.build(model, pose, true)
 	model:Destroy()
 	return copy, false
-end
-
---[=[
-	The animation registry key of the idle loop a preview plays: the chosen idle item's (`idle`, the key after the dot,
-	one that fits the skin), else the skin's own showcase idle when it has one (EmployeeRegistry `showcaseIdle`), else
-	the employee's idle (nil = no own locomotion).
-]=]
-function EmployeePreviewSystem.idleOf(employee: string, skin: string?, idle: string?): string?
-	local def = EmployeeRegistry.get(employee)
-	return if def ~= nil then EmployeeSkinRules.idleOf(def, skin, idle) else nil
-end
-
---[=[
-	How far the clip a preview plays (idleOf) carries the model and its props round its root, over the whole idle, its
-	fidget and the menu reaction (measured in Studio; EmployeeRegistry `showcaseReach` / `previewReach`): a spinning
-	preview's camera is fitted to it once and never refits (owner, 2026-11-14: no zoom while you look at an item).
-]=]
-function EmployeePreviewSystem.reachOf(employee: string, skin: string?, idle: string?): EmployeeRegistry.PreviewReach?
-	local def = EmployeeRegistry.get(employee)
-	if def == nil then
-		return nil
-	end
-	local clip = EmployeeSkinRules.idleOf(def, skin, idle)
-	for _, look in def.skins do
-		if clip ~= nil and look.showcaseIdle == clip and look.showcaseReach ~= nil then
-			return look.showcaseReach
-		end
-	end
-	return def.previewReach
-end
-
---[=[
-	The animation registry key of the fidget a preview plays, the one that belongs to its idle (EmployeeSkinRules
-	`fidgetOf`: a skin's own over its showcase idle, else the employee's); nil when there is none.
-]=]
-function EmployeePreviewSystem.fidgetOf(employee: string, skin: string?, idle: string?): string?
-	local def = EmployeeRegistry.get(employee)
-	return if def ~= nil then EmployeeSkinRules.fidgetOf(def, skin, idle) else nil
-end
-
---[=[
-	The animation registry key of the reveal the reveal screen plays for `employee` in `skin` (nil = a hire): the
-	skin's own unlock reveal, else the employee's hire reveal worn in that skin; nil when there is none (its idle only).
-]=]
-function EmployeePreviewSystem.revealOf(employee: string, skin: string?): string?
-	local def = EmployeeRegistry.get(employee)
-	if def == nil then
-		return nil
-	end
-	local look = if skin ~= nil then def.skins[skin] else nil
-	local own = if look ~= nil then look.unlockReveal else nil
-	return own or def.hireReveal
-end
-
---[=[
-	The animation registry key of the reaction a menu hero plays when clicked (EmployeeRegistry `selectReaction`); nil
-	when it has none.
-]=]
-function EmployeePreviewSystem.reactionOf(employee: string): string?
-	local def = EmployeeRegistry.get(employee)
-	return if def ~= nil then def.selectReaction else nil
-end
-
---[=[
-	The animation registry key of the clip an emote item (a CosmeticRegistry id) loops in a preview; nil when the id is
-	not an emote or its clip is not made yet.
-]=]
-function EmployeePreviewSystem.emoteOf(itemId: string): string?
-	local item = CosmeticRegistry.get(itemId)
-	if item == nil or item.kind ~= "emote" then
-		return nil
-	end
-	local key = "emote:" .. itemId
-	return if AnimationRegistry.get(key) ~= nil then key else nil
-end
-
-local function load(model: Model, key: string?): AnimationTrack?
-	local def = if key ~= nil then AnimationRegistry.get(key) else nil
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	local animator = if humanoid ~= nil then humanoid:FindFirstChildOfClass("Animator") else nil
-	if def == nil or animator == nil then
-		return nil
-	end
-	local animation = Instance.new("Animation")
-	animation.AnimationId = def.assetId
-	return animator:LoadAnimation(animation)
-end
-
---[=[
-	Plays the idle loop (`idleOf`) on a live preview (call after it is parented into a WorldModel), over `fade` seconds
-	(nil = at once). Returns the track, nil when there is nothing to play.
-]=]
-function EmployeePreviewSystem.playIdle(
-	model: Model,
-	employee: string,
-	skin: string?,
-	fade: number?,
-	idle: string?
-): AnimationTrack?
-	local track = load(model, EmployeePreviewSystem.idleOf(employee, skin, idle))
-	if track == nil then
-		return nil
-	end
-	track.Looped = true
-	track:Play(fade or 0)
-	return track
-end
-
---[=[
-	Plays the reveal (`revealOf`) once on a live preview, then its idle (`playIdle`, the skin's showcase idle when it
-	has one). A reveal ends on the employee's own idle, so a skin's own idle takes over with a REVEAL_FADE crossfade
-	before the reveal's end. Its props and faces come from the clip's markers (EmotePropSystem / EmoteEffectSystem
-	tracking the model). Returns the stop (it cancels the reveal or the idle that followed), or nil when there is no
-	reveal (the caller plays the idle instead).
-]=]
-function EmployeePreviewSystem.playReveal(model: Model, employee: string, skin: string?, idleItem: string?): (() -> ())?
-	local reveal = load(model, EmployeePreviewSystem.revealOf(employee, skin))
-	if reveal == nil then
-		return nil
-	end
-	-- The idle holds until the faces the reveal swaps in are loaded (a first swap drew a blank white face for a
-	-- moment, Studio probe 2026-10-29), at most REVEAL_PRELOAD seconds.
-	local idle = EmployeePreviewSystem.playIdle(model, employee, skin, nil, idleItem)
-	local stopped = false
-	local started = false
-	local handedOver = false
-	local connection = reveal.Stopped:Connect(function()
-		if not stopped and not handedOver and model.Parent ~= nil then
-			idle = EmployeePreviewSystem.playIdle(model, employee, skin, nil, idleItem)
-		end
-	end)
-	-- A skin's own idle: crossfade into it before the reveal ends (the reveal ends on the employee's idle).
-	local fading: RBXScriptConnection? = nil
-	if EmployeePreviewSystem.idleOf(employee, skin, idleItem) ~= EmployeePreviewSystem.idleOf(employee, nil) then
-		fading = RunService.Heartbeat:Connect(function()
-			if not started or reveal.Length == 0 or reveal.TimePosition < reveal.Length - REVEAL_FADE then
-				return
-			end
-			local waiting = fading
-			if waiting ~= nil then
-				waiting:Disconnect()
-			end
-			handedOver = true
-			idle = EmployeePreviewSystem.playIdle(model, employee, skin, REVEAL_FADE, idleItem)
-			reveal:Stop(REVEAL_FADE)
-		end)
-	end
-	local function start()
-		if stopped or started or model.Parent == nil then
-			return
-		end
-		started = true
-		local holding = idle
-		if holding ~= nil then
-			holding:Stop(0)
-			idle = nil
-		end
-		reveal:Play(0)
-	end
-	local faces = model:FindFirstChild(EmployeeConstants.FACES_FOLDER)
-	if faces ~= nil then
-		task.spawn(function()
-			pcall(function()
-				ContentProvider:PreloadAsync({ faces })
-			end)
-			start()
-		end)
-		task.delay(REVEAL_PRELOAD, start)
-	else
-		start()
-	end
-	return function()
-		stopped = true
-		connection:Disconnect()
-		local waiting = fading
-		if waiting ~= nil then
-			waiting:Disconnect()
-		end
-		reveal:Stop(0)
-		local settled = idle
-		if settled ~= nil then
-			settled:Stop(0)
-		end
-	end
-end
-
---[=[
-	Plays the reaction (`reactionOf`) once on a live preview that is playing its idle, then that idle again. The idle
-	stops for it, so a showcase idle's props stow with the idle's track and come back with it (owner, 2026-10-29: a
-	Legendary skin reacts with its props hidden). Returns the stop (it fades the reaction out and leaves the idle, so a
-	new reaction takes over from a pose, never from nothing), or nil when there is no reaction.
-]=]
-function EmployeePreviewSystem.playReaction(model: Model, employee: string, skin: string?, idle: string?): (() -> ())?
-	local reaction = load(model, EmployeePreviewSystem.reactionOf(employee))
-	if reaction == nil then
-		return nil
-	end
-	local idleKey = EmployeePreviewSystem.idleOf(employee, skin, idle)
-	local idleDef = if idleKey ~= nil then AnimationRegistry.get(idleKey) else nil
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	local animator = if humanoid ~= nil then humanoid:FindFirstChildOfClass("Animator") else nil
-	local stopped = false
-	local handedOver = false
-	local connection = reaction.Stopped:Connect(function()
-		if not stopped and not handedOver and model.Parent ~= nil then
-			EmployeePreviewSystem.playIdle(model, employee, skin, nil, idle)
-		end
-	end)
-	local returning: RBXScriptConnection? = nil
-	if idleKey ~= EmployeePreviewSystem.idleOf(employee, nil) then
-		returning = RunService.Heartbeat:Connect(function()
-			if reaction.Length == 0 or reaction.TimePosition < reaction.Length - SHOWCASE_RETURN then
-				return
-			end
-			local waiting = returning
-			if waiting ~= nil then
-				waiting:Disconnect()
-			end
-			handedOver = true
-			EmployeePreviewSystem.playIdle(model, employee, skin, SHOWCASE_RETURN, idle)
-			reaction:Stop(SHOWCASE_RETURN)
-		end)
-	end
-	-- The click lands anywhere in the idle's loop, so the reaction fades in over it; it covers the whole body, so the
-	-- idle can stop unseen once it is in. The reaction's last pose is the idle's first, which is where the idle resumes.
-	local covering: RBXScriptConnection? = nil
-	covering = RunService.Heartbeat:Connect(function()
-		if reaction.WeightCurrent < 1 then
-			return
-		end
-		local waiting = covering
-		if waiting ~= nil then
-			waiting:Disconnect()
-		end
-		if idleDef ~= nil and animator ~= nil then
-			for _, track in animator:GetPlayingAnimationTracks() do
-				if track.Animation.AnimationId == idleDef.assetId then
-					track:Stop(0)
-				end
-			end
-		end
-	end)
-	reaction:Play(REACTION_FADE)
-	return function()
-		stopped = true
-		connection:Disconnect()
-		local waiting = covering
-		if waiting ~= nil then
-			waiting:Disconnect()
-		end
-		local handing = returning
-		if handing ~= nil then
-			handing:Disconnect()
-		end
-		reaction:Stop(REACTION_FADE)
-	end
-end
-
---[=[
-	Runs the fidget (`fidgetOf`) on a live preview, the same wait as in the world, held off while a reveal or another
-	Action clip plays. Returns the stop, or nil when it has no fidget.
-]=]
-function EmployeePreviewSystem.playFidgets(model: Model, employee: string, skin: string?, idle: string?): (() -> ())?
-	local clip = EmployeePreviewSystem.fidgetOf(employee, skin, idle)
-	local def = if clip ~= nil then AnimationRegistry.get(clip) else nil
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	local animator = if humanoid ~= nil then humanoid:FindFirstChildOfClass("Animator") else nil
-	if clip == nil or def == nil or animator == nil then
-		return nil
-	end
-	local player = AnimationPlayerEngineSystem.forAnimator(animator)
-	-- Loaded up front: a clip fetched at its first play would land late in the idle's loop.
-	player:warm(clip)
-	local fidget = AnimationFidgetSystem.new(player, { clips = { clip } })
-	local own = { def.assetId }
-	local idleKey = EmployeePreviewSystem.idleOf(employee, skin, idle)
-	local idleDef = if idleKey ~= nil then AnimationRegistry.get(idleKey) else nil
-	local idleAsset = if idleDef ~= nil then idleDef.assetId else nil
-	local connection = RunService.Heartbeat:Connect(function()
-		local tracks = animator:GetPlayingAnimationTracks()
-		fidget:update(os.clock(), {
-			pose = "idle",
-			blocked = AnimationFidgetSystem.actionPlaying(tracks, own),
-			idlePhase = AnimationFidgetSystem.loopTime(tracks, idleAsset),
-		})
-	end)
-	return function()
-		connection:Disconnect()
-		fidget:destroy()
-	end
-end
-
---[=[
-	Loops an emote item's clip on a live preview (owner, 2026-10-29): the emote, EMOTE_PAUSE seconds of the idle, the
-	emote again. Its props and faces come from the clip's markers (EmotePropSystem / EmoteEffectSystem tracking the
-	model). Returns the stop, or nil when the emote has no clip (the caller plays the idle instead).
-]=]
-function EmployeePreviewSystem.playEmote(model: Model, employee: string, skin: string?, itemId: string): (() -> ())?
-	local emote = load(model, EmployeePreviewSystem.emoteOf(itemId))
-	if emote == nil then
-		return nil
-	end
-	local idle = EmployeePreviewSystem.playIdle(model, employee, skin)
-	local stopped = false
-	local again: thread? = nil
-	local connection = emote.Stopped:Connect(function()
-		if not stopped then
-			again = task.delay(EMOTE_PAUSE, function()
-				if not stopped and model.Parent ~= nil then
-					emote:Play()
-				end
-			end)
-		end
-	end)
-	emote:Play()
-	return function()
-		stopped = true
-		connection:Disconnect()
-		local pending = again
-		if pending ~= nil then
-			task.cancel(pending)
-		end
-		emote:Stop(0)
-		if idle ~= nil then
-			idle:Stop(0)
-		end
-	end
 end
 
 function EmployeePreviewSystem.liveCount(): number
