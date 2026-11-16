@@ -28,6 +28,7 @@
 	Visibility is cosmetic and per client: a client can only change its own view.
 
 	`deps` is a test seam: the character's Animator as a source of tracks, the clip lookup and the prop templates.
+	The real Animator source (the AnimationTrack wrapper) lives in EmotePropAnimatorUtils, split out of this file.
 
 	@class EmotePropSystem
 ]=]
@@ -40,24 +41,12 @@ local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Dat
 local EmployeeOutfitSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeOutfitSystem)
 local EmoteConstants = require(ReplicatedStorage.Shared.Features.Emote.Data.EmoteConstants)
 local EmotePropRegistry = require(ReplicatedStorage.Shared.Features.Emote.Data.EmotePropRegistry)
+local EmotePropAnimatorUtils = require(ReplicatedStorage.Client.Features.Emote.Utils.EmotePropAnimatorUtils)
 
--- What the system reads of a playing AnimationTrack.
-export type PropTrack = {
-	assetId: string,
-	timePosition: () -> number,
-	isPlaying: () -> boolean,
-	-- The time of the keyframe with this name, or nil when the clip has none.
-	timeOfKeyframe: (name: string) -> number?,
-	-- The callback gets the marker's Value (e.g. a face name).
-	onMarker: (name: string, callback: (value: string) -> ()) -> () -> (),
-	onStopped: (callback: () -> ()) -> () -> (),
-}
-
--- A character's Animator: the tracks playing now, and each one it starts later.
-export type TrackSource = {
-	playing: () -> { PropTrack },
-	onPlayed: (callback: (track: PropTrack) -> ()) -> () -> (),
-}
+-- What the system reads of a playing AnimationTrack, and a character's Animator as a source of them
+-- (EmotePropAnimatorUtils).
+export type PropTrack = EmotePropAnimatorUtils.PropTrack
+export type TrackSource = EmotePropAnimatorUtils.TrackSource
 
 export type Deps = {
 	sourceOf: (character: Model) -> TrackSource?,
@@ -82,74 +71,7 @@ export type EmotePropSystem = {
 	getState: () -> EmotePropState,
 }
 
--- The registry's canonical `rbxassetid://N` form of an AnimationId (a replicated track may carry another form).
-local function canonical(id: string): string
-	local digits = string.match(id, "(%d+)$")
-	return if digits ~= nil then "rbxassetid://" .. digits else id
-end
-
-local function wrapTrack(track: AnimationTrack): PropTrack
-	return {
-		assetId = canonical(track.Animation.AnimationId),
-		timePosition = function()
-			return track.TimePosition
-		end,
-		isPlaying = function()
-			return track.IsPlaying
-		end,
-		timeOfKeyframe = function(name)
-			-- Errors when the clip has no keyframe of that name.
-			local ok, time = pcall(function()
-				return track:GetTimeOfKeyframe(name)
-			end)
-			return if ok then time else nil
-		end,
-		onMarker = function(name, callback)
-			local connection = track:GetMarkerReachedSignal(name):Connect(function(value: string?)
-				callback(value or "")
-			end)
-			return function()
-				connection:Disconnect()
-			end
-		end,
-		onStopped = function(callback)
-			local connection = track.Stopped:Connect(callback)
-			return function()
-				connection:Disconnect()
-			end
-		end,
-	}
-end
-
-local function animatorSource(animator: Animator): TrackSource
-	return {
-		playing = function()
-			local out = {}
-			for _, track in animator:GetPlayingAnimationTracks() do
-				table.insert(out, wrapTrack(track))
-			end
-			return out
-		end,
-		onPlayed = function(callback)
-			local connection = animator.AnimationPlayed:Connect(function(track: AnimationTrack)
-				callback(wrapTrack(track))
-			end)
-			return function()
-				connection:Disconnect()
-			end
-		end,
-	}
-end
-
--- The character's Animator, under its Humanoid or AnimationController (nil until it exists).
-local function realSource(character: Model): TrackSource?
-	local host: Instance? = character:FindFirstChildOfClass("Humanoid")
-	if host == nil then
-		host = character:FindFirstChildOfClass("AnimationController")
-	end
-	local animator = if host ~= nil then host:FindFirstChildOfClass("Animator") else nil
-	return if animator ~= nil then animatorSource(animator) else nil
-end
+local realSource = EmotePropAnimatorUtils.realSource
 
 -- The emote prop template with this name, under ReplicatedStorage at EmoteConstants.PROP_TEMPLATES_PATH.
 local function realTemplate(name: string): BasePart?
