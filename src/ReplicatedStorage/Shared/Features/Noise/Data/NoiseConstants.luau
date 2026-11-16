@@ -12,6 +12,10 @@
 local QUIET_SOURCES: { [string]: boolean } = { sprint = true, vacuum = true }
 
 return table.freeze({
+	-- Whether a noise shows anything at all (owner pick 2026-11-16, launch VFX round 2: "I think we should just not have
+	-- any for noise stuff!", like a horror game where you just know you are loud). false: the server sends no Ripple
+	-- and nothing is drawn; Harlow still hears every noise (NoiseServiceServer.made). true brings the old ring back.
+	SHOW_RIPPLE = false,
 	RIPPLE_NAME = "NoiseRipple",
 	-- Seconds from the noise to the ring vanishing at the heard radius.
 	RIPPLE_SECONDS = 1.1,

@@ -4,7 +4,8 @@
 	pulses, Cargo's drops, splashes, searches and rattles, and Hide's coming out of a spot (the Manager's behaviours
 	design §10.3) arrive on their `noiseMade` signals; anything else
 	may call `emit`. Every noise fires `made` (Occupant decides whether Harlow hears it, through NoiseRules) and
-	shows every client a ripple at the radius Harlow hears it at (the hearing scale Occupant keeps current). A noise from
+	shows every client a ripple at the radius Harlow hears it at (the hearing scale Occupant keeps current) when
+	NoiseConstants.SHOW_RIPPLE is on (off since the owner's 2026-11-16 pick: no noise visuals). A noise from
 	a Quiet source (NoiseRules.quietens: sprinting feet, a vacuum) carries as far as its loudest maker's Quiet stat
 	allows (EmployeeStatFormulas.noiseCut), so a quiet employee never hides a loud one.
 
@@ -19,6 +20,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local NoiseShared = ReplicatedStorage.Shared.Features.Noise
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
+local NoiseConstants = require(NoiseShared.Data.NoiseConstants)
 local NoiseTypes = require(NoiseShared.Data.NoiseTypes)
 local NoiseEvents = require(NoiseShared.Net.NoiseEvents)
 local NoiseRules = require(NoiseShared.Rules.NoiseRules)
@@ -106,10 +108,13 @@ local NoiseServiceServer: NoiseServiceServer = {
 		local event: NoiseTypes.NoiseEvent =
 			{ position = position, radius = radius, source = source, makers = makers or {} }
 		made:Fire(event)
-		NoiseEvents.packets.Ripple.sendToAll({
-			position = position,
-			radius = NoiseRules.heardRadius(radius, hearingScale),
-		})
+		-- Owner pick 2026-11-16: no noise visuals (NoiseConstants.SHOW_RIPPLE); the hearing above is unchanged.
+		if NoiseConstants.SHOW_RIPPLE then
+			NoiseEvents.packets.Ripple.sendToAll({
+				position = position,
+				radius = NoiseRules.heardRadius(radius, hearingScale),
+			})
+		end
 	end,
 
 	--[=[
