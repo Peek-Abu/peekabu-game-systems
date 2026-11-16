@@ -2,8 +2,8 @@
 --[=[
 	EmployeeServiceClient: employee presentation on this client. For every employee character (an EmployeeName attribute) it
 	shows the server's chosen face (EmployeeFaceSystem), drives the springy ears (EmployeeEarSystem) and the head look
-	(EmployeeHeadLookSystem) once per
-	frame in RunService.PreSimulation, after the frame's animations are applied, and keeps its layered clothing wrapped
+	(EmployeeHeadLookSystem) and swings an outfit's coat tails (EmployeeTailSystem) once per frame in
+	RunService.PreSimulation, after the frame's animations are applied, and keeps its layered clothing wrapped
 	(EmployeeGarmentGuardSystem) on the same step.
 
 	@class EmployeeServiceClient
@@ -22,10 +22,12 @@ local EmployeeGarmentGuardSystem =
 local EmployeeHeadLookSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeHeadLookSystem)
 local EmployeeLanyardSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeLanyardSystem)
 local EmployeeSwapVfxSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeSwapVfxSystem)
+local EmployeeTailSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeTailSystem)
 
 local ears = EmployeeEarSystem.new()
 local heads = EmployeeHeadLookSystem.new()
 local garments = EmployeeGarmentGuardSystem.new()
+local tails = EmployeeTailSystem.new()
 local stoppers: { () -> () } = {}
 local faces = 0
 
@@ -34,6 +36,7 @@ export type EmployeeClientState = {
 	ears: EmployeeEarSystem.EmployeeEarState,
 	heads: { tracked: number, looking: number },
 	garments: EmployeeGarmentGuardSystem.EmployeeGarmentGuardState,
+	tails: EmployeeTailSystem.EmployeeTailState,
 }
 
 export type EmployeeServiceClient = {
@@ -62,6 +65,7 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 				local releaseHead = heads.track(player, character)
 				local releaseGarments = garments.track(character, os.clock())
 				local releaseLanyard = EmployeeLanyardSystem.bind(player, character)
+				local releaseTails = tails.track(character)
 				return function()
 					faces -= 1
 					releaseFace()
@@ -69,6 +73,7 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 					releaseHead()
 					releaseGarments()
 					releaseLanyard()
+					releaseTails()
 				end
 			end)
 		)
@@ -77,6 +82,7 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 			if camera ~= nil then
 				ears.step(dt, camera.CFrame.Position, os.clock())
 				heads.step(dt, camera.CFrame.Position)
+				tails.step(dt, camera.CFrame.Position)
 			end
 			garments.step(os.clock())
 		end)
@@ -93,7 +99,13 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 	end,
 
 	getState = function(_self)
-		return { faces = faces, ears = ears.getState(), heads = heads.getState(), garments = garments.getState() }
+		return {
+			faces = faces,
+			ears = ears.getState(),
+			heads = heads.getState(),
+			garments = garments.getState(),
+			tails = tails.getState(),
+		}
 	end,
 }
 

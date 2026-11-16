@@ -130,6 +130,23 @@ local EmployeeConstants = {
 	-- Seconds between server expression passes.
 	EXPRESSION_INTERVAL = 0.25,
 
+	-- Outfit tail springs (client cosmetic; EmployeeTailSystem, the maths EmployeeTailFormulas). An outfit's coat tails
+	-- are chains of Bones under LowerTorso named Tail<side><n>Bone (n = 1, 2, ...; the last one only marks the end
+	-- of the chain). Each link end is a damped Verlet point pulled to where the coat hangs at rest, kept off the
+	-- legs (capsules on the leg parts) and the floor (the lower foot's sole), at the link's length. Distances are in
+	-- studs at the template's size (times the character's scale); the gains are per TAIL_STEP.
+	TAIL_BONE_PATTERN = "^Tail(%a+)(%d+)Bone$",
+	TAIL_STEP = 1 / 30,
+	TAIL_MAX_STEPS = 3,
+	TAIL_STIFFNESS = 0.18,
+	TAIL_DAMPING = 0.22,
+	TAIL_GRAVITY = 0.0025,
+	TAIL_UPPER_LEG_RADIUS = 0.33,
+	TAIL_LOWER_LEG_RADIUS = 0.24,
+	TAIL_FLOOR_CLEARANCE = 0.12,
+	-- Characters farther than this (studs) from the camera keep their tails at rest.
+	TAIL_RADIUS = 80,
+
 	-- Ear springs (client cosmetic; EmployeeEarFormulas).
 	EAR_JOINTS = EAR_JOINTS,
 	-- Employees farther than this (studs) from the camera keep their ears at rest.
