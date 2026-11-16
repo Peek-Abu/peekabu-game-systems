@@ -33,6 +33,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
+local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumMountFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMountFormulas)
@@ -158,6 +160,9 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 	local tuning = Constants.hold
 	-- The body's real surface at rest, so the hold keeps the right forearm out of a round belly or a hoodie.
 	local measured = AnimationCarryMeasureSystem.measure(holder)
+	-- A bulkier visible body than the shared rig's holds the wand further out (EmployeeRegistry.vacuumHoldForward).
+	local name = holder:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE)
+	local employee = if type(name) == "string" then EmployeeRegistry.get(name) else nil
 	return VacuumHoldFormulas.hold(
 		right,
 		VacuumRigUtils.arm(holder, "Left"),
@@ -175,6 +180,7 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 			maxShift = tuning.maxShift,
 			armClear = tuning.armClear * size,
 			maxClear = tuning.maxClear,
+			extraForward = if employee ~= nil then employee.vacuumHoldForward else nil,
 		},
 		if measured ~= nil then measured.body else nil
 	)

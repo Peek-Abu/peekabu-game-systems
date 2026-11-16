@@ -329,6 +329,26 @@ return function()
 			expect((hold.rightAt - plain.rightAt).Magnitude).to.be.near(0, 1e-6)
 		end)
 
+		it("holds a bulkier body's hand further out by its extraForward, straight ahead (EmployeeRegistry)", function()
+			local hold = VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, tuned({ extraForward = 0.35 }))
+			local moved = hold.rightAt - plain.rightAt
+			expect(moved.Z).to.be.near(-0.35, 1e-6)
+			expect(moved.X).to.be.near(0, 1e-6)
+			expect(moved.Y).to.be.near(0, 1e-6)
+		end)
+
+		it("plans the left paw after the extraForward move, so it stays on the wand within its reach", function()
+			local hold = VacuumHoldFormulas.hold(
+				RIGHT,
+				LEFT,
+				FLOOR,
+				WAND,
+				tuned({ extraForward = 0.35, leftSlide = true, maxShift = 0.3 })
+			)
+			expect(hold.left ~= nil).to.equal(true)
+			expect((hold.leftAt - LEFT.shoulder).Magnitude <= (LEFT.upper + LEFT.lower) * 0.95 + 1e-6).to.equal(true)
+		end)
+
 		it("plans the left paw on the moved wand (it slides to where it reaches)", function()
 			local hold = VacuumHoldFormulas.hold(
 				RIGHT,

@@ -176,6 +176,11 @@ export type EmployeeDef = {
 	selectReaction: string?,
 	-- Where the vacuum's backpack sits; nil = fitted from the torso's size.
 	backpack: BackpackFit?,
+	-- How much further out in front (studs, at its spawned size) its vacuum hold sits than the shared rig's plan
+	-- (VacuumHoldFormulas Tuning.extraForward): every employee shares one skeleton, so the plan is the same for all,
+	-- but a bulkier visible body swallows the arms. Launch IK fix 2026-11-16 (owner: hands went INSIDE the body),
+	-- measured in Shift Play with the camera swept through 84 looks; nil = 0 (Pippa).
+	vacuumHoldForward: number?,
 	-- The company uniform it wears over every skin: names of fitted-gear Models under
 	-- EmployeeConstants.ACCESSORIES_PATH, modelled for THIS employee's body (another torso supplies its own pieces).
 	uniform: { string },
@@ -441,6 +446,8 @@ EMPLOYEES.Cappy = {
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
 	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32, "cappyfidget"),
+	-- His hoodie: 0.35 out took his clipping looks 5/84 -> 0 (Shift Play, 2026-11-16).
+	vacuumHoldForward = 0.35,
 }
 
 EMPLOYEES.Prickles = {
@@ -537,6 +544,9 @@ EMPLOYEES.Prickles = {
 	previewReach = { radius = 2.12, top = 3.55, bottom = -1.16 },
 	uniform = {},
 	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34, "pricklesfidget"),
+	-- His round middle hugged the wand into his belly: 0.35 out took his clipping looks 50/84 -> 7 (Shift Play,
+	-- 2026-11-16).
+	vacuumHoldForward = 0.35,
 }
 
 local EmployeeRegistry = {

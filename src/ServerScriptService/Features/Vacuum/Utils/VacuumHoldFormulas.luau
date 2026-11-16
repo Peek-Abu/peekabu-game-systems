@@ -62,6 +62,10 @@ export type Tuning = {
 	-- studs, at most `maxClear` of the right arm's reach; nil: never moved.
 	armClear: number?,
 	maxClear: number?,
+	-- How much further out in front (studs) this holder's hand goes than the plan (EmployeeRegistry
+	-- vacuumHoldForward: a bulkier visible body than the shared rig's), before the left paw is planned so it slides
+	-- onto the moved wand; nil = 0.
+	extraForward: number?,
 }
 
 -- One slice of a body's real surface, root space at rest (AnimationCarryMeasureSystem.slices): an ellipse
@@ -323,7 +327,9 @@ function VacuumHoldFormulas.hold(
 ): Hold
 	local reach = right.upper + right.lower
 	local along = VacuumHoldFormulas.axis(tuning.angle, tuning.yaw)
-	local planned = right.shoulder + Vector3.new(tuning.out, -tuning.down, -tuning.forward) * reach
+	local planned = right.shoulder
+		+ Vector3.new(tuning.out, -tuning.down, -tuning.forward) * reach
+		- Vector3.new(0, 0, tuning.extraForward or 0)
 	local target = planned - Vector3.new(0, 0, clearForward(right, planned, body, tuning))
 	-- Batch 2.6: a left paw that reaches neither GripLower nor any other point of the wand moves the whole hold
 	-- toward its shoulder (a hold it reaches is never moved).
