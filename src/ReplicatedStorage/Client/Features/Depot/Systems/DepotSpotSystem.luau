@@ -10,7 +10,7 @@
 	  every radio puffs music notes (DepotAssets.RADIO_NOTES, a flipbook) at the station's rate (none on a quiet one).
 
 	A ring of a shift bell (DepotEvents.Bell, to everyone) plays the bell sound at the bell, swings it (its DepotSwing parts
-	about its BellPivot attachment, DepotSpotRules.bellSwing; a local move) and plays its gold ring (DepotBellVfxSystem).
+	about its BellPivot attachment, DepotSpotRules.bellSwing; a local move) and plays its gold floor rings (DepotBellVfxSystem).
 
 	Spec-exempt shell (ByteNet, scene stack, Sound, local Instance motion); the decisions are the specced DepotSpotRules and DepotStore.
 
@@ -192,7 +192,8 @@ function DepotSpotSystem.start(): () -> ()
 			swing(bell)
 			local pivot = bell:FindFirstChild(SWING.PIVOT_NAME, true)
 			DepotBellVfxSystem.play(
-				if pivot ~= nil and pivot:IsA("Attachment") then pivot.WorldPosition - CUP_BELOW_PIVOT else at
+				if pivot ~= nil and pivot:IsA("Attachment") then pivot.WorldPosition - CUP_BELOW_PIVOT else at,
+				bell
 			)
 		else
 			DepotBellVfxSystem.play(at)

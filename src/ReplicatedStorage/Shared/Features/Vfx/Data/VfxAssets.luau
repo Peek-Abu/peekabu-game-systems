@@ -33,7 +33,7 @@ return table.freeze({
 		ring = "rbxassetid://98059630359923",
 		-- A shine bar for the clean sweep.
 		streak = "rbxassetid://140215498885808",
-		-- The shift bell's gold ring (launch VFX 2026-11-16, owner pick B), full colour with its deep-gold edge baked in
+		-- The shift bell's gold ring (launch VFX 2026-11-16, owner pick C: laid on the floor as a Decal), full colour with its deep-gold edge baked in
 		-- (make_launch_tex.py in the launch VFX notes): Icey Labs decal 79343308067895, its image.
 		bellWave = "rbxassetid://74675078562559",
 	}),

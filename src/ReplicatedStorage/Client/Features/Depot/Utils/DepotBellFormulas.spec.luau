@@ -3,26 +3,34 @@ local DepotBellFormulas = require(script.Parent.DepotBellFormulas)
 return function()
 	local T = DepotBellFormulas.TUNING
 
-	describe("wave", function()
-		it("is one gold ring (owner pick B): it grows from small to its full size and fades out", function()
-			expect(#T.waves).to.equal(1)
-			local wave = T.waves[1]
-			expect(DepotBellFormulas.wave(1, wave.delay - 0.01).live).to.equal(false)
-			local first = DepotBellFormulas.wave(1, wave.delay)
-			expect(first.live).to.equal(true)
-			expect(first.studs).to.be.near(T.waveStart, 1e-6)
-			expect(first.transparency).to.be.near(wave.alpha, 1e-6)
-			local last = DepotBellFormulas.wave(1, wave.delay + T.waveSeconds)
-			expect(last.studs).to.be.near(T.waveStart + wave.grow, 1e-6)
-			expect(last.transparency).to.be.near(1, 1e-6)
-			expect(DepotBellFormulas.wave(1, wave.delay + T.waveSeconds + 0.01).live).to.equal(false)
+	describe("ring", function()
+		it("is two gold rings rolling out across the floor, one a beat after the other (owner pick C)", function()
+			expect(#T.rings).to.equal(2)
+			expect(T.rings[2].delay > T.rings[1].delay).to.equal(true)
+			expect(T.rings[2].radius < T.rings[1].radius).to.equal(true)
 		end)
 
-		it("grows fast then slows (eases out)", function()
-			local early = DepotBellFormulas.wave(1, 0.1).studs - DepotBellFormulas.wave(1, 0).studs
-			local late = DepotBellFormulas.wave(1, T.waveSeconds).studs
-				- DepotBellFormulas.wave(1, T.waveSeconds - 0.1).studs
+		it("each grows from small to its full radius and fades out, live only in its own time", function()
+			for index, ring in T.rings do
+				expect(DepotBellFormulas.ring(index, ring.delay - 0.01).live).to.equal(false)
+				local first = DepotBellFormulas.ring(index, ring.delay)
+				expect(first.live).to.equal(true)
+				expect(first.radius).to.be.near(T.ringStart, 1e-6)
+				expect(first.transparency).to.be.near(ring.alpha, 1e-6)
+				local last = DepotBellFormulas.ring(index, ring.delay + T.ringSeconds)
+				expect(last.radius).to.be.near(T.ringStart + ring.radius, 1e-6)
+				expect(last.transparency).to.be.near(1, 1e-6)
+				expect(DepotBellFormulas.ring(index, ring.delay + T.ringSeconds + 0.01).live).to.equal(false)
+			end
+		end)
+
+		it("rolls out fast then slows (eases out), and holds solid before it fades", function()
+			local early = DepotBellFormulas.ring(1, 0.1).radius - DepotBellFormulas.ring(1, 0).radius
+			local late = DepotBellFormulas.ring(1, T.ringSeconds).radius
+				- DepotBellFormulas.ring(1, T.ringSeconds - 0.1).radius
 			expect(early > late).to.equal(true)
+			local held = DepotBellFormulas.ring(1, T.ringSeconds * T.ringHold)
+			expect(held.transparency).to.be.near(T.rings[1].alpha, 1e-6)
 		end)
 	end)
 
@@ -56,31 +64,10 @@ return function()
 		end)
 	end)
 
-	describe("word", function()
-		it("pops in past full size, rises, holds, then fades", function()
-			local most = 0
-			for step = 0, 20 do
-				most = math.max(most, DepotBellFormulas.word(step / 20 * T.wordSeconds * 0.3).scale)
-			end
-			expect(most > 1).to.equal(true)
-			expect(DepotBellFormulas.word(T.wordSeconds * 0.4).transparency).to.equal(0)
-			local last = DepotBellFormulas.word(T.wordSeconds)
-			expect(last.transparency).to.be.near(1, 1e-6)
-			expect(last.rise).to.be.near(T.wordRise, 1e-6)
-			expect(DepotBellFormulas.word(T.wordSeconds + 0.01).live).to.equal(false)
-		end)
-
-		it("is the big DING! of pick B", function()
-			expect(T.word).to.equal(true)
-			expect(T.wordText).to.equal("DING!")
-			expect(T.wordStuds >= 6).to.equal(true)
-		end)
-	end)
-
 	it("lasts as long as its longest part", function()
-		local longest = math.max(T.wordSeconds, DepotBellFormulas.glowSeconds())
-		for _, wave in T.waves do
-			longest = math.max(longest, wave.delay + T.waveSeconds)
+		local longest = DepotBellFormulas.glowSeconds()
+		for _, ring in T.rings do
+			longest = math.max(longest, ring.delay + T.ringSeconds)
 		end
 		expect(DepotBellFormulas.duration()).to.be.near(longest, 1e-6)
 	end)

@@ -1,19 +1,19 @@
 --!strict
 --[=[
-	DepotBellVfxSystem: the shift bell's ring on this client (launch VFX 2026-11-16, owner pick B; DepotSpotSystem calls
-	`play` on every DepotEvents.Bell, as it swings the bell). One gold ring bursts from the bell's cup (a camera-facing
-	BillboardGui, a full-colour image with its edge baked in, so it reads on the hub's dark walls and its yellow floor
-	lines), a big "DING!" pops above it, gold soap bubbles float up and a short warm glow lights the bell (skipped on
-	low graphics). The glow's PointLight is made at brightness 0, fades up, holds and fades back to 0 before it is
-	removed (owner: never snap a light; DepotBellFormulas.glow). One RenderStepped connection drives it all until
-	DepotBellFormulas.duration(), then everything is destroyed. Client-local instances.
+	DepotBellVfxSystem: the shift bell's ring on this client (launch VFX 2026-11-16, owner pick C; DepotSpotSystem calls
+	`play` on every DepotEvents.Bell, as it swings the bell). Two gold rings roll out across the hub floor from the bell
+	post (Decals on flat invisible plates on the floor under the cup: a full-colour image with its deep-gold edge baked
+	in), gold soap bubbles float up and a short warm glow lights the bell (unless the player set graphics 1 to 4 by
+	hand, VfxFormulas.lightsShown). The glow's PointLight is made at brightness 0, fades up, holds and fades back to 0
+	before it is removed (owner: never snap a light; DepotBellFormulas.glow). One RenderStepped connection drives it all
+	until DepotBellFormulas.duration(), then everything is destroyed. Client-local instances.
 
-	Spec-exempt shell (Instances, RunService); the shapes over time are the specced DepotBellFormulas.
+	Spec-exempt shell (Instances, raycasts, RunService); the shapes over time are the specced DepotBellFormulas.
 
 	@class DepotBellVfxSystem
 ]=]
 
-local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -21,19 +21,17 @@ local Workspace = game:GetService("Workspace")
 local DepotBellFormulas = require(ReplicatedStorage.Client.Features.Depot.Utils.DepotBellFormulas)
 local VfxAssets = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxAssets)
 local VfxConstants = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxConstants)
+local VfxFormulas = require(ReplicatedStorage.Shared.Features.Vfx.Utils.VfxFormulas)
 
 local T = DepotBellFormulas.TUNING
 local GOLD = VfxConstants.PALETTE.gleam
 local GOLD_LIGHT = VfxConstants.PALETTE.gleamLight
-local GOLD_DEEP = VfxConstants.PALETTE.gleamDeep
--- The Gloom ink: the word's outline (the UI's ink).
-local INK = Color3.fromRGB(30, 15, 58)
 
-type Billboard = { host: Part, gui: BillboardGui, image: ImageLabel }
+type Plate = { part: Part, decal: Decal }
 
 local DepotBellVfxSystem = {}
 
-local function host(folder: Folder, at: Vector3): Part
+local function host(folder: Folder, at: Vector3, size: Vector3): Part
 	local part = Instance.new("Part")
 	part.Anchored = true
 	part.CanCollide = false
@@ -41,32 +39,44 @@ local function host(folder: Folder, at: Vector3): Part
 	part.CanTouch = false
 	part.CastShadow = false
 	part.Transparency = 1
-	part.Size = Vector3.new(0.2, 0.2, 0.2)
+	part.Size = size
 	part.CFrame = CFrame.new(at)
 	part.Parent = folder
 	return part
 end
 
-local function billboard(folder: Folder, at: Vector3, texture: string): Billboard
-	local part = host(folder, at)
-	local gui = Instance.new("BillboardGui")
-	gui.LightInfluence = 0
-	gui.Enabled = false
-	gui.Adornee = part
-	gui.Parent = part
-	local image = Instance.new("ImageLabel")
-	image.BackgroundTransparency = 1
-	image.Image = texture
-	image.AnchorPoint = Vector2.new(0.5, 0.5)
-	image.Position = UDim2.fromScale(0.5, 0.5)
-	image.Size = UDim2.fromScale(1, 1)
-	image.Parent = gui
-	return { host = part, gui = gui, image = image }
+-- The floor under the bell's cup (the bell itself, characters and non-colliding parts ignored), or the cup itself.
+local function floorUnder(cup: Vector3, folder: Folder, bell: Instance?): Vector3
+	local ignore: { Instance } = { folder }
+	if bell ~= nil then
+		table.insert(ignore, bell)
+	end
+	for _, player in Players:GetPlayers() do
+		if player.Character ~= nil then
+			table.insert(ignore, player.Character)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = ignore
+	params.RespectCanCollide = true
+	local hit = Workspace:Raycast(cup, Vector3.new(0, -T.floorProbe, 0), params)
+	return if hit ~= nil then hit.Position else cup
+end
+
+local function plate(folder: Folder, floor: Vector3): Plate
+	local part = host(folder, floor + Vector3.new(0, T.ringLift, 0), Vector3.new(0.1, 0.02, 0.1))
+	local decal = Instance.new("Decal")
+	decal.Texture = VfxAssets.TEXTURES.bellWave
+	decal.Face = Enum.NormalId.Top
+	decal.Transparency = 1
+	decal.Parent = part
+	return { part = part, decal = decal }
 end
 
 local function bubbles(folder: Folder, at: Vector3)
 	local attachment = Instance.new("Attachment")
-	attachment.Parent = host(folder, at)
+	attachment.Parent = host(folder, at, Vector3.new(0.2, 0.2, 0.2))
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = VfxAssets.TEXTURES.bubble
 	emitter.Color = ColorSequence.new(GOLD, GOLD_LIGHT)
@@ -92,80 +102,41 @@ local function bubbles(folder: Folder, at: Vector3)
 	emitter:Emit(T.bubbles)
 end
 
-local function word(folder: Folder, at: Vector3): (Part, TextLabel, UIStroke)
-	local part = host(folder, at)
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromScale(T.wordStuds, T.wordStuds * 0.4)
-	gui.LightInfluence = 0
-	gui.Adornee = part
-	gui.Parent = part
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Text = T.wordText
-	label.Font = Enum.Font.LuckiestGuy
-	label.TextScaled = true
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.AnchorPoint = Vector2.new(0.5, 0.5)
-	label.Position = UDim2.fromScale(0.5, 0.5)
-	label.Size = UDim2.fromScale(0, 0)
-	label.Parent = gui
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = INK
-	stroke.Thickness = 4
-	stroke.Parent = label
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new(GOLD_LIGHT, GOLD_DEEP)
-	gradient.Rotation = 90
-	gradient.Parent = label
-	return part, label, stroke
-end
-
 --[=[
-	Plays the ring at `cup` (world space: the bell's cup, where the rings start).
+	Plays the ring at `cup` (world space: the bell's cup; the floor rings start on the floor under it, the `bell` model
+	itself never taken for the floor).
 ]=]
-function DepotBellVfxSystem.play(cup: Vector3)
+function DepotBellVfxSystem.play(cup: Vector3, bell: Instance?)
 	local folder = Instance.new("Folder")
 	folder.Name = "BellRing"
-	local waves: { Billboard } = {}
-	for _ in T.waves do
-		table.insert(waves, billboard(folder, cup, VfxAssets.TEXTURES.bellWave))
+	folder.Parent = Workspace
+	local floor = floorUnder(cup, folder, bell)
+	local rings: { Plate } = {}
+	for _ in T.rings do
+		table.insert(rings, plate(folder, floor))
 	end
 	local light: PointLight? = nil
-	if UserSettings():GetService("UserGameSettings").SavedQualityLevel.Value > VfxConstants.LIGHT_MIN_QUALITY then
+	if VfxFormulas.lightsShown(UserSettings():GetService("UserGameSettings").SavedQualityLevel.Value) then
 		local made = Instance.new("PointLight")
 		made.Color = GOLD
 		made.Range = T.glowRange
 		made.Brightness = 0
-		made.Parent = host(folder, cup)
+		made.Parent = host(folder, cup, Vector3.new(0.2, 0.2, 0.2))
 		light = made
 	end
-	local wordPart: Part?, label: TextLabel?, stroke: UIStroke? = nil, nil, nil
-	if T.word then
-		wordPart, label, stroke = word(folder, cup + Vector3.new(0, T.wordLift, 0))
-	end
-	folder.Parent = Workspace
 	bubbles(folder, cup)
-	local calm = GuiService.ReducedMotionEnabled
 	local started = os.clock()
 	local connection: RBXScriptConnection
 	connection = RunService.RenderStepped:Connect(function()
 		local elapsed = os.clock() - started
-		for index, wave in waves do
-			local shape = DepotBellFormulas.wave(index, elapsed)
-			wave.gui.Enabled = shape.live
-			wave.gui.Size = UDim2.fromScale(shape.studs, shape.studs)
-			wave.image.ImageTransparency = shape.transparency
+		for index, ring in rings do
+			local shape = DepotBellFormulas.ring(index, elapsed)
+			local across = shape.radius * 2
+			ring.part.Size = Vector3.new(across, 0.02, across)
+			ring.decal.Transparency = if shape.live then shape.transparency else 1
 		end
 		if light ~= nil then
 			light.Brightness = DepotBellFormulas.glow(elapsed)
-		end
-		if wordPart ~= nil and label ~= nil and stroke ~= nil then
-			local shape = DepotBellFormulas.word(elapsed)
-			label.Size = UDim2.fromScale(shape.scale, shape.scale)
-			label.Rotation = if calm then 0 else shape.rotation
-			label.TextTransparency = shape.transparency
-			stroke.Transparency = shape.transparency
-			wordPart.CFrame = CFrame.new(cup + Vector3.new(0, T.wordLift + shape.rise, 0))
 		end
 		if elapsed >= DepotBellFormulas.duration() + 1.5 or folder.Parent == nil then
 			connection:Disconnect()
