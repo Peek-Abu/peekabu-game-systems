@@ -26,7 +26,8 @@ return function()
 			expect(head.days).to.equal("10 days left")
 			expect(head.acorns).to.equal("1,250")
 			expect(VM.header(HARVEST, HARVEST.ends - 3600, false, 0).days).to.equal("Last day!")
-			expect(VM.header(HARVEST, HARVEST.starts - 99 * DAY, true, 0).days).to.equal("Last day!")
+			-- A preview after the dates still says it is on (the last day), never "0 days left".
+			expect(VM.header(HARVEST, HARVEST.ends + 5 * DAY, true, 0).days).to.equal("Last day!")
 		end)
 	end)
 
