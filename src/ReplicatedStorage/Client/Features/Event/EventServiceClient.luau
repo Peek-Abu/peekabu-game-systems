@@ -34,6 +34,8 @@ export type EventServiceClient = {
 	live: (self: EventServiceClient) -> EventTypes.Event?,
 	-- Whole days the live event has left (1 at least while previewed); 0 when none is live.
 	daysLeft: (self: EventServiceClient) -> number,
+	-- Tells the server the Shop opened on this event's tab (the next opens start on Featured).
+	markShown: (self: EventServiceClient, eventId: string) -> (),
 }
 
 local EventServiceClient: EventServiceClient = {
@@ -57,6 +59,10 @@ local EventServiceClient: EventServiceClient = {
 
 	live = function(_self)
 		return EventUtils.live(EventRegistry.all(), Workspace:GetServerTimeNow(), preview())
+	end,
+
+	markShown = function(_self, eventId)
+		EventEvents.packets.Shown.send({ event = eventId })
 	end,
 
 	daysLeft = function(self)

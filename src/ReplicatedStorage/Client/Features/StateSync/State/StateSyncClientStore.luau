@@ -55,6 +55,8 @@ local initialDeals: PlayerDataTypes.Deals = { bought = {}, picks = {} }
 local deals = Charm.atom(initialDeals)
 local initialPlaces: PlayerDataTypes.Places = { owned = {} }
 local places = Charm.atom(initialPlaces)
+local initialEvents: PlayerDataTypes.Events = { day = 0, shown = {} }
+local events = Charm.atom(initialEvents)
 -- The public slice: other players' public data, already filtered by the server to the players relevant
 -- to this client (plus this client itself). Not a profile slice; synced under StateSyncConstants.publicKey.
 local initialPublicPlayers: PublicPlayerTypes.PublicPlayerMap = {}
@@ -86,6 +88,7 @@ local StateSyncClientStore = {
 	coffee = coffee,
 	deals = deals,
 	places = places,
+	events = events,
 	publicPlayers = publicPlayers,
 	world = world,
 }
@@ -112,6 +115,7 @@ local atoms: { [string]: any } = {
 	coffee = coffee,
 	deals = deals,
 	places = places,
+	events = events,
 	publicPlayers = publicPlayers,
 	world = world,
 }

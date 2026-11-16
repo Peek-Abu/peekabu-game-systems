@@ -60,9 +60,11 @@ export type ShiftFacts = {
 	withFriend: boolean,
 }
 
--- The account-wide `events` slice: the day number (EventUtils.day) the first-shift bonus was last paid (0 = never).
+-- The account-wide `events` slice: the day number (EventUtils.day) the first-shift bonus was last paid (0 = never),
+-- and the events whose Shop tab the player has been shown (the Shop opens on it only the first time, owner Y1).
 export type Events = {
 	day: number,
+	shown: { [string]: boolean },
 }
 
 return {}

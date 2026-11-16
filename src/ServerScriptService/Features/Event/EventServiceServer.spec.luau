@@ -77,7 +77,7 @@ local function makeProfileData(acorns, credits, day)
 			coffee = { seconds = 0, since = 0 },
 			deals = { bought = {}, picks = {} },
 			places = { owned = {} },
-			events = { day = day or 0 },
+			events = { day = day or 0, shown = {} },
 		},
 		slots = slots,
 	}
@@ -183,6 +183,20 @@ return function()
 			it("refuses (to retry) when the profile is not loaded", function()
 				expect(EventService:payShift(A, HARVEST, { quotaMet = true }, { A })).to.equal(false)
 				expect(#sent).to.equal(0)
+			end)
+		end)
+
+		describe("markShown", function()
+			it("remembers that the player saw a live event's tab, once", function()
+				seed(A, 0, 0)
+				expect(EventService:markShown(A, "harvest")).to.equal(true)
+				expect(EventService:markShown(A, "harvest")).to.equal(false)
+			end)
+
+			it("ignores an event that is not live", function()
+				clock = AFTER
+				seed(A, 0, 0)
+				expect(EventService:markShown(A, "harvest")).to.equal(false)
 			end)
 		end)
 

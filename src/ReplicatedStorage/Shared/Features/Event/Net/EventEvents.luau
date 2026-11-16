@@ -26,6 +26,11 @@ end
 local EventEvents = ByteNet.defineNamespace(NAMESPACE, function()
 	return {
 		packets = {
+			-- client -> server: { event } (the Shop opened on that event's tab; EventRules.parseShown checks it)
+			Shown = ByteNet.definePacket({
+				value = ByteNet.unknown,
+				reliabilityType = "reliable",
+			}),
 			-- server -> client: { event, total, parts (EventTypes.PayPart list) }
 			Paid = ByteNet.definePacket({
 				value = ByteNet.struct({

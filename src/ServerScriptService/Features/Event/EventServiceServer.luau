@@ -39,13 +39,14 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local EventPaySystem = require(ServerScriptService.Features.Event.Systems.EventPaySystem)
 local EventPropSystem = require(ServerScriptService.Features.Event.Systems.EventPropSystem)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 
 type Event = EventTypes.Event
 
-local eventsSlice = PlayerDataSliceSystem.registerAccount("events", { day = 0 }, function(account)
+local eventsSlice = PlayerDataSliceSystem.registerAccount("events", { day = 0, shown = {} }, function(account)
 	return account.events
 end, EventRules.validate)
 
@@ -207,6 +208,36 @@ local function convertImpl(userId: number): boolean
 	return changed
 end
 
+-- Remembers that the player was shown a live event's Shop tab (the Shop opens on it only the first time).
+local function markShownImpl(userId: number, eventId: string): boolean
+	Guard.userId(userId)
+	local event = liveImpl()
+	if event == nil or event.id ~= eventId then
+		return false
+	end
+	local changed = eventsSlice.mutate(userId, function(saved): boolean
+		if saved.shown[eventId] == true then
+			return false
+		end
+		saved.shown[eventId] = true
+		return true
+	end)
+	return changed
+end
+
+local onShownRequest = RequestHandler.wrap({
+	name = "EventShownRequest",
+	rateLimit = { maxRequests = 3, windowSeconds = 10 },
+	handler = function(payload: unknown, player: Player)
+		local eventId = EventRules.parseShown(payload)
+		if eventId == nil then
+			log:warn(`bad Shown request from {player.Name}`)
+			return
+		end
+		markShownImpl(player.UserId, eventId)
+	end,
+})
+
 export type EventServiceServer = {
 	dependencies: { string },
 	start: (self: EventServiceServer) -> (),
@@ -221,6 +252,8 @@ export type EventServiceServer = {
 		results: ShiftTypes.ShiftResults,
 		crew: { number }
 	) -> boolean,
+	-- Remembers the player was shown a live event's Shop tab; true when it was new.
+	markShown: (self: EventServiceServer, userId: number, eventId: string) -> boolean,
 	-- Turns leftover money of an ended event into its other currency; true when anything changed.
 	convertLeftover: (self: EventServiceServer, userId: number) -> boolean,
 	getState: (self: EventServiceServer) -> { [string]: any },
@@ -232,6 +265,14 @@ local EventServiceServer: EventServiceServer = {
 	dependencies = { "PlayerDataServiceServer", "CurrencyServiceServer", "ShiftServiceServer" },
 
 	start = function(self)
+		janitor:Add(
+			EventEvents.packets.Shown.listen(function(payload: unknown, player: Player?)
+				if player then
+					onShownRequest(payload, player)
+				end
+			end),
+			true
+		)
 		janitor:Add(
 			PlayerDataService.profileLoaded:Connect(function(userId: number)
 				self:convertLeftover(userId)
@@ -300,6 +341,10 @@ local EventServiceServer: EventServiceServer = {
 
 	payShift = function(_self, userId, event, results, crew)
 		return payShiftImpl(userId, event, results, crew)
+	end,
+
+	markShown = function(_self, userId, eventId)
+		return markShownImpl(userId, eventId)
 	end,
 
 	convertLeftover = function(_self, userId)

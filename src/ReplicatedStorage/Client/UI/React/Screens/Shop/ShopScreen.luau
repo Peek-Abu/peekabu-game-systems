@@ -426,9 +426,18 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		setSlot(index)
 	end
 	local passKeys = MarketplaceRegistry.passKeys()
-	-- A live limited-time event (never in a preview): its tab comes first and the Shop opens on it (owner Y1).
+	-- A live limited-time event (never in a preview): its tab comes first, and the Shop opens on it the first time
+	-- only (owner Y1, 11-16); the server remembers it in the `events` slice.
 	local liveEvent = if props.preview ~= nil then nil else EventServiceClient:live()
-	local tab, setTab = React.useState(props.tab or (if liveEvent ~= nil then "event" else "featured"))
+	local eventsSeen = ReactCharm.useAtom(StateSyncClientStore.events)
+	local firstEventOpen = liveEvent ~= nil and eventsSeen.shown[liveEvent.id] ~= true
+	local tab, setTab = React.useState(props.tab or (if firstEventOpen then "event" else "featured"))
+	local firstEventId = if firstEventOpen and liveEvent ~= nil then liveEvent.id else ""
+	React.useEffect(function()
+		if firstEventId ~= "" then
+			EventServiceClient:markShown(firstEventId)
+		end
+	end, { firstEventId })
 	-- The carousel moves on by itself while the Featured tab is up with no product page open.
 	local carouselDeps: { unknown } = { slot, picked, tab, storeProduct ~= nil }
 	React.useEffect(function(): () -> ()

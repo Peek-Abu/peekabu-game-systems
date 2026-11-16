@@ -131,11 +131,13 @@ export type Loadout = {
 	Locker (the pity counter) and the total opens. Keyed by Locker id ("gloom", "gleam").
 ]=]
 --[=[
-	The account-wide events slice (EventServiceServer, server-only): the day number (EventUtils.day) a limited-time
-	event's first-shift-of-the-day bonus was last paid (0 = never). Mirrors EventTypes.Events.
+	The account-wide events slice (EventServiceServer; synced to its owner): the day number (EventUtils.day) a
+	limited-time event's first-shift-of-the-day bonus was last paid (0 = never), and the events whose Shop tab the
+	player has been shown (the Shop opens on it only the first time). Mirrors EventTypes.Events.
 ]=]
 export type Events = {
 	day: number,
+	shown: { [string]: boolean },
 }
 
 export type Lockers = {

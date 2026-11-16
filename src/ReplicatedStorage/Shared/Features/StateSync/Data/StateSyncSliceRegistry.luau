@@ -127,6 +127,13 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.places
 		end,
 	},
+	-- ACCOUNT-WIDE: limited-time events: the first-shift bonus day and the event tabs shown (EventServiceServer);
+	-- owner-only.
+	events = {
+		read = function(profile)
+			return profile.account.events
+		end,
+	},
 	-- ACCOUNT-WIDE: keys and pity per Locker (LockerServiceServer); owner-only.
 	lockers = {
 		read = function(profile)

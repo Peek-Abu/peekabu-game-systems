@@ -46,7 +46,7 @@ end
 -- "receipts", EntitlementServiceServer owns "entitlements", SettingServiceServer owns "settings", and
 -- DailyRewardServiceServer owns "dailyReward", RankServiceServer owns "rank" (its season string is stamped
 -- by the registration; the empty season here is only the skeleton), TimecardServiceServer owns "timecard", and
--- AnalyticsFirstSeenSystem owns "firstSeen" (server-only, never synced), and TipServiceServer owns "tips" (server-only too), and TrainingServiceServer owns "training", and CoffeeServiceServer owns "coffee", and DealServiceServer owns "deals", and DepotPlaceSystem owns "places", and EventServiceServer owns "events" (server-only).
+-- AnalyticsFirstSeenSystem owns "firstSeen" (server-only, never synced), and TipServiceServer owns "tips" (server-only too), and TrainingServiceServer owns "training", and CoffeeServiceServer owns "coffee", and DealServiceServer owns "deals", and DepotPlaceSystem owns "places", and EventServiceServer owns "events".
 -- `nextUid` starts at 1, not 0: uid 0 would be indistinguishable from an absent/falsy value at any
 -- callsite that checks truthiness.
 local function emptyAccount(): PlayerDataTypes.PlayerAccount
@@ -70,7 +70,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		coffee = { seconds = 0, since = 0 },
 		deals = { bought = {}, picks = {} },
 		places = { owned = {} },
-		events = { day = 0 },
+		events = { day = 0, shown = {} },
 	}
 end
 

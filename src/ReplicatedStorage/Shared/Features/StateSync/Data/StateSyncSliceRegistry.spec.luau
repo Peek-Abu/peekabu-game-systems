@@ -52,7 +52,7 @@ return function()
 					coffee = { seconds = 0, since = 0 },
 					deals = { bought = {}, picks = {} },
 					places = { owned = {} },
-					events = { day = 0 },
+					events = { day = 0, shown = {} },
 					loadout = {
 						current = "Pippa",
 						picked = false,
@@ -87,6 +87,7 @@ return function()
 				coffee = true,
 				deals = true,
 				places = true,
+				events = true,
 			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
@@ -104,6 +105,7 @@ return function()
 				"deals",
 				"entitlements",
 				"equippedTitle",
+				"events",
 				"inventory",
 				"loadout",
 				"lockers",
