@@ -174,14 +174,14 @@ return table.freeze({
 	-- Owner plan B (2026-11-16, hands went INSIDE the body): the hand targets and elbow poles ride the ANIMATION's sway
 	-- and turn of the upper body (the idle swayed Cappy's chest 0.28 stud and 13 degrees under hands pinned to the
 	-- root), this share of it (VacuumBodyFormulas.follow: never its tilt or height, never the brace the rig writes
-	-- itself), measured from a reference that settles after the chest over `chestSettle` seconds, so a lean the
-	-- animation holds is not followed. chestFollow 0 restores the old root-pinned hands exactly.
+	-- itself), measured from the rest pose the hold was planned in. 0 restores the old root-pinned hands exactly.
 	chestFollow = 1,
-	chestSettle = 1.5,
 	-- Owner plan C (2026-11-16): the wand turns about the point between the paws (true) or about the left paw as before
-	-- (false). Studio only, the Workspace attribute TURN_ABOUT_PAWS_ATTRIBUTE, a boolean, overrides it on every
-	-- machine, so both can be measured on one build (the shipped value is this one).
-	turnAboutPaws = true,
+	-- (false). Shipped false: about the midpoint the turns carried the left paw's grip away, which the reach guard
+	-- (VacuumMotionFormulas.wand, turns kept whole) cannot see, and aiming ahead took a 60 degree turn (25 about the
+	-- left paw); vacuum harness 2026-11-16. Studio only, the Workspace attribute TURN_ABOUT_PAWS_ATTRIBUTE, a boolean,
+	-- overrides it on every machine for an A/B check.
+	turnAboutPaws = false,
 	TURN_ABOUT_PAWS_ATTRIBUTE = "DevVacuumTurnAboutPaws",
 	-- Aim fix (2026-11-06): while the wand is out the local player's body eases to face where their camera looks (a
 	-- soft shift-lock, VacuumFaceSystem): Humanoid.AutoRotate is off and the root turns toward the camera's heading,

@@ -87,25 +87,4 @@ return function()
 			expect(VacuumBodyFormulas.follow(rest, now, 0.5).Position.X).to.be.near(0.1, 1e-6)
 		end)
 	end)
-
-	describe("settle", function()
-		it("eases the reference pose toward the chest, so a held lean or offset stops being followed", function()
-			local reference = CFrame.new(0, 0.7, 0)
-			local now = CFrame.new(0.3, 0.7, 0)
-			local after = VacuumBodyFormulas.settle(reference, now, 0.1, 1.5)
-			expect(after.Position.X > 0 and after.Position.X < 0.3).to.equal(true)
-			-- Held there long enough, the reference catches up and nothing is followed any more.
-			local caught = reference
-			for _ = 1, 600 do
-				caught = VacuumBodyFormulas.settle(caught, now, 1 / 60, 1.5)
-			end
-			expect((caught.Position - now.Position).Magnitude < 1e-2).to.equal(true)
-		end)
-
-		it("does not move in no time, and jumps there with no settle time", function()
-			local reference, now = CFrame.new(0, 0.7, 0), CFrame.new(0.3, 0.7, 0)
-			expect(VacuumBodyFormulas.settle(reference, now, 0, 1.5)).to.equal(reference)
-			expect(VacuumBodyFormulas.settle(reference, now, 0.1, 0)).to.equal(now)
-		end)
-	end)
 end
