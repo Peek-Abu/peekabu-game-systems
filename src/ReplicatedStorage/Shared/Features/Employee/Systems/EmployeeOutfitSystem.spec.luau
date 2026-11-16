@@ -166,6 +166,25 @@ return function()
 		end)
 
 		it(
+			"copies the outfit's tail settings (attributes starting with Tail) onto the Outfit folder, and nothing else",
+			function()
+				local character, outfit = makeCharacter(), makeOutfit()
+				outfit:SetAttribute(EmployeeConstants.TAIL_PHYSICS_ATTRIBUTE, EmployeeConstants.TAIL_PHYSICS_SMARTBONE)
+				outfit:SetAttribute("TailDamping", 0.2)
+				outfit:SetAttribute("HideParts", "LowerTorso")
+				EmployeeOutfitSystem.fit(character, outfit, "Red")
+				local folder = character:FindFirstChild(EmployeeConstants.OUTFIT_FOLDER)
+				expect(folder:GetAttribute(EmployeeConstants.TAIL_PHYSICS_ATTRIBUTE)).to.equal(
+					EmployeeConstants.TAIL_PHYSICS_SMARTBONE
+				)
+				expect(folder:GetAttribute("TailDamping")).to.equal(0.2)
+				expect(folder:GetAttribute("HideParts")).to.equal(nil)
+				character:Destroy()
+				outfit:Destroy()
+			end
+		)
+
+		it(
 			"welds the meshes to LowerTorso (on HumanoidRootPart they stay rigid), weightless and out of the world",
 			function()
 				local character, outfit = makeCharacter(), makeOutfit()

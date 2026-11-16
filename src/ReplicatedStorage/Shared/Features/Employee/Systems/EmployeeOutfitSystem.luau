@@ -204,6 +204,12 @@ function EmployeeOutfitSystem.fit(character: Model, outfit: Model, style: string
 	local rest = EmployeeOutfitFormulas.rest(part0.CFrame, root.C0, root.C1)
 	local folder = Instance.new("Folder")
 	folder.Name = EmployeeConstants.OUTFIT_FOLDER
+	-- The outfit's tail settings ride on the folder, so each client's tail physics can read them (EmployeeTailSystem).
+	for name, value in outfit:GetAttributes() do
+		if string.sub(name, 1, #EmployeeConstants.TAIL_ATTRIBUTE_PREFIX) == EmployeeConstants.TAIL_ATTRIBUTE_PREFIX then
+			folder:SetAttribute(name, value)
+		end
+	end
 	for _, mesh in meshes:GetChildren() do
 		if mesh:IsA("BasePart") then
 			local copy = mesh:Clone()

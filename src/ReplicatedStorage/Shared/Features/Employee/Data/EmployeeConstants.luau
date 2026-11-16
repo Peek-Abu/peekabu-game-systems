@@ -149,6 +149,25 @@ local EmployeeConstants = {
 	TAIL_FLOOR_CLEARANCE = 0.12,
 	-- Characters farther than this (studs) from the camera keep their tails at rest.
 	TAIL_RADIUS = 80,
+	-- An outfit's attributes starting with this ride onto the fitted Outfit folder (EmployeeOutfitSystem.fit), so
+	-- each client's tail physics can read them. TAIL_PHYSICS_ATTRIBUTE = TAIL_PHYSICS_SMARTBONE hands the outfit's
+	-- tails to SmartBone 2 (Packages.SmartBone, MIT) instead of our own spring: Tail<SmartBone attribute> on the
+	-- outfit (e.g. TailDamping, TailStiffness, TailGravity, TailConstraint) overrides SMARTBONE_DEFAULTS.
+	TAIL_ATTRIBUTE_PREFIX = "Tail",
+	TAIL_PHYSICS_ATTRIBUTE = "TailPhysics",
+	TAIL_PHYSICS_SMARTBONE = "SmartBone",
+	SMARTBONE_TAG = "SmartBone",
+	SMARTBONE_COLLIDER_TAG = "SmartCollider",
+	-- Owner-approved test 11-15 (three-way comparison): "Spring" keeps the coat's flared rest shape ("Distance"
+	-- pulls the bones straight down and crumpled the hem).
+	SMARTBONE_DEFAULTS = table.freeze({
+		Constraint = "Spring",
+		Damping = 0.15,
+		Stiffness = 0.5,
+		Gravity = Vector3.new(0, -4, 0),
+	}),
+	-- The leg parts that get SmartBone capsule colliders (only for their own character's tails).
+	SMARTBONE_LEG_COLLIDERS = table.freeze({ "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg" }),
 
 	-- Ear springs (client cosmetic; EmployeeEarFormulas).
 	EAR_JOINTS = EAR_JOINTS,

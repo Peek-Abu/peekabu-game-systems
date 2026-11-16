@@ -106,6 +106,14 @@ overlay (`Client/UI/React/Debugger`) is the reference integration — copy its s
 [conventions.md: Mounting React UI](conventions.md#mounting-react-ui-the-playergui-reset-trap) for
 any new UI.
 
+### SmartBone
+`jakeywastaken/smartbone-2@0.5.2` (MIT, github.com/smartbone-org/SmartBone-2; its LICENSE ships in the package) —
+client-side bone physics for loose skin cloth (coat tails, capes). It runs only on clients, in parallel Actors under
+PlayerScripts, started once by `EmployeeServiceClient`. An outfit opts in with the `TailPhysics = "SmartBone"`
+attribute; `EmployeeTailSmartBoneUtils` turns its tail chains and `Tail<setting>` attributes into SmartBone's tag,
+attributes and leg colliders. Outfits without it keep the in-house spring (`EmployeeTailSystem`). Pinned below 0.6
+(a release candidate at the time).
+
 ### Observers
 `sleitnick/observers@0.5.0` — `observePlayer`/`observeCharacter`/`observeTag`/`observeAttribute`
 lifecycle helpers. `PlayerDataServiceServer` uses `observePlayer` to start/end ProfileStore sessions

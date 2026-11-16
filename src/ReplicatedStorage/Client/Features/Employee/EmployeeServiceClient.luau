@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
+local SmartBone = require(ReplicatedStorage.Packages.SmartBone)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeEarSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeEarSystem)
 local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
@@ -77,6 +78,11 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 				end
 			end)
 		)
+		-- SmartBone 2 (MIT) drives the tails of outfits that ask for it (EmployeeTailSystem hands them over).
+		local smartBone = SmartBone.Start()
+		if smartBone ~= nil then
+			table.insert(stoppers, smartBone.Stop)
+		end
 		local connection = RunService.PreSimulation:Connect(function(dt: number)
 			local camera = Workspace.CurrentCamera
 			if camera ~= nil then
