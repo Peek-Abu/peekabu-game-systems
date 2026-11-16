@@ -171,6 +171,11 @@ return table.freeze({
 	-- restore the old welded hands exactly.
 	handSmooth = 0.05,
 	poleFollow = 0.5,
+	-- Owner plan B (2026-11-16, hands went INSIDE the body): the hand targets and elbow poles ride the upper body's
+	-- animated move away from its rest pose (the idle swayed Cappy's chest 0.28 stud and 13 degrees under hands pinned
+	-- to the root; the brace's lean and twist ride along too), this share of it (VacuumBodyFormulas.follow). 0
+	-- restores the old root-pinned hands exactly.
+	chestFollow = 1,
 	-- Aim fix (2026-11-06): while the wand is out the local player's body eases to face where their camera looks (a
 	-- soft shift-lock, VacuumFaceSystem): Humanoid.AutoRotate is off and the root turns toward the camera's heading,
 	-- closing the gap with a time constant of `ease` seconds, at most `maxRate` radians a second. The suction already

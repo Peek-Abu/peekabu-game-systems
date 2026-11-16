@@ -62,10 +62,6 @@ export type Tuning = {
 	-- studs, at most `maxClear` of the right arm's reach; nil: never moved.
 	armClear: number?,
 	maxClear: number?,
-	-- How much further out in front (studs) this holder's hand goes than the plan (EmployeeRegistry
-	-- vacuumHoldForward: a bulkier visible body than the shared rig's), straight ahead and only as far as the left
-	-- paw still reaches the wand (`extraOut`), before the left paw is planned; nil = 0.
-	extraForward: number?,
 }
 
 -- One slice of a body's real surface, root space at rest (AnimationCarryMeasureSystem.slices): an ellipse
@@ -313,43 +309,6 @@ local function clearForward(right: Arm, target: Vector3, body: { BodySlice }?, t
 	return 0
 end
 
--- How far past the left paw's reach (SLIDE_REACH of it) the nearest point of the wand from `target` lies (studs;
--- 0 or less: it reaches some point).
-local function leftShort(target: Vector3, left: Arm, along: Vector3, wand: WandDims): number
-	local from = target + along * (wand.upper + wand.gripHalf)
-	local closest = nearest(from, along, left.shoulder)
-	return (closest - left.shoulder).Magnitude - SLIDE_REACH * (left.upper + left.lower)
-end
-
--- How far forward (studs) the hold goes for `tuning.extraForward`: all of it when the left paw still reaches the wand
--- there (or there is no left paw), else the most that keeps it in reach, so the left-paw shift toward the shoulder
--- below never pulls the moved hold back into the body (it did: Cappy at 0.35 out, Shift Play 2026-11-16).
-local function extraOut(target: Vector3, left: Arm?, along: Vector3, wand: WandDims, tuning: Tuning): number
-	local extra = tuning.extraForward or 0
-	if extra <= 0 or left == nil then
-		return math.max(extra, 0)
-	end
-	local function reaches(distance: number): boolean
-		return leftShort(target - Vector3.new(0, 0, distance), left, along, wand) <= 0
-	end
-	if reaches(extra) then
-		return extra
-	end
-	if not reaches(0) then
-		return 0
-	end
-	local low, high = 0, extra
-	for _ = 1, 12 do
-		local middle = (low + high) / 2
-		if reaches(middle) then
-			low = middle
-		else
-			high = middle
-		end
-	end
-	return low
-end
-
 --[=[
 	The hold for a holder's arms (root space) over a floor `floorY` below the root, its right hand moved out of `body`
 	(its real surface; nil: not checked) as `tuning` allows.
@@ -366,7 +325,6 @@ function VacuumHoldFormulas.hold(
 	local along = VacuumHoldFormulas.axis(tuning.angle, tuning.yaw)
 	local planned = right.shoulder + Vector3.new(tuning.out, -tuning.down, -tuning.forward) * reach
 	local target = planned - Vector3.new(0, 0, clearForward(right, planned, body, tuning))
-	target -= Vector3.new(0, 0, extraOut(target, left, along, wand, tuning))
 	-- Batch 2.6: a left paw that reaches neither GripLower nor any other point of the wand moves the whole hold
 	-- toward its shoulder (a hold it reaches is never moved).
 	if left ~= nil and tuning.leftSlide == true then

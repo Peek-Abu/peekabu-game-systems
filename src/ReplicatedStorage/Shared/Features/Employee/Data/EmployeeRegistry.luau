@@ -176,14 +176,6 @@ export type EmployeeDef = {
 	selectReaction: string?,
 	-- Where the vacuum's backpack sits; nil = fitted from the torso's size.
 	backpack: BackpackFit?,
-	-- How much further out in front (studs, at its spawned size) its vacuum hold sits than the shared plan
-	-- (VacuumHoldFormulas Tuning.extraForward). Why it exists: every employee shares one skeleton, and the planner's
-	-- clearance check reads the body's COLLISION surface, but a visible body can be bulkier than that surface (Cappy's
-	-- hoodie, Prickles' round middle), and its arms then sink into it while the check sees no clash. Set it for every
-	-- new employee from a Shift Play camera sweep and the vacuum harness (characters/launch/new-employee-requirements.md);
-	-- the planner moves it only as far as the left paw still reaches the wand. nil = 0 (Pippa).
-	-- Launch IK fix 2026-11-16 (owner: hands went INSIDE the body).
-	vacuumHoldForward: number?,
 	-- The company uniform it wears over every skin: names of fitted-gear Models under
 	-- EmployeeConstants.ACCESSORIES_PATH, modelled for THIS employee's body (another torso supplies its own pieces).
 	uniform: { string },
@@ -449,9 +441,6 @@ EMPLOYEES.Cappy = {
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
 	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32, "cappyfidget"),
-	-- His hoodie. The planner moves it out only as far as his short left arm still reaches the wand (a full 0.35 with
-	-- the old left-paw shift pulled the hold back into him: 20/84 clipping looks, Shift Play 2026-11-16).
-	vacuumHoldForward = 0.35,
 }
 
 EMPLOYEES.Prickles = {
@@ -548,9 +537,6 @@ EMPLOYEES.Prickles = {
 	previewReach = { radius = 2.12, top = 3.55, bottom = -1.16 },
 	uniform = {},
 	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34, "pricklesfidget"),
-	-- His round middle hugged the wand into his belly: 0.35 out took his clipping looks 50/84 -> 7 (Shift Play,
-	-- 2026-11-16; 20/84 with the planned left paw, which passes the vacuum harness).
-	vacuumHoldForward = 0.35,
 }
 
 local EmployeeRegistry = {

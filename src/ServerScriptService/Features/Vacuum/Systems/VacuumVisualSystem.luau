@@ -33,8 +33,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
-local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumMountFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMountFormulas)
@@ -149,6 +147,39 @@ local function padHalf(pack: Model): Vector2
 	return Vector2.new(size.X / 2, size.Y / 2)
 end
 
+-- Slices measured on each worn piece (as the head's attached pieces are, AnimationCarryMeasureSystem).
+local WORN_SLICES = 4
+
+-- The holder's visible body at rest (root space), as slices of its real surface: the torso parts and every piece worn
+-- on them (owner plan A, 2026-11-16: Cappy's hoodie is a separate piece round a thin torso, and the hold used to see
+-- the bare torso only). Nil when the rig cannot be measured.
+local function visibleBody(holder: Model): { VacuumHoldFormulas.BodySlice }?
+	local measured = AnimationCarryMeasureSystem.measure(holder)
+	local root = holder:FindFirstChild("HumanoidRootPart")
+	if measured == nil or root == nil or not root:IsA("BasePart") then
+		return nil
+	end
+	local body: { VacuumHoldFormulas.BodySlice } = table.clone(measured.body)
+	local pack = holder:FindFirstChild(VacuumConstants.BACKPACK_NAME)
+	for _, name in { "UpperTorso", "LowerTorso" } do
+		local torso = holder:FindFirstChild(name)
+		if torso ~= nil and torso:IsA("BasePart") then
+			local rest = AnimationCarryMeasureSystem.restFrame(torso, root)
+			for _, worn in AnimationCarryMeasureSystem.joinedTo(torso, holder) do
+				-- Body parts (arms, head, legs) are the character's own children; worn pieces are not. The vacuum's
+				-- own backpack is not clothing.
+				if worn.Parent ~= holder and (pack == nil or not worn:IsDescendantOf(pack)) then
+					local at = rest * torso.CFrame:ToObjectSpace(worn.CFrame)
+					for _, slice in AnimationCarryMeasureSystem.slices(root, worn, WORN_SLICES, at) do
+						table.insert(body, slice)
+					end
+				end
+			end
+		end
+	end
+	return body
+end
+
 -- The hold for `holder` with a wand this big, or nil when its arms cannot be measured.
 local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: number): VacuumHoldFormulas.Hold?
 	local humanoid = holder:FindFirstChildOfClass("Humanoid")
@@ -158,11 +189,8 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 		return nil
 	end
 	local tuning = Constants.hold
-	-- The body's real surface at rest, so the hold keeps the right forearm out of a round belly or a hoodie.
-	local measured = AnimationCarryMeasureSystem.measure(holder)
-	-- A bulkier visible body than the shared rig's holds the wand further out (EmployeeRegistry.vacuumHoldForward).
-	local name = holder:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE)
-	local employee = if type(name) == "string" then EmployeeRegistry.get(name) else nil
+	-- The body's visible surface at rest, clothes included, so the hold keeps the right forearm out of it.
+	local body = visibleBody(holder)
 	return VacuumHoldFormulas.hold(
 		right,
 		VacuumRigUtils.arm(holder, "Left"),
@@ -180,9 +208,8 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 			maxShift = tuning.maxShift,
 			armClear = tuning.armClear * size,
 			maxClear = tuning.maxClear,
-			extraForward = if employee ~= nil then employee.vacuumHoldForward else nil,
 		},
-		if measured ~= nil then measured.body else nil
+		body
 	)
 end
 

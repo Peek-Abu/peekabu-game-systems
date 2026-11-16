@@ -220,7 +220,7 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 		rig.rest,
 		VacuumMotionFormulas.offsetOf(layers),
 		Constants.floorMargin,
-		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean, twist)
+		VacuumMotionFormulas.unheld(VacuumMotionFormulas.motion(rig.rest.waist, drop, lean, twist))
 	)
 	rig.apply({ wand = wand, drop = drop, lean = lean, twist = twist })
 end

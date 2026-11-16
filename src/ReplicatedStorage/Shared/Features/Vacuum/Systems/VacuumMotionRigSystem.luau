@@ -19,6 +19,12 @@
 	  put it, the floor head over the floor (taking the lean back out of the targets, as first written, lifted the
 	  floor head 0.5 stud off the floor in the brace: AnimationVacuumHarness, Studio 2026-10-17).
 
+	Owner plan A+B+C (2026-11-16, hands went INSIDE the body): the chest it guards is the visible one, the UpperTorso
+	and every piece worn on it (VacuumBodyUtils.chestBox); the hand targets and elbow poles ride the chest's animated
+	move from its rest pose (VacuumBodyFormulas.follow, VacuumMotionConstants.chestFollow), so the idle's sway never
+	swings the chest into the hands; and the wand turns about the point between the paws (VacuumBodyFormulas.pivot),
+	the left paw turning part way about its own grip.
+
 	A Transform it wrote is recognised next frame: a joint the Animator did not rewrite is posed from the animation's
 	value again, never on top of its own last write. Setting an Attachment's CFrame and a Motor6D's Transform locally
 	is never replicated (the server never rewrites either after creating them), so nothing authoritative moves.
@@ -36,6 +42,8 @@ local RunService = game:GetService("RunService")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
+local VacuumBodyFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumBodyFormulas)
+local VacuumBodyUtils = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumBodyUtils)
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 
@@ -221,11 +229,13 @@ local function readRest(character: Model): Reading?
 			leftHold = { at = at, shoulder = shoulder, reach = reach }
 		end
 	end
+	-- The visible chest (owner plan A): the UpperTorso and every piece worn on it, as a box in its rest frame.
+	local chestBox = if chest ~= nil then VacuumBodyUtils.chestBox(character, chest, tool) else nil
+	local rightAt = handleRest * handle.CFrame:PointToObjectSpace(upper.WorldPosition)
 	local rest: VacuumMotionFormulas.WandRest = {
-		-- Every layer turns about the left paw's grip (its arm is planned near full reach; the right has room).
-		pivot = if leftHold ~= nil
-			then leftHold.at
-			else handleRest * handle.CFrame:PointToObjectSpace(upper.WorldPosition),
+		-- Every layer turns about the point between the paws, in front of the chest (owner plan C, 2026-11-16: about the
+		-- left paw, aiming right swung the right paw across the chest).
+		pivot = VacuumBodyFormulas.pivot(rightAt, if leftHold ~= nil then leftHold.at else nil),
 		corners = corners,
 		floorY = -(root.Size.Y / 2 + humanoid.HipHeight),
 		left = leftHold,
@@ -237,15 +247,15 @@ local function readRest(character: Model): Reading?
 		right = rightRest.Position,
 		torso = if rootJoint ~= nil
 				and waist ~= nil
-				and chest ~= nil
+				and chestBox ~= nil
 			then {
 				centre = (
 					rootJoint.motor.C0
 					* rootJoint.motor.C1:Inverse()
 					* waist.motor.C0
 					* waist.motor.C1:Inverse()
-				).Position,
-				half = chest.Size / 2,
+				) * chestBox.centre,
+				half = chestBox.half,
 			}
 			else nil,
 	}
@@ -400,6 +410,27 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 		return motion
 	end
 
+	-- The upper body's frame (root space) from its joints' Transforms; at rest with no Transforms (owner plan B: the
+	-- hands ride its move from there).
+	local function chestFrame(rootT: CFrame, waistT: CFrame): CFrame?
+		if rootJoint == nil or waist == nil then
+			return nil
+		end
+		return through(through(CFrame.identity, rootJoint.motor, rootT), waist.motor, waistT)
+	end
+	local chestRest = chestFrame(CFrame.identity, CFrame.identity)
+	-- How the chest has moved from rest this frame (the animation's idle, walk and sway plus the brace written above),
+	-- Constants.chestFollow of it; no move without the joints.
+	local function chestMove(): CFrame
+		local now = if rootJoint ~= nil and waist ~= nil
+			then chestFrame(rootJoint.motor.Transform, waist.motor.Transform)
+			else nil
+		if chestRest == nil or now == nil then
+			return CFrame.identity
+		end
+		return VacuumBodyFormulas.follow(chestRest, now, Constants.chestFollow)
+	end
+
 	-- The wand last written (with its lift) and the lift held from it (VacuumMotionFormulas.floorLift).
 	local applied: CFrame? = nil
 	local lifted = 0
@@ -424,23 +455,26 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 				return CFrame.identity
 			end
 			local motion = lean(pose.drop, pose.lean, pose.twist or 0)
+			-- The hands ride the chest (owner plan B): the pose's wand is carried by the chest's move this frame.
+			local held = chestMove() * pose.wand
 			-- Lifted by what the head sank under its pose last frame, so the hand's small miss never takes it into
 			-- the floor (Launch List g-prickles-floor-dip).
-			local need = VacuumMotionFormulas.floorLift(rest, pose.wand, residual(), Constants.floorMargin)
+			local need = VacuumMotionFormulas.floorLift(rest, held, residual(), Constants.floorMargin)
 			lifted = math.max(need, lifted * Constants.floorLiftHold)
-			local wand = CFrame.new(0, lifted, 0) * pose.wand
+			local wand = CFrame.new(0, lifted, 0) * held
 			applied = wand
 			right.CFrame = wand * rightRest
 			if left ~= nil and leftRest ~= nil then
-				-- The left paw's wrap point is the pivot: it goes where the wand takes it, turned only part way.
+				-- The left paw goes where the wand takes its grip, turned only part way about it.
+				local at = if rest.left ~= nil then rest.left.at else rest.pivot
 				local turned = CFrame.new():Lerp(wand.Rotation, Constants.leftTurn)
-				left.CFrame = CFrame.new(wand * rest.pivot) * turned * CFrame.new(-rest.pivot) * leftRest
+				left.CFrame = CFrame.new(wand * at) * turned * CFrame.new(-at) * leftRest
 			end
-			if Constants.poleFollow > 0 then
-				for _, pole in poles do
-					local moved = wand * pole.rest.Position
-					pole.attachment.CFrame = pole.rest.Rotation + pole.rest.Position:Lerp(moved, Constants.poleFollow)
-				end
+			for _, pole in poles do
+				-- The elbow poles ride the chest too, and follow `poleFollow` of the wand's own move.
+				local moved = wand * pole.rest.Position
+				local base = (wand * pose.wand:Inverse()) * pole.rest.Position
+				pole.attachment.CFrame = pole.rest.Rotation + base:Lerp(moved, Constants.poleFollow)
 			end
 			return motion
 		end,
