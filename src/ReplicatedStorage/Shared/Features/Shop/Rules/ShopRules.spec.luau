@@ -40,8 +40,7 @@ return function()
 		expect(dead).to.equal("not on sale")
 	end)
 
-	-- Held back with the Harvest Pack until its art is uploaded (A1); re-enabled when the pack comes back.
-	itSKIP("sells an event's offer only while its event is live", function()
+	it("sells an event's offer only while its event is live", function()
 		local harvest = ShopRegistry.get("HarvestPack")
 		expect(harvest).to.be.ok()
 		local ok = ShopRules.check(harvest, owner(), harvest.price, NOON, "harvest")

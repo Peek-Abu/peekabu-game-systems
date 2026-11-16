@@ -142,9 +142,7 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	-- gift box.
 	shop = "rbxassetid://78344221274424",
 	stickers = "rbxassetid://114382938678176",
-	-- The Thanksgiving event's acorn (so-event): no image until the owner OKs the rendered acorn icon; the number shows
-	-- alone until then.
-	acorns = "",
+	acorns = "rbxassetid://116086695828146", -- the Thanksgiving event's matte acorn (owner A4 yes 2026-11-16, decal 108178476017281)
 	credits = "rbxassetid://120886772987647", -- the Credits ticket (2026-10-21, decal 72265330733611)
 	gleam = "rbxassetid://138856527532184", -- the premium Gleam crystal (2026-10-21, decal 98003345456608)
 	globe = "rbxassetid://105862507048588",
@@ -273,6 +271,11 @@ local STICKERS: { [string]: string } = {
 	["SheriffPack.GotIt"] = "rbxassetid://138267781398143",
 	["SheriffPack.Aww"] = "rbxassetid://117243301577418",
 	["SheriffPack.Oops"] = "rbxassetid://114811908848269",
+	-- The Thanksgiving Harvest Pack (owner A3/A7 yes 2026-11-16; decals in
+	-- characters/ui/stickers/harvest-2026-11-16/final/upload.log).
+	["HarvestPack.Thanks"] = "rbxassetid://111662959105450",
+	["HarvestPack.Cozy"] = "rbxassetid://86795819097019",
+	["HarvestPack.Yum"] = "rbxassetid://80592040818757",
 }
 UIAssets.stickers = table.freeze(STICKERS)
 

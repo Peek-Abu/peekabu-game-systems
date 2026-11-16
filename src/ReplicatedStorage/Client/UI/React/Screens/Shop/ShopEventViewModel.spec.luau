@@ -34,6 +34,7 @@ return function()
 	describe("offers", function()
 		it("lists only this event's offers, priciest first, priced in acorns", function()
 			local cards = VM.offers(HARVEST, owner(), { gleam = 0, credits = 0, acorns = 0 })
+			expect(#cards > 0).to.equal(true)
 			local last = math.huge
 			for _, card in cards do
 				expect(card.currency).to.equal("acorns")

@@ -55,6 +55,7 @@ return function()
 			for _, entry in LockerRules.pool(GLOOM) do
 				expect(ids[entry.id]).to.equal(true)
 			end
+			expect(ids.HarvestPack).to.equal(true)
 			expect(HARVEST.currency).to.equal("acorns")
 			expect(HARVEST.paidRandom).to.equal(false)
 		end)

@@ -149,8 +149,49 @@ local ITEMS: { CosmeticTypes.Item } = {
 		source = "gleam",
 		lore = "Prickles made a little mistake.",
 	},
-	-- The Thanksgiving event's Harvest Pack (owner L4) is held back until its art is approved and uploaded (A1, every
-	-- sticker needs its own uploaded art: CalloutAssets.spec); `git revert` of the commit that held it back re-adds it.
+
+	-- The Thanksgiving event's pack (owner L4, 2026-11-16): sold for acorns only while the event is live (EventRegistry
+	-- "harvest"); owners keep it after. Price is a placeholder until the owner sets prices (R4).
+	{
+		id = "HarvestPack",
+		kind = "stickerPack",
+		name = "Harvest Pack",
+		rarity = "rare",
+		source = "event",
+		event = "harvest",
+		price = 200,
+		lore = "Fall stickers for a thankful crew.",
+	},
+	{
+		id = "HarvestPack.Thanks",
+		kind = "sticker",
+		pack = "HarvestPack",
+		name = "Thanks!",
+		rarity = "rare",
+		source = "event",
+		event = "harvest",
+		lore = "Pippa brought pie for everyone.",
+	},
+	{
+		id = "HarvestPack.Cozy",
+		kind = "sticker",
+		pack = "HarvestPack",
+		name = "Cozy",
+		rarity = "rare",
+		source = "event",
+		event = "harvest",
+		lore = "Cappy naps in a pile of leaves.",
+	},
+	{
+		id = "HarvestPack.Yum",
+		kind = "sticker",
+		pack = "HarvestPack",
+		name = "Yum!",
+		rarity = "rare",
+		source = "event",
+		event = "harvest",
+		lore = "Prickles found an acorn. Snack time!",
+	},
 }
 
 return ITEMS
