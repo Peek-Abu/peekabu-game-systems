@@ -15,6 +15,12 @@
 	  with the prize's colour leaking from its seams -> door bursts open, out toward the camera, with rarity cavity
 	  light and volumetric neon beams). The rarer the prize, the longer the rattle, the more and brighter the leaking
 	  light shafts and the burst's rays (LockerViewModel.RARITY_FX; owner picks 11-16).
+	- Softens the stage's neon on its own client copy (key and lockers: Neon -> SmoothPlastic) and keeps the added
+	  light (leak, rays) dim, so nothing blooms to white (owner 11-16: "lights are very neon on key / cutscene").
+	- The leak is plain white through the hold and turns the prize's rarity colour in its last half second (pose
+	  `leakTint`), a glimpse of the rarity before the door opens.
+	- `hasStage()` answers, before anything renders, whether the 3D stage is there, so LockerOpeningScreen never draws
+	  its 2D fallback for a frame first (owner 11-16: a screen flashed for about 0.1 s before the cutscene).
 	- Plays the beats' sounds (LockerAssets: library picks, NOT approved): the key click, the rattle (louder the
 	  rarer), the burst and the rarity's prize chime.
 	- Restores the camera and destroys temporary instances cleanly on finish or Skip.
@@ -50,16 +56,31 @@ local LockerCutsceneSystem = {}
 
 local doorRest: { [Instance]: { [BasePart]: CFrame } } = {}
 
-local function acquireStage(): (Model?, boolean)
+-- The cutscene's stage template (ReplicatedStorage.Assets.CleanupCrew.LockerStage), nil when it is absent.
+local function template(): Instance?
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
 	local cc = if assets ~= nil then assets:FindFirstChild("CleanupCrew") else nil
-	local template = if cc ~= nil then cc:FindFirstChild("LockerStage") else nil
-	if template ~= nil and template:IsA("Model") then
+	return if cc ~= nil then cc:FindFirstChild("LockerStage") else nil
+end
+
+-- Studio's Neon material blooms to white on camera; on the cutscene's own copy every Neon part (the key, the
+-- lockers' glow bits) becomes SmoothPlastic in the same colour.
+local function soften(root: Instance)
+	for _, descendant in root:GetDescendants() do
+		if descendant:IsA("BasePart") and descendant.Material == Enum.Material.Neon then
+			descendant.Material = Enum.Material.SmoothPlastic
+		end
+	end
+end
+
+local function acquireStage(): (Model?, boolean)
+	local source = template()
+	if source ~= nil and source:IsA("Model") then
 		local existingRef = workspace:FindFirstChild("LockerStage_Ref")
 		if existingRef ~= nil then
 			existingRef:Destroy()
 		end
-		local copy = template:Clone()
+		local copy = source:Clone()
 		copy.Name = "LockerStage_Active"
 		copy.Parent = workspace
 		return copy, true
@@ -134,7 +155,7 @@ local function setBurstGlow(lockerModel: Model, on: boolean, color: Color3, fx: 
 			ray.CastShadow = false
 			ray.Material = Enum.Material.Neon
 			ray.Color = color
-			ray.Transparency = math.min(0.9, 0.5 + math.abs(index - middle) * (0.4 / middle))
+			ray.Transparency = math.min(0.92, 0.7 + math.abs(index - middle) * (0.2 / middle))
 			ray.Size = Vector3.new(0.5 + (index % 2) * 0.4, 0.15, 9)
 			ray.CFrame = base * CFrame.Angles(math.rad(10 + (index % 3) * 7), angle * 1.4, 0) * CFrame.new(0, 0, -4.5)
 			ray.Parent = beams
@@ -146,9 +167,8 @@ end
 -- shafts pointing out of them, and a light behind the door. Returns its update (leak 0..1, seconds) and its cleanup.
 local function buildLeak(
 	lockerModel: Model,
-	color: Color3,
 	fx: LockerViewModel.RarityFx
-): (((leak: number, seconds: number) -> ())?, (() -> ())?)
+): (((leak: number, seconds: number, color: Color3) -> ())?, (() -> ())?)
 	local door = lockerModel:FindFirstChild("Door")
 	local cavity = lockerModel:FindFirstChild("Cavity")
 	if door == nil or not door:IsA("Model") or cavity == nil or not cavity:IsA("BasePart") then
@@ -167,7 +187,7 @@ local function buildLeak(
 		part.CanQuery = false
 		part.CastShadow = false
 		part.Material = Enum.Material.Neon
-		part.Color = color
+		part.Color = Color3.new(1, 1, 1)
 		part.Transparency = 1
 		part.Size = partSize
 		part.CFrame = at
@@ -200,20 +220,23 @@ local function buildLeak(
 	end
 	local light = Instance.new("PointLight")
 	light.Name = "LeakLight"
-	light.Color = color
+	light.Color = Color3.new(1, 1, 1)
 	light.Range = 8 + fx.brightness
 	light.Brightness = 0
 	light.Parent = cavity
 	folder.Parent = lockerModel
-	local function update(amount: number, seconds: number)
+	local function update(amount: number, seconds: number, color: Color3)
 		for _, strip in strips do
-			strip.Transparency = 1 - 0.85 * amount
+			strip.Transparency = 1 - 0.55 * amount
+			strip.Color = color
 		end
 		for index, shaft in shafts do
 			local flicker = 0.75 + 0.25 * math.sin(seconds * 23 + index * 1.7)
-			shaft.Transparency = 1 - math.clamp(amount * flicker * 0.7, 0, 0.7)
+			shaft.Transparency = 1 - math.clamp(amount * flicker * 0.45, 0, 0.45)
+			shaft.Color = color
 		end
-		light.Brightness = fx.brightness * 0.6 * amount
+		light.Color = color
+		light.Brightness = fx.brightness * 0.4 * amount
 	end
 	local function cleanup()
 		folder:Destroy()
@@ -241,6 +264,16 @@ local function buildActor(): (Model?, boolean)
 		EmployeePreviewSystem.playIdle(model, outfit.employee, CosmeticRegistry.keyOf(outfit.look.skin))
 	end
 	return model, isLive
+end
+
+-- Whether the 3D stage can play (its template, or a Workspace.LockerStage_Ref, is there).
+function LockerCutsceneSystem.hasStage(): boolean
+	local found = template()
+	if found ~= nil and found:IsA("Model") then
+		return true
+	end
+	local ref = workspace:FindFirstChild("LockerStage_Ref")
+	return ref ~= nil and ref:IsA("Model")
 end
 
 function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
@@ -287,7 +320,14 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 	local startedAt = os.clock()
 	local duration = LockerViewModel.openingDuration(outcome.rarity)
 	local glowActive = false
-	local leakUpdate, leakCleanup = buildLeak(lockerModel, rarityShade.hi, fx)
+	if ownedStage then
+		soften(lockerModel)
+		if keyModel ~= nil then
+			soften(keyModel)
+		end
+	end
+	local leakUpdate, leakCleanup = buildLeak(lockerModel, fx)
+	local white = Color3.new(1, 1, 1)
 	local keyClicked = false
 	local lastBeat: LockerViewModel.CutsceneBeat? = nil
 	local rattle: SoundServiceClient.SoundHandle? = nil
@@ -334,7 +374,11 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 		local update = leakUpdate
 		if update ~= nil then
 			-- The seams go dark once the door is open (the burst's own light takes over).
-			update(if pose.glow then 0 else pose.leak, os.clock() - startedAt)
+			update(
+				if pose.glow then 0 else pose.leak,
+				os.clock() - startedAt,
+				white:Lerp(rarityShade.base, pose.leakTint)
+			)
 		end
 		if pose.glow ~= glowActive then
 			glowActive = pose.glow

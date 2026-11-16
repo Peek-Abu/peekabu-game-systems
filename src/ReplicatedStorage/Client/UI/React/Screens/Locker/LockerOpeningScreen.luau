@@ -67,14 +67,17 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 	local stored = ReactCharm.useAtom(LockerStore.opening)
 	local outcome = props.outcome or stored
 	local canSkip, setCanSkip = React.useState(false)
-	local cutscene3d, setCutscene3d = React.useState(false)
+	-- Known before the first frame (owner 11-16: the 2D fallback flashed for a frame before the 3D cutscene took over).
+	local cutscene3d, setCutscene3d = React.useState(LockerCutsceneSystem.hasStage)
 
 	local key = if outcome ~= nil then `{outcome.locker}:{outcome.item}:{outcome.pity}` else ""
 	local duration = if outcome ~= nil then VM.openingDuration(outcome.rarity) else VM.openingDuration("uncommon")
 	local progress = useToonPlay(duration, 0, key)
 
 	local deps: { unknown } = { key, outcome ~= nil, props.onFinish }
-	React.useEffect(function(): () -> ()
+	-- A layout effect: the cutscene camera is in place in the same frame the screen first draws, so the hub never
+	-- shows through for a frame.
+	React.useLayoutEffect(function(): () -> ()
 		setCanSkip(false)
 		if outcome == nil then
 			setCutscene3d(false)

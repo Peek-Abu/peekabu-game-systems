@@ -321,6 +321,42 @@ return function()
 			end
 		end)
 
+		-- Owner 11-16: the leak is plain white through the hold, then shows the prize's own colour about half a second
+		-- before the door opens (a glimpse of the rarity).
+		it("leaks plain white, then the prize's colour in the last half second before the burst", function()
+			for _, rarity in LADDER do
+				local duration = VM.openingDuration(rarity)
+				local burstAt = duration - VM.BURST_SECONDS
+				local late = VM.cutscenePose("gloom", (burstAt - 0.05) / duration, rarity)
+				expect(late.leakTint > 0.9).to.equal(true)
+				expect(VM.cutscenePose("gloom", (burstAt + 0.1) / duration, rarity).leakTint).to.equal(1)
+			end
+			local hold = VM.RARITY_FX.legendary.hold
+			local duration = VM.openingDuration("legendary")
+			local burstAt = duration - VM.BURST_SECONDS
+			local early = VM.cutscenePose("gloom", (burstAt - hold + 0.1) / duration, "legendary")
+			expect(early.beat).to.equal("rattle")
+			expect(early.leakTint).to.equal(0)
+			expect(VM.GLIMPSE_SECONDS).to.equal(0.5)
+		end)
+
+		-- Owner 11-16: the key floats in from screen right, never from the employee (who only idles).
+		it("brings the key in from the side away from the employee", function()
+			for _, id in { "gloom", "gleam" } do
+				local start = VM.cutscenePose(id, 0, "uncommon")
+				local emp = start.employeeCFrame.Position
+				for step = 0, 60 do
+					local pose = VM.cutscenePose(id, step / 60 * 0.7, "uncommon")
+					local key = pose.keyCFrame.Position
+					if key.Y > -50 then
+						expect((key - emp).Magnitude > 2.5).to.equal(true)
+						-- The employee stands at +X of the locker; the key comes from -X (screen right).
+						expect(key.X < emp.X - 2).to.equal(true)
+					end
+				end
+			end
+		end)
+
 		it("flashes brighter at the burst for a rarer prize", function()
 			local function brightest(rarity)
 				local least = 1

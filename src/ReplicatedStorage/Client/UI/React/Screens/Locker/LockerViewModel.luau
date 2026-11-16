@@ -140,8 +140,11 @@ export type CutscenePose = {
 	doorDeg: number,
 	glow: boolean,
 	flashTransparency: number,
-	-- 0..1: how bright the prize's colour leaks out round the shut door (the rattle beat; 1 at the burst).
+	-- 0..1: how bright the light leaks out round the shut door (the rattle beat; 1 at the burst).
 	leak: number,
+	-- 0..1: the leaking light's colour, plain white (0) to the prize's rarity colour (1): white through the hold, the
+	-- rarity showing through in the last GLIMPSE_SECONDS before the door opens (owner 11-16).
+	leakTint: number,
 }
 
 local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
@@ -241,11 +244,17 @@ local ESTABLISH_SECONDS = 0.8
 local APPROACH_SECONDS = 0.9
 local KEY_SECONDS = 1.0
 local BURST_SECONDS = 0.8
+-- The rarity's colour shows through the seams this long before the door opens (owner 11-16: "half a second before
+-- the actual locker opens you get a small glimpse of the rarity leaking through").
+local GLIMPSE_SECONDS = 0.5
+-- How long the leak takes to turn from white to the rarity's colour.
+local GLIMPSE_BLEND = 0.15
 
 local VM = {
 	OPENING_SCENE = "lockerOpening",
 	SKIP_AFTER = 1.0,
 	BURST_SECONDS = BURST_SECONDS,
+	GLIMPSE_SECONDS = GLIMPSE_SECONDS,
 	RARITY_FX = RARITY_FX,
 	STAGE_ORIGIN = CFrame.new(3000, 0, 0),
 }
@@ -520,7 +529,8 @@ end
 
 --[=[
 	The 3D cutscene at `alpha` (0..1 of `VM.openingDuration(rarity)`) for `lockerId`'s Locker (the Gleam Locker sits at
-	-X, every other one at +X). Beats: establishing, approach (the key floats from the employee's hand), key_turn,
+	-X, every other one at +X). Beats: establishing, approach (the key floats in from screen right, away from the
+	employee, who only idles: owner 11-16), key_turn,
 	rattle (the shut door jumps against its latch, harder and longer the rarer the prize, light in the prize's colour
 	leaking round it) and burst_open. Both doors hinge on their -X edge, so the employee waits on the latch side (+X),
 	facing the keyhole, and every shot comes from the hinge side: the employee is never between the camera and what it
@@ -539,7 +549,9 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 	-- A step aside and back from the latch seam, so the leaking light shows and the burst shot keeps them out of frame
 	-- (Play check 11-16).
 	local empPos = Vector3.new(lx + 3.4, 3.1, -0.2)
-	local hand = empPos + Vector3.new(-0.9, 1.1, 0.7)
+	-- Where the key floats in from: the hinge side (-X), which is screen right in every shot, never the employee.
+	local keyStart = Vector3.new(kx - 4.5, 6.4, 0.5)
+	local hidden = Vector3.new(kx, -100, 0)
 
 	local rattleAt = ESTABLISH_SECONDS + APPROACH_SECONDS + KEY_SECONDS
 	local burstAt = rattleAt + fx.hold
@@ -548,12 +560,13 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 	local camPos: Vector3
 	local camLook: Vector3
 	local fov: number
-	local keyPos = hand
+	local keyPos = hidden
 	local keyRollDeg = 0
 	local doorDeg = 0
 	local glow = false
 	local flashTransparency = 1
 	local leak = 0
+	local leakTint = 0
 
 	if seconds < ESTABLISH_SECONDS then
 		beat = "establishing"
@@ -567,7 +580,7 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 		camPos = Vector3.new(lx - 3.2, 6.0, -6.5):Lerp(Vector3.new(lx - 2.2, 5.6, -3.0), t)
 		camLook = Vector3.new(lx + 0.5, 5.2, 3.5):Lerp(keyHole, t)
 		fov = 46 - 4 * t
-		keyPos = hand:Lerp(keyFront, t * t * (3 - 2 * t))
+		keyPos = keyStart:Lerp(keyFront, t * t * (3 - 2 * t))
 	elseif seconds < rattleAt then
 		beat = "key_turn"
 		local t = (seconds - ESTABLISH_SECONDS - APPROACH_SECONDS) / KEY_SECONDS
@@ -595,6 +608,7 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 		-- The door jumps open against its latch and falls back (0 or more: never into the locker's body).
 		doorDeg = fx.rattleDeg * grow * (0.5 + 0.5 * math.sin(seconds * math.pi * 2 * 9))
 		leak = grow
+		leakTint = math.clamp((seconds - (burstAt - GLIMPSE_SECONDS)) / GLIMPSE_BLEND, 0, 1)
 		local shake = fx.shake * grow
 		camPos += Vector3.new(math.sin(seconds * 71) * shake, math.sin(seconds * 53 + 1.3) * shake, 0)
 	else
@@ -604,6 +618,7 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 		doorDeg = 115 * swing
 		glow = true
 		leak = 1
+		leakTint = 1
 		keyPos = Vector3.new(kx, 5.2, -100)
 		camPos = Vector3.new(lx - 0.4, 5.7, -4.2):Lerp(Vector3.new(lx - 0.15, 5.45, -3.0), t)
 		camLook = Vector3.new(lx, 5.0, 5.0)
@@ -629,6 +644,7 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 		glow = glow,
 		flashTransparency = flashTransparency,
 		leak = leak,
+		leakTint = leakTint,
 	}
 end
 
