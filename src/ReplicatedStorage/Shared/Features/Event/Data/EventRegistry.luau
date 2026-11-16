@@ -3,10 +3,10 @@
 	EventRegistry: the limited-time events, looked up by id. Turning an event on or off, or moving it, is a change to
 	its `starts` / `ends` here: no code changes. Two events never overlap (EventRegistry.spec).
 
-	harvest (the Thanksgiving launch event, owner picks r1 2026-11-16): earned-only acorns; pay table R3; leftover
-	acorns become Credits at 1 = 5 (R7). The name and dates are waiting on the owner's answer (they asked for a longer
-	run); the dates below are the proposed Thu 26 Nov 12:00 am ET to Sun 20 Dec 11:59 pm ET. The Gloom Locker key price
-	is a placeholder until the owner sets prices (R4).
+	harvest (the Thanksgiving launch event, owner picks r1 + answers 2026-11-16): "Thanksgiving Harvest", earned-only
+	acorns; pay table R3; about one acorn pickup a shift worth 5; leftover acorns become Credits at 1 = 5 (R7); live Thu
+	26 Nov 12:00 am ET to Sun 20 Dec 11:59 pm ET. The Gloom Locker key price is a placeholder until the owner sets
+	prices (R4).
 
 	@class EventRegistry
 ]=]
@@ -30,6 +30,7 @@ local EVENTS: { Event } = {
 		convertTo = "credits",
 		convertRate = 5,
 		keys = { { locker = "gloom", price = 60 } },
+		pickup = { amount = 5, firstPile = 3, lastPile = 15 },
 	},
 }
 
@@ -37,6 +38,7 @@ local byId: { [string]: Event } = {}
 for _, event in EVENTS do
 	assert(byId[event.id] == nil, `EventRegistry: duplicate id {event.id}`)
 	table.freeze(event.pay)
+	table.freeze(event.pickup)
 	for _, key in event.keys do
 		table.freeze(key)
 	end

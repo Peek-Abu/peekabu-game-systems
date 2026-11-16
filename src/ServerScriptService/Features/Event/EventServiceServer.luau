@@ -10,6 +10,8 @@
 	  sent EventEvents.Paid for the results screen. Training pays nothing; coffee and passes never multiply it.
 	- After an event: on each profile load, while no event is live, leftover money of an event that has ended turns
 	  into its `convertTo` currency at `convertRate` (one currency write).
+	- In a shift, about one acorn hides under a cleared pile (EventPickupSystem); the first to touch it gets the event's
+	  pickup amount.
 	- Hub props tagged `EventProp` (attribute `Event` = event id) are shown only while that event is live
 	  (EventPropSystem).
 
@@ -38,6 +40,9 @@ local EventUtils = require(EventShared.Utils.EventUtils)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local EventPaySystem = require(ServerScriptService.Features.Event.Systems.EventPaySystem)
 local EventPropSystem = require(ServerScriptService.Features.Event.Systems.EventPropSystem)
+local EventPickupSystem = require(ServerScriptService.Features.Event.Systems.EventPickupSystem)
+local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
+local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
@@ -262,7 +267,13 @@ export type EventServiceServer = {
 }
 
 local EventServiceServer: EventServiceServer = {
-	dependencies = { "PlayerDataServiceServer", "CurrencyServiceServer", "ShiftServiceServer" },
+	dependencies = {
+		"PlayerDataServiceServer",
+		"CurrencyServiceServer",
+		"ShiftServiceServer",
+		"VacuumServiceServer",
+		"ToastServiceServer",
+	},
 
 	start = function(self)
 		janitor:Add(
@@ -309,6 +320,28 @@ local EventServiceServer: EventServiceServer = {
 				end,
 				live = liveImpl,
 			}, payShiftImpl)
+		)
+		table.insert(
+			stoppers,
+			EventPickupSystem.start({
+				changed = ShiftServiceServer.changed,
+				cleared = VacuumServiceServer.pileCleared,
+				live = liveImpl,
+				training = function()
+					return ShiftServiceServer:isTraining()
+				end,
+				grant = function(userId, event, amount)
+					if not CurrencyServiceServer:addCurrency(userId, event.currency, amount) then
+						return false
+					end
+					log:audit(`userId={userId}`, "EVENT_PICKUP", event.id, amount)
+					local player = Players:GetPlayerByUserId(userId)
+					if player ~= nil then
+						ToastServiceServer:send(player, { text = `You found an acorn! +{amount}` })
+					end
+					return true
+				end,
+			})
 		)
 		table.insert(
 			stoppers,

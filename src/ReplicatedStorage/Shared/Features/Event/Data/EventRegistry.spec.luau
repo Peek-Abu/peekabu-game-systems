@@ -52,5 +52,12 @@ return function()
 		expect(harvest.pay.friend).to.equal(5)
 		expect(harvest.convertTo).to.equal("credits")
 		expect(harvest.convertRate).to.equal(5)
+		-- About one acorn pickup a shift, worth 5 (owner, 11-16).
+		expect(harvest.pickup.amount).to.equal(5)
+		expect(harvest.pickup.firstPile >= 1).to.equal(true)
+		expect(harvest.pickup.lastPile >= harvest.pickup.firstPile).to.equal(true)
+		-- Dates approved 11-16: Thu 26 Nov 12:00 am ET to the end of Sun 20 Dec ET.
+		expect(harvest.starts).to.equal(1795669200)
+		expect(harvest.ends).to.equal(1797829200)
 	end)
 end

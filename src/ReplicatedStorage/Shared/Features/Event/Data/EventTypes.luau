@@ -21,6 +21,14 @@ export type Pay = {
 	friend: number,
 }
 
+-- The rare pickup in a shift: one acorn hides under a random cleared pile between firstPile and lastPile and gives
+-- `amount` of the event's money to whoever touches it first (EventPickupSystem).
+export type Pickup = {
+	amount: number,
+	firstPile: number,
+	lastPile: number,
+}
+
 -- A Locker key sold for the event's money (the key is added to the player's keys for that Locker).
 export type KeyOffer = {
 	locker: string,
@@ -43,6 +51,7 @@ export type Event = {
 	convertTo: CurrencyConstants.CurrencyType,
 	convertRate: number,
 	keys: { KeyOffer },
+	pickup: Pickup,
 }
 
 -- Why one shift paid what it did (the results screen's acorns line).
