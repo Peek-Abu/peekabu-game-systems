@@ -12,12 +12,12 @@ inside the game, so it never touches Robux directly.
 | Item | Kind | Id (code) | What the player gets | Where it is granted |
 |---|---|---|---|---|
 | 100 Gleam (R$ 99) | developer product | 3722076056 (`ShopConstants.PRODUCT_IDS.gleam100`) | +100 Gleam | Marketplace receipt → premium slice |
-| 150 Gleam (R$ 129) | developer product | 3722076494 (`gleam275`, the key kept its old name) | +150 Gleam (+15 % bonus shown) | same |
-| 600 Gleam (R$ 449) | developer product | 3722076599 (`gleam600`) | +600 Gleam (+32 %) | same |
-| 1,500 Gleam (R$ 999) | developer product | 3722076697 (`gleam1500`) | +1,500 Gleam (+49 %) | same |
+| 420 Gleam (R$ 399) | developer product | 3722076494 (`gleam275`, the key kept its old name) | +420 Gleam (+4 % bonus shown) | same |
+| 880 Gleam (R$ 799) | developer product | 3722076599 (`gleam600`) | +880 Gleam (+9 %) | same |
+| 1,950 Gleam (R$ 1,699) | developer product | 3722076697 (`gleam1500`) | +1,950 Gleam (+14 %) | same |
 | Big Crew | game pass | 2058797732 (`HostConstants.PASS_ID`) | the host's truck holds 6 | Roblox owns it; checked on join and on purchase |
 
-Robux prices live on the Creator Dashboard (the Shop shows what Roblox reports); the Gleam amounts live in `ShopConstants.BUNDLES` and the bonus shown is worked out from both. Pack 2 went from 275 to 150 Gleam on 2026-11-13 (owner): its Dashboard name and description must say 150.
+Robux prices live on the Creator Dashboard (the Shop shows what Roblox reports); the Gleam amounts live in `ShopConstants.BUNDLES` and the bonus shown is worked out from both. Pack 2 went from 275 to 150 Gleam on 2026-11-13 (owner). On 2026-11-16 the owner moved to small bonuses (about Marvel Rivals'): 100 / 420 / 880 / 1,950 Gleam for R$ 99 / 399 / 799 / 1,699. Each product's Dashboard **price, name and description** must match its row above (same product ids). Ship the code and the Dashboard edit together: the Shop's bonus label uses the live Dashboard price, so new amounts at old prices would show a huge bonus. Later (new products, after launch): 5,400 Gleam for R$ 4,499 (+19 %) and 12,500 for R$ 9,999 (+24 %).
 
 ## How a receipt is handled (why "paid and got nothing" should be rare)
 

@@ -87,7 +87,7 @@ end
 
 --[=[
 	Deal `id`'s "% off" at `robux`: how much less than buying the same Gleam (`worth`) at the best Gleam pack's rate
-	(1,500 Gleam = R$ 999), rounded; never below 0. From the price the card shows, so a Dashboard price change keeps
+	(today 1,950 Gleam = R$ 1,699), rounded; never below 0. From the price the card shows, so a Dashboard price change keeps
 	the badge honest.
 ]=]
 function DealRules.offPercent(id: DealId, robux: number): number

@@ -15,12 +15,16 @@ local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 -- `robux` and `image` are the products' price and icon on Roblox (Creator Dashboard, read 2026-11-12); the Shop shows
 -- what Roblox reports at runtime and these only until it answers, so a Dashboard change shows without a code change.
 local BUNDLES: { ShopTypes.GleamBundle } = {
-	-- Owner, 11-13 (price sheet Q1): each bigger pack is a better deal; pack 2 gives 150 (its key keeps the old name, it
-	-- is the developer product's registration key). The bonus shown is worked out from the numbers (ShopViewModel).
+	-- Owner, 11-16 (Gleam pack page: "if marvel rivals max bonus is 16%! I think ours should be around there"): small
+	-- bonuses, each bigger pack still a better deal (+4% / +9% / +14% over the first), each price 1 under a Roblox Robux
+	-- bundle, and the top pack covers a 1,900-Gleam Legendary bundle in one buy. The keys keep their old names (they are
+	-- the developer products' registration keys); the Robux prices must match the products' Dashboard prices. Later
+	-- (after launch, new products): 5,400 for 4,499 (+19%) and 12,500 for 9,999 (+24%). The bonus shown is worked out
+	-- from the numbers (ShopViewModel).
 	{ key = "gleam100", gleam = 100, robux = 99, image = "rbxassetid://112673750570330" },
-	{ key = "gleam275", gleam = 150, robux = 129, image = "rbxassetid://82923918698099" },
-	{ key = "gleam600", gleam = 600, robux = 449, image = "rbxassetid://138358363514131" },
-	{ key = "gleam1500", gleam = 1500, robux = 999, image = "rbxassetid://138262914648345" },
+	{ key = "gleam275", gleam = 420, robux = 399, image = "rbxassetid://82923918698099" },
+	{ key = "gleam600", gleam = 880, robux = 799, image = "rbxassetid://138358363514131" },
+	{ key = "gleam1500", gleam = 1950, robux = 1699, image = "rbxassetid://138262914648345" },
 }
 
 -- The developer product id of each bundle (owner, Creator Dashboard, 2026-10-24). The Gleam amounts and Robux prices

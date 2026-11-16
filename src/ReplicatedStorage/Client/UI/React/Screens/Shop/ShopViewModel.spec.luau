@@ -318,10 +318,12 @@ return function()
 			expect(bundles[1].amount).to.equal("100")
 			expect(bundles[1].bonus).to.equal(nil)
 			-- Worked out from the numbers: Gleam per Robux over the first pack's.
-			expect(bundles[2].amount).to.equal("150")
-			expect(bundles[2].bonus).to.equal("+15%")
-			expect(bundles[3].bonus).to.equal("+32%")
-			expect(bundles[4].bonus).to.equal("+49%")
+			-- Owner 11-16: small bonuses, about Marvel Rivals' (its best pack is ~16% over its smallest).
+			expect(bundles[2].amount).to.equal("420")
+			expect(bundles[2].bonus).to.equal("+4%")
+			expect(bundles[3].bonus).to.equal("+9%")
+			expect(bundles[4].amount).to.equal("1,950")
+			expect(bundles[4].bonus).to.equal("+14%")
 			-- Each bigger pack is a better deal.
 			for index = 2, #ShopConstants.BUNDLES do
 				local a, b = ShopConstants.BUNDLES[index - 1], ShopConstants.BUNDLES[index]
