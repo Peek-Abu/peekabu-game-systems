@@ -102,4 +102,89 @@ return function()
 			end
 		)
 	end)
+
+	describe("deal", function()
+		it("runs dealFrom -> past 1 -> 1, clamped", function()
+			expect(VM.deal(0)).to.equal(MOTION.dealFrom)
+			expect(VM.deal(1)).to.equal(1)
+			expect(VM.deal(-1)).to.equal(MOTION.dealFrom)
+			expect(VM.deal(3)).to.equal(1)
+			local peak = 0
+			for step = 0, 40 do
+				peak = math.max(peak, VM.deal(step / 40))
+			end
+			expect(math.abs(peak - MOTION.dealOvershoot) < 0.01).to.equal(true)
+		end)
+
+		it("staggers the first dealCount cards and leaves the rest still", function()
+			expect(VM.dealDelay(1)).to.equal(0)
+			expect(math.abs(VM.dealDelay(2) - MOTION.dealStagger) < 1e-9).to.equal(true)
+			expect(VM.dealDelay(MOTION.dealCount) ~= nil).to.equal(true)
+			expect(VM.dealDelay(MOTION.dealCount + 1)).to.equal(nil)
+			expect(VM.dealDelay(0)).to.equal(nil)
+		end)
+	end)
+
+	describe("arrive", function()
+		it("starts `from` px away and lands exactly on 0, never past it", function()
+			expect(VM.arrive(0, 24)).to.equal(24)
+			expect(VM.arrive(1, 24)).to.equal(0)
+			expect(VM.arrive(1, -16)).to.equal(0)
+			local last = 24
+			for step = 1, 20 do
+				local now = VM.arrive(step / 20, 24)
+				expect(now <= last).to.equal(true)
+				expect(now >= 0).to.equal(true)
+				last = now
+			end
+		end)
+	end)
+
+	describe("slideFrom", function()
+		it("comes in from the side of the tab picked", function()
+			local tabs = { "a", "b", "c" }
+			expect(VM.slideFrom(tabs, "a", "c")).to.equal(MOTION.slideShift)
+			expect(VM.slideFrom(tabs, "c", "a")).to.equal(-MOTION.slideShift)
+			expect(VM.slideFrom(tabs, "b", "b")).to.equal(0)
+			expect(VM.slideFrom(tabs, "x", "a")).to.equal(0)
+			expect(VM.slideFrom(tabs, nil, "a")).to.equal(0)
+		end)
+	end)
+
+	describe("count", function()
+		it("eases from the old balance to the new one in whole numbers", function()
+			expect(VM.count(100, 140, 0)).to.equal(100)
+			expect(VM.count(100, 140, 1)).to.equal(140)
+			expect(VM.count(100, 140, 2)).to.equal(140)
+			expect(VM.count(140, 100, 1)).to.equal(100)
+			local mid = VM.count(100, 140, 0.5)
+			expect(mid > 120 and mid < 140).to.equal(true)
+			expect(mid % 1).to.equal(0)
+		end)
+	end)
+
+	describe("bump", function()
+		it("swells once to bumpScale and settles at 1", function()
+			expect(VM.bump(0)).to.equal(1)
+			expect(VM.bump(1)).to.equal(1)
+			local peak = 0
+			for step = 0, 40 do
+				peak = math.max(peak, VM.bump(step / 40))
+			end
+			expect(math.abs(peak - MOTION.bumpScale) < 0.01).to.equal(true)
+		end)
+	end)
+
+	describe("float", function()
+		it("fades in, rises floatRise px and is gone at the end", function()
+			local start = VM.float(0)
+			local finish = VM.float(1)
+			expect(start.transparency).to.equal(1)
+			expect(finish.transparency).to.equal(1)
+			expect(finish.rise).to.equal(MOTION.floatRise)
+			local shown = VM.float(0.5)
+			expect(shown.transparency).to.equal(0)
+			expect(shown.rise > 0 and shown.rise < MOTION.floatRise).to.equal(true)
+		end)
+	end)
 end

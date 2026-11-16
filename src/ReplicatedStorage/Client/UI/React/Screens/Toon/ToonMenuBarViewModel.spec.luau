@@ -61,4 +61,42 @@ return function()
 			end
 		end
 	)
+
+	describe("scrollTo (U1)", function()
+		-- Four 100 px tabs, 10 px apart, in a 250 px window.
+		local widths = { 100, 100, 100, 100 }
+
+		it("keeps the scroll when the tab is already whole in view", function()
+			expect(VM.scrollTo(widths, 10, 1, 250, 0)).to.equal(0)
+			expect(VM.scrollTo(widths, 10, 2, 250, 0)).to.equal(0)
+		end)
+
+		it("scrolls right just far enough to show the tab whole, plus a peek of room", function()
+			local scroll = VM.scrollTo(widths, 10, 3, 250, 0)
+			-- tab 3 spans 220..320
+			expect(scroll >= 320 - 250).to.equal(true)
+			expect(scroll <= 220).to.equal(true)
+		end)
+
+		it("scrolls left to a tab cut on the left, and never past either end", function()
+			expect(VM.scrollTo(widths, 10, 1, 250, 150)).to.equal(0)
+			local content = 4 * 100 + 3 * 10
+			expect(VM.scrollTo(widths, 10, 4, 250, 0) <= content - 250).to.equal(true)
+			expect(VM.scrollTo(widths, 10, 9, 250, 40)).to.equal(40)
+		end)
+	end)
+
+	describe("more (U1)", function()
+		it("says which sides still hide tabs", function()
+			local none = VM.more(0, 430, 500)
+			expect(none.left).to.equal(false)
+			expect(none.right).to.equal(false)
+			local start = VM.more(0, 430, 250)
+			expect(start.left).to.equal(false)
+			expect(start.right).to.equal(true)
+			local finish = VM.more(180, 430, 250)
+			expect(finish.left).to.equal(true)
+			expect(finish.right).to.equal(false)
+		end)
+	end)
 end

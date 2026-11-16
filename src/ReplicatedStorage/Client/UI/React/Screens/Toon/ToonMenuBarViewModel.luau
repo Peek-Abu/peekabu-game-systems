@@ -78,4 +78,46 @@ function ToonMenuBarViewModel.tabs(
 	return { textSize = floor, icons = false, scroll = true, widths = widths }
 end
 
+-- How much of the next tab stays in view beyond a tab scrolled to (px), so the bar still reads as "more this way".
+local PEEK = 40
+-- A side counts as hiding tabs past this many px (a scroll a hair off its end is the end).
+local SLACK = 2
+
+-- Where a scrolling tab row should sit (its CanvasPosition.X) so tab `index` is whole in a `view`-px window, moving as
+-- little as it can from `scroll` and leaving PEEK px beyond it when there is more (owner pick U1, 2026-11-16).
+function ToonMenuBarViewModel.scrollTo(
+	widths: { number },
+	gap: number,
+	index: number,
+	view: number,
+	scroll: number
+): number
+	if widths[index] == nil then
+		return scroll
+	end
+	local left = 0
+	for i = 1, index - 1 do
+		left += widths[i] + gap
+	end
+	local right = left + widths[index]
+	local content = 0
+	for i, width in widths do
+		content += width + (if i > 1 then gap else 0)
+	end
+	local target = scroll
+	if left < scroll then
+		target = left - PEEK
+	elseif right > scroll + view then
+		target = right + PEEK - view
+	end
+	return math.clamp(target, 0, math.max(0, content - view))
+end
+
+export type More = { left: boolean, right: boolean }
+
+-- Which sides of a `view`-px window scrolled to `scroll` over `content` px of tabs still hide some.
+function ToonMenuBarViewModel.more(scroll: number, content: number, view: number): More
+	return { left = scroll > SLACK, right = scroll + view < content - SLACK }
+end
+
 return ToonMenuBarViewModel

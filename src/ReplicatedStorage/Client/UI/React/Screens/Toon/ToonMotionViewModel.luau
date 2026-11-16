@@ -80,4 +80,75 @@ function ToonMotionViewModel.highlight(seconds: number): number
 	return 0.1 + 0.6 * wave
 end
 
+-- A card dealt in as a menu page opens (owner pick M4): MOTION.dealFrom -> dealOvershoot -> 1, the pop's shape but
+-- softer.
+function ToonMotionViewModel.deal(t: number): number
+	local clamped = math.clamp(t, 0, 1)
+	if clamped < POP_PEAK then
+		return MOTION.dealFrom + (MOTION.dealOvershoot - MOTION.dealFrom) * easeOut(clamped / POP_PEAK)
+	end
+	return MOTION.dealOvershoot + (1 - MOTION.dealOvershoot) * easeInOut((clamped - POP_PEAK) / (1 - POP_PEAK))
+end
+
+-- When the `index`-th card (1-based) starts its deal, or nil past the first MOTION.dealCount (those are simply there).
+function ToonMotionViewModel.dealDelay(index: number): number?
+	if index < 1 or index > MOTION.dealCount then
+		return nil
+	end
+	return (index - 1) * MOTION.dealStagger
+end
+
+-- How far (design px) a page still is from its place `t` of the way through its arrival or slide, starting `from` px
+-- away (M2 rise, M3 slide): eased out, landing exactly on 0 with no overshoot.
+function ToonMotionViewModel.arrive(t: number, from: number): number
+	local clamped = math.clamp(t, 0, 1)
+	if clamped >= 1 then
+		return 0
+	end
+	return from * (1 - easeOut(clamped))
+end
+
+-- Where a new tab's page slides in from (M3): from the right when the tab picked sits right of the last one, from the
+-- left when it sits left, not at all when either is unknown or it is the same tab.
+function ToonMotionViewModel.slideFrom(tabs: { string }, previous: string?, current: string): number
+	local from = if previous ~= nil then table.find(tabs, previous) else nil
+	local to = table.find(tabs, current)
+	if from == nil or to == nil or from == to then
+		return 0
+	end
+	return if to > from then MOTION.slideShift else -MOTION.slideShift
+end
+
+-- A wallet's number `t` of the way from its old balance to its new one (M5): eased out, whole numbers only.
+function ToonMotionViewModel.count(from: number, to: number, t: number): number
+	local clamped = math.clamp(t, 0, 1)
+	if clamped >= 1 then
+		return to
+	end
+	return math.floor(from + (to - from) * easeOut(clamped) + 0.5)
+end
+
+-- A wallet pill's one bump when its balance grows (M5): 1 -> MOTION.bumpScale -> 1.
+function ToonMotionViewModel.bump(t: number): number
+	local clamped = math.clamp(t, 0, 1)
+	local peak = 0.35
+	if clamped < peak then
+		return 1 + (MOTION.bumpScale - 1) * easeOut(clamped / peak)
+	end
+	return MOTION.bumpScale + (1 - MOTION.bumpScale) * easeInOut((clamped - peak) / (1 - peak))
+end
+
+export type Float = { rise: number, transparency: number }
+
+-- The "+40" floating off a wallet (M5): fades in over the first quarter, rises MOTION.floatRise px in all, fades out
+-- over the last quarter.
+function ToonMotionViewModel.float(t: number): Float
+	local clamped = math.clamp(t, 0, 1)
+	local transparency = if clamped < 0.25
+		then 1 - clamped / 0.25
+		elseif clamped > 0.75 then (clamped - 0.75) / 0.25
+		else 0
+	return { rise = MOTION.floatRise * easeOut(clamped), transparency = transparency }
+end
+
 return ToonMotionViewModel

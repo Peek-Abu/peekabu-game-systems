@@ -162,6 +162,27 @@ local MOTION = table.freeze({
 	sparklePeriod = 1.6,
 	-- A waiting button's border highlight (ToonHighlight): one soft-and-back every this many seconds.
 	highlightPeriod = 1.4,
+	-- Cards dealt in when a menu page opens (owner pick M4, 2026-11-16): a softer pop, one card after another, only
+	-- the first few (the rest are simply there).
+	dealFrom = 0.9,
+	dealOvershoot = 1.04,
+	dealSeconds = 0.25,
+	dealStagger = 0.04,
+	dealCount = 8,
+	-- A menu's page arriving (M2): it rises this many design px into place, no scaling (no zooms).
+	arriveRise = 24,
+	arriveSeconds = 0.18,
+	-- A tab change (M3): the new page slides in this many design px from the side of the tab picked.
+	slideShift = 16,
+	slideSeconds = 0.15,
+	-- A wallet's number counting to a new balance, the pill's one bump when it grows, and the "+40" floating off (M5).
+	countSeconds = 0.4,
+	bumpScale = 1.08,
+	bumpSeconds = 0.26,
+	floatSeconds = 1.1,
+	floatRise = 44,
+	-- A question's dimmed back fading in under its pop (M6).
+	dimSeconds = 0.15,
 })
 
 -- Roblox's own controls, kept clear (design px): the top-left menu/chat buttons, the phone thumbstick (bottom-left)
