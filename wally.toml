@@ -17,6 +17,7 @@ CharmSync = "littensy/charm-sync@0.4.0" # server->client atom replication
 React = "jsdotlua/react@17.2.1" # React-lua (ReactJS 17 for Luau)
 ReactRoblox = "jsdotlua/react-roblox@17.2.1" # React renderer for Roblox instances
 ReactCharm = "littensy/react-charm@0.4.0" # useAtom hook bridging Charm into React
+SmartBone = "jakeywastaken/smartbone-2@0.5.2" # MIT. Client bone physics for loose skin cloth (coat tails, capes): EmployeeTailSystem drives it from an outfit's attributes. Pinned; 0.6 is a release candidate.
 
 [server-dependencies]
 ProfileStore = "lm-loleris/profilestore@1.0.3" # This is not an official release by creator

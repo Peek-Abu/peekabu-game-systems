@@ -10,6 +10,10 @@
 	clip animates these Bones (their names are no body part's), so the Animator never writes them; the owner calls
 	`step` after the frame's animation pass, as for the ears. Characters beyond TAIL_RADIUS rest at identity.
 
+	An outfit that asks for SmartBone 2 (EmployeeConstants.TAIL_PHYSICS_ATTRIBUTE on its fitted Outfit folder) is
+	handed over instead (EmployeeTailSmartBoneUtils.prepare); SmartBone's own runtime (started by
+	EmployeeServiceClient) then drives those bones, and this system only releases them when the character goes.
+
 	@class EmployeeTailSystem
 ]=]
 
@@ -19,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local EmployeeTailFormulas = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeTailFormulas)
+local EmployeeTailSmartBoneUtils = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeTailSmartBoneUtils)
 
 type Chain = {
 	-- The link Bones in order, then the end marker.
@@ -34,6 +39,8 @@ type Tracked = {
 	dirty: boolean,
 	time: number,
 	active: boolean,
+	-- Whether SmartBone drives this character's tails (its outfit asked for it; EmployeeTailSmartBoneUtils).
+	smart: boolean,
 }
 
 export type EmployeeTailState = {
@@ -189,9 +196,10 @@ function EmployeeTailSystem.new(isHiding: ((Model) -> boolean)?): EmployeeTailSy
 
 	return {
 		track = function(character)
-			local tracked: Tracked = { model = character, chains = {}, dirty = true, time = 0, active = false }
+			local tracked: Tracked =
+				{ model = character, chains = {}, dirty = true, time = 0, active = false, smart = false }
 			local function markDirty(instance: Instance)
-				if instance:IsA("Bone") then
+				if instance:IsA("Bone") or instance.Name == EmployeeConstants.OUTFIT_FOLDER then
 					tracked.dirty = true
 				end
 			end
@@ -205,15 +213,30 @@ function EmployeeTailSystem.new(isHiding: ((Model) -> boolean)?): EmployeeTailSy
 					trackedByModel[character] = nil
 				end
 				rest(tracked)
+				if tracked.smart then
+					EmployeeTailSmartBoneUtils.release(character)
+				end
 			end
 		end,
 
 		step = function(dt, focus)
 			for model, tracked in trackedByModel do
 				if tracked.dirty then
-					rest(tracked)
-					tracked.chains = collect(model)
 					tracked.dirty = false
+					rest(tracked)
+					if EmployeeTailSmartBoneUtils.wantsSmartBone(model) then
+						-- A fresh fit (flat chains again) is handed over; our own nesting changes nothing.
+						if EmployeeTailSmartBoneUtils.prepare(model) then
+							tracked.smart = true
+						end
+						tracked.chains = {}
+					else
+						if tracked.smart then
+							EmployeeTailSmartBoneUtils.release(model)
+							tracked.smart = false
+						end
+						tracked.chains = collect(model)
+					end
 				end
 				local lower = partOf(model, "LowerTorso")
 				if #tracked.chains == 0 or lower == nil then
