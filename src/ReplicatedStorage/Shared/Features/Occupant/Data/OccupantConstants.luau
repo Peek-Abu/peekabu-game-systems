@@ -2,14 +2,16 @@
 --[=[
 	OccupantConstants: Mr. Harlow's tuning, names, placeholder lines and body (Cleanup Crew spec §4 "Mr.
 	Harlow", §7). Every number is a tuning hypothesis. The pacing knobs (pressure tiers, party size) live in
-	ShiftConstants (spec §4 "Pacing": one constants module). Static data (spec-exempt).
+	ShiftConstants (spec §4 "Pacing": one constants module). The gestures and the dread table live in
+	OccupantGestureConstants and OccupantDreadConstants and are re-exported here unchanged. Static data (spec-exempt).
 
 	@class OccupantConstants
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
+local OccupantDreadConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantDreadConstants)
+local OccupantGestureConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantGestureConstants)
 
 export type Body = {
 	height: number,
@@ -56,337 +58,14 @@ local LINE_VARIANTS: { [string]: { string } } = {
 	sitIn = { "Now… where was I.", "Just a few more reports." },
 }
 
--- A procedural gesture laid over his animation (OccupantGestureFormulas): how long it takes to settle, and each
--- joint's extra rotation in degrees (X pitch, Y yaw, Z roll; negative X bends forward).
---
--- A keyed gesture (`keys`) follows a path instead of one straight blend: each key is reached at `at` (0..1 of
--- `seconds`, smoothstepped between keys) with its joints and `back`, how far his whole body is drawn back (studs along
--- his root's back, the Root joint; negative leans him in; a seated body takes its chair along on every client). `exit` is the path back to
--- rest over `exitSeconds`, from the last key, whatever he does next. (2026-10-17: the straight blends arced his head
--- over the desk and down through its top, in view of the hider; the paths below were sampled against the desk and
--- table art for every frame and touch nothing: OccupantClearanceSystem still fades, for the hider only, any part of
--- their spot his body meets where a wall stops him drawing back.)
-export type GestureKey = { at: number, back: number, joints: { [string]: Vector3 } }
-export type Gesture = {
-	seconds: number,
-	joints: { [string]: Vector3 },
-	keys: { GestureKey }?,
-	exit: { GestureKey }?,
-	exitSeconds: number?,
-}
-
-local function key(at: number, back: number, joints: { [string]: Vector3 }): GestureKey
-	return table.freeze({ at = at, back = back, joints = joints })
-end
-
--- At rest (no extra rotation).
-local REST: { [string]: Vector3 } = table.freeze({})
--- The sit-in's fold: over his knees, his head upside down facing the hider.
-local UNDER_FOLD: { [string]: Vector3 } =
-	table.freeze({ Waist = Vector3.new(-98, 0, 0), Neck = Vector3.new(98, 0, 180) })
--- The stare's check: folded double (he is far too tall to stoop), his head hanging tipped sideways, toward the spot's
--- centre line: from its -X side (PEEK_FOLD) or, mirrored, its +X side (PEEK_FOLD_MIRROR). Tipped the other way, from a
--- desk's +X side, his head ended behind its drawer pedestal.
-local PEEK_FOLD: { [string]: Vector3 } =
-	table.freeze({ Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, 90) })
-local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
-	table.freeze({ Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, -90) })
-
--- A perch kind's perch and drop (B4, owner 11-14: "bramble should get a perch and drop"), on the standard R15 joint
--- names only, so any R15 rig takes them (a joint the rig lacks is skipped). Hip X > 0 swings the thigh forward, knee
--- X < 0 folds the shin back, and the ankle undoes both so the feet stay flat (hip + knee + ankle = 0). Every pose
--- here is in place: it never moves the body across the floor (the server moves the root, on checked paths).
--- Perched: the flattest owl crouch on a prop's top (owner play-check 11-14: on top, never through the ceiling), body
--- hunched low over the edge, legs tucked under it, face tipped about 65 degrees down at the crew, wings held close.
--- The server sets its lowest point on the prop's visible top (OccupantSeatSystem.perch, measured with
--- OccupantGestureFormulas.posedBox on the rig's own parts); Bramble's 0.9 scale makes it fit a 7-stud locker under a
--- 13-stud ceiling.
-local PERCH_CROUCH: { [string]: Vector3 } = table.freeze({
-	-- -75 (measured 11-14 on Bramble at 0.9: 5.44 studs tall, under the 5.7 a 7-stud locker leaves; -70 was 5.85).
-	Waist = Vector3.new(-75, 0, 0),
-	Neck = Vector3.new(10, 0, 8),
-	LeftHip = Vector3.new(150, 0, 0),
-	RightHip = Vector3.new(150, 0, 0),
-	LeftKnee = Vector3.new(-150, 0, 0),
-	RightKnee = Vector3.new(-150, 0, 0),
-	LeftAnkle = Vector3.new(0, 0, 0),
-	RightAnkle = Vector3.new(0, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -10),
-	RightShoulder = Vector3.new(0, 0, 10),
-})
--- The drop: off the top with the legs tucked and the wings spread high, then a squash on landing. (Bramble's bind pose
--- already holds its wings out, so the wing lifts stay small: at 75 they crossed behind its head.)
-local DROP_LEAP: { [string]: Vector3 } = table.freeze({
-	Waist = Vector3.new(-12, 0, 0),
-	Neck = Vector3.new(12, 0, 0),
-	LeftHip = Vector3.new(45, 0, 0),
-	RightHip = Vector3.new(45, 0, 0),
-	LeftKnee = Vector3.new(-75, 0, 0),
-	RightKnee = Vector3.new(-75, 0, 0),
-	LeftAnkle = Vector3.new(30, 0, 0),
-	RightAnkle = Vector3.new(30, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -40),
-	RightShoulder = Vector3.new(0, 0, 40),
-})
-local DROP_SQUASH: { [string]: Vector3 } = table.freeze({
-	Waist = Vector3.new(-34, 0, 0),
-	Neck = Vector3.new(30, 0, 0),
-	LeftHip = Vector3.new(70, 0, 0),
-	RightHip = Vector3.new(70, 0, 0),
-	LeftKnee = Vector3.new(-110, 0, 0),
-	RightKnee = Vector3.new(-110, 0, 0),
-	LeftAnkle = Vector3.new(40, 0, 0),
-	RightAnkle = Vector3.new(40, 0, 0),
-	LeftShoulder = Vector3.new(0, 0, -25),
-	RightShoulder = Vector3.new(0, 0, 25),
-})
--- The drop's beats (seconds): the fall from the top to the floor point (with a DROP_HOP studs hop up off it), the
--- squash held on landing, and the rise back to standing. DROP_SECONDS is all three: the drop gesture's length.
-local DROP_FALL_SECONDS = 0.42
-local DROP_SQUASH_SECONDS = 0.18
-local DROP_RISE_SECONDS = 0.3
-local DROP_SECONDS = DROP_FALL_SECONDS + DROP_SQUASH_SECONDS + DROP_RISE_SECONDS
-local DROP_LANDED = DROP_FALL_SECONDS / DROP_SECONDS
-local DROP_SQUASHED = (DROP_FALL_SECONDS + 0.06) / DROP_SECONDS
-local DROP_RISING = (DROP_FALL_SECONDS + DROP_SQUASH_SECONDS) / DROP_SECONDS
-
--- The slow head turn and the whip that finishes one in a hurry (behaviours design §11): their seconds, shared with the
--- brain's timing below.
-local SLOW_TURN_SECONDS = 2.0
-local WHIP_SECONDS = 0.15
-
-local GESTURES: { [string]: Gesture } = {
-	-- The ambush: the head snaps round to the point on the long neck (the yaw is aimed live; this is its timing).
-	swivel = { seconds = 0.35, joints = {} },
-	-- The slow turn (§11.2): the same aimed yaw, smootherstepped over SLOW_TURN_SECONDS, the waist leading
-	-- (SLOW_WAIST_SHARE); and the whip that carries a turn the rest of the way over WHIP_SECONDS when the player moves.
-	-- OccupantGestureSystem carries one turn fraction across the two.
-	slowSwivel = { seconds = SLOW_TURN_SECONDS, joints = {} },
-	whip = { seconds = WHIP_SECONDS, joints = {} },
-	-- The stare's check, from beside the knee-hole (STARE_SIDE, STARE_GAP out: far enough that the fold clears the
-	-- top): the fold, then he leans in 1.5 studs so his face hangs at the mouth of the spot, just off its front edge.
-	peek = {
-		seconds = 1,
-		joints = PEEK_FOLD,
-		keys = { key(0.6, 0, PEEK_FOLD), key(1, -1.5, PEEK_FOLD) },
-		exit = { key(0.4, 0, PEEK_FOLD), key(1, 0, REST) },
-		exitSeconds = 0.6,
-	},
-	-- The same from the spot's other side (Spot.side > 0), his head tipped the other way.
-	peekMirror = {
-		seconds = 1,
-		joints = PEEK_FOLD_MIRROR,
-		keys = { key(0.6, 0, PEEK_FOLD_MIRROR), key(1, -1.5, PEEK_FOLD_MIRROR) },
-		exit = { key(0.4, 0, PEEK_FOLD_MIRROR), key(1, 0, REST) },
-		exitSeconds = 0.6,
-	},
-	-- The sit-in: he rolls his chair back, folds forward over his knees with his head dropping in front of the desk's
-	-- edge, then rolls in so his head comes in under the lip, upside down and facing the hider (it ends 0.5 studs
-	-- back, its face just inside the edge). Out (TIP_BACK) the same way in reverse.
-	under = {
-		seconds = 2.6,
-		joints = UNDER_FOLD,
-		keys = { key(0.25, 2.8, REST), key(0.7, 2.8, UNDER_FOLD), key(1, 0.5, UNDER_FOLD) },
-		exit = { key(0.3, 2.8, UNDER_FOLD), key(0.8, 2.8, REST), key(1, 0, REST) },
-		exitSeconds = 1,
-	},
-	-- A perch kind on a perch (mode "perch"): it settles into the crouch.
-	perch = { seconds = 0.3, joints = PERCH_CROUCH },
-	-- Its drop (DROP_SECONDS from when it left the perch): from the crouch, the leap (tucked, wings high) through the
-	-- fall, the squash as it lands, held, then the rise to standing. The server moves the root along the same beats.
-	drop = {
-		seconds = DROP_SECONDS,
-		joints = REST,
-		keys = {
-			key(0, 0, PERCH_CROUCH),
-			key(0.12, 0, DROP_LEAP),
-			key(DROP_LANDED, 0, DROP_LEAP),
-			key(DROP_SQUASHED, 0, DROP_SQUASH),
-			key(DROP_RISING, 0, DROP_SQUASH),
-			key(1, 0, REST),
-		},
-	},
-}
+-- A procedural gesture and its keys (OccupantGestureConstants, re-exported here unchanged).
+export type GestureKey = OccupantGestureConstants.GestureKey
+export type Gesture = OccupantGestureConstants.Gesture
 
 export type Range = { min: number, max: number }
 local function range(min: number, max: number): Range
 	return table.freeze({ min = min, max = max })
 end
-
-type DreadLook = OccupantTypes.DreadLook
-
-local function look(values: DreadLook): DreadLook
-	return table.freeze(values)
-end
-
---[=[
-	THE dread table (2026-10-17 feedback: "getting chased doesn't feel scary", "him nearby should have screen effects or
-	heartbeats or both"). Every knob of the proximity dread and the chase's feel and mix (OccupantDreadFormulas,
-	OccupantDreadSystem, OccupantChaseMusicSystem). Kid-safe: nothing strobes, the vignette never closes the view, and
-	every change eases. No markers over him: all of it is screen mood and sound.
-]=]
-local DREAD = {
-	-- Distance (studs) where the dread starts, and where it is full. Beyond RANGE_FAR nothing shows.
-	RANGE_FAR = 60,
-	RANGE_FULL = 20,
-	-- With no line of sight to his head his distance counts this many times farther (walls take the edge off).
-	OCCLUDED_SCALE = 1.6,
-	-- The line-of-sight ray is re-cast this often (s), and a change in sight blends in over SIGHT_EASE (s).
-	SIGHT_INTERVAL = 0.15,
-	SIGHT_EASE = 0.5,
-	-- "Sees you or hunting" never shows weaker than this share of the aware look, however far he is.
-	AWARE_FLOOR = 0.55,
-	-- A crewmate chased within CREW_RANGE studs of you (or of the crewmate you spectate) gives you the crew look,
-	-- weighted from 1 next to them down to CREW_FLOOR at the edge.
-	CREW_RANGE = 45,
-	CREW_FLOOR = 0.4,
-	-- How fast the look follows its target (1/s, exponential): it rises quickly and breathes out slowly after an escape.
-	RISE_SHARPNESS = 3,
-	FALL_SHARPNESS = 1.1,
-	-- Heartbeat seconds per beat: near ramps BEAT_NEAR_SLOW (at RANGE_FAR) to BEAT_NEAR_FAST (at RANGE_FULL); aware and
-	-- crew beat at their own rates. The chase's beat is the music's (CHASE_BEAT, locked to the stems' TimePosition).
-	BEAT_NEAR_SLOW = 1.15,
-	BEAT_NEAR_FAST = 0.7,
-	BEAT_AWARE = 0.55,
-	BEAT_CREW = 0.62,
-	-- A slow turn or a stare (behaviours design §11.2): the aware stage at full strength, beating faster.
-	BEAT_SLOW = 0.5,
-	-- The heartbeat sound's volumeScale = look.heart * HEART_GAIN (harlowHeartbeat is registered at 0.8). Measured live
-	-- 2026-10-17 in a chase at ~19 studs (RMS of PlaybackLoudness x Volume x group volume): the old heartbeat sat
-	-- ~19 dB over the old chase music; at 0.75 (chase heart 0.65-0.8) it sits ~5 dB over the louder music.
-	HEART_GAIN = 0.75,
-	-- A pulse peaks on the beat and is gone PULSE_WIDTH of the way to the next (a quick attack, eased decay).
-	PULSE_WIDTH = 0.45,
-	-- The colour the beat pulses toward (multiplied into the screen tint), kept soft.
-	PULSE_TINT = Color3.fromRGB(255, 150, 150),
-	-- The edge fringe's two tints (a red and a cyan copy of the vignette pushed apart on the beat: the chromatic split).
-	EDGE_RED = Color3.fromRGB(255, 70, 70),
-	EDGE_CYAN = Color3.fromRGB(70, 230, 255),
-	-- How far (screen scale) the edge fringe's copies spread at a full pulse.
-	EDGE_SPREAD = 0.035,
-	-- The vignette is dark ink, never black, at most VIGNETTE_MAX opaque at the edge.
-	VIGNETTE_COLOR = Color3.fromRGB(8, 4, 10),
-	VIGNETTE_MAX = 0.85,
-	-- How much the vignette tightens (screen scale shrink) at full strength.
-	VIGNETTE_TIGHTEN = 0.12,
-	-- The grain's tile size (pixels) and its opacity at full strength.
-	GRAIN_TILE = 180,
-	GRAIN_MAX = 0.22,
-	-- His footfalls shake your camera (trauma, camera-setting scaled) within SHAKE_RANGE studs while he sees you or
-	-- chases you: SHAKE_TRAUMA at his feet, 0 at the range.
-	SHAKE_RANGE = 22,
-	SHAKE_TRAUMA = 0.16,
-	-- The ambience EQ: the duck on every band, and the muffle on the highs (the mids take MUFFLE_MID of it). Applied to
-	-- the Ambient group and to every other Music-group sound (never to his sounds, the chase stems or the dread loop).
-	MUFFLE_MID = 0.35,
-	-- The chase music's stems play this much louder than registered (+8 dB). Measured 2026-10-17 (offline, in-game
-	-- volume chain): the old chase sat 3-11 dB under his running steps and 2-3 dB under the office bed; at 2.5 it sits
-	-- level with his steps at 15 studs, 3.6 dB under them at 8 and ~19 dB over the ducked bed.
-	CHASE_MUSIC_GAIN = 2.5,
-	-- Intensity 2 of the chase music (motif, ticks, pulse): silent from CHASE_LAYER_FAR studs out, full within
-	-- CHASE_LAYER_NEAR (2026-10-17: was 34 / 14, so it already sounds dangerous at mid distance).
-	CHASE_LAYER_NEAR = 18,
-	CHASE_LAYER_FAR = 50,
-	-- The dread loop fades out over this (s) when the dread lets go.
-	DREAD_FADE = 1.5,
-	-- Accessibility default (OccupantDreadSystem.setReduceMotion): no FOV squeeze, no edge fringe, no beat flashing
-	-- (the red holds steady at REDUCED_RED of its peak), still grain. Camera shake follows the cameraShake setting.
-	REDUCE_MOTION = false,
-	REDUCED_RED = 0.35,
-	-- Each stage's look. near is scaled by proximity, aware by max(proximity, AWARE_FLOOR), the chase blends
-	-- CHASE_FAR -> CHASE_NEAR by the chase layer's closeness, crew is scaled by the crew weight.
-	LOOKS = table.freeze({
-		near = look({
-			heart = 0.5,
-			dread = 1,
-			vignette = 0.45,
-			desaturate = 0.22,
-			grain = 0.5,
-			red = 0.1,
-			edge = 0,
-			squeeze = 0,
-			duck = -5,
-			muffle = -3,
-		}),
-		aware = look({
-			heart = 0.8,
-			dread = 1,
-			vignette = 0.55,
-			desaturate = 0.3,
-			grain = 0.75,
-			red = 0.28,
-			edge = 0.45,
-			squeeze = 0,
-			duck = -8,
-			muffle = -6,
-		}),
-		chaseFar = look({
-			heart = 0.65,
-			dread = 0,
-			vignette = 0.5,
-			desaturate = 0.3,
-			grain = 0.8,
-			red = 0.5,
-			edge = 0.5,
-			squeeze = 2,
-			duck = -12,
-			muffle = -6,
-		}),
-		chaseNear = look({
-			heart = 0.8,
-			dread = 0,
-			vignette = 0.7,
-			desaturate = 0.4,
-			grain = 1,
-			red = 0.7,
-			edge = 0.9,
-			squeeze = 7,
-			duck = -15,
-			muffle = -20,
-		}),
-		-- His slow turn or his stare (§11.2): unscaled by distance. The music ducks to near-silence (-30 dB) so the creak
-		-- and your heartbeat are all there is; the dread loop sits back too.
-		slowTurn = look({
-			heart = 1,
-			dread = 0.5,
-			vignette = 0.7,
-			desaturate = 0.4,
-			grain = 0.9,
-			red = 0.35,
-			edge = 0.4,
-			squeeze = 3,
-			duck = -30,
-			muffle = -12,
-		}),
-		crew = look({
-			heart = 0.45,
-			dread = 0.5,
-			vignette = 0.3,
-			desaturate = 0.15,
-			grain = 0.4,
-			red = 0.12,
-			edge = 0.2,
-			squeeze = 0,
-			duck = -5,
-			muffle = -4,
-		}),
-	}),
-	-- Hiding while he is near (near, aware or chase): the heart at least HIDDEN_HEART, the world muffled to at least
-	-- HIDDEN_MUFFLE and ducked to at least HIDDEN_DUCK (dB), the vignette HIDDEN_VIGNETTE stronger.
-	HIDDEN_HEART = 1,
-	HIDDEN_MUFFLE = -22,
-	HIDDEN_DUCK = -9,
-	HIDDEN_VIGNETTE = 0.1,
-	-- While a camera frames his face (the catch's jumpscare, the hider's reveal; OccupantFaceLightSystem lights it), the
-	-- screen side of the look eases back to these shares (OccupantDreadFormulas.framed) over FACE_EASE (1/s): the
-	-- vignette, the grey and the red pulse had stacked with the catch's own red screen and the lights-out until his
-	-- face was a dark smudge (user, 2026-10-17). The fringe goes entirely.
-	FACE_VIGNETTE = 0.35,
-	FACE_DESATURATE = 0.3,
-	FACE_RED = 0.2,
-	FACE_GRAIN = 0.5,
-	FACE_EASE = 12,
-}
 
 return table.freeze({
 	-- The NPC kind, and the tag the client's tells find him by.
@@ -454,7 +133,7 @@ return table.freeze({
 	-- §11.2 The slow turn: his head comes round over SLOW_TURN_SECONDS (the slowSwivel gesture), his waist leading with
 	-- SLOW_WAIST_SHARE of the yaw (all of it by SLOW_WAIST_LEAD of the turn) so the smile comes round last. For the first
 	-- SLOW_SETTLE seconds where the target "stands" follows them (time to freeze at the creak).
-	SLOW_TURN_SECONDS = SLOW_TURN_SECONDS,
+	SLOW_TURN_SECONDS = OccupantGestureConstants.SLOW_TURN_SECONDS,
 	SLOW_WAIST_SHARE = 0.2,
 	SLOW_WAIST_LEAD = 0.6,
 	SLOW_SETTLE = 0.35,
@@ -463,7 +142,7 @@ return table.freeze({
 	STILL_SPEED = 2.5,
 	STILL_DISTANCE = 1.25,
 	-- Moving mid-turn: his head whips the rest of the way over WHIP_SECONDS (the whip gesture) as the jerk begins.
-	WHIP_SECONDS = WHIP_SECONDS,
+	WHIP_SECONDS = OccupantGestureConstants.WHIP_SECONDS,
 	-- §11.3 The staring contest: after the turn he stares, stock still, for a rolled STARE_CONTEST_SECONDS, then bolts
 	-- anyway.
 	STARE_CONTEST_SECONDS = range(4, 7),
@@ -696,7 +375,7 @@ return table.freeze({
 	STAGE_NEAR = 25,
 	PEN_CLICK = range(9, 16),
 	-- The proximity dread and the chase's feel and mix: one table (see DREAD above).
-	DREAD = table.freeze(DREAD),
+	DREAD = OccupantDreadConstants,
 	-- Model attributes the client reads: his phase, his gesture and its target, and the catch tilt.
 	PHASE_ATTRIBUTE = "OccupantPhase",
 	GESTURE_ATTRIBUTE = "OccupantGesture",
@@ -711,7 +390,7 @@ return table.freeze({
 	REVEAL_FOV = 55,
 	REVEAL_PRIORITY = 60,
 	-- The gestures, how fast one lets go, and the catch's head tilt (degrees of roll, seconds, shiver).
-	GESTURES = table.freeze(GESTURES),
+	GESTURES = OccupantGestureConstants.GESTURES,
 	GESTURE_RELEASE = 0.4,
 	TILT_DEGREES = 25,
 	TILT_SECONDS = 0.45,
@@ -791,9 +470,9 @@ return table.freeze({
 	PERCH_FLICKER_BACK_SECONDS = 0.45,
 	PERCH_BLACKOUT_RADIUS = 30,
 	-- The drop's beats (see GESTURES.drop): the fall, the squash, the rise, all of them, and the hop up off the top.
-	DROP_FALL_SECONDS = DROP_FALL_SECONDS,
-	DROP_SQUASH_SECONDS = DROP_SQUASH_SECONDS,
-	DROP_RISE_SECONDS = DROP_RISE_SECONDS,
-	DROP_SECONDS = DROP_SECONDS,
+	DROP_FALL_SECONDS = OccupantGestureConstants.DROP_FALL_SECONDS,
+	DROP_SQUASH_SECONDS = OccupantGestureConstants.DROP_SQUASH_SECONDS,
+	DROP_RISE_SECONDS = OccupantGestureConstants.DROP_RISE_SECONDS,
+	DROP_SECONDS = OccupantGestureConstants.DROP_SECONDS,
 	DROP_HOP = 1.5,
 })

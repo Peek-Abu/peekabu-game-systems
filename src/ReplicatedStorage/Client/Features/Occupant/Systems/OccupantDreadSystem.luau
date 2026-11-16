@@ -18,7 +18,7 @@
 	  shake on his footfalls (FootstepServiceClient:onStep; the cameraShake setting scales it);
 	- the mix: an EqualizerSoundEffect on the Ambient group and on every other Music-group sound (the overtime ticking)
 	  ducks them and muffles their highs: harder in a chase, hardest with him close or while you hide near him. His
-	  own sounds, the chase stems and the dread loop are never touched.
+	  own sounds, the chase stems and the dread loop are never touched (OccupantDreadMixSystem).
 
 	Nothing in the depot hub or outside a running shift; a spectator gets only the crew look. Reduce motion (the
 	engine's ReducedMotionEnabled, DREAD.REDUCE_MOTION or `setReduceMotion`) drops the squeeze, the fringe, the beat
@@ -34,18 +34,17 @@ local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
 local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local OccupantClient = ReplicatedStorage.Client.Features.Occupant
-local OccupantAssets = require(OccupantShared.Data.OccupantAssets)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
 local OccupantKindRegistry = require(OccupantShared.Data.OccupantKindRegistry)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
 local OccupantDreadFormulas = require(OccupantShared.Utils.OccupantDreadFormulas)
 local OccupantChaseMusicSystem = require(OccupantClient.Systems.OccupantChaseMusicSystem)
+local OccupantDreadMixSystem = require(OccupantClient.Systems.OccupantDreadMixSystem)
 local OccupantDreadStore = require(OccupantClient.State.OccupantDreadStore)
 local OccupantDreadTracker = require(OccupantClient.State.OccupantDreadTracker)
 local OccupantFaceLightSystem = require(OccupantClient.Systems.OccupantFaceLightSystem)
@@ -77,20 +76,10 @@ export type OccupantDreadState = {
 }
 
 local DREAD = OccupantConstants.DREAD
--- The camera FOV offset's owner, and the EQ's name on each sound or group it ducks.
+-- The camera FOV offset's owner.
 local FOV_OWNER = "OccupantDread"
-local EQ_NAME = "OccupantDreadEq"
 -- Below this a look value counts as off (the screen request, the loop and the EQs are released).
 local OFF = 0.01
--- How often the other Music-group sounds are looked for (s).
-local SCAN_INTERVAL = 0.5
--- Sounds the duck never touches: the dread loop and the chase stems (its own Music-group sounds).
-local OWN: { [string]: boolean } = { harlowDread = true }
-for _, list in { OccupantAssets.CHASE_STEMS.base, OccupantAssets.CHASE_STEMS.near } do
-	for _, id in list do
-		OWN[id] = true
-	end
-end
 
 local WHITE = Color3.new(1, 1, 1)
 
@@ -106,7 +95,6 @@ local hidden = false
 local sight = 1
 local sightTarget = 1
 local nextSight = 0
-local nextScan = 0
 local lastBeatAt = -math.huge
 local beatPeriod = 1
 local lastMusicBeat = -1
@@ -114,7 +102,6 @@ local reduceFlag = DREAD.REDUCE_MOTION
 local screenToken: number? = nil
 local dreadLoop: SoundServiceClient.SoundHandle? = nil
 local dreadBase = 0
-local eqs: { [Instance]: EqualizerSoundEffect? } = {}
 local counters = { beats = 0, musicBeats = 0, shakes = 0, stages = 0, loops = 0, pending = 0, sightRays = 0 }
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -239,63 +226,6 @@ local function setLoop(level: number)
 	started.sound.Volume = dreadBase * level
 end
 
-local function releaseEqs()
-	for _, eq in eqs do
-		if eq ~= nil then
-			eq:Destroy()
-		end
-	end
-	table.clear(eqs)
-end
-
-local function eqFor(target: Instance): EqualizerSoundEffect
-	local existing = eqs[target]
-	if existing ~= nil and existing.Parent == target then
-		return existing
-	end
-	local eq = Instance.new("EqualizerSoundEffect")
-	eq.Name = EQ_NAME
-	-- After any other effect on the group (the results duck), so the two simply stack.
-	eq.Priority = 10
-	eq.Parent = target
-	eqs[target] = eq
-	return eq
-end
-
--- The duck and muffle on the Ambient group and on every other Music-group sound.
-local function setMix(now: number)
-	local low, mid, high = OccupantDreadFormulas.eq(look.duck, look.muffle)
-	if low > -0.05 and high > -0.05 then
-		releaseEqs()
-		return
-	end
-	local ambient = SoundService:FindFirstChild("Ambient")
-	if ambient ~= nil and ambient:IsA("SoundGroup") then
-		eqFor(ambient)
-	end
-	if now >= nextScan then
-		nextScan = now + SCAN_INTERVAL
-		for _, child in SoundService:GetChildren() do
-			if
-				child:IsA("Sound")
-				and not OWN[child.Name]
-				and child.Volume > 0
-				and child.SoundGroup ~= nil
-				and child.SoundGroup.Name == "Music"
-			then
-				eqFor(child)
-			end
-		end
-	end
-	for target, eq in eqs do
-		if eq == nil or target.Parent == nil or eq.Parent ~= target then
-			eqs[target] = nil
-			continue
-		end
-		eq.LowGain, eq.MidGain, eq.HighGain = low, mid, high
-	end
-end
-
 local function setScreen(shown: DreadLook, pulse: number)
 	local red = if reduceMotion() then shown.red * DREAD.REDUCED_RED else shown.red * pulse
 	local active = shown.desaturate > OFF or red > OFF
@@ -329,7 +259,7 @@ local function clearAll()
 	hidden = false
 	lastMusicBeat = -1
 	setLoop(0)
-	releaseEqs()
+	OccupantDreadMixSystem.release()
 	local token = screenToken
 	if token ~= nil then
 		VfxServiceClient:releaseScreen(token)
@@ -422,7 +352,7 @@ local function step(dt: number)
 	})
 	CameraServiceClient:setFovOffset(FOV_OWNER, if look.squeeze > OFF then -look.squeeze else 0)
 	setLoop(look.dread)
-	setMix(now)
+	OccupantDreadMixSystem.set(now, look.duck, look.muffle)
 end
 
 -- One of his footfalls landed: while he sees or chases you, close, the camera shakes (the cameraShake setting scales it).
@@ -476,10 +406,6 @@ function OccupantDreadSystem.setReduceMotion(on: boolean)
 end
 
 function OccupantDreadSystem.getState(): OccupantDreadState
-	local count = 0
-	for _ in eqs do
-		count += 1
-	end
 	return {
 		stage = stage,
 		proximity = proximity,
@@ -489,7 +415,7 @@ function OccupantDreadSystem.getState(): OccupantDreadState
 		framing = framing,
 		reduceMotion = reduceMotion(),
 		look = table.clone(look),
-		eqs = count,
+		eqs = OccupantDreadMixSystem.count(),
 		counters = table.clone(counters),
 	}
 end
