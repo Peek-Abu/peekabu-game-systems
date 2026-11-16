@@ -81,8 +81,19 @@ local function setMusicDucked(on: boolean)
 	end
 end
 
+local syncQueued = false
+
+-- Settles the duck once the frame's changes are in: an opening ends (opening cleared) a moment before its reveal is
+-- queued, and checking between the two let the music swell back up for an instant (Play check 11-16).
 local function syncMusic()
-	setMusicDucked(LockerViewModel.musicDucked(LockerStore.opening(), CosmeticRevealStore.current()))
+	if syncQueued then
+		return
+	end
+	syncQueued = true
+	task.defer(function()
+		syncQueued = false
+		setMusicDucked(LockerViewModel.musicDucked(LockerStore.opening(), CosmeticRevealStore.current()))
+	end)
 end
 
 -- Ends the opening in progress (if any) and queues its reveal.
