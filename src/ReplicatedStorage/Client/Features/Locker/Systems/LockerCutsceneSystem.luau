@@ -8,9 +8,11 @@
 	- Cloning `LockerStage` on the client keeps every part and light resident at `STAGE_ORIGIN` even when
 	  `Workspace.StreamingEnabled` is on and the player's character is at the depot.
 	- Binds at `Enum.RenderPriority.Camera.Value + 50` so the cutscene camera runs after `CameraServiceClient`.
-	- Dresses the player's own employee (`EmployeePreviewSystem.outfit`) and places them in the Lost & Found room.
+	- Dresses the player's own employee (`EmployeePreviewSystem.outfit`) and places them in the Lost & Found room,
+	  playing their own idle (a live preview), or held in their idle pose when no live slot is free (owner check 11-16:
+	  they stood frozen with arms out).
 	- Animates the 4 camera beats (establishing -> approach with key -> key flies into keyhole & turns -> door bursts
-	  open with rarity cavity light and volumetric neon beams).
+	  open, out toward the camera, with rarity cavity light and volumetric neon beams).
 	- Restores the camera and destroys temporary instances cleanly on finish or Skip.
 	- Returns `nil` from `start` when the 3D stage is absent so `LockerOpeningScreen` falls back to Stage 1.
 
@@ -24,6 +26,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local EmployeePoseRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeePoseRegistry)
 local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
 local LockerTypes = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerTypes)
 local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePreviewSystem)
@@ -75,8 +79,10 @@ local function setDoorAngle(lockerModel: Model, deg: number)
 		end
 		doorRest[lockerModel] = rest
 	end
+	-- Both doors hinge on their -X edge: a positive turn about +Y swings the door out toward the room (a negative one
+	-- swung it back through the locker's body).
 	local pivot = hinge.CFrame
-	local rot = pivot * CFrame.Angles(0, math.rad(-deg), 0) * pivot:Inverse()
+	local rot = pivot * CFrame.Angles(0, math.rad(deg), 0) * pivot:Inverse()
 	for part, cf in rest do
 		part.CFrame = rot * cf
 	end
@@ -126,7 +132,9 @@ local function setBurstGlow(lockerModel: Model, on: boolean, color: Color3)
 	end
 end
 
-local function buildActor(): Model?
+-- The player's own employee in their outfit: live and playing their idle when a live preview slot is free, else
+-- frozen in their idle pose. Returns the model and whether it is live.
+local function buildActor(): (Model?, boolean)
 	local entitlements = StateSyncClientStore.entitlements()
 	local loadout = StateSyncClientStore.loadout()
 	local outfit = CosmeticOutfitRules.current(loadout, function(id: string): boolean
@@ -134,8 +142,15 @@ local function buildActor(): Model?
 	end)
 	local localPlayer = Players.LocalPlayer
 	local character = if localPlayer ~= nil then localPlayer.Character else nil
-	local model = EmployeePreviewSystem.outfit(outfit, ReplicatedStorage, character, false)
-	return model
+	local set = EmployeePoseRegistry.get(outfit.employee)
+	local pose = if set ~= nil then set.poses.idle else nil
+	local model, isLive = EmployeePreviewSystem.outfit(outfit, ReplicatedStorage, character, true, pose)
+	if model ~= nil and isLive then
+		-- Parented first: an Animator plays only in the world.
+		model.Parent = workspace
+		EmployeePreviewSystem.playIdle(model, outfit.employee, CosmeticRegistry.keyOf(outfit.look.skin))
+	end
+	return model, isLive
 end
 
 function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
@@ -173,7 +188,7 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 		end
 	end
 
-	local actor = buildActor()
+	local actor, actorLive = buildActor()
 	if actor ~= nil then
 		actor.Parent = stage
 	end
@@ -215,6 +230,10 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 			RunService:UnbindFromRenderStep(BIND_NAME)
 		end)
 		doorRest[lockerModel] = nil
+		if actor ~= nil and actorLive then
+			-- Frees its live preview slot at once.
+			EmployeePreviewSystem.release(actor)
+		end
 		if ownedStage then
 			stage:Destroy()
 		else
@@ -223,7 +242,7 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 			if keyModel ~= nil and keyModel:IsA("Model") then
 				keyModel:PivotTo(CFrame.new(0, -100, 0))
 			end
-			if actor ~= nil then
+			if actor ~= nil and not actorLive then
 				actor:Destroy()
 			end
 			for part, transparency in hiddenParts do

@@ -19,7 +19,8 @@ export type Reveal = {
 	-- A duplicate from a Locker open: the ribbon says what was refunded instead of "New ...".
 	duplicate: boolean?,
 	refund: number?,
-	currency: ("gloom" | "gleam")?,
+	-- The money the refund came back in (an event Locker's is acorns).
+	currency: ("gloom" | "gleam" | "acorns")?,
 	-- A Robux buy that is not a cosmetic (Gleam, a pass, coffee): the "You bought it!" screen, with no items.
 	purchase: ShopTypes.Purchase?,
 }

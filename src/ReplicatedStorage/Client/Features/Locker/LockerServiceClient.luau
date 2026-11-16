@@ -8,12 +8,16 @@
 	- When `LockerEvents.Opened` arrives, registers and opens the stage-1 opening scene (`LockerOpeningScreen`); when
 	  the opening finishes (or is skipped), pushes the rolled item into `CosmeticRevealStore` so `RevealScreen` shows
 	  it with its rarity fanfare (and duplicate refund ribbon if already owned).
+	- The opening scene leaving the stack any other way (Escape or gamepad B pops it, the depot closing removes it) settles
+	  the opening the same way, so the reveal still shows and the Shop (hidden while an opening plays) comes back
+	  (owner check 11-16: Esc mid-opening lost the reveal and left the Shop blank with the HUD hidden).
 
 	@class LockerServiceClient
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Charm = require(ReplicatedStorage.Packages.Charm)
 local React = require(ReplicatedStorage.Packages.React)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
@@ -27,23 +31,23 @@ local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.Locke
 local LockerViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Locker.LockerViewModel)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
+local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 
 type LockerId = LockerTypes.LockerId
 
 local stoppers: { () -> () } = {}
 
-local function finishOpeningImpl()
+-- Ends the opening in progress (if any) and queues its reveal.
+local function settleOpening()
 	local outcome = LockerStore.finishOpening()
-	SceneStack.remove(LockerViewModel.OPENING_SCENE)
 	if outcome ~= nil then
-		CosmeticRevealStore.push({
-			ids = { outcome.item },
-			source = "locker",
-			duplicate = outcome.duplicate,
-			refund = outcome.refund,
-			currency = if outcome.locker == "gleam" then "gleam" else "gloom",
-		})
+		CosmeticRevealStore.push(LockerViewModel.revealOf(outcome))
 	end
+end
+
+local function finishOpeningImpl()
+	settleOpening()
+	SceneStack.remove(LockerViewModel.OPENING_SCENE)
 end
 
 local function ensureScene()
@@ -96,6 +100,14 @@ local LockerServiceClient: LockerServiceClient = {
 
 	init = function(_self)
 		ensureScene()
+		table.insert(
+			stoppers,
+			Charm.subscribe(UIStore.sceneStack, function(stack: { string })
+				if LockerStore.opening() ~= nil and table.find(stack, LockerViewModel.OPENING_SCENE) == nil then
+					settleOpening()
+				end
+			end)
+		)
 		table.insert(
 			stoppers,
 			LockerEvents.packets.Status.listen(function(data: { restricted: boolean })

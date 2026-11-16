@@ -352,6 +352,17 @@ return function()
 		expect(view.later).to.equal(false)
 	end)
 
+	it("names acorns on an event Locker's duplicate (the refund is paid in acorns, not Gloom)", function()
+		local view = VM.view({
+			ids = { "Pippa.GloomTouched" },
+			source = "locker",
+			duplicate = true,
+			refund = 8,
+			currency = "acorns",
+		})
+		expect(view.ribbon).to.equal("You already have this! +8 acorns back")
+	end)
+
 	describe("a Robux purchase (owner 11-15: a You bought it! screen)", function()
 		it("Gleam: shouts the amount and shows the bundle's art", function()
 			local view =

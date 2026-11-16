@@ -38,7 +38,7 @@ export type Reveal = {
 	source: string,
 	duplicate: boolean?,
 	refund: number?,
-	currency: ("gloom" | "gleam")?,
+	currency: ("gloom" | "gleam" | "acorns")?,
 	purchase: ShopTypes.Purchase?,
 }
 
@@ -354,7 +354,10 @@ function VM.view(reveal: Reveal, given: Context?): View
 	local multi = #items > 1
 	local word = string.lower(KIND_WORD[item.kind])
 	local duplicate = reveal.duplicate == true
-	local currencyWord = if reveal.currency == "gleam" then "Gleam" else "Gloom"
+	local currencyWord = if reveal.currency == "gleam"
+		then "Gleam"
+		elseif reveal.currency == "acorns" then "acorns"
+		else "Gloom"
 	local ribbon = if duplicate
 		then `You already have this! +{ToonStyleViewModel.grouped(reveal.refund or 0)} {currencyWord} back`
 		elseif item.kind == "stickerPack" then "New sticker pack"

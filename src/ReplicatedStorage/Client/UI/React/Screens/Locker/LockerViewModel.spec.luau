@@ -201,6 +201,33 @@ return function()
 		end)
 	end)
 
+	describe("revealOf", function()
+		local function outcome(locker, duplicate)
+			return {
+				locker = locker,
+				item = "Pippa.GloomTouched",
+				rarity = "uncommon",
+				duplicate = duplicate,
+				refund = if duplicate then 8 else 0,
+				guaranteed = false,
+				pity = 2,
+			}
+		end
+
+		it("hands the rolled item to the reveal with the Locker's own money for a refund", function()
+			local gloom = VM.revealOf(outcome("gloom", true))
+			expect(gloom.ids[1]).to.equal("Pippa.GloomTouched")
+			expect(gloom.source).to.equal("locker")
+			expect(gloom.duplicate).to.equal(true)
+			expect(gloom.refund).to.equal(8)
+			expect(gloom.currency).to.equal("gloom")
+			expect(VM.revealOf(outcome("gleam", true)).currency).to.equal("gleam")
+			-- The Harvest Locker refunds acorns (owner play-check 11-16 found "Gloom back").
+			expect(VM.revealOf(outcome("harvest", true)).currency).to.equal("acorns")
+			expect(VM.revealOf(outcome("gloom", false)).duplicate).to.equal(false)
+		end)
+	end)
+
 	describe("cutscenePose (stage 2 3D cutscene)", function()
 		it("walks through establishing, approach, key_turn and burst_open for both Lockers", function()
 			local start = VM.cutscenePose("gloom", 0)
@@ -223,6 +250,27 @@ return function()
 			expect(burst.doorDeg > 80).to.equal(true)
 			expect(burst.glow).to.equal(true)
 			expect(burst.flashTransparency < 1).to.equal(true)
+		end)
+
+		-- Owner check 11-16: the camera sat behind (then inside) the employee's head, so the locker, the key and the
+		-- door were never seen. The employee (about 3.5 studs wide) must stay clear of the camera's line to what it
+		-- looks at, and the camera clear of the employee, in every beat after the establishing shot.
+		it("never lets the employee block the camera's view of the locker", function()
+			for _, id in { "gloom", "gleam", "harvest" } do
+				for step = 0, 50 do
+					local alpha = 0.24 + 0.76 * step / 50
+					local pose = VM.cutscenePose(id, alpha)
+					local emp = pose.employeeCFrame.Position
+					local a = Vector2.new(pose.camPos.X, pose.camPos.Z)
+					local b = Vector2.new(pose.camLook.X, pose.camLook.Z)
+					local p = Vector2.new(emp.X, emp.Z)
+					local ab = b - a
+					local t = math.clamp((p - a):Dot(ab) / ab:Dot(ab), 0, 1)
+					local gap = (a + ab * t - p).Magnitude
+					expect(gap > 2.2).to.equal(true)
+					expect((a - p).Magnitude > 3).to.equal(true)
+				end
+			end
 		end)
 	end)
 end
