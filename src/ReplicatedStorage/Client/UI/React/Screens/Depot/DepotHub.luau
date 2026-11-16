@@ -4,7 +4,7 @@
 	crew's shift), the travel card (hidden under it), the player's published rank, their Credits and Gloom (the `credits` and `gloom` balances),
 	their weekly timecard on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
-	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the clipboard is a CLIPBOARD tile under SHOP and the invite row sits under the Tonight card (owner 11-08, layout A; no clipboard before training is done, DepotHubViewModel.clipboardShown); the calendar tile is the one daily button: PUNCH IN! with a "!" until today's punch (a tap punches), then the time to tomorrow's (a tap opens the Timecard)
+	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the calendar tile opens the clipboard (no CLIPBOARD tile, and on desktop no JOBS tile, since the Tonight card opens the Jobs board: owner 11-16, DepotHubViewModel.menuTiles) and the invite row sits under the Tonight card; the calendar tile is the one daily button: PUNCH IN! with a "!" until today's punch (a tap punches), then the time to tomorrow's (a tap opens the Timecard)
 	(owner 2026-11-14; the old empty daily gift streak stays in saves, unused). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
 	DepotHubViewModel (off a truck, the small Find a truck tab instead of the Next shift card, hidden while a prompt is up).
 
@@ -49,7 +49,6 @@ local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 local SocialPerksPanel = require(ReplicatedStorage.Client.UI.React.Screens.Social.SocialPerksPanel)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
-local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 
 -- The contract the depot's board shows (its shell carries the id), or nil before the board has streamed in.
 local function boardContract(): string?
@@ -90,7 +89,6 @@ local function DepotHub(): React.ReactNode
 	local punchPending = ReactCharm.useAtom(TimecardService.pending)
 	local stamp = ReactCharm.useAtom(TimecardMomentStore.stamp)
 	local social = ReactCharm.useAtom(StateSyncClientStore.social)
-	local training = ReactCharm.useAtom(StateSyncClientStore.training)
 	-- An interaction prompt is up: the Find a truck tab steps aside (owner 11-11).
 	local promptUp = ReactCharm.useAtom(ShiftPromptStore.shown) ~= nil
 	local scale = usePaperHudScale()
@@ -99,7 +97,6 @@ local function DepotHub(): React.ReactNode
 		return nil
 	end
 	local phone = scale.layout == "phone"
-	local showClipboard = VM.clipboardShown(TrainingRules.isNew(training))
 	local status = TimecardRules.status(timecard, now)
 	local daily = VM.daily(status.canPunch, now, phone)
 	-- The invite row under the Tonight card (design px; phone: under the right column).
@@ -177,11 +174,6 @@ local function DepotHub(): React.ReactNode
 					end
 				end,
 				onGo = openBoard,
-				onClipboard = if showClipboard
-					then function()
-						Company.open(nil)
-					end
-					else nil,
 			}),
 			social = if clipboardOpen
 				then nil

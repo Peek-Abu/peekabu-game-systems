@@ -113,14 +113,24 @@ function VM.visible(snapshot: ShiftTypes.ShiftSnapshot?, userId: number): boolea
 	return snapshot == nil or snapshot.phase == "lobby" or table.find(snapshot.crew, userId) == nil
 end
 --[=[
-	Whether the hub shows the CLIPBOARD tile (under SHOP; owner 11-08, layout A): not before training is done. The
-	clipboard never opens by itself and its Today tracker lives inside the card.
+	The menu tiles, in order (owner 11-16, "final hub cut": one button per screen). Desktop drops JOBS, because the
+	Tonight card opens the same Jobs board; a phone has no Tonight card, so it keeps JOBS first. There is no CLIPBOARD
+	tile anywhere: the calendar tile opens the same clipboard (its Timecard tab, the Work Order one tap inside).
 ]=]
-function VM.clipboardShown(isNew: boolean): boolean
-	return not isNew
+function VM.menuTiles(phone: boolean): { string }
+	if phone then
+		return { "jobs", "inventory", "guide", "settings" }
+	end
+	return { "inventory", "guide", "settings" }
+end
+
+-- Where the new player's NEW sticker goes: the Tonight card on desktop (it is the Jobs button there), the JOBS tile on
+-- a phone.
+function VM.newJobsOn(phone: boolean): "tonight" | "jobs"
+	return if phone then "jobs" else "tonight"
 end
 -- The menu tiles' labels (JOBS, INVENTORY, GUIDE, SETTINGS). The phone tile's label box is 56 px, and INVENTORY needs
--- 62 px even at the 12 px text floor, so the phone says BAG (its render is a backpack), as CLIPBOARD says CARD.
+-- 62 px even at the 12 px text floor, so the phone says BAG (its render is a backpack).
 local TILE_LABELS: { [string]: string } = {
 	jobs = "JOBS",
 	inventory = "INVENTORY",

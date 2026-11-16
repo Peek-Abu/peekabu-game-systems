@@ -4,14 +4,15 @@
 	(1920x1080 desktop, scaled by PaperHudFrame; 844x390 phone):
 	- top-left, right of Roblox's menu and chat buttons: the profile card (the player's own character in a ring
 	  breaking the card, the player's name, the Clearance Level star, the rank name on desktop and the XP bar);
-	- under it the menu tiles (JOBS, INVENTORY, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
-	  grid on phone, clear of the thumbstick);
+	- under it the menu tiles (DepotHubViewModel.menuTiles; renders breaking their tiles): a column of INVENTORY, GUIDE
+	  and SETTINGS on desktop, where the Tonight card is the Jobs button (owner 11-16, one button per screen); a 2x2 grid
+	  of JOBS, INVENTORY, GUIDE and SETTINGS on phone, clear of the thumbstick;
 	- top-right: the Credits counter (the coin render overlapping a gold number), the Gloom counter left of it (the
 	  Gloom splat overlapping a grape number; owner P1 2026-11-14: there was nowhere to see your Gloom) and the
 	  calendar tile, the one daily button
 	  (PUNCH IN! with a "!" until today's punch, and a tap punches in; else the time to tomorrow's, and it opens the
-	  Timecard); on desktop the Tonight card (tonight's building photo, the Manager breaking its
-	  edge), which opens the Jobs board;
+	  Timecard, and so the Company Clipboard: there is no CLIPBOARD tile); on desktop the Tonight card (tonight's building
+	  photo, the Manager breaking its edge), which opens the Jobs board and wears the new player's NEW sticker;
 	- bottom: off a truck, a small "Find a truck!" tab (bottom-right; phone bottom-centre), hidden while a prompt is up
 	  (owner 11-11: the full Next shift card got in the way); the full card is the queue pad's own (DepotPad) aboard.
 	Presentational: the words come from DepotHubViewModel / DepotPadViewModel, the actions from DepotHub. Exempt; story
@@ -68,9 +69,6 @@ export type DepotHubPanelProps = {
 	-- The SHOP tile under the gift.
 	onShop: () -> (),
 	onGo: () -> (),
-	-- The Company Clipboard's tile under SHOP (owner 11-08, layout A; DepotHubViewModel.clipboardShown) and what it
-	-- opens. No tile without `onClipboard`.
-	onClipboard: (() -> ())?,
 }
 
 type Tile = {
@@ -184,29 +182,29 @@ end
 
 local function tiles(props: DepotHubPanelProps): React.ReactNode
 	local phone = props.phone
-	local list: { Tile } = {
-		{
+	local all: { [string]: Tile } = {
+		jobs = {
 			key = "jobs",
 			label = DepotHubViewModel.tileLabel("jobs", phone),
 			icon = "jobs",
 			variant = "gleam",
 			activate = props.onJobs,
 		},
-		{
+		inventory = {
 			key = "inventory",
 			label = DepotHubViewModel.tileLabel("inventory", phone),
 			icon = "inventory",
 			variant = "grape",
 			activate = props.onInventory,
 		},
-		{
+		guide = {
 			key = "guide",
 			label = DepotHubViewModel.tileLabel("guide", phone),
 			icon = "guide",
 			variant = "primary",
 			activate = props.onGuide,
 		},
-		{
+		settings = {
 			key = "settings",
 			label = DepotHubViewModel.tileLabel("settings", phone),
 			icon = "settings",
@@ -214,6 +212,10 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 			activate = props.onSettings,
 		},
 	}
+	local list: { Tile } = {}
+	for _, key in DepotHubViewModel.menuTiles(phone) do
+		table.insert(list, all[key])
+	end
 	local side = if phone then 68 else 136
 	local gap = if phone then 12 else 18
 	local nodes: { [string]: React.ReactNode } = {}
@@ -226,7 +228,7 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 			icon = tile.icon,
 			text = tile.label,
 			textSize = if phone then 15 else 28,
-			badge = if tile.key == "jobs" and props.newJobs then "NEW" else nil,
+			badge = if tile.key == DepotHubViewModel.newJobsOn(phone) and props.newJobs then "NEW" else nil,
 			position = UDim2.fromOffset(column * (side + gap), row * (side + gap + 6)),
 			size = UDim2.fromOffset(side, side),
 			small = phone,
@@ -244,30 +246,6 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 		-- The training spotlight's arrow and coach keep clear of the menu column.
 		[React.Tag] = TrainingConstants.SPOTLIGHT_TAGS.menu,
 	}, nodes)
-end
-
--- The Company Clipboard's tile under SHOP, or nil (DepotHubViewModel.clipboardShown).
-local function clipboardTile(props: DepotHubPanelProps): React.ReactNode
-	local onOpen = props.onClipboard
-	if onOpen == nil then
-		return nil
-	end
-	local phone = props.phone
-	return e(ToonButton, {
-		variant = "lilac",
-		layout = "tile",
-		icon = "clock",
-		-- The phone tile is 66 px: a short word that fits at a readable size. The daily call to punch in is the calendar
-		-- tile's (one obvious daily button, owner 2026-11-14).
-		text = if phone then "CARD" else "CLIPBOARD",
-		textSize = if phone then 13 else 20,
-		anchor = Vector2.new(1, 0),
-		position = UDim2.fromOffset(0, if phone then 214 else 424),
-		size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
-		small = phone,
-		radius = if phone then 16 else 24,
-		onActivated = onOpen,
-	})
 end
 
 local function topRight(props: DepotHubPanelProps): React.ReactNode
@@ -350,7 +328,6 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			}),
 		}),
 	}
-	nodes.clipboard = clipboardTile(props)
 	if not phone then
 		local tonight = props.tonight
 		local card: { [string]: React.ReactNode } = {
@@ -414,6 +391,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 				variant = "secondary",
 				size = UDim2.fromScale(1, 1),
 				content = card,
+				badge = if DepotHubViewModel.newJobsOn(phone) == "tonight" and props.newJobs then "NEW" else nil,
 				onActivated = props.onJobs,
 			}),
 			tag = e(ToonPill, {
