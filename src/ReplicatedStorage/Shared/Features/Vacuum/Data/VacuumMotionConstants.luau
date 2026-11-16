@@ -171,11 +171,16 @@ return table.freeze({
 	-- restore the old welded hands exactly.
 	handSmooth = 0.05,
 	poleFollow = 0.5,
-	-- Owner plan B (2026-11-16, hands went INSIDE the body): the hand targets and elbow poles ride the upper body's
-	-- animated move away from its rest pose (the idle swayed Cappy's chest 0.28 stud and 13 degrees under hands pinned
-	-- to the root; the brace's lean and twist ride along too), this share of it (VacuumBodyFormulas.follow). 0
+	-- Owner plan B (2026-11-16, hands went INSIDE the body): the hand targets and elbow poles ride the ANIMATION's move
+	-- of the upper body away from its rest pose (the idle swayed Cappy's chest 0.28 stud and 13 degrees under hands
+	-- pinned to the root), this share of it (VacuumBodyFormulas.follow). Never the brace the rig writes itself. 0
 	-- restores the old root-pinned hands exactly.
 	chestFollow = 1,
+	-- Owner plan C (2026-11-16): the wand turns about the point between the paws (true) or about the left paw as before
+	-- (false). Studio only, the Workspace attribute TURN_ABOUT_PAWS_ATTRIBUTE, a boolean, overrides it on every
+	-- machine, so both can be measured on one build (the shipped value is this one).
+	turnAboutPaws = true,
+	TURN_ABOUT_PAWS_ATTRIBUTE = "DevVacuumTurnAboutPaws",
 	-- Aim fix (2026-11-06): while the wand is out the local player's body eases to face where their camera looks (a
 	-- soft shift-lock, VacuumFaceSystem): Humanoid.AutoRotate is off and the root turns toward the camera's heading,
 	-- closing the gap with a time constant of `ease` seconds, at most `maxRate` radians a second. The suction already

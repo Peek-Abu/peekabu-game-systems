@@ -503,29 +503,6 @@ return function()
 			expect(VacuumMotionFormulas.fitTwist(REST, 0, 0, wanted)).to.equal(wanted)
 		end)
 
-		it("hands that ride the chest share its move, so none of it counts against the left paw's reach", function()
-			local motion = VacuumMotionFormulas.motion(Vector3.new(0, 0.2, 0), 0.2, math.rad(11), math.rad(20))
-			local unheld = VacuumMotionFormulas.unheld(motion)
-			local share = 1 - Constants.chestFollow
-			expect((unheld.Position - motion.Position * share).Magnitude).to.be.near(0, 1e-6)
-			expect(VacuumMotionFormulas.unheld(CFrame.identity)).to.equal(CFrame.identity)
-		end)
-
-		it("never trims the body's twist while the hands ride the chest (owner plan B)", function()
-			if Constants.chestFollow < 1 then
-				return
-			end
-			local holding = table.clone(REST)
-			holding.left = { at = Vector3.new(-0.1, 0.4, -1.0), shoulder = Vector3.new(-0.55, 1.0, -0.3), reach = 0.9 }
-			holding.waist = Vector3.new(0, 0.2, 0)
-			local ahead = VacuumMotionFormulas.aimYaw(holding, 0, Constants.aim.far)
-			local turned = layers({ aimYaw = ahead + 0.6 })
-			expect(VacuumMotionFormulas.bodyTwist(holding, turned, 0, 0)).to.be.near(
-				0.6 * Constants.aim.twistShare,
-				1e-9
-			)
-		end)
-
 		it("counts the brace's lean: the shoulder drops and tips forward with it", function()
 			local motion = VacuumMotionFormulas.motion(Vector3.new(0, 0.2, 0), 0.2, math.rad(11))
 			local shoulder = Vector3.new(-0.5, 1, 0)

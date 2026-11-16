@@ -143,7 +143,7 @@ function AnimationVacuumHarness.poseOf(
 		rig.rest,
 		VacuumMotionFormulas.offsetOf(aimed),
 		VacuumMotionConstants.floorMargin,
-		VacuumMotionFormulas.unheld(VacuumMotionFormulas.motion(rig.rest.waist, drop, lean, twist))
+		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean, twist)
 	)
 	return { wand = wand, drop = drop, lean = lean, twist = twist }
 end

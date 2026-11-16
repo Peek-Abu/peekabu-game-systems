@@ -369,19 +369,7 @@ end
 function VacuumMotionFormulas.bodyTwist(rest: WandRest, layers: Layers, drop: number, lean: number): number
 	local ahead = VacuumMotionFormulas.aimYaw(rest, 0, Constants.aim.far)
 	local turn = (layers.aimYaw or ahead) - ahead + layers.swayYaw
-	-- Hands that ride the chest turn with it, so the twist never takes the left shoulder off its grip.
-	if Constants.chestFollow >= 1 then
-		return VacuumMotionFormulas.twist(turn)
-	end
 	return VacuumMotionFormulas.fitTwist(rest, drop, lean, VacuumMotionFormulas.twist(turn))
-end
-
---[=[
-	The part of the upper body's move `body` the hands do not share (they ride the chest Constants.chestFollow of the
-	way, owner plan B 2026-11-16): what the left paw's reach is checked against (`wand`'s `body`).
-]=]
-function VacuumMotionFormulas.unheld(body: CFrame): CFrame
-	return CFrame.identity:Lerp(body, 1 - Constants.chestFollow)
 end
 
 --[=[

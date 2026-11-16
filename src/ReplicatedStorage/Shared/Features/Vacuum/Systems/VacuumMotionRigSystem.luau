@@ -39,6 +39,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
@@ -173,6 +174,13 @@ local function headCorners(handle: BasePart, head: BasePart): { Vector3 }
 	return corners
 end
 
+-- Whether the wand turns about the point between the paws (Constants.turnAboutPaws; in Studio the Workspace attribute
+-- may override it for an A/B check).
+local function aboutPaws(): boolean
+	local override = if RunService:IsStudio() then Workspace:GetAttribute(Constants.TURN_ABOUT_PAWS_ATTRIBUTE) else nil
+	return if type(override) == "boolean" then override else Constants.turnAboutPaws
+end
+
 -- What `readRest` reads of a held vacuum (bind's inputs).
 type Reading = {
 	humanoid: Humanoid,
@@ -235,7 +243,9 @@ local function readRest(character: Model): Reading?
 	local rest: VacuumMotionFormulas.WandRest = {
 		-- Every layer turns about the point between the paws, in front of the chest (owner plan C, 2026-11-16: about the
 		-- left paw, aiming right swung the right paw across the chest).
-		pivot = VacuumBodyFormulas.pivot(rightAt, if leftHold ~= nil then leftHold.at else nil),
+		pivot = if aboutPaws() or leftHold == nil
+			then VacuumBodyFormulas.pivot(rightAt, if leftHold ~= nil then leftHold.at else nil)
+			else leftHold.at,
 		corners = corners,
 		floorY = -(root.Size.Y / 2 + humanoid.HipHeight),
 		left = leftHold,
@@ -419,12 +429,11 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 		return through(through(CFrame.identity, rootJoint.motor, rootT), waist.motor, waistT)
 	end
 	local chestRest = chestFrame(CFrame.identity, CFrame.identity)
-	-- How the chest has moved from rest this frame (the animation's idle, walk and sway plus the brace written above),
-	-- Constants.chestFollow of it; no move without the joints.
+	-- How the ANIMATION has moved the chest from rest this frame (its idle, walk and sway), Constants.chestFollow of it;
+	-- no move without the joints. Never the brace this rig writes itself: riding that tipped the wand into the floor
+	-- (vacuum harness, 2026-11-16: up to 1.2 studs under it), and the brace was designed round root-held hands.
 	local function chestMove(): CFrame
-		local now = if rootJoint ~= nil and waist ~= nil
-			then chestFrame(rootJoint.motor.Transform, waist.motor.Transform)
-			else nil
+		local now = if rootJoint ~= nil and waist ~= nil then chestFrame(animated(rootJoint), animated(waist)) else nil
 		if chestRest == nil or now == nil then
 			return CFrame.identity
 		end
