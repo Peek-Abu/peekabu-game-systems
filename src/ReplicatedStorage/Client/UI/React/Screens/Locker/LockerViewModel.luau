@@ -106,7 +106,28 @@ export type OpeningView = {
 	duration: number,
 }
 
-export type CutsceneBeat = "establishing" | "approach" | "key_turn" | "burst_open"
+export type CutsceneBeat = "establishing" | "approach" | "key_turn" | "rattle" | "burst_open"
+
+-- How a rarity plays its opening (owner picks 11-16: the rarer the prize, the longer the hold before the burst, the
+-- harder the rattle and the more and brighter the lights).
+export type RarityFx = {
+	-- Seconds the shut door rattles, light leaking out, between the key turn and the burst.
+	hold: number,
+	-- Light shafts leaking from the door's seams.
+	lights: number,
+	-- The leak's and the burst's light brightness.
+	brightness: number,
+	-- How far the rattling door jumps open, in degrees.
+	rattleDeg: number,
+	-- Camera shake at the height of the rattle, in studs.
+	shake: number,
+	-- Neon rays at the burst.
+	rays: number,
+	-- How opaque the burst's colour flash gets (0..1).
+	flash: number,
+	-- The prize chime's layers at the burst (sound ids, LockerAssets).
+	chime: { string },
+}
 
 export type CutscenePose = {
 	beat: CutsceneBeat,
@@ -119,6 +140,8 @@ export type CutscenePose = {
 	doorDeg: number,
 	glow: boolean,
 	flashTransparency: number,
+	-- 0..1: how bright the prize's colour leaks out round the shut door (the rattle beat; 1 at the burst).
+	leak: number,
 }
 
 local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
@@ -149,12 +172,94 @@ local RARITY_LABEL: { [Rarity]: string } = {
 	odd = "Odd",
 }
 
+-- Uncommon and Rare stay plain; the sparkly Aura layer is kept for Epic and up (the sound rarity rule).
+local RARITY_FX: { [Rarity]: RarityFx } = {
+	default = {
+		hold = 0.5,
+		lights = 2,
+		brightness = 2,
+		rattleDeg = 1.5,
+		shake = 0,
+		rays = 3,
+		flash = 0.55,
+		chime = { "lockerChimeLow" },
+	},
+	uncommon = {
+		hold = 0.5,
+		lights = 2,
+		brightness = 2,
+		rattleDeg = 1.5,
+		shake = 0,
+		rays = 3,
+		flash = 0.55,
+		chime = { "lockerChimeLow" },
+	},
+	rare = {
+		hold = 0.8,
+		lights = 3,
+		brightness = 3,
+		rattleDeg = 2.5,
+		shake = 0.02,
+		rays = 5,
+		flash = 0.65,
+		chime = { "lockerChimeHigh" },
+	},
+	epic = {
+		hold = 1.2,
+		lights = 5,
+		brightness = 4.5,
+		rattleDeg = 4,
+		shake = 0.06,
+		rays = 7,
+		flash = 0.8,
+		chime = { "lockerChimeHigh", "lockerChimeAura" },
+	},
+	legendary = {
+		hold = 1.7,
+		lights = 8,
+		brightness = 7,
+		rattleDeg = 6,
+		shake = 0.12,
+		rays = 10,
+		flash = 0.88,
+		chime = { "lockerChimeHigh", "lockerChimeAura", "lockerChimeLow" },
+	},
+	odd = {
+		hold = 1.7,
+		lights = 8,
+		brightness = 7,
+		rattleDeg = 6,
+		shake = 0.12,
+		rays = 10,
+		flash = 0.88,
+		chime = { "lockerChimeHigh", "lockerChimeAura", "lockerChimeLow" },
+	},
+}
+
+-- The fixed beats, in seconds; the rattle's hold sits between the key turn and the burst.
+local ESTABLISH_SECONDS = 0.8
+local APPROACH_SECONDS = 0.9
+local KEY_SECONDS = 1.0
+local BURST_SECONDS = 0.8
+
 local VM = {
 	OPENING_SCENE = "lockerOpening",
 	SKIP_AFTER = 1.0,
-	OPENING_DURATION = 2.8,
+	BURST_SECONDS = BURST_SECONDS,
+	RARITY_FX = RARITY_FX,
 	STAGE_ORIGIN = CFrame.new(3000, 0, 0),
 }
+
+-- The whole opening's length for a prize of `rarity` (about 4 seconds for Uncommon).
+function VM.openingDuration(rarity: Rarity): number
+	return ESTABLISH_SECONDS + APPROACH_SECONDS + KEY_SECONDS + RARITY_FX[rarity].hold + BURST_SECONDS
+end
+
+-- When Skip shows (owner pick 11-16): a second into your first ever open, at once after that. `opened` is the
+-- synced open count, which already counts this open once the server's answer has synced.
+function VM.skipAfter(opened: number): number
+	return if opened >= 2 then 0 else VM.SKIP_AFTER
+end
 
 local function currencyWord(currency: LockerTypes.Currency): string
 	if currency == "gleam" then
@@ -396,7 +501,7 @@ function VM.openingView(outcome: LockerTypes.Outcome): OpeningView
 			then `You already have this! +{ToonStyleViewModel.grouped(outcome.refund)} {cWord} back`
 			else nil,
 		skipAfter = VM.SKIP_AFTER,
-		duration = VM.OPENING_DURATION,
+		duration = VM.openingDuration(outcome.rarity),
 	}
 end
 
@@ -414,19 +519,28 @@ function VM.revealOf(outcome: LockerTypes.Outcome): CosmeticRevealStore.Reveal
 end
 
 --[=[
-	The 3D cutscene at `alpha` (0..1) for `lockerId`'s Locker (the Gleam Locker sits at -X, every other one at +X).
-	Both doors hinge on their -X edge, so the employee waits on the latch side (+X), facing the keyhole, and every
-	camera shot comes from the hinge side: the employee is never between the camera and what it looks at (owner check
-	11-16: the camera sat behind, then inside, the employee's head). `doorDeg` swings the door out toward the camera.
+	The 3D cutscene at `alpha` (0..1 of `VM.openingDuration(rarity)`) for `lockerId`'s Locker (the Gleam Locker sits at
+	-X, every other one at +X). Beats: establishing, approach (the key floats from the employee's hand), key_turn,
+	rattle (the shut door jumps against its latch, harder and longer the rarer the prize, light in the prize's colour
+	leaking round it) and burst_open. Both doors hinge on their -X edge, so the employee waits on the latch side (+X),
+	facing the keyhole, and every shot comes from the hinge side: the employee is never between the camera and what it
+	looks at (owner check 11-16: the camera sat behind, then inside, the employee's head). `doorDeg` swings the door
+	out toward the camera.
 ]=]
-function VM.cutscenePose(lockerId: LockerId, alpha: number): CutscenePose
-	local a = math.clamp(alpha, 0, 1)
+function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): CutscenePose
+	local tier: Rarity = rarity or "uncommon"
+	local fx = RARITY_FX[tier]
+	local seconds = math.clamp(alpha, 0, 1) * VM.openingDuration(tier)
 	local lx = if lockerId == "gleam" then -6.5 else 6.5
 	local kx = lx + 0.15
 	local keyHole = Vector3.new(kx, 5.2, 3.42)
 	local keyFront = Vector3.new(kx, 5.2, 2.25)
+	local keyIn = Vector3.new(kx, 5.2, 3.08)
 	local empPos = Vector3.new(lx + 2.4, 3.1, 0.9)
 	local hand = empPos + Vector3.new(-0.9, 1.1, 0.7)
+
+	local rattleAt = ESTABLISH_SECONDS + APPROACH_SECONDS + KEY_SECONDS
+	local burstAt = rattleAt + fx.hold
 
 	local beat: CutsceneBeat
 	local camPos: Vector3
@@ -437,46 +551,63 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number): CutscenePose
 	local doorDeg = 0
 	local glow = false
 	local flashTransparency = 1
+	local leak = 0
 
-	if a < 0.24 then
+	if seconds < ESTABLISH_SECONDS then
 		beat = "establishing"
-		local t = a / 0.24
+		local t = seconds / ESTABLISH_SECONDS
 		camPos = Vector3.new(lx - 5.5, 6.6, -9.5):Lerp(Vector3.new(lx - 3.2, 6.0, -6.5), t)
 		camLook = Vector3.new(lx - 1, 5.6, 4):Lerp(Vector3.new(lx + 0.5, 5.2, 3.5), t)
 		fov = 50 - 4 * t
-	elseif a < 0.50 then
+	elseif seconds < ESTABLISH_SECONDS + APPROACH_SECONDS then
 		beat = "approach"
-		local t = (a - 0.24) / 0.26
+		local t = (seconds - ESTABLISH_SECONDS) / APPROACH_SECONDS
 		camPos = Vector3.new(lx - 3.2, 6.0, -6.5):Lerp(Vector3.new(lx - 2.2, 5.6, -3.0), t)
 		camLook = Vector3.new(lx + 0.5, 5.2, 3.5):Lerp(keyHole, t)
 		fov = 46 - 4 * t
 		keyPos = hand:Lerp(keyFront, t * t * (3 - 2 * t))
-	elseif a < 0.76 then
+	elseif seconds < rattleAt then
 		beat = "key_turn"
-		local t = (a - 0.50) / 0.26
+		local t = (seconds - ESTABLISH_SECONDS - APPROACH_SECONDS) / KEY_SECONDS
 		camPos = Vector3.new(kx - 1.7, 5.6, 0.4):Lerp(Vector3.new(kx - 1.25, 5.4, 1.3), t)
 		camLook = keyHole
 		fov = 36
 		if t < 0.45 then
-			keyPos = keyFront:Lerp(Vector3.new(kx, 5.2, 3.08), t / 0.45)
+			keyPos = keyFront:Lerp(keyIn, t / 0.45)
 		else
 			local turn = (t - 0.45) / 0.55
-			keyPos = Vector3.new(kx, 5.2, 3.08)
+			keyPos = keyIn
 			keyRollDeg = math.sin(turn * math.pi * 0.5) * 90
 		end
+	elseif seconds < burstAt then
+		beat = "rattle"
+		local t = (seconds - rattleAt) / fx.hold
+		-- Builds up: a faint, gentle rattle that grows to the rarity's full shake and glow.
+		local grow = 0.25 + 0.75 * t ^ 1.5
+		camPos = Vector3.new(lx - 0.6, 5.6, -5.2):Lerp(Vector3.new(lx - 0.4, 5.7, -4.2), t)
+		camLook = Vector3.new(lx, 5.1, 4.0)
+		fov = 44
+		keyPos = keyIn
+		keyRollDeg = 90
+		-- The door jumps open against its latch and falls back (0 or more: never into the locker's body).
+		doorDeg = fx.rattleDeg * grow * (0.5 + 0.5 * math.sin(seconds * math.pi * 2 * 9))
+		leak = grow
+		local shake = fx.shake * grow
+		camPos += Vector3.new(math.sin(seconds * 71) * shake, math.sin(seconds * 53 + 1.3) * shake, 0)
 	else
 		beat = "burst_open"
-		local t = (a - 0.76) / 0.24
+		local t = math.min(1, (seconds - burstAt) / BURST_SECONDS)
 		local swing = 1 - (1 - math.min(1, t * 1.25)) ^ 3
 		doorDeg = 115 * swing
 		glow = true
+		leak = 1
 		keyPos = Vector3.new(kx, 5.2, -100)
 		camPos = Vector3.new(lx - 0.4, 5.7, -4.2):Lerp(Vector3.new(lx - 0.1, 5.4, -2.4), t)
 		camLook = Vector3.new(lx, 5.0, 5.0)
 		fov = 44 - 8 * t
 		if t > 0.55 then
 			local burst = (t - 0.55) / 0.45
-			flashTransparency = math.clamp(1 - math.sin(burst * math.pi) * 0.85, 0.15, 1)
+			flashTransparency = math.clamp(1 - math.sin(burst * math.pi) * fx.flash, 1 - fx.flash, 1)
 		end
 	end
 
@@ -494,6 +625,7 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number): CutscenePose
 		doorDeg = doorDeg,
 		glow = glow,
 		flashTransparency = flashTransparency,
+		leak = leak,
 	}
 end
 

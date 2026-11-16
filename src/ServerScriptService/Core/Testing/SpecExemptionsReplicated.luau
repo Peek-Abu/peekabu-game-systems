@@ -284,6 +284,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Film.FilmServiceClient"] = "shell over input, the core UI and prompts (the hide specced in FilmHideSystem, the camera maths in FilmFlyFormulas / FilmPathFormulas)",
 	["ReplicatedStorage.Client.Features.Callout.CalloutServiceClient"] = "shell over input, the camera ray and packets (rules in CalloutRules, the wheel in ChatWheelViewModel, the effects in CalloutStickerSystem / CalloutPingSystem, state in CalloutStore / CalloutWheelStore)",
 	["ReplicatedStorage.Client.Features.Locker.LockerServiceClient"] = "shell over LockerEvents packets, SceneStack and CosmeticRevealStore (values specced in LockerViewModel, state in LockerStore)",
+	["ReplicatedStorage.Client.Features.Locker.Data.LockerAssets"] = "asset id slots; registers the Locker cutscene's sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Locker.Systems.LockerCutsceneSystem"] = "Instance/Camera/RunService shell over Workspace.LockerStage_Ref (timeline, camera, key and door poses specced in LockerViewModel)",
 	["ReplicatedStorage.Shared.Features.Employee.Data.EmployeeLanyardConstants"] = "static fitted v4 strap data and v6 front card layouts (checked through EmployeeLanyardFormulas.spec)",
 	["ReplicatedStorage.Client.Features.Employee.Systems.EmployeeHeadLookSystem"] = "Motor6D/Animator/RunService shell for the head look (the angles, easing and head-owning rule are specced in EmployeeHeadLookFormulas)",

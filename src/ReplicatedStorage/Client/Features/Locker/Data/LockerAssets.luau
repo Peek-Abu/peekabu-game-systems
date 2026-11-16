@@ -1,0 +1,67 @@
+--!strict
+--[=[
+	LockerAssets: the Locker opening cutscene's sounds (owner pick 11-16: "Add sounds now from the Roblox library ...
+	and make our own versions later"). Registers them at load (guarded); LockerCutsceneSystem plays them on its beats.
+
+	⚠ NOT APPROVED, ALL OF THEM. Every id below is a Creator Store library pick made by an agent without a listening
+	round, to be replaced (probably) by in-house versions (owner 11-16: "ENSURE WE MAKE NOTE OF WHAT SOUNDS WE TAKE! We
+	already use library sounds that HAVE BEEN APPROVED! These are ones that haven't been / will be replaced"). Keep this
+	list in sync with `docs/odd-hours-unapproved-sounds.md`; when a sound is approved or replaced, update both.
+
+	| id | Creator Store asset | when it plays |
+	|---|---|---|
+	| lockerKey | Vice Grips 29 (SFX), ProSoundEffects, 9120409020 | the key turns in the lock |
+	| lockerRattle | Security Gate 4 (SFX), ProSoundEffects, 9118901593 | the shut door rattles (louder the rarer) |
+	| lockerBurst | Steel Door 3 (SFX), ProSoundEffects, 9119631707 | the door bursts open |
+	| lockerChimeLow | Roblox GUI - Notification Low, Roblox, 17208372272 | the prize chime: Uncommon (a layer on Legendary) |
+	| lockerChimeHigh | Roblox GUI - Notification High, Roblox, 17208361335 | the prize chime: Rare, Epic, Legendary |
+	| lockerChimeAura | Roblox GUI - Aura, Roblox, 17208327798 | the sparkle layer: Epic and Legendary only |
+
+	(Notification High is also the approved tutorial pop; here it is a separate, unapproved use.)
+
+	Static data + registration (spec-exempt).
+
+	@class LockerAssets
+]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
+local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
+
+local SOUNDS: { [string]: SoundTypes.SoundDef } = {
+	lockerKey = { assetId = "rbxassetid://9120409020", group = "SFX", volume = 0.8, maxConcurrent = 1 },
+	lockerRattle = { assetId = "rbxassetid://9118901593", group = "SFX", volume = 0.7, maxConcurrent = 1 },
+	lockerBurst = { assetId = "rbxassetid://9119631707", group = "SFX", volume = 0.9, maxConcurrent = 1 },
+	lockerChimeLow = {
+		assetId = "rbxassetid://17208372272",
+		group = "SFX",
+		bus = "Reward",
+		volume = 1.6,
+		maxConcurrent = 1,
+	},
+	lockerChimeHigh = {
+		assetId = "rbxassetid://17208361335",
+		group = "SFX",
+		bus = "Reward",
+		volume = 1.6,
+		maxConcurrent = 1,
+	},
+	lockerChimeAura = {
+		assetId = "rbxassetid://17208327798",
+		group = "SFX",
+		bus = "Reward",
+		volume = 1.4,
+		maxConcurrent = 1,
+	},
+}
+
+for id, def in SOUNDS do
+	if not SoundRegistry.has(id) then
+		SoundRegistry.register(id, def)
+	end
+end
+
+return table.freeze({
+	sounds = table.freeze(SOUNDS),
+})

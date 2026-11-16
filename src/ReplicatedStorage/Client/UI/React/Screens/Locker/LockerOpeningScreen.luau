@@ -8,8 +8,9 @@
 	  `Skip` button drawn over the 3D view.
 	- Stage 1 fallback (when the 3D stage is absent): the 2D Locker card shakes on a `ToonBackdrop`, the key flies in,
 	  the screen flashes the rarity colour and rays spin.
-	When the opening finishes (or the player taps Skip after the first second) it hands off to `RevealScreen` via
-	`onFinish`.
+	The opening runs `LockerViewModel.openingDuration(rarity)` (about 4 s, longer the rarer the prize). When it finishes
+	(or the player taps Skip: a second in on their first ever open, at once after that, `LockerViewModel.skipAfter`) it
+	hands off to `RevealScreen` via `onFinish`.
 
 	Presentational React screen over `LockerStore.opening` (exempt; values and 3D poses specced in `LockerViewModel`).
 
@@ -22,6 +23,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local LockerTypes = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerTypes)
 local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local LockerCutsceneSystem = require(ReplicatedStorage.Client.Features.Locker.Systems.LockerCutsceneSystem)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
@@ -68,7 +70,8 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 	local cutscene3d, setCutscene3d = React.useState(false)
 
 	local key = if outcome ~= nil then `{outcome.locker}:{outcome.item}:{outcome.pity}` else ""
-	local progress = useToonPlay(VM.OPENING_DURATION, 0, key)
+	local duration = if outcome ~= nil then VM.openingDuration(outcome.rarity) else VM.openingDuration("uncommon")
+	local progress = useToonPlay(duration, 0, key)
 
 	local deps: { unknown } = { key, outcome ~= nil, props.onFinish }
 	React.useEffect(function(): () -> ()
@@ -80,7 +83,7 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 		local stopCutscene = LockerCutsceneSystem.start(outcome)
 		setCutscene3d(stopCutscene ~= nil)
 		local running = true
-		local skipThread = task.delay(VM.SKIP_AFTER, function()
+		local skipThread = task.delay(VM.skipAfter(StateSyncClientStore.lockers().opened), function()
 			if running then
 				setCanSkip(true)
 			end
@@ -88,7 +91,7 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 		local finishThread: thread? = nil
 		local onFinish = props.onFinish
 		if onFinish ~= nil then
-			finishThread = task.delay(VM.OPENING_DURATION, function()
+			finishThread = task.delay(VM.openingDuration(outcome.rarity), function()
 				if running then
 					onFinish()
 				end
@@ -228,7 +231,7 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 			BackgroundColor3 = shade.hi,
 			BackgroundTransparency = progress:map(function(alpha: number): number
 				if cutscene3d then
-					return VM.cutscenePose(view.locker, alpha).flashTransparency
+					return VM.cutscenePose(view.locker, alpha, view.rarity).flashTransparency
 				end
 				if alpha < 0.62 then
 					return 1

@@ -257,20 +257,88 @@ return function()
 		-- looks at, and the camera clear of the employee, in every beat after the establishing shot.
 		it("never lets the employee block the camera's view of the locker", function()
 			for _, id in { "gloom", "gleam", "harvest" } do
-				for step = 0, 50 do
-					local alpha = 0.24 + 0.76 * step / 50
-					local pose = VM.cutscenePose(id, alpha)
-					local emp = pose.employeeCFrame.Position
-					local a = Vector2.new(pose.camPos.X, pose.camPos.Z)
-					local b = Vector2.new(pose.camLook.X, pose.camLook.Z)
-					local p = Vector2.new(emp.X, emp.Z)
-					local ab = b - a
-					local t = math.clamp((p - a):Dot(ab) / ab:Dot(ab), 0, 1)
-					local gap = (a + ab * t - p).Magnitude
-					expect(gap > 2.2).to.equal(true)
-					expect((a - p).Magnitude > 3).to.equal(true)
+				for _, rarity in { "uncommon", "legendary" } do
+					for step = 0, 50 do
+						local alpha = 0.24 + 0.76 * step / 50
+						local pose = VM.cutscenePose(id, alpha, rarity)
+						local emp = pose.employeeCFrame.Position
+						local a = Vector2.new(pose.camPos.X, pose.camPos.Z)
+						local b = Vector2.new(pose.camLook.X, pose.camLook.Z)
+						local p = Vector2.new(emp.X, emp.Z)
+						local ab = b - a
+						local t = math.clamp((p - a):Dot(ab) / ab:Dot(ab), 0, 1)
+						local gap = (a + ab * t - p).Magnitude
+						expect(gap > 2.2).to.equal(true)
+						expect((a - p).Magnitude > 3).to.equal(true)
+					end
 				end
 			end
+		end)
+	end)
+
+	-- Owner picks 11-16: about 4 seconds, a door rattle with the prize's colour leaking out before the burst, held
+	-- longer, rattled harder, with more and brighter lights the rarer the prize.
+	describe("rarity build-up", function()
+		local LADDER = { "uncommon", "rare", "epic", "legendary" }
+
+		it("runs about 4 seconds, longer the rarer the prize", function()
+			expect(math.abs(VM.openingDuration("uncommon") - 4) < 0.25).to.equal(true)
+			for index = 2, #LADDER do
+				expect(VM.openingDuration(LADDER[index]) > VM.openingDuration(LADDER[index - 1])).to.equal(true)
+			end
+			expect(VM.openingDuration("odd") >= VM.openingDuration("legendary")).to.equal(true)
+		end)
+
+		it("rattles harder, with more and brighter lights and a bigger burst, the rarer the prize", function()
+			for index = 2, #LADDER do
+				local lower = VM.RARITY_FX[LADDER[index - 1]]
+				local higher = VM.RARITY_FX[LADDER[index]]
+				expect(higher.hold > lower.hold).to.equal(true)
+				expect(higher.lights > lower.lights).to.equal(true)
+				expect(higher.brightness > lower.brightness).to.equal(true)
+				expect(higher.rattleDeg > lower.rattleDeg).to.equal(true)
+				expect(higher.rays > lower.rays).to.equal(true)
+				expect(higher.flash >= lower.flash).to.equal(true)
+				expect(#higher.chime >= #lower.chime).to.equal(true)
+			end
+		end)
+
+		it("rattles the shut door with the light leaking out between the key turn and the burst", function()
+			for _, rarity in LADDER do
+				local duration = VM.openingDuration(rarity)
+				local fx = VM.RARITY_FX[rarity]
+				-- The middle of the hold: the last fx.hold seconds before the burst.
+				local burstAt = duration - VM.BURST_SECONDS
+				local mid = VM.cutscenePose("gloom", (burstAt - fx.hold / 2) / duration, rarity)
+				expect(mid.beat).to.equal("rattle")
+				expect(mid.glow).to.equal(false)
+				expect(mid.doorDeg <= fx.rattleDeg).to.equal(true)
+				expect(mid.leak > 0).to.equal(true)
+				expect(mid.keyRollDeg).to.equal(90)
+				local late = VM.cutscenePose("gloom", (burstAt - 0.02) / duration, rarity)
+				expect(late.leak > mid.leak).to.equal(true)
+				expect(VM.cutscenePose("gloom", (burstAt + 0.05) / duration, rarity).beat).to.equal("burst_open")
+			end
+		end)
+
+		it("flashes brighter at the burst for a rarer prize", function()
+			local function brightest(rarity)
+				local least = 1
+				for step = 0, 100 do
+					least = math.min(least, VM.cutscenePose("gloom", step / 100, rarity).flashTransparency)
+				end
+				return least
+			end
+			expect(brightest("legendary") < brightest("uncommon")).to.equal(true)
+		end)
+	end)
+
+	describe("skipAfter", function()
+		it("waits a second on your first ever open, then lets you skip at once", function()
+			expect(VM.skipAfter(0)).to.equal(VM.SKIP_AFTER)
+			expect(VM.skipAfter(1)).to.equal(VM.SKIP_AFTER)
+			expect(VM.skipAfter(2)).to.equal(0)
+			expect(VM.skipAfter(40)).to.equal(0)
 		end)
 	end)
 end
