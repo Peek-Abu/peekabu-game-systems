@@ -37,7 +37,9 @@
 	  0), so nothing scanning the playing sounds takes it for one.
 
 	Spec-exempt shell (Sound instances, TweenService, ByteNet); the rules live in SoundRegistry,
-	SoundFormulas, SoundVoiceTracker and SoundIdlePool.
+	SoundFormulas, SoundVoiceTracker and SoundIdlePool. The SoundGroups and the place cut's state live in
+	SoundGroupTracker, and the voices (start, release, the idle caps, the counters) in SoundVoicePool, both split out
+	of this file.
 
 	@class SoundServiceClient
 ]=]
@@ -54,165 +56,40 @@ local SoundConstants = require(SoundShared.Data.SoundConstants)
 local SoundRegistry = require(SoundShared.Data.SoundRegistry)
 local SoundFormulas = require(SoundShared.Utils.SoundFormulas)
 local SoundEvents = require(SoundShared.Net.SoundEvents)
-local SoundIdlePool = require(ReplicatedStorage.Client.Features.Sound.State.SoundIdlePool)
-local SoundVoiceTracker = require(ReplicatedStorage.Client.Features.Sound.State.SoundVoiceTracker)
+local SoundGroupTracker = require(ReplicatedStorage.Client.Features.Sound.State.SoundGroupTracker)
+local SoundVoicePool = require(ReplicatedStorage.Client.Features.Sound.State.SoundVoicePool)
 
 type SoundGroupName = SoundTypes.SoundGroupName
-type SoundBusName = SoundTypes.SoundBusName
 type SoundPlace = SoundTypes.SoundPlace
+type Voice = SoundVoicePool.Voice
 
 export type SoundHandle = {
 	sound: Sound,
 	stop: (self: SoundHandle, fade: number?) -> (),
 }
 
--- A reusable Sound, at its place (a fixed point's Sound sits in its own anchor in the Terrain).
-type Voice = {
-	sound: Sound,
-	anchor: Attachment?,
-	place: Instance,
-	-- The voice token of the play it is sounding now; nil while idle.
-	token: number?,
-	-- A handle's fade-out running on it (cancelled when it is released).
-	fade: Tween?,
-}
-
 local log = Logger.new("SoundServiceClient")
 
-local rng = Random.new()
-local voices = SoundVoiceTracker.new()
-local idle: SoundIdlePool.SoundIdlePool<Instance, Voice> = SoundIdlePool.new()
--- The idle cap of each place pre-warmed above its default (a place that left the world is forgotten by the sweep).
-local caps: { [Instance]: number } = {}
-local groups: { [string]: SoundGroup? } = {}
--- The mix buses' groups, by bus name, each nested in its volume group (SoundConstants.BUSES).
-local busGroups: { [string]: SoundGroup? } = {}
--- The place groups, by "<volume group>/<bus>/<place>", nested in their bus (or volume) group, and each one's running
--- fade.
-local placeGroups: { [string]: SoundGroup? } = {}
--- Each place's groups (one per volume group). Kept per place, not in one map by place: iterating a map's literal-typed
--- values widens them to string.
-local buildingGroups: { SoundGroup } = {}
-local outsideGroups: { SoundGroup } = {}
-local placeFades: { [SoundGroup]: Tween? } = {}
--- The outdoor boxes and the local player's place (setPlaces); none = nothing is placed.
-local placeBoxes: { SoundTypes.SoundPlaceBox } = {}
-local listenerPlace: SoundPlace? = nil
--- The looping positional plays, placed again on every setPlaces: their volume group and where they play from.
-local placedLoops: { [Sound]: { group: SoundGroupName, bus: SoundBusName?, at: SoundTypes.PlayAt } } = {}
--- token -> how to stop the sound playing for it (so an evicted voice can be stopped).
-local playing: { [number]: () -> () } = {}
+local groupFor = SoundGroupTracker.groupFor
+local placeGroupFor = SoundGroupTracker.placeGroupFor
+local pointOf = SoundGroupTracker.pointOf
+local placeFor = SoundGroupTracker.placeFor
+local idle = SoundVoicePool.idle
+local caps = SoundVoicePool.caps
+local placedLoops = SoundVoicePool.placedLoops
+local counters = SoundVoicePool.counters
+local configure = SoundVoicePool.configure
+local placeOf = SoundVoicePool.placeOf
+local capOf = SoundVoicePool.capOf
+local release = SoundVoicePool.release
+local newVoice = SoundVoicePool.newVoice
+local start = SoundVoicePool.start
+
 local music: Sound? = nil
 local ambience: { [string]: Sound? } = {}
 -- Each looping track's kept Sound, by its slot ("music" or the ambience layer) and id, and its running fade.
 local tracks: { [string]: Sound? } = {}
 local trackFades: { [Sound]: Tween? } = {}
--- created: Sounds made for plays and tracks; prewarmed: idle voices made ahead of any play (prewarm); reused: plays
--- that re-pointed an idle voice; resumed: track starts that replayed a kept Sound; unloaded: released unloaded.
-local counters = {
-	played = 0,
-	evicted = 0,
-	unknown = 0,
-	created = 0,
-	prewarmed = 0,
-	reused = 0,
-	resumed = 0,
-	unloaded = 0,
-}
--- Releases since the last sweep of places that left the world.
-local releases = 0
-local SWEEP_EVERY = 64
-
-local function groupFor(name: SoundGroupName): SoundGroup
-	local existing = groups[name]
-	if existing ~= nil then
-		return existing
-	end
-	local created = Instance.new("SoundGroup")
-	created.Name = name
-	created.Volume = SoundConstants.DEFAULT_GROUP_VOLUMES[name]
-	created.Parent = SoundService
-	groups[name] = created
-	return created
-end
-
--- The group of mix bus `bus` in volume group `name` (made on first use at its trim), or the volume group itself with
--- no bus.
-local function busGroupFor(name: SoundGroupName, bus: SoundBusName?): SoundGroup
-	local parent = groupFor(name)
-	if bus == nil then
-		return parent
-	end
-	local existing = busGroups[bus]
-	if existing ~= nil then
-		return existing
-	end
-	local created = Instance.new("SoundGroup")
-	created.Name = bus
-	created.Volume = SoundFormulas.busGain(SoundConstants.BUSES[bus])
-	created.Parent = parent
-	busGroups[bus] = created
-	return created
-end
-
--- The group a sound of volume group `name` and bus `bus` joins in `place`: its place group nested in the bus group
--- (made on first use, at the listener's gain), or the bus group itself when placeless.
-local function placeGroupFor(name: SoundGroupName, bus: SoundBusName?, place: SoundPlace?): SoundGroup
-	local parent = busGroupFor(name, bus)
-	if place == nil then
-		return parent
-	end
-	local key = `{name}/{bus or ""}/{place}`
-	local existing = placeGroups[key]
-	if existing ~= nil then
-		return existing
-	end
-	local created = Instance.new("SoundGroup")
-	created.Name = place
-	created.Volume = SoundFormulas.placeGain(place, listenerPlace)
-	created.Parent = parent
-	placeGroups[key] = created
-	table.insert(if place == "Outside" then outsideGroups else buildingGroups, created)
-	return created
-end
-
--- Fades each of `place`'s groups to its gain for the listener's place over `fade` (0: at once).
-local function fadePlace(list: { SoundGroup }, place: SoundPlace, fade: number)
-	local gain = SoundFormulas.placeGain(place, listenerPlace)
-	for _, group in list do
-		local running = placeFades[group]
-		if running ~= nil then
-			placeFades[group] = nil
-			running:Cancel()
-		end
-		if fade <= 0 then
-			group.Volume = gain
-		else
-			local tween = TweenService:Create(group, TweenInfo.new(fade), { Volume = gain })
-			placeFades[group] = tween
-			tween:Play()
-		end
-	end
-end
-
--- Where a play at `at` sounds from in the world; nil for a 2D play.
-local function pointOf(at: SoundTypes.PlayAt?): Vector3?
-	if typeof(at) == "Vector3" then
-		return at
-	elseif typeof(at) == "Instance" then
-		if at:IsA("BasePart") then
-			return at.Position
-		elseif at:IsA("Attachment") then
-			return at.WorldPosition
-		end
-	end
-	return nil
-end
-
--- The place a play of `def` at `at` is in now (nil: placeless, heard everywhere; a pinned sound is in its place).
-local function placeFor(def: SoundTypes.SoundDef, at: SoundTypes.PlayAt?): SoundPlace?
-	return SoundFormulas.placeOfPlay(def, pointOf(at), placeBoxes)
-end
 
 -- Fades `sound` to `volume` over `duration`, then calls `done` (immediately when duration <= 0; never for a fade
 -- that is cancelled). Returns the running tween, if any.
@@ -235,230 +112,6 @@ local function fadeTo(sound: Sound, volume: number, duration: number, done: (() 
 	end
 	tween:Play()
 	return tween
-end
-
--- Points `sound` at a registry entry: its asset, volume, a picked pitch, loop and group (its `place`'s, if any).
-local function configure(
-	sound: Sound,
-	id: string,
-	def: SoundTypes.SoundDef,
-	volumeScale: number,
-	pitchScale: number,
-	place: SoundPlace?
-)
-	sound.Name = id
-	if sound.SoundId ~= def.assetId then
-		sound.SoundId = def.assetId
-	end
-	sound.Volume = def.volume * volumeScale
-	sound.PlaybackSpeed = SoundFormulas.pickPitch(def.pitch, rng:NextNumber()) * pitchScale
-	sound.Looped = def.looped == true
-	sound.SoundGroup = placeGroupFor(def.group, def.bus, place)
-	-- Max first at its widest, so the min never meets a reused voice's smaller max on the way.
-	sound.RollOffMaxDistance = SoundConstants.DEFAULT_ROLL_OFF_MAX
-	sound.RollOffMinDistance = def.rollOffMinDistance or SoundConstants.DEFAULT_ROLL_OFF_MIN
-	sound.RollOffMaxDistance = def.rollOffMaxDistance or SoundConstants.DEFAULT_ROLL_OFF_MAX
-end
-
--- Where a play at `at` keeps its voices, and the fixed point for a Vector3 (its anchor's position).
-local function placeOf(at: SoundTypes.PlayAt?): (Instance, Vector3?)
-	if typeof(at) == "Vector3" then
-		return Workspace.Terrain, at
-	elseif typeof(at) == "Instance" then
-		return at, nil
-	end
-	-- Outside the Workspace a Sound plays without position (2D).
-	return SoundService, nil
-end
-
--- How many idle voices `place` keeps.
-local function capOf(place: Instance): number
-	local base = if place == SoundService or place == Workspace.Terrain
-		then SoundConstants.IDLE_SHARED
-		else SoundConstants.IDLE_PER_PLACE
-	local raised = caps[place]
-	return if raised ~= nil and raised > base then raised else base
-end
-
--- Releases `sound` if it never loaded LOAD_TIMEOUT after its play (`still` says the play is still the current one).
-local function guardLoad(sound: Sound, still: () -> boolean, release: () -> ())
-	if sound.IsLoaded then
-		return
-	end
-	task.delay(SoundConstants.LOAD_TIMEOUT, function()
-		if still() and not sound.IsLoaded then
-			counters.unloaded += 1
-			release()
-		end
-	end)
-end
-
-local function destroyVoice(voice: Voice)
-	local anchor = voice.anchor
-	if anchor ~= nil then
-		anchor:Destroy()
-	else
-		voice.sound:Destroy()
-	end
-end
-
--- Destroys the idle voices of places that left the world (deparented without being destroyed), and forgets their
--- raised caps.
-local function sweep()
-	for _, at in idle:places() do
-		if at.Parent == nil then
-			for _, voice in idle:forget(at) do
-				destroyVoice(voice)
-			end
-		end
-	end
-	for at in caps do
-		if at.Parent == nil then
-			caps[at] = nil
-		end
-	end
-end
-
--- Ends a voice's play: frees its slot and keeps it idle at its place (or destroys it when that is full, gone, or
--- `keep` is false: it never loaded, or a handle's caller may still steer it).
-local function release(voice: Voice, keep: boolean)
-	local token = voice.token
-	if token == nil then
-		return
-	end
-	voice.token = nil
-	voices:finish(token)
-	playing[token] = nil
-	local fade = voice.fade
-	if fade ~= nil then
-		voice.fade = nil
-		fade:Cancel()
-	end
-	local sound = voice.sound
-	placedLoops[sound] = nil
-	sound:Stop()
-	for _, child in sound:GetChildren() do
-		if child:IsA("SoundEffect") then
-			child:Destroy()
-		end
-	end
-	sound.Volume = 0
-	if
-		not keep
-		or voice.place.Parent == nil
-		or sound.Parent == nil
-		or not idle:put(voice.place, voice, capOf(voice.place))
-	then
-		destroyVoice(voice)
-	end
-	releases += 1
-	if releases >= SWEEP_EVERY then
-		releases = 0
-		sweep()
-	end
-end
-
--- A new voice at `place` (an anchor of its own for a fixed point), released when it ends. (Its caller counts it:
--- created for a play, prewarmed ahead of one.)
-local function newVoice(at: Instance, point: Vector3?): Voice
-	local sound = Instance.new("Sound")
-	sound.Volume = 0
-	local voice: Voice = { sound = sound, anchor = nil, place = at, token = nil, fade = nil }
-	if point ~= nil then
-		local anchor = Instance.new("Attachment")
-		anchor.Name = "OneShotAnchor"
-		anchor.WorldPosition = point
-		anchor.Parent = Workspace.Terrain
-		sound.Parent = anchor
-		voice.anchor = anchor
-	else
-		sound.Parent = at
-	end
-	sound.Ended:Connect(function()
-		release(voice, true)
-	end)
-	-- Its place removed from the game without being destroyed: a non-looped play can never end, so let it go. (A
-	-- loop is its handle's: its caller stops it.)
-	sound.AncestryChanged:Connect(function()
-		if voice.token ~= nil and not sound.Looped and not sound:IsDescendantOf(game) then
-			release(voice, false)
-		end
-	end)
-	-- Destroyed with its place (a character leaving, a pile popping): forget it, idle or playing.
-	sound.Destroying:Once(function()
-		local token = voice.token
-		if token ~= nil then
-			voice.token = nil
-			voices:finish(token)
-			playing[token] = nil
-		end
-		idle:remove(voice.place, voice)
-		placedLoops[sound] = nil
-	end)
-	return voice
-end
-
--- Starts a voice slot for `id`, stopping the oldest voice when the id is at its cap.
-local function claim(id: string, def: SoundTypes.SoundDef): number
-	local token, evicted = voices:start(id, def.maxConcurrent)
-	if evicted ~= nil then
-		local stop = playing[evicted]
-		if stop ~= nil then
-			counters.evicted += 1
-			stop()
-		end
-	end
-	return token
-end
-
--- Plays `id` on a voice at its place (an idle one re-pointed, else a new one). `handled`: a handle holds it, so an
--- eviction destroys it rather than keeping it for reuse.
-local function start(
-	id: string,
-	def: SoundTypes.SoundDef,
-	options: SoundTypes.PlayOptions?,
-	handled: boolean
-): (Voice, number)
-	local at = if options ~= nil then options.at else nil
-	local where, point = placeOf(at)
-	local current: Voice
-	local idleVoice = idle:take(where)
-	if idleVoice ~= nil then
-		counters.reused += 1
-		local anchor = idleVoice.anchor
-		if anchor ~= nil and point ~= nil then
-			anchor.WorldPosition = point
-		end
-		current = idleVoice
-	else
-		current = newVoice(where, point)
-		counters.created += 1
-	end
-	local scale = if options ~= nil and options.volumeScale ~= nil then options.volumeScale else 1
-	local pitchScale = if options ~= nil and options.pitchScale ~= nil then options.pitchScale else 1
-	local sound = current.sound
-	configure(sound, id, def, scale, pitchScale, placeFor(def, at))
-	sound.TimePosition = 0
-	if at ~= nil and def.looped == true and def.heardEverywhere ~= true and def.place == nil then
-		placedLoops[sound] = { group = def.group, bus = def.bus, at = at }
-	end
-
-	local token = claim(id, def)
-	current.token = token
-	local voice = current
-	playing[token] = function()
-		release(voice, not handled)
-	end
-	sound:Play()
-	counters.played += 1
-	if not sound.Looped then
-		guardLoad(sound, function()
-			return voice.token == token
-		end, function()
-			release(voice, false)
-		end)
-	end
-	return voice, token
 end
 
 -- Cancels a track's running fade.
@@ -677,15 +330,11 @@ local SoundServiceClient: SoundServiceClient = {
 		positional play is placed again.
 	]=]
 	setPlaces = function(_self, boxes, listener, fade)
-		placeBoxes = boxes
-		if listener ~= listenerPlace then
-			listenerPlace = listener
-			fadePlace(buildingGroups, "Building", fade or 0)
-			fadePlace(outsideGroups, "Outside", fade or 0)
-		end
+		SoundGroupTracker.setPlaces(boxes, listener, fade)
 		-- (A heardEverywhere or pinned loop is never in placedLoops.)
 		for sound, loop in placedLoops do
-			sound.SoundGroup = placeGroupFor(loop.group, loop.bus, SoundFormulas.placeOf(pointOf(loop.at), placeBoxes))
+			sound.SoundGroup =
+				placeGroupFor(loop.group, loop.bus, SoundFormulas.placeOf(pointOf(loop.at), SoundGroupTracker.boxes()))
 		end
 	end,
 
@@ -693,14 +342,14 @@ local SoundServiceClient: SoundServiceClient = {
 		The local player's place now (setPlaces); nil while nothing is placed (the hub, a layout with no grounds).
 	]=]
 	listener = function(_self)
-		return listenerPlace
+		return SoundGroupTracker.listener()
 	end,
 
 	--[=[
 		The place of `point` among the outdoor boxes (SoundFormulas.placeOf); nil without boxes.
 	]=]
 	placeAt = function(_self, point)
-		return SoundFormulas.placeOf(point, placeBoxes)
+		return SoundFormulas.placeOf(point, SoundGroupTracker.boxes())
 	end,
 
 	getState = function(_self)
@@ -718,7 +367,7 @@ local SoundServiceClient: SoundServiceClient = {
 			loops += 1
 		end
 		return {
-			listenerPlace = listenerPlace or "none",
+			listenerPlace = SoundGroupTracker.listener() or "none",
 			placedLoops = loops,
 			music = if music ~= nil then music.Name else "none",
 			ambience = layers,

@@ -252,6 +252,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 
 	-- Cleanup Crew: Footstep
 	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepAssets"] = "asset id pools; registers the footstep sounds at load (no decisions)",
+	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepBodyAssets"] = "asset ids; registers the jump, land and fall sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants"] = "static tuning and material map (no logic)",
 	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Footstep.Systems.FootstepEmitterSystem"] = "Instance/raycast/Sound shell (plant, gait and surface decisions specced in FootstepPlantFormulas, FootstepGaitFormulas, FootstepSurfaceUtils)",
