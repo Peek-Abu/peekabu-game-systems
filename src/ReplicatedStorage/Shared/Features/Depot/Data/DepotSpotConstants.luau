@@ -81,7 +81,7 @@ local DepotSpotConstants = {
 	STATIONS = table.freeze(STATIONS),
 	-- The bell's swing when it rings (DepotSpotRules.bellSwing): its parts with SWING_ATTRIBUTE swing about the
 	-- attachment PIVOT_NAME (on the bell's arm), DEGREES at most, dying down over SECONDS at FREQUENCY swings a second.
-	-- A gold ring wave puffs out from the bell (RING_*).
+	-- Its gold ring is DepotBellVfxSystem's (DepotBellFormulas).
 	BELL_SWING = table.freeze({
 		SWING_ATTRIBUTE = "DepotSwing",
 		PIVOT_NAME = "BellPivot",
@@ -89,9 +89,6 @@ local DepotSpotConstants = {
 		SECONDS = 1.6,
 		FREQUENCY = 2.4,
 		DAMPING = 2.6,
-		RING_SECONDS = 0.55,
-		RING_SIZE = 9,
-		RING_COLOR = Color3.fromRGB(255, 205, 80),
 	}),
 	-- The radio's music notes (DepotSpotRules.noteRate): notes a second on a station with music.
 	RADIO_NOTES = table.freeze({

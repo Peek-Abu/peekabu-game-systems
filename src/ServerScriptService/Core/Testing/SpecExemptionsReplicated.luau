@@ -107,6 +107,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Host.Net.HostEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Client.Features.Host.HostServiceClient"] = "ByteNet send shell (HostStore and HostSnapshotUtils are specced)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotSpotSystem"] = "ByteNet/scene-stack/Sound shell (the decisions are specced in DepotSpotRules and DepotStore)",
+	["ReplicatedStorage.Client.Features.Depot.Systems.DepotBellVfxSystem"] = "Instance/BillboardGui/RunService shell (the ring's shapes over time are the specced DepotBellFormulas)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotDriveBySystem"] = "CollectionService/RunService/Sound shell (road, timing and motion specced in DepotSpotRules)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotClerkSystem"] = "Instance/Animator shell (the fidget pool, the greet, the parcel height and hop are specced in DepotClerkRules)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotTopperSystem"] = "Instance/React-root shell (where toppers, pools and lanes go is the specced DepotTopperRules)",

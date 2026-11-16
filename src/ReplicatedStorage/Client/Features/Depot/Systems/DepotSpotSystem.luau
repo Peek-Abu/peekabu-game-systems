@@ -10,7 +10,7 @@
 	  every radio puffs music notes (DepotAssets.RADIO_NOTES, a flipbook) at the station's rate (none on a quiet one).
 
 	A ring of a shift bell (DepotEvents.Bell, to everyone) plays the bell sound at the bell, swings it (its DepotSwing parts
-	about its BellPivot attachment, DepotSpotRules.bellSwing; a local move) and puffs a gold ring wave with sparks.
+	about its BellPivot attachment, DepotSpotRules.bellSwing; a local move) and plays its gold ring (DepotBellVfxSystem).
 
 	Spec-exempt shell (ByteNet, scene stack, Sound, local Instance motion); the decisions are the specced DepotSpotRules and DepotStore.
 
@@ -22,12 +22,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
 local DepotEvents = require(ReplicatedStorage.Shared.Features.Depot.Net.DepotEvents)
 local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 local DepotSpotRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotSpotRules)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
+local DepotBellVfxSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotBellVfxSystem)
 local DepotClerkSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotClerkSystem)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
@@ -44,9 +44,8 @@ local SWING = DepotSpotConstants.BELL_SWING
 local RADIO_TOAST_SECONDS = 2.5
 -- Studs: a ring's position is matched to the bell standing this close to it.
 local BELL_MATCH = 8
--- The ring wave: this many glowing dashes round a circle, and this many sparks flying off.
-local RING_DASHES = 14
-local RING_SPARKS = 6
+-- The bell's cup, where its ring starts, sits this far under its BellPivot.
+local CUP_BELOW_PIVOT = Vector3.new(0, 0.6, 0)
 
 -- The bell that rang at `at`: the tagged bell spot whose pivot is nearest (within BELL_MATCH).
 local function bellAt(at: Vector3): Instance?
@@ -105,50 +104,6 @@ local function swing(bell: Instance)
 			part.CFrame = base * offset
 		end
 		swinging[bell] = nil
-	end)
-end
-
--- A gold ring wave from the bell's cup: glowing dashes spreading out flat and fading, and a few sparks flying off.
-local function ringWave(at: Vector3)
-	local folder = Instance.new("Folder")
-	folder.Name = "BellRing"
-	local dashes: { { part: Part, angle: number } } = {}
-	for index = 1, RING_DASHES + RING_SPARKS do
-		local spark = index > RING_DASHES
-		local part = Instance.new("Part")
-		part.Anchored = true
-		part.CanCollide = false
-		part.CanQuery = false
-		part.CanTouch = false
-		part.CastShadow = false
-		part.Material = Enum.Material.Neon
-		part.Color = SWING.RING_COLOR
-		part.Shape = if spark then Enum.PartType.Ball else Enum.PartType.Block
-		part.Size = if spark then Vector3.new(0.25, 0.25, 0.25) else Vector3.new(0.9, 0.12, 0.25)
-		part.Parent = folder
-		local angle = if spark then math.random() * math.pi * 2 else (index / RING_DASHES) * math.pi * 2
-		table.insert(dashes, { part = part, angle = angle })
-	end
-	folder.Parent = Workspace
-	task.spawn(function()
-		local started = os.clock()
-		while true do
-			local k = math.clamp((os.clock() - started) / SWING.RING_SECONDS, 0, 1)
-			local ease = 1 - (1 - k) ^ 3
-			for index, dash in dashes do
-				local spark = index > RING_DASHES
-				local radius = (if spark then 1.4 else 1) * ease * SWING.RING_SIZE / 2 + 0.6
-				local lift = if spark then ease * 2.5 - ease * ease * 1.5 else 0
-				local offset = Vector3.new(math.cos(dash.angle) * radius, lift, math.sin(dash.angle) * radius)
-				dash.part.CFrame = CFrame.new(at + offset) * CFrame.Angles(0, -dash.angle + math.pi / 2, 0)
-				dash.part.Transparency = k
-			end
-			if k >= 1 then
-				break
-			end
-			RunService.RenderStepped:Wait()
-		end
-		folder:Destroy()
 	end)
 end
 
@@ -236,11 +191,11 @@ function DepotSpotSystem.start(): () -> ()
 		if bell ~= nil then
 			swing(bell)
 			local pivot = bell:FindFirstChild(SWING.PIVOT_NAME, true)
-			ringWave(
-				if pivot ~= nil and pivot:IsA("Attachment") then pivot.WorldPosition - Vector3.new(0, 1.2, 0) else at
+			DepotBellVfxSystem.play(
+				if pivot ~= nil and pivot:IsA("Attachment") then pivot.WorldPosition - CUP_BELOW_PIVOT else at
 			)
 		else
-			ringWave(at)
+			DepotBellVfxSystem.play(at)
 		end
 	end)
 	local emitters: { [Instance]: ParticleEmitter } = {}

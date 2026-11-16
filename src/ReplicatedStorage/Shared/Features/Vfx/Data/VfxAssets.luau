@@ -33,5 +33,10 @@ return table.freeze({
 		ring = "rbxassetid://98059630359923",
 		-- A shine bar for the clean sweep.
 		streak = "rbxassetid://140215498885808",
+		-- Launch touch-ups (2026-11-16), full colour with the edge baked in (make_launch_tex.py, see the launch VFX
+		-- notes): the bell's gold ring (deep-gold edges) and gold sound marks.
+		-- LOCAL STUDIO PATHS until the owner's upload OK: swap for the Icey Labs image ids before pushing.
+		bellWave = "rbxasset://vfxlaunch/bell_wave.png",
+		bellMarks = "rbxasset://vfxlaunch/bell_arcs.png",
 	}),
 })
