@@ -84,6 +84,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.NpcClear"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AbilityNoCooldown"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AbilityReset"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.EmployeeOutfitTest"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.EmployeeStatSet"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.DailyRewardReset"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.OccupantWork"] = "Cmdr command definition (server impl is specced)",
