@@ -34,8 +34,9 @@ local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inv
 type Offer = ShopTypes.Offer
 type Owns = (id: string) -> boolean
 
--- What the player has, and `now`: the server time prices are worked out at (sales; nil: regular prices only).
-export type Balances = { gleam: number, credits: number, now: number? }
+-- What the player has, and `now`: the server time prices are worked out at (sales; nil: regular prices only). `acorns`:
+-- a live event's money (absent reads 0).
+export type Balances = { gleam: number, credits: number, acorns: number?, now: number? }
 
 -- A game pass card: what its button says follows `state` (loading the price, on sale, owned, not for sale).
 export type PassState = "loading" | "buy" | "owned" | "unavailable"
@@ -155,9 +156,17 @@ local VM = {}
 
 VM.SCENE = "shop"
 
--- The Shop's tabs; Passes shows greyed ("Soon") until a game pass is registered (`hasPasses`).
-function VM.tabs(hasPasses: boolean): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
-	return {
+-- The Shop's tabs; Passes shows greyed ("Soon") until a game pass is registered (`hasPasses`). A live limited-time
+-- event's tab comes first (owner Y1).
+function VM.tabs(
+	hasPasses: boolean,
+	event: { short: string }?
+): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
+	local tabs: { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } } = {}
+	if event ~= nil then
+		table.insert(tabs, { id = "event", text = event.short, icon = "acorns", soon = false })
+	end
+	local fixed: { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } } = {
 		{ id = "featured", text = "Featured", icon = "featured", soon = false },
 		{ id = "hires", text = "Hire", icon = "jobs", soon = false },
 		{ id = "skins", text = "Skins", icon = "pippaSkins", soon = false },
@@ -165,6 +174,10 @@ function VM.tabs(hasPasses: boolean): { { id: string, text: string, icon: UIAsse
 		{ id = "lockers", text = "Lockers", icon = "locker", soon = false },
 		{ id = "passes", text = "Passes", soon = not hasPasses },
 	}
+	for _, entry in fixed do
+		table.insert(tabs, entry)
+	end
+	return tabs
 end
 
 local function main(offer: Offer): CosmeticTypes.Item?
@@ -193,7 +206,12 @@ local function bundleEmployee(bundle: CosmeticTypes.Bundle): string?
 end
 
 local function balanceOf(offer: Offer, balances: Balances): number
-	return if offer.currency == "gleam" then balances.gleam else balances.credits
+	if offer.currency == "gleam" then
+		return balances.gleam
+	elseif offer.currency == "acorns" then
+		return balances.acorns or 0
+	end
+	return balances.credits
 end
 
 local function lineOf(item: CosmeticTypes.Item): string
@@ -266,7 +284,8 @@ end
 
 -- How a short player pays the rest in Gleam (ShopTopUpRules); nil for a Gleam price or when not short.
 local function topUpOf(offer: Offer, balances: Balances): ShopTopUpRules.Plan?
-	if offer.currency == "gleam" then
+	-- Gleam never pays the rest of a Gleam price, or of an event's money (earned only, owner R2).
+	if offer.currency == "gleam" or offer.currency == "acorns" then
 		return nil
 	end
 	return ShopTopUpRules.plan(offer.currency, offer.price, balanceOf(offer, balances))

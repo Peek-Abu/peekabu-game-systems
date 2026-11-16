@@ -31,6 +31,8 @@ export type Event = {
 	id: string,
 	-- The player-facing name.
 	name: string,
+	-- One short word for the Shop tab and the hub chip.
+	short: string,
 	-- The event's money: a slot currency that only this event pays.
 	currency: CurrencyConstants.CurrencyType,
 	-- UTC unix seconds; live from `starts` up to (not including) `ends`.

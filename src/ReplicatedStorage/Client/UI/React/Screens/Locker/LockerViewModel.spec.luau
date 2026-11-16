@@ -40,6 +40,33 @@ return function()
 		},
 	}
 
+	describe("the event's Locker", function()
+		local HARVEST = LockerConstants.LOCKERS.harvest
+
+		it("lists it after the others only while its event is live", function()
+			local function ids(list)
+				local out = {}
+				for _, locker in list do
+					table.insert(out, locker.id)
+				end
+				return table.concat(out, ",")
+			end
+			expect(ids(VM.lockers(nil))).to.equal("gloom,gleam")
+			expect(ids(VM.lockers("harvest"))).to.equal("gloom,gleam,harvest")
+		end)
+
+		it("opens with acorns from the acorn balance, and says so in words", function()
+			local state = { keys = {}, pity = {}, opened = 0 }
+			local card = VM.card(HARVEST, state, { gloom = 0, gleam = 0, acorns = HARVEST.keyPrice }, false)
+			expect(card.button.kind).to.equal("buy")
+			expect(card.currency).to.equal("acorns")
+			local short = VM.card(HARVEST, state, { gloom = 9999, gleam = 9999, acorns = 0 }, false)
+			expect(short.button.kind).to.equal("short")
+			expect(short.button.enabled).to.equal(false)
+			expect(VM.resultText("not on")).to.equal("This Locker is closed now.")
+		end)
+	end)
+
 	describe("cards", function()
 		it("shows live pity remaining and uses a held key before asking for currency", function()
 			local pityAt = LockerRules.odds(GLOOM).pityAt

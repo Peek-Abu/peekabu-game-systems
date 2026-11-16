@@ -86,6 +86,8 @@ export type LockerServiceClient = {
 	stop: (self: LockerServiceClient) -> (),
 	requestOpen: (self: LockerServiceClient, lockerId: LockerId) -> (),
 	requestBuy: (self: LockerServiceClient, lockerId: LockerId, itemId: string) -> (),
+	-- Buys one key to `lockerId` with the live event's money (the answer comes back as a Refused result).
+	requestKey: (self: LockerServiceClient, lockerId: LockerId) -> (),
 	finishOpening: (self: LockerServiceClient) -> (),
 }
 
@@ -158,6 +160,14 @@ local LockerServiceClient: LockerServiceClient = {
 		end
 		LockerStore.setResult(nil)
 		LockerEvents.packets.BuyRequest.send(LockerRequestRules.buildBuy(lockerId, itemId))
+	end,
+
+	requestKey = function(_self, lockerId)
+		if LockerRules.get(lockerId) == nil then
+			return
+		end
+		LockerStore.setResult(nil)
+		LockerEvents.packets.KeyRequest.send(LockerRequestRules.buildKey(lockerId))
 	end,
 
 	finishOpening = function(_self)

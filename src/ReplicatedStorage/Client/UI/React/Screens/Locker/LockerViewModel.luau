@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local Locker = ReplicatedStorage.Shared.Features.Locker
+local LockerConstants = require(Locker.Data.LockerConstants)
 local LockerRules = require(Locker.Rules.LockerRules)
 local LockerTypes = require(Locker.Data.LockerTypes)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
@@ -22,7 +23,8 @@ type LockerId = LockerTypes.LockerId
 type Rarity = CosmeticTypes.Rarity
 type Owns = (id: string) -> boolean
 
-export type Balances = { gloom: number, gleam: number }
+-- `acorns`: a live event's money (absent reads 0).
+export type Balances = { gloom: number, gleam: number, acorns: number? }
 
 export type ButtonKind = "key" | "buy" | "short" | "restricted" | "empty"
 
@@ -154,7 +156,24 @@ local VM = {
 }
 
 local function currencyWord(currency: LockerTypes.Currency): string
-	return if currency == "gleam" then "Gleam" else "Gloom"
+	if currency == "gleam" then
+		return "Gleam"
+	elseif currency == "acorns" then
+		return "acorns"
+	end
+	return "Gloom"
+end
+
+-- The Lockers to show, in order: an event's Locker only while its event (`live`, its id) is live.
+function VM.lockers(live: string?): { Locker }
+	local list: { Locker } = {}
+	for _, id in LockerConstants.ORDER do
+		local locker = LockerConstants.BY_ID[id]
+		if locker ~= nil and (locker.event == nil or locker.event == live) then
+			table.insert(list, locker)
+		end
+	end
+	return list
 end
 
 local function formatPercent(chance: number): string
@@ -189,7 +208,10 @@ function VM.card(
 	local pity = state.pity[locker.id] or 0
 	local isRestricted = locker.paidRandom and restricted
 	local priceText = ToonStyleViewModel.grouped(locker.keyPrice)
-	local balance = if locker.currency == "gleam" then balances.gleam else balances.gloom
+	local balance = if locker.currency == "gleam"
+		then balances.gleam
+		elseif locker.currency == "acorns" then balances.acorns or 0
+		else balances.gloom
 
 	local pityText = "Nothing inside yet."
 	if isRestricted then
@@ -474,6 +496,8 @@ function VM.resultText(reason: string): string?
 		return "Hold on a second!"
 	elseif reason == "locked during a shift" then
 		return "Lockers open at the depot."
+	elseif reason == "not on" then
+		return "This Locker is closed now."
 	end
 	return "That didn't work. Try again!"
 end

@@ -452,6 +452,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Event.Data.EventTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Event.Data.EventConstants"] = "static names and tuning (no logic)",
 	["ReplicatedStorage.Shared.Features.Event.Net.EventEvents"] = "ByteNet packet definitions (no logic)",
+	["ReplicatedStorage.Client.Features.Event.EventServiceClient"] = "ByteNet listener and clock shell (EventUtils and EventStore are specced)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopEventPanel"] = "presentational React component (event tab specced in ShopEventViewModel; story in ShopEventPanel.story)",
 }
 
 return table.freeze(EXEMPT_MODULES)

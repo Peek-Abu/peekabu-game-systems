@@ -17,6 +17,7 @@ return function()
 	it("gives every event real dates, a real money and a real conversion", function()
 		for _, event in EventRegistry.all() do
 			expect(event.ends > event.starts).to.equal(true)
+			expect(#event.name > 0 and #event.short > 0 and #event.short <= 10).to.equal(true)
 			expect(CurrencyConstants.isValidCurrencyType(event.currency)).to.equal(true)
 			expect(CurrencyConstants.isValidCurrencyType(event.convertTo)).to.equal(true)
 			expect(event.convertTo).never.to.equal(event.currency)

@@ -112,6 +112,32 @@ return function()
 		end)
 	end)
 
+	describe("an event's offers", function()
+		local HARVEST = require(ReplicatedStorage.Shared.Features.Event.Data.EventRegistry).get("harvest")
+
+		it("puts the live event's tab first, and no event tab without one", function()
+			local tabs = VM.tabs(false, HARVEST)
+			expect(tabs[1].id).to.equal("event")
+			expect(tabs[1].text).to.equal(HARVEST.short)
+			expect(tabs[1].icon).to.equal("acorns")
+			for _, entry in VM.tabs(false, nil) do
+				expect(entry.id).never.to.equal("event")
+			end
+		end)
+
+		it("prices an event item in acorns, from the acorn balance, and never offers Gleam for the rest", function()
+			local pack = ShopRegistry.get("HarvestPack")
+			local card = VM.card(pack, owner(), { gleam = 0, credits = 0, acorns = pack.price })
+			expect(card.currency).to.equal("acorns")
+			expect(card.state).to.equal("afford")
+			local short = VM.button(pack, owner(), { gleam = 99999, credits = 99999, acorns = 1 })
+			expect(short.kind).to.equal("short")
+			expect(short.enabled).to.equal(false)
+			expect(short.pack).to.equal(nil)
+			expect(VM.button(pack, owner(), { gleam = 0, credits = 0, acorns = pack.price }).kind).to.equal("buy")
+		end)
+	end)
+
 	describe("vacuums", function()
 		it("sells a vacuum for every employee, shown as the vacuum", function()
 			local card = VM.card(ShopRegistry.get("Vacuum.BrassBellows"), owner(), rich)

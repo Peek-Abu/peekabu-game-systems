@@ -21,6 +21,7 @@ local EVENTS: { Event } = {
 	{
 		id = "harvest",
 		name = "Thanksgiving Harvest",
+		short = "Harvest",
 		currency = "acorns",
 		-- 2026-11-26 05:00 UTC (12:00 am ET) to 2026-12-21 05:00 UTC (the end of Sun 20 Dec, ET).
 		starts = 1795669200,

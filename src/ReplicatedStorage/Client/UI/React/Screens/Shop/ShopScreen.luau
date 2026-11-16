@@ -45,6 +45,8 @@ local MarketplaceConstants = require(ReplicatedStorage.Shared.Features.Marketpla
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
+local LockerServiceClient = require(ReplicatedStorage.Client.Features.Locker.LockerServiceClient)
+local EventServiceClient = require(ReplicatedStorage.Client.Features.Event.EventServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -73,6 +75,8 @@ local ShopPassesPanel = require(script.Parent.ShopPassesPanel)
 local DealBanner = require(script.Parent.Parent.Deal.DealBanner)
 local DealViewModel = require(script.Parent.Parent.Deal.DealViewModel)
 local ShopProductPanel = require(script.Parent.ShopProductPanel)
+local ShopEventPanel = require(script.Parent.ShopEventPanel)
+local EventVM = require(script.Parent.ShopEventViewModel)
 local VM = require(script.Parent.ShopViewModel)
 
 local e = React.createElement
@@ -404,6 +408,8 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local result = ReactCharm.useAtom(ShopStore.result)
 	local lockerOpening = ReactCharm.useAtom(LockerStore.opening)
 	local lockerViewing = ReactCharm.useAtom(LockerStore.viewing)
+	-- The last Locker answer (an event key buy's refusal shows on the event tab).
+	local keyResult = ReactCharm.useAtom(LockerStore.result)
 	local passInfo = ReactCharm.useAtom(ShopStore.passInfo)
 	local bundleInfo = ReactCharm.useAtom(ShopStore.bundleInfo)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
@@ -420,7 +426,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		setSlot(index)
 	end
 	local passKeys = MarketplaceRegistry.passKeys()
-	local tab, setTab = React.useState(props.tab or "featured")
+	-- A live limited-time event (never in a preview): its tab comes first and the Shop opens on it (owner Y1).
+	local liveEvent = if props.preview ~= nil then nil else EventServiceClient:live()
+	local tab, setTab = React.useState(props.tab or (if liveEvent ~= nil then "event" else "featured"))
 	-- The carousel moves on by itself while the Featured tab is up with no product page open.
 	local carouselDeps: { unknown } = { slot, picked, tab, storeProduct ~= nil }
 	React.useEffect(function(): () -> ()
@@ -494,6 +502,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		else {
 			gleam = premium.balance,
 			credits = CurrencyUtils.getCurrencyAmount(currency, "credits"),
+			acorns = CurrencyUtils.getCurrencyAmount(currency, "acorns"),
 			-- Sales run on the server's clock.
 			now = now,
 		}
@@ -539,12 +548,12 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	end
 
 	local tabs: { ToonMenuBar.Tab } = {}
-	for _, entry in VM.tabs(#passKeys > 0) do
+	for _, entry in VM.tabs(#passKeys > 0, liveEvent) do
 		table.insert(tabs, { id = entry.id, text = entry.text, icon = entry.icon, soon = entry.soon })
 	end
 	local offer = if productId ~= nil then ShopRegistry.get(productId) else nil
 	local backText = "Back"
-	for _, entry in VM.tabs(#passKeys > 0) do
+	for _, entry in VM.tabs(#passKeys > 0, liveEvent) do
 		if entry.id == tab then
 			backText = entry.text
 		end
@@ -685,6 +694,33 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				}),
 			})
 		end
+	elseif tab == "event" and liveEvent ~= nil then
+		local acorns = balances.acorns or 0
+		-- Live outside its dates: the admin preview.
+		local previewed = now < liveEvent.starts or now >= liveEvent.ends
+		body = e(ShopEventPanel, {
+			header = EventVM.header(liveEvent, now, previewed, acorns),
+			cards = EventVM.offers(liveEvent, owns, balances),
+			locker = EventVM.locker(liveEvent),
+			keys = EventVM.keys(liveEvent, acorns),
+			note = if keyResult ~= nil then EventVM.resultText(keyResult.reason) else nil,
+			width = content.width,
+			height = content.height,
+			headingSize = layout.headingSize,
+			textSize = size,
+			gap = gap,
+			phone = phone,
+			renderCard = function(card: VM.OfferCard, cellSize: Vector2, order: number): React.ReactNode
+				return offerCard(card, cellSize, phone, order, open)
+			end,
+			onLocker = function(id)
+				LockerStore.select(id)
+				setTab("lockers")
+			end,
+			onKey = function(id)
+				LockerServiceClient:requestKey(id)
+			end,
+		})
 	elseif tab == "skins" then
 		local chips: Nodes = {
 			list = e("UIListLayout", {
@@ -779,9 +815,10 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		local gloom = if preview ~= nil then preview.credits else CurrencyUtils.getCurrencyAmount(currency, "gloom")
 		body = e(LockerPanel, {
 			owns = owns,
-			balances = { gloom = gloom, gleam = balances.gleam },
+			balances = { gloom = gloom, gleam = balances.gleam, acorns = balances.acorns },
 			layout = layout,
 			preview = preview ~= nil,
+			live = if liveEvent ~= nil then liveEvent.id else nil,
 			onGetGleam = function()
 				setTab("gleam")
 				if preview == nil then

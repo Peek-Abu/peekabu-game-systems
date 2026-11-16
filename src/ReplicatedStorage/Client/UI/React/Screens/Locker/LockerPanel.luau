@@ -51,6 +51,8 @@ export type LockerPanelProps = {
 	layout: InventoryViewModel.Layout,
 	preview: boolean,
 	onGetGleam: () -> (),
+	-- The live limited-time event's id: its Locker shows as a third card while it is live.
+	live: string?,
 }
 
 local function itemArt(item: VM.InsideItem): React.ReactNode
@@ -318,16 +320,16 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 	local layout, content, phone, gap, size =
 		props.layout, props.layout.content, props.layout.phone, props.layout.gap, props.layout.textSize
 
-	local cards: { VM.LockerCard } = {
-		VM.card(LockerConstants.LOCKERS.gloom, state, props.balances, restricted),
-		VM.card(LockerConstants.LOCKERS.gleam, state, props.balances, restricted),
-	}
+	local cards: { VM.LockerCard } = {}
+	for _, locker in VM.lockers(props.live) do
+		table.insert(cards, VM.card(locker, state, props.balances, restricted))
+	end
 	local activeLocker = LockerRules.get(selected) or LockerConstants.LOCKERS.gloom
 	local inside = VM.inside(activeLocker, props.owns, props.balances, restricted)
 	local note = if result ~= nil and result.locker == selected then VM.resultText(result.reason) else nil
 
 	local leftWidth = math.floor(content.width * (if phone then 0.46 else 0.44))
-	local cardHeight = math.floor((content.height - gap) / 2)
+	local cardHeight = math.floor((content.height - gap * (#cards - 1)) / #cards)
 	local leftNodes: Nodes =
 		{ list = e("UIListLayout", { Padding = UDim.new(0, gap), SortOrder = Enum.SortOrder.LayoutOrder }) }
 	for index, card in cards do
