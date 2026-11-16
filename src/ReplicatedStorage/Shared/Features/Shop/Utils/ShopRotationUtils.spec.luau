@@ -72,6 +72,23 @@ return function()
 		expect(#ShopRotationUtils.flags(offer("C", "picks", nil, nil), NOON)).to.equal(0)
 	end)
 
+	it(
+		"sells a limited-time event's offer only while that event is live (dates or preview), never in the rotation",
+		function()
+			local harvest = offer("H", "event", NOON - DAY, NOON + DAY)
+			harvest.event = "harvest"
+			expect(ShopRotationUtils.available(harvest, NOON, "harvest")).to.equal(true)
+			expect(ShopRotationUtils.available(harvest, NOON, nil)).to.equal(false)
+			expect(ShopRotationUtils.available(harvest, NOON, "winter")).to.equal(false)
+			-- A previewed event sells outside its dates.
+			expect(ShopRotationUtils.available(harvest, NOON + 9 * DAY, "harvest")).to.equal(true)
+			local live = ShopRotationUtils.live({ harvest }, NOON)
+			expect(live.featured).to.equal(nil)
+			expect(#live.picks).to.equal(0)
+			expect(#live.more).to.equal(0)
+		end
+	)
+
 	it("lists the rest of the featured pool after today's banner, in turn order, for the banner carousel", function()
 		local pool = { offer("a", "featured"), offer("b", "featured"), offer("c", "featured"), offer("p", "picks") }
 		local live = ShopRotationUtils.live(pool, NOON)

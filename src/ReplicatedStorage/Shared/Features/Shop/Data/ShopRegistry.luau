@@ -5,8 +5,9 @@
 	catalogue price, and every bundle (CosmeticBundleRegistry) is one offer of all its items at the bundle's price.
 	Employees are always listed. Bundles, Legendary skins without a bundle and vacuum skins take turns in the Featured
 	banner (owner, 2026-11-13: promote the bundle, not the skin alone; a skin with no bundle is still promoted);
-	everything else, a bundled skin sold alone included, rotates through Today's picks (ShopRotationUtils). Event offers (dates) and real sales (`was`) are added
-	here when the owner runs one; there are none yet. It also registers the Gleam bundles' developer products with the
+	everything else, a bundled skin sold alone included, rotates through Today's picks (ShopRotationUtils). A limited-time
+	event's priced item (`source = "event"`) is one offer in the event's money (EventRegistry), in the event pool, sold
+	only while the event is live. Real sales (`was`) are added here when the owner runs one; there are none yet. It also registers the Gleam bundles' developer products with the
 	Marketplace (MarketplaceRegistry) at load.
 
 	@class ShopRegistry
@@ -17,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticBundleRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
+local EventRegistry = require(ReplicatedStorage.Shared.Features.Event.Data.EventRegistry)
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
@@ -46,6 +48,24 @@ for _, item in CosmeticRegistry.all() do
 			currency = source,
 			price = price,
 			pool = poolOf(item),
+		})
+		table.insert(offers, offer)
+		byId[item.id] = offer
+	end
+	-- A limited-time event's item: sold for the event's money in the event's own tab, only while it is live.
+	local eventId = item.event
+	local event = if source == "event" and eventId ~= nil then EventRegistry.get(eventId) else nil
+	if event ~= nil and price ~= nil and item.kind ~= "sticker" then
+		local pool: ShopTypes.Pool = "event"
+		local offer: Offer = table.freeze({
+			id = item.id,
+			items = table.freeze({ item.id }),
+			currency = event.currency,
+			price = price,
+			pool = pool,
+			starts = event.starts,
+			ends = event.ends,
+			event = event.id,
 		})
 		table.insert(offers, offer)
 		byId[item.id] = offer

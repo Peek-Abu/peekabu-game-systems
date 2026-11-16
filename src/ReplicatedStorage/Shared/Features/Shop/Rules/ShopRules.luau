@@ -1,6 +1,7 @@
 --!strict
 --[=[
-	ShopRules: whether a player may buy an offer now: it is on sale (inside its dates), they don't already own
+	ShopRules: whether a player may buy an offer now: it is on sale (inside its dates; an event's offer while `live`, the
+	live event's id, is its event), they don't already own
 	everything it grants (owning a bundled extra is fine: the rest is still new), and their balance in the offer's
 	currency covers the price. The server runs the same check inside the purchase; the client uses it to draw the
 	button.
@@ -30,9 +31,10 @@ function ShopRules.check(
 	offer: ShopTypes.Offer,
 	owns: (id: string) -> boolean,
 	balance: number,
-	now: number
+	now: number,
+	live: string?
 ): (boolean, Refusal?)
-	if not ShopRotationUtils.available(offer, now) then
+	if not ShopRotationUtils.available(offer, now, live) then
 		return false, "not on sale"
 	end
 	if ShopRules.owned(offer, owns) then

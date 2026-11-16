@@ -28,6 +28,7 @@ export type ToonIcon =
 	"abilityLetsGo"
 	| "abilityPottedPlant"
 	| "abilitySpotIt"
+	| "acorns"
 	| "bell"
 	| "brambleCalm"
 	| "brambleHunt"
@@ -141,6 +142,9 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	-- gift box.
 	shop = "rbxassetid://78344221274424",
 	stickers = "rbxassetid://114382938678176",
+	-- The Thanksgiving event's acorn (so-event): no image until the owner OKs the rendered acorn icon; the number shows
+	-- alone until then.
+	acorns = "",
 	credits = "rbxassetid://120886772987647", -- the Credits ticket (2026-10-21, decal 72265330733611)
 	gleam = "rbxassetid://138856527532184", -- the premium Gleam crystal (2026-10-21, decal 98003345456608)
 	globe = "rbxassetid://105862507048588",

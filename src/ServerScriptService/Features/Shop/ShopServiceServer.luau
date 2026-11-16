@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	ShopServiceServer: runs Shop purchases. `buy(userId, offerId)` checks the offer exists, the player is not in a
-	shift, and (ShopRules) it is on sale and not already owned; then ONE PlayerData transaction spends the price (Gleam
+	shift, and (ShopRules) it is on sale (an event's offer while EventServiceServer:live() is its event) and not already
+	owned; then ONE PlayerData transaction spends the price (Gleam
 	through MarketplaceServiceServer:premiumOp, Credits through CurrencyServiceServer:currencyOp; a player short on
 	Credits who said yes to paying the rest in Gleam pays both, ShopTopUpRules) and grants the items with their bundles
 	(CosmeticServiceServer:grantOps). `payOps` gives any other purchase the same payment. Either all of it happens or none of it: a
@@ -38,6 +39,7 @@ local ShopTypes = require(Shop.Data.ShopTypes)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
 local DepotServiceServer = require(ServerScriptService.Features.Depot.DepotServiceServer)
+local EventServiceServer = require(ServerScriptService.Features.Event.EventServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
@@ -158,6 +160,9 @@ local function payOpsImpl(
 		return paySlot(userId, "credits", price, agreedGleam)
 	elseif currency == "gloom" then
 		return paySlot(userId, "gloom", price, agreedGleam)
+	elseif currency == "acorns" then
+		-- An event's money is earned only (owner R2): Gleam never pays the rest.
+		return paySlot(userId, "acorns", price, 0)
 	end
 	return payGleam(userId, price)
 end
@@ -183,14 +188,20 @@ local function buyImpl(userId: number, offerId: string, agreedGleam: number, see
 	if seen ~= nil and offer.price > seen then
 		return false, "price changed"
 	end
-	local balance = if offer.currency == "gleam"
-		then MarketplaceServiceServer:getPremium(userId)
-		else CurrencyServiceServer:getCurrencyAmount(userId, "credits")
+	-- Gleam is the account's premium balance; anything else is a slot currency (Credits, an event's money).
+	local slotCurrency: CurrencyConstants.CurrencyType? = CurrencyConstants.toCurrencyType(offer.currency)
+	local balance: number?
+	if slotCurrency ~= nil then
+		balance = CurrencyServiceServer:getCurrencyAmount(userId, slotCurrency)
+	else
+		balance = MarketplaceServiceServer:getPremium(userId)
+	end
 	if balance == nil then
 		return false, "no profile loaded"
 	end
+	local event = EventServiceServer:live()
 	-- Short is not the end: Gleam may pay the rest (payOpsImpl).
-	local allowed, refusal = ShopRules.check(offer, owns, balance, os.time())
+	local allowed, refusal = ShopRules.check(offer, owns, balance, os.time(), if event ~= nil then event.id else nil)
 	if not allowed and refusal ~= "short" then
 		return false, refusal
 	end
@@ -306,6 +317,7 @@ local ShopServiceServer: ShopServiceServer = {
 		"CosmeticServiceServer",
 		"CurrencyServiceServer",
 		"MarketplaceServiceServer",
+		"EventServiceServer",
 	},
 
 	init = function(_self)

@@ -2,7 +2,7 @@
 --[=[
 	ShopRotationUtils: which offers the Shop shows at a UTC time, the same on every server: the day number (counted
 	from the rotation hour) seeds the choice, so the Featured banner takes turns through the featured pool and Today's
-	picks are a shuffled handful of the picks pool. `more` lists the rest of the featured pool for the banner carousel. Event offers count only inside their dates. Pure.
+	picks are a shuffled handful of the picks pool. `more` lists the rest of the featured pool for the banner carousel. Dated offers count only inside their dates; a limited-time event's offers never rotate (they live in the event's tab, sold while the event is live). Pure.
 
 	@class ShopRotationUtils
 ]=]
@@ -21,7 +21,12 @@ function ShopRotationUtils.day(now: number): number
 	return math.floor((now - ShopConstants.ROTATION_HOUR_UTC * 3600) / ShopConstants.DAY)
 end
 
-function ShopRotationUtils.available(offer: Offer, now: number): boolean
+-- `live`: the live limited-time event's id (EventUtils.live), nil when none. An event's offer is sold exactly while its
+-- event is live (an admin preview included), whatever the clock says.
+function ShopRotationUtils.available(offer: Offer, now: number, live: string?): boolean
+	if offer.event ~= nil then
+		return offer.event == live
+	end
 	local starts, ends = offer.starts, offer.ends
 	if starts ~= nil and now < starts then
 		return false
@@ -59,7 +64,7 @@ function ShopRotationUtils.live(offers: { Offer }, now: number): ShopTypes.LiveS
 	local featuredPool: { Offer } = {}
 	local picksPool: { Offer } = {}
 	for _, offer in offers do
-		if ShopRotationUtils.available(offer, now) then
+		if offer.event == nil and ShopRotationUtils.available(offer, now) then
 			if offer.pool == "featured" then
 				table.insert(featuredPool, offer)
 			elseif offer.pool == "picks" then

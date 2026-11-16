@@ -2,13 +2,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticBundleRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
+local EventRegistry = require(ReplicatedStorage.Shared.Features.Event.Data.EventRegistry)
 local ShopRegistry = require(script.Parent.ShopRegistry)
 
 return function()
 	it("sells every priced Credits or Gleam item in the catalogue, at its catalogue price", function()
 		local count = 0
 		for _, item in CosmeticRegistry.all() do
-			local sold = (item.source == "credits" or item.source == "gleam")
+			local sold = (item.source == "credits" or item.source == "gleam" or item.source == "event")
 				and item.price ~= nil
 				and item.kind ~= "sticker"
 			local offer = ShopRegistry.get(item.id)
@@ -16,13 +17,32 @@ return function()
 				count += 1
 				expect(offer).to.be.ok()
 				expect(offer.price).to.equal(item.price)
-				expect(offer.currency).to.equal(item.source)
+				if item.source ~= "event" then
+					expect(offer.currency).to.equal(item.source)
+				end
 				expect(offer.items[1]).to.equal(item.id)
 			else
 				expect(offer).to.equal(nil)
 			end
 		end
 		expect(#ShopRegistry.all()).to.equal(count + #CosmeticBundleRegistry.all())
+	end)
+
+	it("sells every priced event item in its event's money, in the event's own pool, flagged by its dates", function()
+		local found = 0
+		for _, item in CosmeticRegistry.all() do
+			if item.source == "event" and item.kind ~= "sticker" then
+				found += 1
+				local event = EventRegistry.get(item.event)
+				local offer = ShopRegistry.get(item.id)
+				expect(offer.event).to.equal(event.id)
+				expect(offer.currency).to.equal(event.currency)
+				expect(offer.pool).to.equal("event")
+				expect(offer.starts).to.equal(event.starts)
+				expect(offer.ends).to.equal(event.ends)
+			end
+		end
+		expect(found > 0).to.equal(true)
 	end)
 
 	it("sells every bundle as one offer of all its items, at the bundle's price, in the Featured banner", function()

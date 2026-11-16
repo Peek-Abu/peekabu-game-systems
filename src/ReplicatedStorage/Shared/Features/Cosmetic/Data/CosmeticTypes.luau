@@ -42,8 +42,11 @@ export type Item = {
 	source: Source,
 	-- The employee it belongs to; nil = works on every employee (shared idles, sticker packs, stickers, vacuums).
 	employee: string?,
-	-- In the source's currency (Credits for `credits`, Gleam for `gleam`); nil when it can't be bought.
+	-- In the source's currency (Credits for `credits`, Gleam for `gleam`, the event's money for `event`); nil when it
+	-- can't be bought.
 	price: number?,
+	-- A limited-time event's item (`source = "event"`): the EventRegistry id. Sold only while that event is live.
+	event: string?,
 	-- A real sale on it (the regular price is `price`).
 	sale: Sale?,
 	-- How many colour styles a skin has (1 when nil).

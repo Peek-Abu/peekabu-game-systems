@@ -32,7 +32,8 @@ return function()
 				end
 			end
 			for _, item in CosmeticStickerRegistry do
-				if item.kind == "stickerPack" then
+				-- An event's pack is priced in the event's money (EventRegistry), not by the Gleam table.
+				if item.kind == "stickerPack" and item.source ~= "event" then
 					local rule = CosmeticConstants.STICKER_PACKS[counts[item.id] or 0]
 					expect(rule).to.be.ok()
 					expect(item.rarity).to.equal(rule.rarity)

@@ -15,6 +15,7 @@ local CosmeticService = require(ServerScriptService.Features.Cosmetic.CosmeticSe
 local CurrencyService = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local MarketplaceService = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local ShopService = require(ServerScriptService.Features.Shop.ShopServiceServer)
+local EventService = require(ServerScriptService.Features.Event.EventServiceServer)
 local sift = require(ReplicatedStorage.Packages.sift)
 
 local function fakeSignal()
@@ -49,10 +50,14 @@ local function makeFakeProfile(data)
 	}
 end
 
-local function makeProfileData(gleam, credits)
+local function makeProfileData(gleam, credits, acorns)
 	local slots = {}
 	for index = 1, PlayerDataConstants.MAX_SLOTS do
-		slots[index] = { currency = { credits = credits, gloom = 0 }, inventory = { items = {} }, equippedTitle = {} }
+		slots[index] = {
+			currency = { credits = credits, gloom = 0, acorns = acorns or 0 },
+			inventory = { items = {} },
+			equippedTitle = {},
+		}
 	end
 	return {
 		_schemaVersion = PlayerDataMigrationSystem.CURRENT_VERSION,
@@ -82,8 +87,8 @@ return function()
 		local realGetShift = ShiftServiceServer.getShift
 		local phase = "lobby"
 
-		local function seed(userId, gleam, credits)
-			PlayerDataService:_setProfileForTesting(userId, makeFakeProfile(makeProfileData(gleam, credits)))
+		local function seed(userId, gleam, credits, acorns)
+			PlayerDataService:_setProfileForTesting(userId, makeFakeProfile(makeProfileData(gleam, credits, acorns)))
 			seeded[userId] = true
 		end
 
@@ -403,6 +408,57 @@ return function()
 				expect(committed).to.equal(true)
 				expect(MarketplaceService:getPremium(1)).to.equal(500 - plan.gleam)
 				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(95 - plan.spend)
+			end)
+		end)
+
+		describe("event offers", function()
+			local previewing
+
+			beforeEach(function()
+				previewing = "harvest"
+				EventService._setDeps({
+					now = function()
+						return 0
+					end,
+					preview = function()
+						return previewing
+					end,
+					isFriend = function()
+						return false
+					end,
+					sendPaid = function() end,
+				})
+			end)
+
+			afterEach(function()
+				EventService._setDeps(nil)
+			end)
+
+			it("spends acorns for an event item while its event is live", function()
+				local price = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry).get("HarvestPack").price
+				seed(1, 0, 0, price + 5)
+				local ok, reason = ShopService:buy(1, "HarvestPack")
+				expect(reason).to.equal(nil)
+				expect(ok).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "acorns")).to.equal(5)
+				expect(CosmeticService:owns(1, "HarvestPack")).to.equal(true)
+			end)
+
+			it("refuses it once the event is over", function()
+				previewing = nil
+				seed(1, 0, 0, 9999)
+				local ok, reason = ShopService:buy(1, "HarvestPack")
+				expect(ok).to.equal(false)
+				expect(reason).to.equal("not on sale")
+				expect(CurrencyService:getCurrencyAmount(1, "acorns")).to.equal(9999)
+			end)
+
+			it("never lets Gleam pay the rest of an acorn price (acorns are earned only)", function()
+				seed(1, 99999, 0, 1)
+				local ok, reason = ShopService:buy(1, "HarvestPack", 99999)
+				expect(ok).to.equal(false)
+				expect(reason).to.equal("short")
+				expect(MarketplaceService:getPremium(1)).to.equal(99999)
 			end)
 		end)
 	end)

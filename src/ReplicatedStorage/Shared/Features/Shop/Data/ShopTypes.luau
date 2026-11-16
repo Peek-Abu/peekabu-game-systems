@@ -7,10 +7,17 @@
 	@class ShopTypes
 ]=]
 
-export type Currency = "gleam" | "credits"
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Where an offer shows: the big Featured banner (one a day), Today's picks (rotating), or always listed (employees).
-export type Pool = "featured" | "picks" | "always"
+local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Data.CurrencyConstants)
+
+-- Gleam (premium) or a slot currency: Credits, or a limited-time event's money (`acorns`, EventRegistry; earned only,
+-- Gleam never pays the rest).
+export type Currency = "gleam" | CurrencyConstants.CurrencyType
+
+-- Where an offer shows: the big Featured banner (one a day), Today's picks (rotating), always listed (employees), or a
+-- limited-time event's own tab (only while that event is live).
+export type Pool = "featured" | "picks" | "always" | "event"
 
 export type Flag = "new" | "lastDay"
 
@@ -22,9 +29,12 @@ export type Offer = {
 	currency: Currency,
 	price: number,
 	pool: Pool,
-	-- An event offer is only sold between these UTC times (unix seconds).
+	-- A dated offer is only sold between these UTC times (unix seconds). An event's offer carries its event's dates for
+	-- the New! / Last day! flags, but is sold while its `event` is live (dates or admin preview).
 	starts: number?,
 	ends: number?,
+	-- A limited-time event's offer: the EventRegistry id.
+	event: string?,
 	-- A real, higher price to cross out: what a bundle's items cost alone (ShopPriceRules), or the price before a
 	-- sale. nil otherwise (never an invented "was" price).
 	was: number?,

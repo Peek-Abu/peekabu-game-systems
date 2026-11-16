@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CosmeticRegistry = require(script.Parent.CosmeticRegistry)
 local CosmeticConstants = require(script.Parent.CosmeticConstants)
 local EntitlementRegistry = require(ReplicatedStorage.Shared.Features.Entitlement.Data.EntitlementRegistry)
+local EventRegistry = require(ReplicatedStorage.Shared.Features.Event.Data.EventRegistry)
 
 return function()
 	local all = CosmeticRegistry.all()
@@ -134,6 +135,33 @@ return function()
 				expect(item.pack).never.to.be.ok()
 			end
 		end
+	end)
+
+	it("ties every event item to a registered event, priced in its money (stickers come in their pack)", function()
+		for _, item in all do
+			if item.source == "event" then
+				expect(type(item.event) == "string" and EventRegistry.get(item.event) ~= nil).to.equal(true)
+				if item.kind ~= "sticker" then
+					expect(type(item.price) == "number" and item.price > 0).to.equal(true)
+				end
+			else
+				expect(item.event).to.equal(nil)
+			end
+		end
+	end)
+
+	it("sells the Thanksgiving stickers (owner L4): Pippa Thanks!, Cappy Cozy, Prickles Yum!", function()
+		local pack = CosmeticRegistry.get("HarvestPack")
+		expect(pack.kind).to.equal("stickerPack")
+		expect(pack.event).to.equal("harvest")
+		local found = {}
+		for _, item in CosmeticRegistry.ofKind("sticker") do
+			if item.pack == "HarvestPack" then
+				table.insert(found, item.id)
+			end
+		end
+		table.sort(found)
+		expect(table.concat(found, ",")).to.equal("HarvestPack.Cozy,HarvestPack.Thanks,HarvestPack.Yum")
 	end)
 
 	it(
