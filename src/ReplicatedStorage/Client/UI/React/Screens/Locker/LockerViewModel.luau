@@ -536,7 +536,9 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 	local keyHole = Vector3.new(kx, 5.2, 3.42)
 	local keyFront = Vector3.new(kx, 5.2, 2.25)
 	local keyIn = Vector3.new(kx, 5.2, 3.08)
-	local empPos = Vector3.new(lx + 2.4, 3.1, 0.9)
+	-- A step aside and back from the latch seam, so the leaking light shows and the burst shot keeps them out of frame
+	-- (Play check 11-16).
+	local empPos = Vector3.new(lx + 3.4, 3.1, -0.2)
 	local hand = empPos + Vector3.new(-0.9, 1.1, 0.7)
 
 	local rattleAt = ESTABLISH_SECONDS + APPROACH_SECONDS + KEY_SECONDS
@@ -569,9 +571,10 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 	elseif seconds < rattleAt then
 		beat = "key_turn"
 		local t = (seconds - ESTABLISH_SECONDS - APPROACH_SECONDS) / KEY_SECONDS
-		camPos = Vector3.new(kx - 1.7, 5.6, 0.4):Lerp(Vector3.new(kx - 1.25, 5.4, 1.3), t)
+		-- Far enough back that the key and the lock read together (Play check 11-16: the key filled a third of the screen).
+		camPos = Vector3.new(kx - 2.0, 5.7, -0.6):Lerp(Vector3.new(kx - 1.6, 5.5, 0.3), t)
 		camLook = keyHole
-		fov = 36
+		fov = 40
 		if t < 0.45 then
 			keyPos = keyFront:Lerp(keyIn, t / 0.45)
 		else
@@ -602,7 +605,7 @@ function VM.cutscenePose(lockerId: LockerId, alpha: number, rarity: Rarity?): Cu
 		glow = true
 		leak = 1
 		keyPos = Vector3.new(kx, 5.2, -100)
-		camPos = Vector3.new(lx - 0.4, 5.7, -4.2):Lerp(Vector3.new(lx - 0.1, 5.4, -2.4), t)
+		camPos = Vector3.new(lx - 0.4, 5.7, -4.2):Lerp(Vector3.new(lx - 0.15, 5.45, -3.0), t)
 		camLook = Vector3.new(lx, 5.0, 5.0)
 		fov = 44 - 8 * t
 		if t > 0.55 then

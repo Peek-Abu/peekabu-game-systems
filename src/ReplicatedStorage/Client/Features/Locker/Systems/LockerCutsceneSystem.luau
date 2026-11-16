@@ -338,7 +338,8 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 		end
 		if pose.glow ~= glowActive then
 			glowActive = pose.glow
-			setBurstGlow(lockerModel, glowActive, rarityShade.hi, fx)
+			-- The rarity's full colour, not its pale tint: the pale one bloomed to white (Play check 11-16).
+			setBurstGlow(lockerModel, glowActive, rarityShade.base, fx)
 		end
 	end
 
