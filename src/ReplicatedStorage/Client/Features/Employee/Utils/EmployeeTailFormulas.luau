@@ -49,6 +49,22 @@ function EmployeeTailFormulas.pushOut(p: Vector3, a: Vector3, b: Vector3, radius
 end
 
 --[=[
+	`x` (an end `length` from `head`) kept at or above `floor`: an end that would sink below it lies on the floor at the
+	link's length, out from `head` the way it already leaned (straight back along +Z when it hung straight down). A
+	head already below the floor leaves `x` alone.
+]=]
+function EmployeeTailFormulas.aboveFloor(x: Vector3, head: Vector3, length: number, floor: number): Vector3
+	if x.Y >= floor or head.Y < floor then
+		return x
+	end
+	local drop = head.Y - floor
+	local reach = math.sqrt(math.max(length * length - drop * drop, 0))
+	local flat = Vector3.new(x.X - head.X, 0, x.Z - head.Z)
+	local direction = if flat.Magnitude > 1e-6 then flat.Unit else Vector3.new(0, 0, 1)
+	return Vector3.new(head.X, floor, head.Z) + direction * reach
+end
+
+--[=[
 	How far an end falls per step (studs) at the character's `scale`.
 ]=]
 function EmployeeTailFormulas.gravityStep(scale: number): number
@@ -78,6 +94,7 @@ function EmployeeTailFormulas.step(points: { Vector3 }, previous: { Vector3 }, w
 		local link = x - head
 		local length = world.lengths[i] or link.Magnitude
 		x = if link.Magnitude > 1e-6 then head + link.Unit * length else target
+		x = EmployeeTailFormulas.aboveFloor(x, head, length, world.floor)
 		nextPoints[i] = x
 		head = x
 	end
