@@ -149,11 +149,7 @@ end
 local function flash(parent: Attachment, light: BurstLight)
 	local level = quality()
 	-- No flash under Reduced Motion (the device setting): a sudden light is what it asks to avoid.
-	if
-		(level > 0 and level <= VfxConstants.LIGHT_MIN_QUALITY)
-		or lights >= MAX_LIGHTS
-		or GuiService.ReducedMotionEnabled
-	then
+	if not VfxFormulas.lightsShown(level) or lights >= MAX_LIGHTS or GuiService.ReducedMotionEnabled then
 		return
 	end
 	lights += 1

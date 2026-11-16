@@ -1,3 +1,4 @@
+local VfxConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Vfx.Data.VfxConstants)
 local VfxFormulas = require(script.Parent.VfxFormulas)
 
 local WHITE = Color3.new(1, 1, 1)
@@ -287,6 +288,24 @@ return function()
 				}
 			do
 				expect(VfxFormulas.teal(colour)).to.equal(false)
+			end
+		end)
+	end)
+
+	describe("lightsShown", function()
+		it(
+			"shows VFX lights on Automatic graphics (quality 0) and at every level above the cutoff (owner 11-16)",
+			function()
+				expect(VfxFormulas.lightsShown(0)).to.equal(true)
+				for level = VfxConstants.LIGHT_MIN_QUALITY + 1, 10 do
+					expect(VfxFormulas.lightsShown(level)).to.equal(true)
+				end
+			end
+		)
+
+		it("skips them only when the player set quality 1 to the cutoff by hand", function()
+			for level = 1, VfxConstants.LIGHT_MIN_QUALITY do
+				expect(VfxFormulas.lightsShown(level)).to.equal(false)
 			end
 		end)
 	end)

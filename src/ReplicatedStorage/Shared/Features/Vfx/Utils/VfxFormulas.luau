@@ -9,6 +9,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local VfxConstants = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxConstants)
 local VfxTypes = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxTypes)
 
 type ScreenRequest = VfxTypes.ScreenRequest
@@ -268,6 +269,15 @@ end
 function VfxFormulas.teal(colour: Color3): boolean
 	local hue, saturation, value = colour:ToHSV()
 	return hue >= 140 / 360 and hue <= 205 / 360 and saturation > 0.3 and value > 0.3
+end
+
+--[=[
+	Whether VFX lights show at graphics `quality` (UserGameSettings.SavedQualityLevel): on Automatic (0) and above
+	VfxConstants.LIGHT_MIN_QUALITY yes; only a player who set quality 1 to that cutoff by hand goes without (owner
+	2026-11-16: Automatic counts as normal quality).
+]=]
+function VfxFormulas.lightsShown(quality: number): boolean
+	return quality <= 0 or quality > VfxConstants.LIGHT_MIN_QUALITY
 end
 
 return VfxFormulas
