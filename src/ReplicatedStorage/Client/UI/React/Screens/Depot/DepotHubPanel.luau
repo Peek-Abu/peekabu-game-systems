@@ -39,6 +39,7 @@ local ToonSparkle = require(Toon.ToonSparkle)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
+local ToonWallet = require(Toon.ToonWallet)
 local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
@@ -50,9 +51,9 @@ export type DepotHubPanelProps = {
 	-- Whose character the profile ring shows (nil: the fallback photo, as in the story).
 	userId: number?,
 	profile: DepotHubViewModel.ProfileView,
-	credits: string,
-	-- The player's Gloom balance, grouped ("1,240").
-	gloom: string,
+	-- The player's Credits and Gloom balances (the counters count to a new balance, M5).
+	credits: number,
+	gloom: number,
 	gift: DepotHubViewModel.GiftView,
 	tonight: DepotHubViewModel.TonightView,
 	-- The full Next shift card; nil while the queue pad's own card shows (and in the hub, where the small tab shows).
@@ -255,8 +256,8 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 	local phone = props.phone
 	local gift = props.gift
 	local nodes: { [string]: React.ReactNode } = {
-		credits = e(ToonPill, {
-			text = props.credits,
+		credits = e(ToonWallet, {
+			amount = props.credits,
 			meaning = "gold",
 			textSize = if phone then 30 else 56,
 			icon = "credits",
@@ -268,8 +269,8 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 		}),
 		-- Gloom, left of Credits on the same row: the same pill, the Gloom splat and the kit's Gloom number colour. The
 		-- gap clears the Credits ticket, which hangs past its pill's left edge.
-		gloom = e(ToonPill, {
-			text = props.gloom,
+		gloom = e(ToonWallet, {
+			amount = props.gloom,
 			meaning = "grape",
 			textSize = if phone then 30 else 56,
 			icon = "gloom",

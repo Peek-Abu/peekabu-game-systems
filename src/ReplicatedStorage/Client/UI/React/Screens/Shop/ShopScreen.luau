@@ -50,7 +50,9 @@ local EventServiceClient = require(ReplicatedStorage.Client.Features.Event.Event
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonArrival = require(Toon.ToonArrival)
 local ToonBackdrop = require(Toon.ToonBackdrop)
+local ToonMotionViewModel = require(Toon.ToonMotionViewModel)
 local ShopRarityLookViewModel = require(script.Parent.ShopRarityLookViewModel)
 local CarouselVM = require(script.Parent.ShopCarouselViewModel)
 local ToonBurst = require(Toon.ToonBurst)
@@ -60,11 +62,13 @@ local ToonIcon = require(Toon.ToonIcon)
 local ToonMenuBar = require(Toon.ToonMenuBar)
 local ToonPill = require(Toon.ToonPill)
 local ToonPrice = require(Toon.ToonPrice)
+local ToonPressable = require(Toon.ToonPressable)
 local ToonStamp = require(Toon.ToonStamp)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
 local UIToonConstants = require(Toon.UIToonConstants)
+local useToonPlay = require(Toon.useToonPlay)
 local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
 local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleViewModel)
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
@@ -82,6 +86,11 @@ local VM = require(script.Parent.ShopViewModel)
 local e = React.createElement
 
 local COLOR = UIToonConstants.COLOR
+local MOTION = UIToonConstants.MOTION
+-- How dark the back gets behind the Yes / No question (its fill's opacity).
+local DIM = 0.6
+-- The longest a "Buying..." waits for the server's answer before the button comes back (seconds).
+local BUY_WAIT = 5
 local DEPTH = UIToonConstants.DEPTH
 -- Space inside the picks list for the flags that stick out over its cards.
 local PICK_PAD = 14
@@ -232,16 +241,15 @@ local function offerCard(
 			zIndex = 7,
 		})
 	end
-	return e("TextButton", {
-		Size = UDim2.fromOffset(size.X, size.Y),
-		BackgroundTransparency = 1,
-		Text = "",
-		AutoButtonColor = false,
-		LayoutOrder = order,
-		[React.Event.Activated] = function()
+	return e(ToonPressable, {
+		size = UDim2.fromOffset(size.X, size.Y),
+		layoutOrder = order,
+		deal = order,
+		onActivated = function()
 			onOpen(card.id)
 		end,
-	}, nodes)
+		children = nodes,
+	})
 end
 
 local function bundleCard(
@@ -464,6 +472,24 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		return nil
 	end)
 	local confirming, setConfirming = React.useState(false)
+	-- The offer a yes was sent for, until its answer comes back (or BUY_WAIT passes): its button says "Buying..." (U2).
+	local buying, setBuying = React.useState("")
+	React.useEffect(function()
+		setBuying("")
+	end, { result })
+	React.useEffect(function(): () -> ()
+		if buying == "" then
+			return function() end
+		end
+		local waiting = task.delay(BUY_WAIT, function()
+			setBuying("")
+		end)
+		return function()
+			task.cancel(waiting)
+		end
+	end, { buying })
+	-- The Yes / No question pops in over a back that dims (M6).
+	local asked = useToonPlay(MOTION.popSeconds, 0, if confirming then "ask" else "")
 	local returnTo = ReactCharm.useAtom(ShopStore.returnTo)
 	local ask = ReactCharm.useAtom(ShopStore.ask)
 	-- Back to what the player went to get Gleam for, as soon as the Gleam they bought arrives (never in a preview).
@@ -560,6 +586,10 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	for _, entry in VM.tabs(#passKeys > 0, liveEvent) do
 		table.insert(tabs, { id = entry.id, text = entry.text, icon = entry.icon, soon = entry.soon })
 	end
+	local tabIds: { string } = {}
+	for _, entry in tabs do
+		table.insert(tabIds, entry.id)
+	end
 	local offer = if productId ~= nil then ShopRegistry.get(productId) else nil
 	local backText = "Back"
 	for _, entry in VM.tabs(#passKeys > 0, liveEvent) do
@@ -621,6 +651,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			),
 			layout = layout,
 			note = resultNow,
+			buying = buying == offer.id,
 			onBuy = function()
 				setConfirming(true)
 			end,
@@ -666,6 +697,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 							local gleam = if product.button.kind == "topup" then product.button.gleam else nil
 							-- The price the player saw: the server never charges more.
 							local seen = ShopPriceRules.forPlayer(offer, owns, balances.now).price
+							setBuying(offer.id)
 							ShopServiceClient:requestBuy(offer.id, gleam, seen)
 						end
 					end,
@@ -686,20 +718,28 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			modal = e("TextButton", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundColor3 = COLOR.ink,
-				BackgroundTransparency = 0.4,
+				BackgroundTransparency = asked:map(function(t: number): number
+					return 1 - DIM * math.min(1, t * MOTION.popSeconds / MOTION.dimSeconds)
+				end),
 				Text = "",
 				AutoButtonColor = false,
 				ZIndex = 20,
 			}, {
-				panel = e(ToonSurface, {
-					hue = "cream",
-					pattern = "rings",
-					radius = 28,
-					anchor = Vector2.new(0.5, 0.5),
-					position = UDim2.fromScale(0.5, 0.5),
-					size = UDim2.fromOffset(if phone then 380 else 640, if phone then 170 else 300),
-					zIndex = 21,
-					children = dialog,
+				panel = e("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(if phone then 380 else 640, if phone then 170 else 300),
+					BackgroundTransparency = 1,
+					ZIndex = 21,
+				}, {
+					pop = e("UIScale", { Scale = asked:map(ToonMotionViewModel.pop) }),
+					surface = e(ToonSurface, {
+						hue = "cream",
+						pattern = "rings",
+						radius = 28,
+						size = UDim2.fromScale(1, 1),
+						children = dialog,
+					}),
 				}),
 			})
 		end
@@ -1185,11 +1225,14 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					BackgroundTransparency = 1,
 					ZIndex = 2,
 				}, { bar = bar }),
-				body = e("Frame", {
-					Position = UDim2.fromOffset(content.x, content.y),
-					Size = UDim2.fromOffset(content.width, content.height),
-					BackgroundTransparency = 1,
-				}, { content = body }),
+				-- The page rises in as the Shop opens and slides in from the side of a tab picked (M2, M3).
+				body = e(ToonArrival, {
+					position = UDim2.fromOffset(content.x, content.y),
+					size = UDim2.fromOffset(content.width, content.height),
+					tabs = tabIds,
+					tab = if offer ~= nil then `item:{offer.id}` else tab,
+					content = body,
+				}),
 				modal = modal,
 			},
 		}),

@@ -16,6 +16,7 @@ local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPrice = require(Toon.ToonPrice)
+local ToonPressable = require(Toon.ToonPressable)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
@@ -139,16 +140,15 @@ local function CharacterPickCard(
 			zIndex = 4,
 		})
 	end
-	return e("TextButton", {
-		Size = UDim2.new(1, 0, 0, math.floor(height * 1.18) + DEPTH.drop),
-		BackgroundTransparency = 1,
-		Text = "",
-		AutoButtonColor = false,
-		LayoutOrder = order,
-		[React.Event.Activated] = function()
+	return e(ToonPressable, {
+		size = UDim2.new(1, 0, 0, math.floor(height * 1.18) + DEPTH.drop),
+		layoutOrder = order,
+		deal = order,
+		onActivated = function()
 			onSelect(entry.id)
 		end,
-	}, nodes)
+		children = nodes,
+	})
 end
 
 return CharacterPickCard

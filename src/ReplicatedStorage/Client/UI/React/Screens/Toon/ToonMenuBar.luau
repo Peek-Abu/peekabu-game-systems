@@ -21,12 +21,13 @@ local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
-local ToonPill = require(Toon.ToonPill)
 local ToonMenuBarViewModel = require(Toon.ToonMenuBarViewModel)
-local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
+local ToonWallet = require(Toon.ToonWallet)
+local ToonWipe = require(Toon.ToonWipe)
 local UIToonConstants = require(Toon.UIToonConstants)
+local useToonPlay = require(Toon.useToonPlay)
 
 local e = React.createElement
 
@@ -65,10 +66,50 @@ export type ToonMenuBarProps = {
 	width: number?,
 }
 
+-- How long a scrolling tab row takes to bring the tab picked into view (U1).
+local SCROLL_SECONDS = 0.25
+
+local function easeOut(t: number): number
+	return 1 - (1 - t) * (1 - t)
+end
+
+-- A small gold chevron on a night disc at a scrolling tab row's edge, pointing to the side that still hides tabs (drawn
+-- from two bars: the kit draws no arrow glyphs). `side` 1 points right, -1 left.
+local function chevron(side: number, size: number, position: UDim2, visible: boolean): React.ReactNode
+	local bars: { [string]: React.ReactNode } = {
+		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+		stroke = e("UIStroke", { Color = UIToonConstants.COLOR.ink, Thickness = 3 }),
+	}
+	for index, tilt in { 45, -45 } do
+		bars[`bar{index}`] = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, side * 2, 0.5, (if index == 1 then -1 else 1) * size * 0.14),
+			Size = UDim2.fromOffset(size * 0.42, math.max(4, size * 0.14)),
+			Rotation = side * tilt,
+			BackgroundColor3 = UIToonConstants.shade("gold").base,
+			BorderSizePixel = 0,
+		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
+	end
+	return e("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = position,
+		Size = UDim2.fromOffset(size, size),
+		BackgroundColor3 = UIToonConstants.shade("night").base,
+		BorderSizePixel = 0,
+		Visible = visible,
+		ZIndex = 6,
+	}, bars)
+end
+
 local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 	local h = props.height
 	local phone = props.phone
 	local nodes: { [string]: React.ReactNode } = {}
+	-- A scrolling tab row (U1): where the player left it, which sides still hide tabs, and the glide that brings the
+	-- tab picked into view.
+	local scrolled = React.useRef(0)
+	local more, setMore = React.useState({ left = false, right = true })
+	local glide = useToonPlay(SCROLL_SECONDS, 0, props.current or "")
 	local x = props.x
 
 	local back = props.back
@@ -100,12 +141,16 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 			zIndex = 3,
 		}),
 	}
+	local plateOverlay: { [string]: React.ReactNode } = {}
+	plateOverlay.wipe = e(ToonWipe, { radius = 22, zIndex = 50 })
 	nodes.plate = e(ToonSurface, {
 		hue = props.hue or "grape",
 		radius = 22,
 		position = UDim2.fromOffset(x + math.floor(art * 0.3), 2),
 		size = UDim2.fromOffset(plateWidth, h - 4),
 		children = plateFace,
+		-- The menu arrives goo-smeared and a squeegee wipes the plate clean (owner pick M2, 2026-11-16).
+		overlay = plateOverlay,
 		zIndex = 2,
 	})
 	local artNode: React.ReactNode = nil
@@ -194,17 +239,48 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 		end
 		tabX += width + tabGap
 	end
+	local view = math.max(0, room)
+	local canvasWidth = tabX + 16
+	local currentIndex = 0
+	for index, tab in props.tabs do
+		if tab.id == props.current then
+			currentIndex = index
+		end
+	end
+	-- Made once per tab picked, so a re-render never pulls the row back from where the player dragged it.
+	local canvasDeps: { unknown } = { props.current or "", fitted.scroll }
+	local canvas = React.useMemo(function(): React.Binding<Vector2>
+		local from = scrolled.current or 0
+		local to = ToonMenuBarViewModel.scrollTo(fitted.widths, tabGap, currentIndex, view, from)
+		return glide:map(function(t: number): Vector2
+			return Vector2.new(from + (to - from) * easeOut(t), 0)
+		end)
+	end, canvasDeps)
 	if fitted.scroll then
 		nodes.tabs = e("ScrollingFrame", {
 			Position = UDim2.fromOffset(x, -HEADROOM),
-			Size = UDim2.fromOffset(math.max(0, room), h + HEADROOM),
-			CanvasSize = UDim2.fromOffset(tabX + 16, h + HEADROOM),
+			Size = UDim2.fromOffset(view, h + HEADROOM),
+			CanvasSize = UDim2.fromOffset(canvasWidth, h + HEADROOM),
+			CanvasPosition = canvas,
+			[React.Change.CanvasPosition] = function(frame: ScrollingFrame)
+				local at = frame.CanvasPosition.X
+				scrolled.current = at
+				local now = ToonMenuBarViewModel.more(at, canvasWidth, view)
+				if now.left ~= more.left or now.right ~= more.right then
+					setMore(now)
+				end
+			end,
 			ScrollingDirection = Enum.ScrollingDirection.X,
 			ScrollBarThickness = 0,
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			Selectable = false,
 		}, tabNodes)
+		-- The row's edges say when tabs hide past them (U1).
+		local hint = if phone then 28 else 36
+		local hintY = tabTop + math.floor((h - 14) / 2)
+		nodes.moreLeft = chevron(-1, hint, UDim2.fromOffset(x + hint * 0.5, hintY), more.left)
+		nodes.moreRight = chevron(1, hint, UDim2.fromOffset(x + view - hint * 0.5, hintY), more.right)
 	else
 		for key, node in tabNodes do
 			nodes[key] = node
@@ -230,8 +306,9 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 		}
 	do
 		local icon: UIAssets.ToonIcon = if wallet.id == "gleam" then "gleam" else "credits"
-		nodes[wallet.id] = e(ToonPill, {
-			text = ToonStyleViewModel.grouped(wallet.amount),
+		-- The balance counts to a new one, bumping when it grows (M5).
+		nodes[wallet.id] = e(ToonWallet, {
+			amount = wallet.amount,
 			meaning = "gold",
 			icon = icon,
 			textSize = walletText,

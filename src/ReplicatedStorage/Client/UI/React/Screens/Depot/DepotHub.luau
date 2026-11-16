@@ -49,7 +49,6 @@ local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.Pa
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 local SocialPerksPanel = require(ReplicatedStorage.Client.UI.React.Screens.Social.SocialPerksPanel)
-local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 
 -- The contract the depot's board shows (its shell carries the id), or nil before the board has streamed in.
 local function boardContract(): string?
@@ -145,8 +144,8 @@ local function DepotHub(): React.ReactNode
 				phone = phone,
 				userId = player.UserId,
 				profile = VM.profile(player.DisplayName, rank),
-				credits = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
-				gloom = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "gloom")),
+				credits = CurrencyUtils.getCurrencyAmount(currency, "credits"),
+				gloom = CurrencyUtils.getCurrencyAmount(currency, "gloom"),
 				gift = daily,
 				tonight = VM.tonight(boardContract(), picked),
 				cta = nil,

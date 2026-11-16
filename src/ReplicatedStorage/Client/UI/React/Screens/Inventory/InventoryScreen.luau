@@ -29,6 +29,7 @@ local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonArrival = require(Toon.ToonArrival)
 local ToonBackdrop = require(Toon.ToonBackdrop)
 local ToonMenuBar = require(Toon.ToonMenuBar)
 local ToonViewport = require(Toon.ToonViewport)
@@ -112,6 +113,10 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 		SceneStack.remove(VM.SCENE)
 	end
 
+	local tabIds: { string } = {}
+	for _, entry in VM.tabs() do
+		table.insert(tabIds, entry.id)
+	end
 	local bar: React.ReactNode
 	local body: React.ReactNode
 	local backdrop: ToonBackdrop.ToonBackdropProps
@@ -266,11 +271,14 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 					BackgroundTransparency = 1,
 					ZIndex = 2,
 				}, { bar = bar }),
-				body = e("Frame", {
-					Position = UDim2.fromOffset(layout.content.x, layout.content.y),
-					Size = UDim2.fromOffset(layout.content.width, layout.content.height),
-					BackgroundTransparency = 1,
-				}, { content = body }),
+				-- The page rises in as the Inventory opens and slides in from the side of a tab picked (M2, M3).
+				body = e(ToonArrival, {
+					position = UDim2.fromOffset(layout.content.x, layout.content.y),
+					size = UDim2.fromOffset(layout.content.width, layout.content.height),
+					tabs = tabIds,
+					tab = if page ~= nil then "page" else area,
+					content = body,
+				}),
 			},
 		}),
 	}

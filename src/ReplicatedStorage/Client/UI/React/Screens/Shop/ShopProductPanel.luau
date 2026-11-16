@@ -39,6 +39,9 @@ local DEPTH = UIToonConstants.DEPTH
 
 type Nodes = { [string]: React.ReactNode }
 
+-- The buy button while the answer is on its way.
+local BUYING_TEXT = "Buying..."
+
 export type ShopProductPanelProps = {
 	product: VM.Product,
 	-- What the player wears now (a vacuum is shown on them, from behind).
@@ -47,6 +50,8 @@ export type ShopProductPanelProps = {
 	-- A refused buy's words (nil when there is nothing to say).
 	note: string?,
 	onBuy: () -> (),
+	-- A yes was sent and the answer is not back yet: the buy button greys and says so (owner pick U2, 2026-11-16).
+	buying: boolean?,
 	-- Short on Gleam: open the Gleam tab.
 	onGetMore: () -> (),
 	-- A Locker item's page: its source, chance and own buttons in place of the buy button.
@@ -361,15 +366,16 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 		}
 		content = priced
 	end
+	local buying = props.buying == true
 	face.buy = e(ToonButton, {
 		variant = if button.kind == "buy"
 			then "primary"
 			elseif button.kind == "short" or button.kind == "topup" then "gleam"
 			else "secondary",
-		text = if content == nil then button.text else nil,
-		content = content,
+		text = if buying then BUYING_TEXT elseif content == nil then button.text else nil,
+		content = if buying then nil else content,
 		textSize = if phone then 18 else 34,
-		disabled = not button.enabled,
+		disabled = buying or not button.enabled,
 		sound = if button.kind == "buy" or button.kind == "topup" then "cta" else nil,
 		anchor = Vector2.new(0, 1),
 		position = UDim2.new(0, pad, 1, -(if phone then 22 else 48)),

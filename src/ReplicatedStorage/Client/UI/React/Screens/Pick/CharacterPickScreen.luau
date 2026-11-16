@@ -29,6 +29,7 @@ local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore
 local ShopViewModel = require(script.Parent.Parent.Shop.ShopViewModel)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonArrival = require(Toon.ToonArrival)
 local ToonBackdrop = require(Toon.ToonBackdrop)
 local ToonButton = require(Toon.ToonButton)
 local ToonPill = require(Toon.ToonPill)
@@ -186,6 +187,83 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	}
 
 	local heroX = (content.x + listWidth + gap + heroWidth / 2) / math.max(1, virtual.X)
+	local page: React.ReactNode = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
+		column = e("Frame", {
+			Size = UDim2.new(0, listWidth, 1, 0),
+			BackgroundTransparency = 1,
+		}, column),
+		hero = e("Frame", {
+			Position = UDim2.fromOffset(listWidth + gap, 0),
+			Size = UDim2.new(0, heroWidth, 1, 0),
+			BackgroundTransparency = 1,
+		}, hero),
+		about = e("Frame", {
+			Position = UDim2.fromOffset(listWidth + heroWidth + 2 * gap, 0),
+			Size = UDim2.new(0, aboutWidth, 1, -startHeight - gap - (if dealText ~= nil then dealHeight + gap else 0)),
+			BackgroundTransparency = 1,
+		}, {
+			card = CharacterPickAboutCard(
+				selected,
+				layout,
+				height - startHeight - gap - (if dealText ~= nil then dealHeight + gap else 0)
+			),
+		}),
+		deal = if dealText ~= nil
+			then e(ToonButton, {
+				variant = "gleam",
+				text = dealText,
+				textSize = if phone then 18 else 36,
+				sound = "cta",
+				anchor = Vector2.new(1, 1),
+				position = UDim2.new(1, 0, 1, -startHeight - gap),
+				size = UDim2.fromOffset(aboutWidth, dealHeight),
+				onActivated = function()
+					DealServiceClient:buy("pickNewHire", selected)
+				end,
+			})
+			else nil,
+		note = if buyNote ~= nil
+			then e(ToonText, {
+				text = buyNote,
+				textSize = layout.textSize,
+				meaning = "white",
+				anchor = Vector2.new(1, 1),
+				position = UDim2.new(1, 0, 1, -startHeight - 4),
+				size = UDim2.fromOffset(aboutWidth, layout.textSize + 8),
+				fit = true,
+				align = "center",
+			})
+			else nil,
+		start = e(ToonButton, {
+			variant = "primary",
+			text = start.text,
+			textSize = if phone then 22 else 46,
+			disabled = not start.enabled,
+			sound = "cta",
+			anchor = Vector2.new(1, 1),
+			position = UDim2.fromScale(1, 1),
+			size = UDim2.fromOffset(aboutWidth, startHeight),
+			onActivated = function()
+				if not start.enabled or props.owns ~= nil then
+					return
+				end
+				if start.kind == "topup" then
+					-- Gleam pays the rest: the first tap asks, the second spends.
+					if sureOf ~= selected then
+						setSureOf(selected)
+					else
+						setSureOf("")
+						ShopServiceClient:requestBuy(selected, start.gleam)
+					end
+				elseif start.kind == "hire" then
+					-- Hiring is a Shop purchase; once it lands the button says Start.
+					ShopServiceClient:requestBuy(selected)
+				else
+					CosmeticServiceClient:requestPick(selected)
+				end
+			end,
+		}),
+	})
 	local screen: Nodes = {
 		scaled = e(PaperHudFrame, {
 			scale = scale,
@@ -210,91 +288,11 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 					position = UDim2.new(0.5, 0, 0, layout.barY + header.subY),
 					size = UDim2.fromOffset(header.subWidth, header.subHeight),
 				}),
-				body = e("Frame", {
-					Position = UDim2.fromOffset(content.x, top),
-					Size = UDim2.fromOffset(content.width, height),
-					BackgroundTransparency = 1,
-				}, {
-					column = e("Frame", {
-						Size = UDim2.new(0, listWidth, 1, 0),
-						BackgroundTransparency = 1,
-					}, column),
-					hero = e("Frame", {
-						Position = UDim2.fromOffset(listWidth + gap, 0),
-						Size = UDim2.new(0, heroWidth, 1, 0),
-						BackgroundTransparency = 1,
-					}, hero),
-					about = e("Frame", {
-						Position = UDim2.fromOffset(listWidth + heroWidth + 2 * gap, 0),
-						Size = UDim2.new(
-							0,
-							aboutWidth,
-							1,
-							-startHeight - gap - (if dealText ~= nil then dealHeight + gap else 0)
-						),
-						BackgroundTransparency = 1,
-					}, {
-						card = CharacterPickAboutCard(
-							selected,
-							layout,
-							height - startHeight - gap - (if dealText ~= nil then dealHeight + gap else 0)
-						),
-					}),
-					deal = if dealText ~= nil
-						then e(ToonButton, {
-							variant = "gleam",
-							text = dealText,
-							textSize = if phone then 18 else 36,
-							sound = "cta",
-							anchor = Vector2.new(1, 1),
-							position = UDim2.new(1, 0, 1, -startHeight - gap),
-							size = UDim2.fromOffset(aboutWidth, dealHeight),
-							onActivated = function()
-								DealServiceClient:buy("pickNewHire", selected)
-							end,
-						})
-						else nil,
-					note = if buyNote ~= nil
-						then e(ToonText, {
-							text = buyNote,
-							textSize = layout.textSize,
-							meaning = "white",
-							anchor = Vector2.new(1, 1),
-							position = UDim2.new(1, 0, 1, -startHeight - 4),
-							size = UDim2.fromOffset(aboutWidth, layout.textSize + 8),
-							fit = true,
-							align = "center",
-						})
-						else nil,
-					start = e(ToonButton, {
-						variant = "primary",
-						text = start.text,
-						textSize = if phone then 22 else 46,
-						disabled = not start.enabled,
-						sound = "cta",
-						anchor = Vector2.new(1, 1),
-						position = UDim2.fromScale(1, 1),
-						size = UDim2.fromOffset(aboutWidth, startHeight),
-						onActivated = function()
-							if not start.enabled or props.owns ~= nil then
-								return
-							end
-							if start.kind == "topup" then
-								-- Gleam pays the rest: the first tap asks, the second spends.
-								if sureOf ~= selected then
-									setSureOf(selected)
-								else
-									setSureOf("")
-									ShopServiceClient:requestBuy(selected, start.gleam)
-								end
-							elseif start.kind == "hire" then
-								-- Hiring is a Shop purchase; once it lands the button says Start.
-								ShopServiceClient:requestBuy(selected)
-							else
-								CosmeticServiceClient:requestPick(selected)
-							end
-						end,
-					}),
+				-- The page rises in as the menu opens (M2).
+				body = e(ToonArrival, {
+					position = UDim2.fromOffset(content.x, top),
+					size = UDim2.fromOffset(content.width, height),
+					content = page,
 				}),
 			},
 		}),

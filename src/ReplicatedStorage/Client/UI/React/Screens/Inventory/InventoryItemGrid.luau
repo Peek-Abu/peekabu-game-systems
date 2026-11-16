@@ -16,6 +16,7 @@ local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
+local ToonPressable = require(Toon.ToonPressable)
 local ToonRarityFrame = require(Toon.ToonRarityFrame)
 local ToonSourceBand = require(Toon.ToonSourceBand)
 local ToonSurface = require(Toon.ToonSurface)
@@ -178,16 +179,15 @@ local function itemCard(
 			zIndex = 7,
 		})
 	end
-	return e("TextButton", {
-		Size = UDim2.fromOffset(cell.X, cell.Y + DEPTH.drop + 8),
-		BackgroundTransparency = 1,
-		Text = "",
-		AutoButtonColor = false,
-		LayoutOrder = order,
-		[React.Event.Activated] = function()
+	return e(ToonPressable, {
+		size = UDim2.fromOffset(cell.X, cell.Y + DEPTH.drop + 8),
+		layoutOrder = order,
+		deal = order,
+		onActivated = function()
 			props.onSelect(entry.id)
 		end,
-	}, nodes)
+		children = nodes,
+	})
 end
 
 -- The page's rows of cards, each under its heading (if any), in one scrolling column.
