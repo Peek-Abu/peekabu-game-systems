@@ -7,6 +7,12 @@ return {
 	Group = "Admins",
 	Args = {
 		{ Type = "string", Name = "outfit", Description = "The outfit Model's name, e.g. PricklesShowstopperTails" },
+		{
+			Type = "string",
+			Name = "mode",
+			Description = "all (default), or solo: only the outfit's new pieces on the plain body",
+			Optional = true,
+		},
 		{ Type = "player", Name = "target", Description = "The player (default: you)", Optional = true },
 	},
 }
