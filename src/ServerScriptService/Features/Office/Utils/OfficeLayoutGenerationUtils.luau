@@ -2,9 +2,9 @@
 --[=[
 	OfficeLayoutGenerationUtils: a fresh workplace from a seed. The corridor network (OfficeCorridorUtils) is the
 	skeleton; the loading bay hangs off the dock junction, the reception off the lobby junction, and hand-authored
-	kit rooms (OfficeKitRegistry, placed by OfficeKitUtils) line the corridor segments on both sides, spread round-robin (each segment takes one room per round); a kit's glass
+	kit rooms (OfficeKitRegistry, placed by OfficeKitUtils; the lining is OfficeRoomLiningUtils) line the corridor segments on both sides, spread round-robin (each segment takes one room per round); a kit's glass
 	pane is clipped to the corridor it faces, so no window looks out of the building. Dead-end
-	corridors that serve no room are pruned (a closet stands in each dead end left), a stairwell and an elevator
+	corridors that serve no room are pruned (a closet stands in each dead end left; OfficeJunctionUtils), a stairwell and an elevator
 	facade go on free junction walls (OfficeFacadeUtils), and Mr. Harlow's patrol route and rest point are derived
 	from the result.
 
@@ -24,448 +24,29 @@ local OfficeFacadeUtils = require(script.Parent.OfficeFacadeUtils)
 local OfficeGroundsUtils = require(script.Parent.OfficeGroundsUtils)
 local OfficeHallDressingUtils = require(script.Parent.OfficeHallDressingUtils)
 local OfficeKitRegistry = require(Server.Data.OfficeKitRegistry)
+local OfficeJunctionUtils = require(script.Parent.OfficeJunctionUtils)
 local OfficeKitUtils = require(script.Parent.OfficeKitUtils)
 local OfficeLayoutRules = require(Server.Rules.OfficeLayoutRules)
 local OfficeLayoutUtils = require(script.Parent.OfficeLayoutUtils)
 local OfficeLoadingBayUtils = require(script.Parent.OfficeLoadingBayUtils)
+local OfficeRoomLiningUtils = require(script.Parent.OfficeRoomLiningUtils)
 local OfficeTypes = require(Server.Data.OfficeTypes)
 
 type Layout = OfficeTypes.Layout
 type Room = OfficeTypes.Room
-type Kit = OfficeTypes.Kit
-type Edge = OfficeTypes.Edge
-type RoomType = OfficeTypes.RoomType
 type Network = OfficeCorridorUtils.Network
-type Run = OfficeCorridorUtils.Run
+type Build = OfficeRoomLiningUtils.Build
 
--- The kit types that are drawn from KIT_WEIGHTS, in a fixed order so draws replay from the seed.
-local DRAWN: { RoomType } = { "pods", "conference", "storage", "breakout" }
--- The depth assumed for a slot before its kit is chosen, to tell whether its back wall reaches the perimeter: the
--- mean depth of the drawn kits (OfficeKitRegistry), so it follows the catalogue.
-local SLOT_DEPTH = 0
-do
-	local total, count = 0, 0
-	for _, roomType: RoomType in DRAWN do
-		for _, kit in OfficeKitRegistry.ofType(roomType) do
-			total += kit.depth
-			count += 1
-		end
-	end
-	SLOT_DEPTH = if count > 0 then total / count else 0
-end
 local ENTRANCE_WIDTH = 12
--- A patrol point keeps this far (Harlow's agent radius) from a closet's front.
-local PATROL_CLEARANCE = 2
--- A glass pane clipped to its corridor is dropped when less than this is left.
-local MIN_PANE = 2
-local CLOSET_YAW: { [Edge]: number } = { minX = math.pi / 2, maxX = -math.pi / 2, minZ = 0, maxZ = math.pi }
-
--- The mutable state of one attempt.
-type Build = {
-	rng: Random,
-	layout: Layout,
-	-- Every room placed so far, pruned corridors included: they stay blockers.
-	solid: { Room },
-	box: Room,
-	counts: { [string]: number },
-	facades: { OfficeTypes.Facade },
-	panes: { OfficeTypes.Segment },
-	-- Kit rooms placed along the corridors (the reception is not counted).
-	placed: number,
-	needServer: boolean,
-	needBreakout: boolean,
-	pending: RoomType?,
-}
 
 local OfficeLayoutGenerationUtils = {}
 
-local function overlaps(a: Room, b: Room): boolean
-	return a.minX < b.maxX and b.minX < a.maxX and a.minZ < b.maxZ and b.minZ < a.maxZ
-end
-
-local function shuffle<T>(rng: Random, list: { T })
-	for index = #list, 2, -1 do
-		local other = rng:NextInteger(1, index)
-		list[index], list[other] = list[other], list[index]
-	end
-end
+local overlaps = OfficeRoomLiningUtils.overlaps
+local addMarkers = OfficeRoomLiningUtils.addMarkers
+local commit = OfficeRoomLiningUtils.commit
 
 local function center(room: Room): (number, number)
 	return (room.minX + room.maxX) / 2, (room.minZ + room.maxZ) / 2
-end
-
--- The draw weight of a room type; the server room and reception are never drawn.
-local function weightOf(roomType: RoomType): number
-	local weights = OfficeConstants.KIT_WEIGHTS
-	if roomType == "pods" then
-		return weights.pods
-	elseif roomType == "conference" then
-		return weights.conference
-	elseif roomType == "storage" then
-		return weights.storage
-	elseif roomType == "breakout" then
-		return weights.breakout
-	end
-	return 0
-end
-
--- A weighted pick of one of `pool`; conference is boosted at the perimeter. Removes it from `pool`.
-local function draw(rng: Random, pool: { RoomType }, boosted: boolean): RoomType
-	local weights: { number } = {}
-	local total = 0
-	for index, roomType: RoomType in pool do
-		local weight = weightOf(roomType)
-		if boosted and roomType == "conference" then
-			weight *= OfficeConstants.PERIMETER_CONFERENCE_BOOST
-		end
-		weights[index] = weight
-		total += weight
-	end
-	local roll = rng:NextNumber() * total
-	for index, roomType: RoomType in pool do
-		roll -= weights[index]
-		if roll < 0 or index == #pool then
-			table.remove(pool, index)
-			return roomType
-		end
-	end
-	error("draw from an empty pool")
-end
-
--- Whether a room hung on `segment`'s side (+1 toward +x/+z, -1 toward -x/-z) would reach the perimeter.
-local function atPerimeter(build: Build, segment: Run, side: number): boolean
-	local room, box = segment.room, build.box
-	local margin = OfficeConstants.ROOM_MARGIN
-	if segment.horizontal then
-		if side > 0 then
-			return box.maxZ - (room.maxZ + SLOT_DEPTH) <= margin
-		end
-		return room.minZ - SLOT_DEPTH - box.minZ <= margin
-	end
-	if side > 0 then
-		return box.maxX - (room.maxX + SLOT_DEPTH) <= margin
-	end
-	return room.minX - SLOT_DEPTH - box.minX <= margin
-end
-
-local function kitsLargestFirst(roomType: RoomType): { Kit }
-	local kits = OfficeKitRegistry.ofType(roomType)
-	table.sort(kits, function(a, b)
-		return a.width * a.depth > b.width * b.depth
-	end)
-	return kits
-end
-
-local function addMarkers(build: Build, markers: { OfficeTypes.Marker })
-	for _, marker in markers do
-		table.insert(build.layout.markers, marker)
-	end
-end
-
-local function commit(build: Build, room: Room, door: OfficeTypes.Door, markers: { OfficeTypes.Marker })
-	table.insert(build.layout.rooms, room)
-	table.insert(build.solid, room)
-	table.insert(build.layout.doors, door)
-	addMarkers(build, markers)
-	local roomType = room.roomType
-	if roomType == "server" then
-		build.needServer = false
-	elseif roomType == "breakout" then
-		build.needBreakout = false
-	end
-end
-
-local function nextId(build: Build, roomType: RoomType): string
-	return `{roomType}{(build.counts[roomType] or 0) + 1}`
-end
-
--- The front-left corner and facing of a kit `width` wide whose slot starts at `cursor` on `segment`'s `side`.
-local function slotFront(segment: Run, side: number, cursor: number, width: number): (number, number, Edge)
-	local room = segment.room
-	if segment.horizontal then
-		if side > 0 then
-			return cursor, room.maxZ, "minZ"
-		end
-		return cursor + width, room.minZ, "maxZ"
-	elseif side > 0 then
-		return room.maxX, cursor + width, "minX"
-	end
-	return room.minX, cursor, "maxX"
-end
-
--- `pane` cut to the part that faces `segment` (its span along the corridor), so glass never looks past a
--- corridor's end into the void; nil when less than MIN_PANE is left.
-local function clipPane(pane: OfficeTypes.Segment, segment: Run): OfficeTypes.Segment?
-	if segment.horizontal then
-		local x1, x2 = math.max(pane.x1, segment.from), math.min(pane.x2, segment.to)
-		if x2 - x1 < MIN_PANE then
-			return nil
-		end
-		return { x1 = x1, z1 = pane.z1, x2 = x2, z2 = pane.z2 }
-	end
-	local z1, z2 = math.max(pane.z1, segment.from), math.min(pane.z2, segment.to)
-	if z2 - z1 < MIN_PANE then
-		return nil
-	end
-	return { x1 = pane.x1, z1 = z1, x2 = pane.x2, z2 = z2 }
-end
-
--- Tries every kit of `roomType` (largest first, randomly mirrored) in the slot starting at `cursor` along
--- `segment`'s `side`; places the first that fits. Returns the placed kit's width, or nil. The kit's glass pane is
--- clipped to the corridor it faces (the front wall may run on past the corridor's end).
-local function tryPlace(build: Build, segment: Run, side: number, cursor: number, roomType: RoomType): number?
-	local room = segment.room
-	for _, kit in kitsLargestFirst(roomType) do
-		local mirrored = build.rng:NextInteger(0, 1) == 1
-		local frontX: number, frontZ: number, facing: Edge = slotFront(segment, side, cursor, kit.width)
-		local id = nextId(build, roomType)
-		local placement = OfficeKitUtils.place(kit, id, frontX, frontZ, facing, mirrored)
-		-- The whole doorway lies along the segment, and the room clears every room and the margin box.
-		local along = if segment.horizontal then placement.doorX else placement.doorZ
-		local fits = along - placement.doorWidth / 2 >= segment.from and along + placement.doorWidth / 2 <= segment.to
-		local kitRoom = placement.room
-		local margin = OfficeConstants.ROOM_MARGIN
-		fits = fits
-			and kitRoom.minX >= build.box.minX - margin
-			and kitRoom.maxX <= build.box.maxX + margin
-			and kitRoom.minZ >= build.box.minZ - margin
-			and kitRoom.maxZ <= build.box.maxZ + margin
-		if fits then
-			for _, other in build.solid do
-				if overlaps(kitRoom, other) then
-					fits = false
-					break
-				end
-			end
-		end
-		if fits then
-			build.counts[roomType] = (build.counts[roomType] or 0) + 1
-			build.placed += 1
-			commit(build, kitRoom, {
-				a = id,
-				b = room.id,
-				x = placement.doorX,
-				z = placement.doorZ,
-				width = placement.doorWidth,
-				kind = placement.doorKind,
-			}, placement.markers)
-			local pane = if placement.pane ~= nil then clipPane(placement.pane, segment) else nil
-			if pane ~= nil then
-				table.insert(build.panes, pane)
-			end
-			return kit.width
-		end
-	end
-	return nil
-end
-
--- One slot: the deck's next type first, then the other drawn types (never a second server room or reception).
-local function fillSlot(build: Build, segment: Run, side: number, cursor: number): number?
-	local rng = build.rng
-	local boosted = atPerimeter(build, segment, side)
-	local pool: { RoomType } = table.clone(DRAWN)
-	local first: RoomType
-	local pending: RoomType? = build.pending
-	if pending ~= nil then
-		first = pending
-	elseif build.needServer then
-		first = "server"
-	elseif build.needBreakout then
-		first = "breakout"
-	else
-		first = draw(rng, pool, boosted)
-	end
-	build.pending = first
-	local order: { RoomType } = { first }
-	local index = table.find(pool, first)
-	if index ~= nil then
-		table.remove(pool, index)
-	end
-	while #pool > 0 do
-		table.insert(order, draw(rng, pool, boosted))
-	end
-	for _, roomType: RoomType in order do
-		local width = tryPlace(build, segment, side, cursor, roomType)
-		if width ~= nil then
-			if roomType == first then
-				build.pending = nil
-			end
-			return width
-		end
-	end
-	return nil
-end
-
--- One segment being lined: its two sides in a random order, whose turn is next, and each side's cursor.
-type Lane = { segment: Run, sides: { number }, turn: number, cursors: { [number]: number } }
-
--- Places one room on `side` of the lane at or after that side's cursor; false when the side is full.
-local function placeOne(build: Build, lane: Lane, side: number): boolean
-	local segment = lane.segment
-	local cursor = lane.cursors[side]
-	while cursor < segment.to do
-		local width = fillSlot(build, segment, side, cursor)
-		if width ~= nil then
-			lane.cursors[side] = cursor + width
-			return true
-		end
-		cursor += OfficeConstants.ROOM_STEP
-	end
-	lane.cursors[side] = cursor
-	return false
-end
-
--- Lines the segments round-robin until the deck is spent: each round gives every segment (shuffled order) one room,
--- on its sides in turn. Spreading the rooms over the network keeps them apart (the clustered dust needs clean rooms
--- between dirty ones: OfficeSpawnUtils' neighbours) and lets each segment's first slot take a full-length kit.
-local function lineSegments(build: Build, network: Network, wanted: number)
-	local order: { Run } = table.clone(network.segments)
-	shuffle(build.rng, order)
-	local lanes: { Lane } = {}
-	for _, segment in order do
-		local sides = { 1, -1 }
-		shuffle(build.rng, sides)
-		table.insert(
-			lanes,
-			{ segment = segment, sides = sides, turn = 1, cursors = { [1] = segment.from, [-1] = segment.from } }
-		)
-	end
-	local progressed = true
-	while progressed and build.placed < wanted do
-		progressed = false
-		for _, lane in lanes do
-			if build.placed >= wanted then
-				break
-			end
-			for _ = 1, 2 do
-				local side = lane.sides[lane.turn]
-				lane.turn = 3 - lane.turn
-				if placeOne(build, lane, side) then
-					progressed = true
-					break
-				end
-			end
-		end
-	end
-end
-
--- The corridor rooms left once dead-end junction/segment pairs that serve no room are removed, repeatedly.
-local function pruneDeadEnds(network: Network, served: { [string]: boolean }): { [string]: boolean }
-	local alive: { [string]: boolean } = {}
-	for _, room in network.rooms do
-		alive[room.id] = true
-	end
-	local changed = true
-	while changed do
-		changed = false
-		for _, junction in network.rooms do
-			local id = junction.id
-			if
-				network.junctions[id] == nil
-				or not alive[id]
-				or junction == network.dock
-				or junction == network.lobby
-				or served[id]
-			then
-				continue
-			end
-			local links: { string } = {}
-			for _, door in network.doors do
-				local other = if door.a == id then door.b elseif door.b == id then door.a else nil
-				if other ~= nil and alive[other] then
-					table.insert(links, other)
-				end
-			end
-			if #links == 1 and not served[links[1]] then
-				alive[id] = false
-				alive[links[1]] = false
-				changed = true
-			end
-		end
-	end
-	return alive
-end
-
--- The edge of `junction` that corridor `segment` leaves through.
-local function junctionEdge(junction: Room, segment: Room): Edge
-	if segment.minX == junction.maxX then
-		return "maxX"
-	elseif segment.maxX == junction.minX then
-		return "minX"
-	elseif segment.minZ == junction.maxZ then
-		return "maxZ"
-	end
-	return "minZ"
-end
-
--- Unit direction from an edge into the junction.
-local INWARD: { [Edge]: Vector2 } = {
-	minX = Vector2.new(1, 0),
-	maxX = Vector2.new(-1, 0),
-	minZ = Vector2.new(0, 1),
-	maxZ = Vector2.new(0, -1),
-}
-
--- A junction's markers. A dead end (`edge`, the wall its corridor `segment` leaves through) gets a closet on its far
--- wall and its patrol point between the closet and the corridor; where that leaves under PATROL_CLEARANCE of the
--- closet's face (a 6-wide junction), the point moves to the middle of the segment instead.
-local function junctionMarkers(junction: Room, edge: Edge?, segment: Room?): { OfficeTypes.Marker }
-	local cx, cz = center(junction)
-	local patrol: OfficeTypes.Marker =
-		{ id = `{junction.id}.patrol.1`, room = junction.id, kind = "patrol", x = cx, z = cz, rotation = 0 }
-	if edge == nil or segment == nil then
-		return { patrol }
-	end
-	local inward = INWARD[edge]
-	local half = (junction.maxX - junction.minX) / 2
-	local wall = OfficeConstants.WALL_THICKNESS / 2
-	local closetDepth = OfficeConstants.CLOSET_SIZE.Z
-	-- Distances along `inward` from the centre: the closet's centre, and its face toward the corridor.
-	local closetAt = half - wall - closetDepth / 2
-	local faceAt = half - wall - closetDepth
-	local patrolAt = math.max(-half + OfficeConstants.MARKER_MARGIN, (faceAt - half) / 2)
-	patrol.x, patrol.z = cx + inward.X * patrolAt, cz + inward.Y * patrolAt
-	if faceAt - patrolAt < PATROL_CLEARANCE then
-		local sx, sz = center(segment)
-		patrol = { id = `{segment.id}.patrol.1`, room = segment.id, kind = "patrol", x = sx, z = sz, rotation = 0 }
-	end
-	return {
-		patrol,
-		{
-			id = `{junction.id}.closet.1`,
-			room = junction.id,
-			kind = "closet",
-			x = cx + inward.X * closetAt,
-			z = cz + inward.Y * closetAt,
-			rotation = CLOSET_YAW[edge],
-		},
-	}
-end
-
--- Marks the junctions: a patrol point for each (in the junction, or in its segment for a tight dead end), and a closet in each dead end left after pruning.
-local function markJunctions(build: Build, network: Network, alive: { [string]: boolean })
-	-- Network doors always run junction (a) to segment (b).
-	local segments: { [string]: Room } = {}
-	for _, segment in network.segments do
-		segments[segment.room.id] = segment.room
-	end
-	local legs: { [string]: { Room } } = {}
-	for _, door in network.doors do
-		if alive[door.a] and alive[door.b] then
-			legs[door.a] = legs[door.a] or {}
-			table.insert(legs[door.a], segments[door.b])
-		end
-	end
-	for _, junction in network.rooms do
-		if alive[junction.id] and network.junctions[junction.id] ~= nil then
-			local own = legs[junction.id] or {}
-			local edge: Edge? = nil
-			if #own == 1 and junction ~= network.dock and junction ~= network.lobby then
-				edge = junctionEdge(junction, own[1])
-			end
-			addMarkers(build, junctionMarkers(junction, edge, own[1]))
-		end
-	end
 end
 
 -- A 6-wide facade of `kind` (the stairwell, the elevator) on a live junction's free wall (OfficeFacadeUtils), drawn
@@ -614,14 +195,14 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 
 	-- The deck: a server room and a breakout lounge, then weighted draws up to the target (reception counts).
 	local target = rng:NextInteger(OfficeConstants.KIT_ROOMS.min, OfficeConstants.KIT_ROOMS.max)
-	lineSegments(state, network, target - 1)
+	OfficeRoomLiningUtils.lineSegments(state, network, target - 1)
 
 	-- Prune dead ends that serve no room; closets and patrol points on what is left.
 	local served: { [string]: boolean } = {}
 	for _, door in layout.doors do
 		served[door.b] = true
 	end
-	local alive = pruneDeadEnds(network, served)
+	local alive = OfficeJunctionUtils.pruneDeadEnds(network, served)
 	local rooms: { Room } = {}
 	for _, room in network.rooms do
 		if alive[room.id] then
@@ -652,7 +233,7 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 			room.depth = math.floor(distance / OfficeConstants.DEPTH_STUDS)
 		end
 	end
-	markJunctions(state, network, alive)
+	addMarkers(state, OfficeJunctionUtils.markers(network, alive))
 
 	if not addFacade(state, network, alive, "stairwell") then
 		return nil, "no junction wall has room for the stairwell"
