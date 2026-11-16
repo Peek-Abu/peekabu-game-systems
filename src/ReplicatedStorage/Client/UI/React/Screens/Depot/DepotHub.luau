@@ -33,6 +33,7 @@ local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
 local ShopViewModel = require(script.Parent.Parent.Shop.ShopViewModel)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
+local EventServiceClient = require(ReplicatedStorage.Client.Features.Event.EventServiceClient)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueStore)
@@ -157,6 +158,17 @@ local function DepotHub(): React.ReactNode
 				end,
 				onShop = function()
 					ShopStore.open(nil)
+					SceneStack.push(ShopViewModel.SCENE)
+				end,
+				event = if EventServiceClient:live() ~= nil
+					then VM.eventChip(
+						CurrencyUtils.getCurrencyAmount(currency, "acorns"),
+						EventServiceClient:daysLeft(),
+						phone
+					)
+					else nil,
+				onEvent = function()
+					ShopStore.openTab("event")
 					SceneStack.push(ShopViewModel.SCENE)
 				end,
 				onGuide = function()

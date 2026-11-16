@@ -28,6 +28,7 @@ local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.S
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 local SocialService = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local SocialAskStore = require(ReplicatedStorage.Client.Features.Social.State.SocialAskStore)
+local EventStore = require(ReplicatedStorage.Client.Features.Event.State.EventStore)
 local SocialAskCard = require(ReplicatedStorage.Client.UI.React.Screens.Social.SocialAskCard)
 
 local e = React.createElement
@@ -48,6 +49,14 @@ local function ShiftReviewScreen(): React.ReactNode
 	local phone = layout == "phone"
 	local userId = Players.LocalPlayer.UserId
 	local transit = useAtom(ShiftTransitStore.snapshot)
+	local paid = useAtom(EventStore.paid)
+	-- A shift's acorn pay belongs to its own review: forget it once the review is over.
+	local phase = if snapshot ~= nil then snapshot.phase else "none"
+	React.useEffect(function()
+		if phase ~= "results" then
+			EventStore.setPaid(nil)
+		end
+	end, { phase })
 	local view = ShiftReviewViewModel.review(snapshot, myVote, userId, now, phone, transit)
 	if view == nil or snapshot == nil then
 		return nil
@@ -60,6 +69,7 @@ local function ShiftReviewScreen(): React.ReactNode
 		scale = ShiftReviewViewModel.fit(viewport, phone),
 		onVote = vote,
 		rank = rank,
+		acorns = ShiftReviewViewModel.acornsText(paid),
 	}
 	return e(React.Fragment, nil, {
 		review = e(ShiftReviewPanel, props),

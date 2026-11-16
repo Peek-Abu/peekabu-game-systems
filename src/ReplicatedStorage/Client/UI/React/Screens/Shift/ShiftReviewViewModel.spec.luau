@@ -483,4 +483,15 @@ return function()
 			expect(row.headerTop + clock.top + clock.height <= row.buttonsTop - 20).to.equal(true)
 		end)
 	end)
+
+	describe("acornsText", function()
+		it("says what the shift paid in a live event's acorns, and nothing when it paid none", function()
+			expect(ShiftReviewViewModel.acornsText({ event = "harvest", total = 40, parts = {} })).to.equal(
+				"+40 acorns"
+			)
+			expect(ShiftReviewViewModel.acornsText({ event = "harvest", total = 1, parts = {} })).to.equal("+1 acorn")
+			expect(ShiftReviewViewModel.acornsText({ event = "harvest", total = 0, parts = {} })).to.equal(nil)
+			expect(ShiftReviewViewModel.acornsText(nil)).to.equal(nil)
+		end)
+	end)
 end

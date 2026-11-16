@@ -54,6 +54,8 @@ export type ShiftReviewPanelProps = {
 	onVote: (choice: ShiftTypes.Vote) -> (),
 	-- The local player's company rank (RankViewModel.slip); absent until the server publishes it.
 	rank: RankViewModel.SlipView?,
+	-- What the shift paid in a live event's acorns ("+40 acorns", ShiftReviewViewModel.acornsText); nil hides the tag.
+	acorns: string?,
 }
 
 type Nodes = { [string]: React.ReactNode }
@@ -247,6 +249,23 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 		local row = (index - 1) // 2
 		nodes[`card{index}`] =
 			statCard(card, phone, UDim2.fromOffset((if phone then 20 else 30) + column * cardW, cardsTop + row * cardH))
+	end
+	-- The acorns a live event paid: a tag on the Credits card's top-right corner (where the Shop's corner flags sit).
+	local acorns = props.acorns
+	if acorns ~= nil then
+		local creditsRight = (if phone then 20 else 30) + 2 * cardW
+		nodes.acorns = e(ToonPill, {
+			text = acorns,
+			hue = "coral",
+			meaning = "gold",
+			icon = "acorns",
+			textSize = if phone then 13 else 24,
+			tilt = 4,
+			anchor = Vector2.new(1, 0.5),
+			position = UDim2.fromOffset(creditsRight - (if phone then 6 else 14), cardsTop + 2),
+			size = UDim2.fromOffset(if phone then 104 else 210, if phone then 24 else 44),
+			zIndex = 6,
+		})
 	end
 	local rank = props.rank
 	if rank ~= nil then

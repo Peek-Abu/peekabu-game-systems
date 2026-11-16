@@ -193,4 +193,13 @@ return function()
 			end
 		end)
 	end)
+
+	describe("event chip (owner Y2)", function()
+		it("shows your acorns and the days left, shorter on a phone", function()
+			expect(VM.eventChip(1250, 11, false).text).to.equal("1,250 · 11 days left")
+			expect(VM.eventChip(1250, 11, true).text).to.equal("1,250 · 11d")
+			expect(VM.eventChip(0, 1, false).text).to.equal("0 · Last day!")
+			expect(VM.eventChip(0, 1, true).text).to.equal("0 · Last day!")
+		end)
+	end)
 end

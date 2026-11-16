@@ -68,6 +68,9 @@ export type DepotHubPanelProps = {
 	onGift: () -> (),
 	-- The SHOP tile under the gift.
 	onShop: () -> (),
+	-- A live event's chip on the SHOP tile's left edge (owner Y2) and what it opens (the Shop's event tab).
+	event: DepotHubViewModel.EventChipView?,
+	onEvent: (() -> ())?,
 	onGo: () -> (),
 }
 
@@ -328,6 +331,25 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			}),
 		}),
 	}
+	-- A live event's chip, attached to the SHOP tile's left edge (it tucks under the tile by a few px).
+	local eventChip, onEvent = props.event, props.onEvent
+	if eventChip ~= nil and onEvent ~= nil then
+		nodes.event = e(ToonButton, {
+			variant = "danger",
+			icon = "acorns",
+			text = eventChip.text,
+			textSize = if phone then 12 else 22,
+			small = true,
+			anchor = Vector2.new(1, 0.5),
+			position = UDim2.fromOffset(
+				if phone then -60 else -124,
+				(if phone then 140 else 272) + (if phone then 33 else 67)
+			),
+			size = if phone then UDim2.fromOffset(120, 30) else UDim2.fromOffset(250, 52),
+			sound = "tab",
+			onActivated = onEvent,
+		})
+	end
 	if not phone then
 		local tonight = props.tonight
 		local card: { [string]: React.ReactNode } = {

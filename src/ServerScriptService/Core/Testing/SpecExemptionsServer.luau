@@ -59,6 +59,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Training.Systems.TrainingHarlowSystem"] = "Occupant/tween/raycast shell (the pass is the specced TrainingPassRules)",
 	["ServerScriptService.Features.Training.Systems.TrainingZoneSystem"] = "Instance/Players/Queue shell (the pool size is the specced TrainingZoneRules)",
 	["ServerScriptService.Commands.CurrencyAdd"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.EventPreview"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AdminBan"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AdminUnban"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AnimationPlay"] = "Cmdr command definition (server impl is specced)",

@@ -300,6 +300,15 @@ local function awardOf(award: ShiftTypes.Award, myUserId: number, phone: boolean
 	}
 end
 
+-- The acorns tag on the Credits card (owner Y4): what this player's shift paid in a live event's money
+-- (EventStore.paid), nil when it paid none.
+function ShiftReviewViewModel.acornsText(paid: { total: number }?): string?
+	if paid == nil or paid.total <= 0 then
+		return nil
+	end
+	return if paid.total == 1 then "+1 acorn" else `+{paid.total} acorns`
+end
+
 --[=[
 	The review while the crew votes; nil outside results or before the review arrives. `myVote` is ShiftStore.myVote,
 	`myUserId` the local player's (0 matches nobody), `now` the server clock, `phone` the 5b layout. `transit` (the
