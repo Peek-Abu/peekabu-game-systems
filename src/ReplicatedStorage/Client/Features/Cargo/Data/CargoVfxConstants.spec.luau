@@ -34,4 +34,26 @@ return function()
 			end
 		end
 	end)
+
+	it(
+		"reveals with one gold shaft out of the pile, little else (owner round 2 pick: the shaft, less VFX slop)",
+		function()
+			local layers = CargoVfxConstants.PRESETS.cargoReveal.layers
+			expect(#layers <= 3).to.equal(true)
+			local shafts, particles = 0, 0
+			for _, layer in layers do
+				particles += layer.count or 0
+				if layer.orientation == Enum.ParticleOrientation.VelocityParallel then
+					shafts += 1
+					expect(layer.count).to.equal(1)
+					-- It rises (the burst emits up) and thins away to nothing.
+					expect(layer.speed.Min > 0).to.equal(true)
+					local last = layer.size.Keypoints[#layer.size.Keypoints]
+					expect(last.Value).to.equal(0)
+				end
+			end
+			expect(shafts).to.equal(1)
+			expect(particles <= 10).to.equal(true)
+		end
+	)
 end

@@ -4,7 +4,8 @@
 	and CargoFeedbackSystem).
 
 	- cargoGlint: a buried pile's hint, two gold bubbles that twinkle in and out (easy to miss on purpose).
-	- cargoReveal: an item popping out of a pile: a dust puff and gold bubbles; `amount` grows with its value tier.
+	- cargoReveal: an item popping out of a pile: one gold shaft shooting up out of it over a little dust, three gold
+	  bubbles after (owner round 2 pick, 2026-11-16); `amount` grows with its value tier.
 	- cargoAppraise: an appraisal: a few paper slips pop up off the item and flutter down, with a small paper puff.
 	- cargoJackpot: a jackpot appraisal: a short gold flash, gold sparks and coins that flip and fall, with one warm
 	  light; big but over in about a second.
@@ -57,34 +58,55 @@ local PRESETS: { [string]: Burst } = {
 			},
 		},
 	},
+	-- Owner round 2 pick (2026-11-16): the gold shaft, "nicer and less VFX slop". One focal shape: a single gold shaft
+	-- that shoots up out of the pile and thins away (pale gold at its heart, the Gleam gold at its end), a small dust
+	-- puff under it, and three gold bubbles that follow it up a beat later. Mostly normal blend (a little glow) so it reads on
+	-- white walls and the dark carpet alike.
 	cargoReveal = {
 		layers = {
 			{
 				texture = T.puff,
 				color = gradient({ P.dust }),
-				size = seq({ { 0, 1 }, { 1, 1.8 } }),
-				transparency = seq({ { 0, 0.2 }, { 0.6, 0.45 }, { 1, 1 } }),
-				lifetime = NumberRange.new(0.5, 0.7),
-				speed = NumberRange.new(4, 6),
-				count = 5,
+				size = seq({ { 0, 0.8 }, { 1, 1.5 } }),
+				transparency = seq({ { 0, 0.25 }, { 0.6, 0.5 }, { 1, 1 } }),
+				lifetime = NumberRange.new(0.4, 0.55),
+				speed = NumberRange.new(3, 4.5),
+				count = 4,
 				spread = Vector2.new(80, 80),
-				drag = 4,
+				drag = 5,
 				acceleration = Vector3.new(0, -4, 0),
 				rotation = NumberRange.new(0, 360),
 				lightInfluence = 0.5,
 			},
 			{
-				texture = T.bubble,
+				texture = T.streak,
 				color = gradient({ P.gleamLight, P.gleam }),
-				size = twinkle(0.7),
+				size = seq({ { 0, 0.9 }, { 0.2, 1.6 }, { 1, 0 } }),
+				transparency = seq({ { 0, 0 }, { 0.55, 0.05 }, { 1, 1 } }),
+				lifetime = NumberRange.new(0.42),
+				speed = NumberRange.new(11),
+				count = 1,
+				spread = Vector2.new(0, 0),
+				drag = 6,
+				orientation = Enum.ParticleOrientation.VelocityParallel,
+				squash = seq({ { 0, -1.2 }, { 1, -0.6 } }),
+				lightEmission = 0.25,
+				lightInfluence = 0,
+				zOffset = 0.5,
+			},
+			{
+				texture = T.bubble,
+				color = gradient({ P.gleam, P.gleamDeep }),
+				size = twinkle(0.55),
 				transparency = seq({ { 0, 0 }, { 0.8, 0.1 }, { 1, 1 } }),
-				lifetime = NumberRange.new(0.5, 0.75),
-				speed = NumberRange.new(7, 11),
-				count = 8,
-				spread = Vector2.new(60, 60),
-				drag = 3.5,
+				lifetime = NumberRange.new(0.6, 0.8),
+				speed = NumberRange.new(5, 7),
+				count = 3,
+				delay = 0.12,
+				spread = Vector2.new(12, 12),
+				drag = 3,
 				rotation = NumberRange.new(-20, 20),
-				lightEmission = 0.35,
+				lightEmission = 0.2,
 				lightInfluence = 0,
 				zOffset = 1,
 			},
