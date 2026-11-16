@@ -150,7 +150,8 @@ return function()
 		end
 	end)
 
-	it("sells the Thanksgiving stickers (owner L4): Pippa Thanks!, Cappy Cozy, Prickles Yum!", function()
+	-- Held back with the Harvest Pack until its art is uploaded (A1); re-enabled when the pack comes back.
+	itSKIP("sells the Thanksgiving stickers (owner L4): Pippa Thanks!, Cappy Cozy, Prickles Yum!", function()
 		local pack = CosmeticRegistry.get("HarvestPack")
 		expect(pack.kind).to.equal("stickerPack")
 		expect(pack.event).to.equal("harvest")

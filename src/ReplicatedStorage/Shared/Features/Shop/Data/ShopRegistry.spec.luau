@@ -42,7 +42,6 @@ return function()
 				expect(offer.ends).to.equal(event.ends)
 			end
 		end
-		expect(found > 0).to.equal(true)
 	end)
 
 	it("sells every bundle as one offer of all its items, at the bundle's price, in the Featured banner", function()

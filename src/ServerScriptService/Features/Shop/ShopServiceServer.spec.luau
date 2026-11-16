@@ -411,7 +411,8 @@ return function()
 			end)
 		end)
 
-		describe("event offers", function()
+		-- Held back with the Harvest Pack until its art is uploaded (A1); re-enabled when the pack comes back.
+		describeSKIP("event offers", function()
 			local previewing
 
 			beforeEach(function()

@@ -125,7 +125,8 @@ return function()
 			end
 		end)
 
-		it("prices an event item in acorns, from the acorn balance, and never offers Gleam for the rest", function()
+		-- Held back with the Harvest Pack until its art is uploaded (A1); re-enabled when the pack comes back.
+		itSKIP("prices an event item in acorns, from the acorn balance, and never offers Gleam for the rest", function()
 			local pack = ShopRegistry.get("HarvestPack")
 			local card = VM.card(pack, owner(), { gleam = 0, credits = 0, acorns = pack.price })
 			expect(card.currency).to.equal("acorns")
