@@ -37,22 +37,18 @@
 	The angle starts at the front for each new item and is kept through a colour style change.
 	`dim` darkens it (a locked item). With no art for the employee in the place it stays blank, then shows the loud error
 	tile (PortraitError, timing in PortraitViewModel.missing). Exempt (needs a renderer); story in ToonViewport.story.
+	The props type and the model build are ToonViewportModel's, the platform ToonViewportPlatform's, and the spin
+	input useToonSpin's.
 
 	@class ToonViewport
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ContextActionService = game:GetService("ContextActionService")
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
-local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
-local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
-local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
 local EmoteEffectSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteEffectSystem)
 local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
 local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
@@ -67,8 +63,10 @@ local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee
 local PortraitError = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitError)
 local PortraitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitViewModel)
 local ToonSpinViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSpinViewModel)
-local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 local UIBuildQueueSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UIBuildQueueSystem)
+local ToonViewportModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonViewportModel)
+local ToonViewportPlatform = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonViewportPlatform)
+local useToonSpin = require(ReplicatedStorage.Client.UI.React.Screens.Toon.useToonSpin)
 
 local e = React.createElement
 
@@ -76,47 +74,9 @@ local e = React.createElement
 local DIM_COLOR = Color3.fromRGB(70, 60, 96)
 
 -- The platform's colours: its top face and its side.
-export type Platform = { top: Color3, side: Color3 }
+export type Platform = ToonViewportPlatform.Platform
 
-export type ToonViewportProps = {
-	employee: string?,
-	-- A whole player's look (takes the place of employee + skin).
-	outfit: CosmeticTypes.Outfit?,
-	-- A VacuumSkinRegistry key: with no employee or outfit, that vacuum alone.
-	vacuum: string?,
-	-- Degrees round the model (180 = from behind).
-	turn: number?,
-	-- An EmployeeRegistry skin key (nil = the default look).
-	skin: string?,
-	-- The skin's colour style (nil = 1); an outfit look carries its own.
-	style: number?,
-	-- A live hero's idle item (the key after the dot, one that fits the skin; nil = the skin's own idle).
-	idle: string?,
-	-- true: the employee preview wears your rank lanyard (a surface that shows YOU: the Inventory employee page, the
-	-- employee page's title art). nil or false: none (owner 11-15: an item, a hire or a coach shows the employee, not you). An
-	-- outfit (your own look) always keeps what you wear.
-	lanyard: boolean?,
-	live: boolean?,
-	-- A Cosmetic emote id: a live hero loops it.
-	emote: string?,
-	-- A live hero plays its reveal once, then its idle.
-	reveal: boolean?,
-	-- A click's time: a live hero plays its menu reaction, once per time, then its idle. The same model waits out
-	-- REACT_COOLDOWN between two clicks; a click that rebuilds the model reacts on the new one.
-	react: number?,
-	framing: PortraitViewModel.Framing,
-	context: EmployeePoseRegistry.PortraitContext?,
-	tone: PortraitViewModel.Tone?,
-	dim: boolean?,
-	-- The player can turn the model round (drag, flick, right stick).
-	spin: boolean?,
-	platform: Platform?,
-	size: UDim2,
-	position: UDim2?,
-	anchor: Vector2?,
-	zIndex: number?,
-	layoutOrder: number?,
-}
+export type ToonViewportProps = ToonViewportModel.ToonViewportProps
 
 -- Live heroes' prop and face tracking (a skin's showcase idle holds its props out; a reveal changes faces). Only the
 -- face effect runs here: particles do not render in a ViewportFrame (emotes play on EmployeeStageSystem instead).
@@ -133,120 +93,12 @@ local GROW_EASE = 8
 -- Seconds before a hero reacts to another click, so spam-clicking does not restart it every frame.
 local REACT_COOLDOWN = 1.5
 
--- A drag that has not moved for this long (seconds) before letting go does not coast.
-local SPIN_HOLD_STILL = 0.08
--- Each spinning viewport binds the right stick under its own action name.
-local spinActions = 0
-
 -- The click the last reaction answered. It lives here so a hero rebuilt on a tab change does not react to it again.
 local reactAnswered: number? = nil
 
 local function aspectOf(frame: ViewportFrame): number
 	local size = frame.AbsoluteSize
 	return if size.X > 0 and size.Y > 0 then size.X / size.Y else 1
-end
-
--- The platform's radius and thickness as shares of the model's height.
-local PLATFORM_RADIUS = 0.34
-local PLATFORM_HEIGHT = 0.07
-
--- One flat round slab (a Roblox cylinder lies along X: turned upright), its top face at `topY`.
-local function slab(name: string, centre: Vector3, topY: number, radius: number, height: number, color: Color3): Part
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Shape = Enum.PartType.Cylinder
-	part.Anchored = true
-	part.CanCollide = false
-	part.CastShadow = false
-	part.Material = Enum.Material.SmoothPlastic
-	part.Color = color
-	part.Size = Vector3.new(height, radius * 2, radius * 2)
-	part.CFrame = CFrame.new(centre.X, topY - height / 2, centre.Z) * CFrame.Angles(0, 0, math.pi / 2)
-	return part
-end
-
---[=[
-	The platform under the model's feet (the bounds' bottom): a light top, a thin ink line at its rim, the side, and
-	an ink foot (the kit's outline and drop, in 3D). Returns it and the bounds grown to hold it.
-]=]
-local function platformFor(bounds: EmployeePoseFormulas.Bounds, colors: Platform): (Model, EmployeePoseFormulas.Bounds)
-	local tall = bounds.max.Y - bounds.min.Y
-	local radius = tall * PLATFORM_RADIUS
-	local height = tall * PLATFORM_HEIGHT
-	local centre = (bounds.min + bounds.max) / 2
-	local feet = bounds.min.Y
-	local line = height * 0.12
-	local model = Instance.new("Model")
-	model.Name = "Platform"
-	slab("Top", centre, feet, radius, line * 1.5, colors.top).Parent = model
-	slab("Rim", centre, feet - line * 1.5, radius * 1.025, line, UIToonConstants.COLOR.ink).Parent = model
-	slab("Side", centre, feet - line * 2.5, radius, height - line * 3.5, colors.side).Parent = model
-	slab("Foot", centre, feet - height + line, radius * 1.05, line * 1.4, UIToonConstants.COLOR.ink).Parent = model
-	local reach = radius * 1.05
-	local grown: EmployeePoseFormulas.Bounds = {
-		min = Vector3.new(
-			math.min(bounds.min.X, centre.X - reach),
-			feet - height - line,
-			math.min(bounds.min.Z, centre.Z - reach)
-		),
-		max = Vector3.new(
-			math.max(bounds.max.X, centre.X + reach),
-			bounds.max.Y,
-			math.max(bounds.max.Z, centre.Z + reach)
-		),
-	}
-	return model, grown
-end
-
--- The model to show and whether it moves: a live one when asked and a slot is free, else the static posed copy.
-local function build(props: ToonViewportProps): (Model?, boolean)
-	local outfit = props.outfit
-	if outfit ~= nil then
-		local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(outfit.employee), props.context or "idle", {})
-		local mine = Players.LocalPlayer
-		return EmployeePreviewSystem.outfit(
-			outfit,
-			ReplicatedStorage,
-			if mine ~= nil then mine.Character else nil,
-			props.live == true,
-			pose
-		)
-	end
-	local employee = props.employee
-	if employee == nil then
-		local vacuum = props.vacuum
-		return if vacuum ~= nil
-			then VacuumPreviewSystem.alone(VacuumSkinRules.select(vacuum), ReplicatedStorage)
-			else nil,
-			false
-	end
-	if props.live == true then
-		local model =
-			EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage, props.style, props.lanyard == true)
-		if model ~= nil then
-			return model, true
-		end
-	end
-	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(employee), props.context or "idle", {})
-	return EmployeePreviewSystem.static(
-		employee,
-		props.skin,
-		ReplicatedStorage,
-		pose,
-		props.style,
-		props.lanyard == true
-	),
-		false
-end
-
--- What the model shows, as one string (the effect rebuilds only when it changes).
-local function lookKey(props: ToonViewportProps): string
-	local outfit = props.outfit
-	if outfit ~= nil then
-		return `{outfit.employee}|{outfit.look.skin}|{outfit.look.style}|{outfit.vacuum}`
-	end
-	local lanyard = if props.lanyard == true then "lanyard" else ""
-	return `{props.employee or ""}|{props.skin or ""}|{props.style or 1}|{props.vacuum or ""}|{lanyard}`
 end
 
 -- The live hero a reaction plays on.
@@ -301,7 +153,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 	local platformKey = if platform ~= nil then platform.top:ToHex() .. platform.side:ToHex() else ""
 	local deps: { unknown } = {
 		frame,
-		lookKey(props),
+		ToonViewportModel.lookKey(props),
 		props.live == true,
 		props.framing,
 		platformKey,
@@ -316,7 +168,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 		-- Builds the model into the frame and returns its teardown.
 		local function mount(): () -> ()
-			local model, moving = build(props)
+			local model, moving = ToonViewportModel.build(props)
 			setShown(model ~= nil)
 			if model == nil then
 				return function() end
@@ -351,7 +203,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			local unplatformed = bounds
 			local stand: Model? = nil
 			if platform ~= nil and bounds ~= nil then
-				stand, bounds = platformFor(bounds, platform)
+				stand, bounds = ToonViewportPlatform.platformFor(bounds, platform)
 			end
 			local who = if props.outfit ~= nil then props.outfit.employee else props.employee
 			local skin = if props.outfit ~= nil then nil else props.skin
@@ -366,7 +218,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			if emote ~= nil and who ~= nil and bounds ~= nil and standIn ~= nil then
 				local standInPlatform: Model? = nil
 				if platform ~= nil and unplatformed ~= nil then
-					standInPlatform = platformFor(unplatformed, platform)
+					standInPlatform = ToonViewportPlatform.platformFor(unplatformed, platform)
 				end
 				local stage = EmployeeStageSystem.show({
 					model = model,
@@ -540,106 +392,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 	end, deps)
 
-	local spinDeps: { unknown } = { frame, props.spin == true }
-	-- The player's spin: a drag on the frame (either mouse button or a finger), the right stick, and the coast after a
-	-- flick, one frame at a time.
-	React.useEffect(function(): () -> ()
-		local window = frame
-		if not window or props.spin ~= true then
-			return function() end
-		end
-		local function set(state: ToonSpinViewModel.State)
-			local was = spinState.current.angle
-			spinState.current = state
-			local apply = applySpin.current
-			if apply ~= nil and state.angle ~= was then
-				apply(state.angle)
-			end
-		end
-		local noGrip: InputObject? = nil
-		local grip = noGrip
-		local lastX, lastAt = 0, 0
-		local stick = 0
-		local began = window.InputBegan:Connect(function(input: InputObject)
-			local kind = input.UserInputType
-			if grip ~= nil then
-				return
-			end
-			if
-				kind == Enum.UserInputType.MouseButton1
-				or kind == Enum.UserInputType.MouseButton2
-				or kind == Enum.UserInputType.Touch
-			then
-				grip = input
-				lastX, lastAt = input.Position.X, os.clock()
-				set(ToonSpinViewModel.drag(spinState.current, 0, window.AbsoluteSize.X, 0))
-			end
-		end)
-		local moved = UserInputService.InputChanged:Connect(function(input: InputObject)
-			local held = grip
-			if held == nil then
-				return
-			end
-			local follows = if held.UserInputType == Enum.UserInputType.Touch
-				then input == held
-				else input.UserInputType == Enum.UserInputType.MouseMovement
-			if not follows then
-				return
-			end
-			local now, x = os.clock(), input.Position.X
-			set(ToonSpinViewModel.drag(spinState.current, x - lastX, window.AbsoluteSize.X, now - lastAt))
-			lastX, lastAt = x, now
-		end)
-		local function letGo()
-			grip = nil
-			local now = os.clock()
-			local state = spinState.current
-			if now - lastAt > SPIN_HOLD_STILL then
-				state = ToonSpinViewModel.drag(state, 0, window.AbsoluteSize.X, now - lastAt)
-			end
-			set(ToonSpinViewModel.release(state))
-		end
-		local ended = UserInputService.InputEnded:Connect(function(input: InputObject)
-			local held = grip
-			if held == nil then
-				return
-			end
-			local same = if held.UserInputType == Enum.UserInputType.Touch
-				then input == held
-				else input.UserInputType == held.UserInputType
-			if same then
-				letGo()
-			end
-		end)
-		spinActions += 1
-		local action = `ToonSpin{spinActions}`
-		ContextActionService:BindActionAtPriority(
-			action,
-			function(_: string, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
-				stick = if state == Enum.UserInputState.Change or state == Enum.UserInputState.Begin
-					then input.Position.X
-					else 0
-				return Enum.ContextActionResult.Sink
-			end,
-			false,
-			Enum.ContextActionPriority.High.Value,
-			Enum.KeyCode.Thumbstick2
-		)
-		local stepping = RunService.Heartbeat:Connect(function(dt: number)
-			set(ToonSpinViewModel.step(spinState.current, dt, stick))
-		end)
-		return function()
-			began:Disconnect()
-			moved:Disconnect()
-			ended:Disconnect()
-			stepping:Disconnect()
-			ContextActionService:UnbindAction(action)
-			if grip ~= nil then
-				grip = nil
-				spinState.current = ToonSpinViewModel.release(spinState.current)
-			end
-		end
-	end, spinDeps)
+	useToonSpin(frame, props.spin, spinState, applySpin)
 
 	-- A click on the model already live. Declared after the build, so a click that rebuilds it finds the new one.
 	React.useEffect(function()
