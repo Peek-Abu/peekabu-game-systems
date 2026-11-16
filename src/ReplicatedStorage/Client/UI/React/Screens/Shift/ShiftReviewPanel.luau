@@ -12,7 +12,8 @@
 	AWARDS" swaps in the folded awards (UI-only state); "WHAT NEXT?", the vote clock and that button share one row
 	above the vote, clear of the chosen button's lifted ring. Pills are sized from their measured labels
 	(ToonStyleViewModel.pillWidth; the rating badge by ShiftReviewViewModel.badge), so no label is cut.
-	Presentational: it draws the view it is given (specced in ShiftReviewViewModel and RankViewModel).
+	Presentational: it draws the view it is given (specced in ShiftReviewViewModel and RankViewModel). The stat cards
+	and the award cards are ShiftReviewStatCard and ShiftReviewAwardCard.
 
 	@class ShiftReviewPanel
 ]=]
@@ -25,14 +26,13 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local RankSlip = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankSlip)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
+local awardCard = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewAwardCard)
+local statCard = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewStatCard)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
-local ToonIcon = require(Toon.ToonIcon)
-local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
 local ToonSparkle = require(Toon.ToonSparkle)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
@@ -65,130 +65,6 @@ local RAYS_PERIOD = 60
 local function pillFor(text: string, textSize: number, padX: number): number
 	local width = TextService:GetTextSize(text, textSize, Enum.Font.LuckiestGuy, Vector2.new(10000, 1000)).X
 	return ToonStyleViewModel.pillWidth(width, textSize, padX)
-end
-
-local function statCard(card: ShiftReviewViewModel.CardView, phone: boolean, position: UDim2): React.ReactNode
-	local size = if phone then Vector2.new(180, 74) else Vector2.new(400, 132)
-	local icon = if phone then 70 else 136
-	local left = if phone then 50 else 116
-	local face: Nodes = {
-		icon = e(ToonIcon, {
-			icon = card.icon,
-			position = UDim2.fromOffset(-icon * 0.3, (size.Y - icon) / 2 - 4),
-			size = UDim2.fromOffset(icon, icon),
-			drop = if phone then 3 else 6,
-			zIndex = 5,
-		}),
-		label = e(ToonText, {
-			text = card.label,
-			font = "body",
-			textSize = if phone then 13 else 22,
-			position = UDim2.fromOffset(left, if phone then 4 else 16),
-			size = UDim2.fromOffset(size.X - left - 10, if phone then 16 else 28),
-			fit = true,
-		}),
-		value = e(ToonText, {
-			text = card.value,
-			meaning = card.meaning,
-			textSize = if phone then 30 else 62,
-			position = UDim2.fromOffset(left, if phone then 24 else 48),
-			size = UDim2.fromOffset(size.X - left - 12, if phone then 38 else 70),
-			fit = true,
-		}),
-	}
-	if card.gold then
-		face.sparkles = e(ToonSparkle, {
-			spots = {
-				{ position = UDim2.new(1, -24, 0, 6), size = if phone then 16 else 30 },
-				{ position = UDim2.new(1, -60, 1, -14), size = if phone then 12 else 22 },
-			},
-			zIndex = 6,
-		})
-	end
-	return e(ToonPanel, {
-		hue = if card.gold then "gold" else "cream",
-		size = size,
-		position = position,
-		radius = if phone then 18 else 26,
-		children = face,
-	})
-end
-
-local function awardCard(
-	award: ShiftReviewViewModel.AwardView,
-	featured: boolean,
-	phone: boolean,
-	width: number,
-	position: UDim2,
-	grade: string?
-): React.ReactNode
-	local height = if featured then (if phone then 72 else 148) else (if phone then 54 else 78)
-	local icon = if featured then (if phone then 70 else 128) else (if phone then 50 else 84)
-	local left = if phone then icon * 0.62 else icon * 0.72
-	local face: Nodes = {
-		title = e(ToonText, {
-			text = award.title,
-			textSize = if featured then (if phone then 20 else 42) else (if phone then 15 else 28),
-			position = UDim2.fromOffset(left, if featured then (if phone then 6 else 30) else 4),
-			size = UDim2.fromOffset(
-				width - left - (if featured then (if phone then 96 else 200) else 20),
-				if featured then (if phone then 24 else 48) else (if phone then 20 else 34)
-			),
-			fit = true,
-		}),
-		line = e(ToonText, {
-			text = award.line,
-			font = "body",
-			textSize = if phone then 13 else 22,
-			position = UDim2.fromOffset(
-				left + 2,
-				if featured then (if phone then 36 else 84) else (if phone then 28 else 42)
-			),
-			size = UDim2.fromOffset(
-				width - left - (if featured then (if phone then 96 else 200) else 20),
-				if phone then 16 else 28
-			),
-			fit = true,
-		}),
-	}
-	if award.icon ~= nil then
-		face.icon = e(ToonIcon, {
-			icon = award.icon,
-			position = UDim2.fromOffset(-icon * 0.3, (height - icon) / 2 - 4),
-			size = UDim2.fromOffset(icon, icon),
-			drop = 5,
-			zIndex = 5,
-		})
-	end
-	if featured and award.userId ~= nil then
-		-- The winner's own character, full figure, posed for the shift's grade, standing on the card's corner.
-		face.pippa = e(CharacterPortrait, {
-			userId = award.userId,
-			context = "award",
-			framing = "full",
-			grade = grade,
-			anchor = Vector2.new(1, 1),
-			position = UDim2.new(1, if phone then 6 else 10, 1, 4),
-			size = UDim2.fromOffset(if phone then 90 else 200, if phone then 104 else 230),
-			zIndex = 6,
-		})
-	elseif featured then
-		face.pippa = e(ToonIcon, {
-			image = UIAssets.toonPhotos.pippaCheerCut,
-			anchor = Vector2.new(1, 1),
-			position = UDim2.new(1, if phone then 6 else 10, 1, 4),
-			size = UDim2.fromOffset(if phone then 90 else 200, if phone then 104 else 230),
-			drop = 0,
-			zIndex = 6,
-		})
-	end
-	return e(ToonPanel, {
-		hue = if featured then "gold" else "cream",
-		size = Vector2.new(width, height),
-		position = position,
-		radius = if phone then 18 else 26,
-		children = face,
-	})
 end
 
 local function voteButton(

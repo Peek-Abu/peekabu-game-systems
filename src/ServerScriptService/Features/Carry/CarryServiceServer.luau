@@ -21,7 +21,8 @@
 	items) sets `setPickUpRoute`.
 
 	Spec-exempt shell (Instances, physics, Players, ByteNet); the rules are the specced CarryRegistry,
-	CarryFormulas and CarryHoldTracker.
+	CarryFormulas and CarryHoldTracker. Welding a held object to the body and taking it off again was split out
+	into CarryWeldSystem.
 
 	@class CarryServiceServer
 ]=]
@@ -49,6 +50,7 @@ local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CarryHoldTracker = require(ServerScriptService.Features.Carry.State.CarryHoldTracker)
 local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
 local CarrySpeedSystem = require(ServerScriptService.Features.Carry.Systems.CarrySpeedSystem)
+local CarryWeldSystem = require(ServerScriptService.Features.Carry.Systems.CarryWeldSystem)
 local AnimationCarrySystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarrySystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
@@ -58,18 +60,13 @@ if not InteractionRegistry.has(CarryConstants.INTERACTION_KIND) then
 	InteractionRegistry.register(CarryConstants.INTERACTION_KIND, { actionText = "Pick up" })
 end
 
-type SavedPart = { part: BasePart, massless: boolean, canCollide: boolean }
-
--- The tag each moving joint gets, for the client that moves it (CarrySwaySystem, CarryPushSystem).
-local JOINT_TAGS: { [string]: string } = { swing = CarryConstants.HANG_TAG, follow = CarryConstants.PUSH_TAG }
-
 type Held = {
 	target: PVInstance,
 	root: BasePart,
 	kind: string,
 	weld: JointInstance,
 	contact: AnimationCarrySystem.Controller?,
-	saved: { SavedPart },
+	saved: { CarryWeldSystem.SavedPart },
 	humanoid: Humanoid?,
 }
 
@@ -103,19 +100,6 @@ local function kindOf(target: Instance): string?
 	return if type(kind) == "string" and CarryRegistry.has(kind) then kind else nil
 end
 
-local function partsOf(target: Instance): { BasePart }
-	local parts: { BasePart } = {}
-	if target:IsA("BasePart") then
-		table.insert(parts, target)
-	end
-	for _, descendant in target:GetDescendants() do
-		if descendant:IsA("BasePart") then
-			table.insert(parts, descendant)
-		end
-	end
-	return parts
-end
-
 -- Ends a hold: unwelds and restores the object, re-applies the carrier's walk for what is left of their load
 -- (CarrySpeedSystem), clears the published state. Returns the object's root part (so a throw can launch it), or nil when nothing was held.
 local function release(player: Player): BasePart?
@@ -125,14 +109,7 @@ local function release(player: Player): BasePart?
 		return nil
 	end
 	held[player.UserId] = nil
-	if state.contact ~= nil then
-		state.contact.destroy()
-	end
-	state.weld:Destroy()
-	for _, saved in state.saved do
-		saved.part.Massless = saved.massless
-		saved.part.CanCollide = saved.canCollide
-	end
+	CarryWeldSystem.detach(state.contact, state.weld, state.saved)
 	CarrySpeedSystem.setHeld(player.UserId, nil)
 	CarrySpeedSystem.apply(player)
 	state.target:SetAttribute(CarryConstants.CARRIED_BY_ATTRIBUTE, nil)
@@ -330,54 +307,7 @@ CarryServiceServer = {
 			return false, "already carrying, or already carried"
 		end
 
-		local saved: { SavedPart } = {}
-		for _, part in partsOf(target) do
-			table.insert(saved, { part = part, massless = part.Massless, canCollide = part.CanCollide })
-			part.Massless = true
-			part.CanCollide = false
-		end
-		root.Anchored = false
-		local prepared = if character ~= nil
-			then AnimationCarrySystem.prepare(character, target, kind, def.weight)
-			else nil
-		target:PivotTo(
-			if prepared ~= nil
-				then prepared.pivot
-				else playerRoot.CFrame * (def.holdOffset or CarryConstants.DEFAULT_HOLD_OFFSET)
-		)
-		local contact: AnimationCarrySystem.Controller? = nil
-		local joint: AnimationCarrySystem.Mount = {
-			part = playerRoot,
-			c0 = playerRoot.CFrame:ToObjectSpace(root.CFrame),
-			c1 = CFrame.identity,
-			joint = "weld",
-		}
-		if prepared ~= nil and character ~= nil then
-			local broken = table.concat(prepared.report.violations, "; ")
-			if broken ~= "" then
-				log:warn(`{kind} held by {player.Name} breaks the carry rules: {broken}`)
-			end
-			-- The contacts are on the item's visible art, not its invisible proxy (AnimationCarrySystem.visibleBox).
-			local boxInRoot = root.CFrame:ToObjectSpace(target:GetPivot() * prepared.box)
-			contact = AnimationCarrySystem.bind(character, root, prepared.hold)
-			joint = AnimationCarrySystem.mount(character, root, prepared.hold, boxInRoot) or joint
-		end
-		-- Part of the character's assembly while held, on the body part its hold rides (so it inherits the animation).
-		-- A hanging bag's joint is a Motor6D at its handle: every client swings it there (CarrySwaySystem); a pushed
-		-- item's is a Motor6D every client slides after the torso (CarryPushSystem). The server never moves either, so
-		-- their physics stay those of a weld.
-		local weld: JointInstance = if joint.joint ~= "weld" then Instance.new("Motor6D") else Instance.new("Weld")
-		weld.Name = "CarryWeld"
-		weld.Part0 = joint.part
-		weld.Part1 = root
-		weld.C0 = joint.c0
-		weld.C1 = joint.c1
-		weld:SetAttribute(CarryConstants.TORSO_REST_ATTRIBUTE, joint.torsoRest)
-		weld.Parent = root
-		local tag = JOINT_TAGS[joint.joint]
-		if tag ~= nil then
-			CollectionService:AddTag(weld, tag)
-		end
+		local weld, contact, saved = CarryWeldSystem.attach(player, target, root, kind, def, character, playerRoot)
 
 		held[player.UserId] = {
 			target = target,

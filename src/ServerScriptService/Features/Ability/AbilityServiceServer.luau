@@ -12,16 +12,18 @@
 	  sent to Cappy alone (AbilityEvents.Spotted); his client draws it through walls.
 	- Potted Plant (Prickles): stealth in the shared Npc layer (NpcServiceServer:conceal): every monster that did not
 	  see it begin can neither see nor catch him. It ends at once (AbilityRules.plantEnds) when he moves, jumps, acts,
-	  asks, dies, is caught or the cap passes, and then he is revealed.
+	  asks, dies, is caught or the cap passes, and then he is revealed (AbilityPlantSystem).
 
 	The character's AbilityActive names the effect while it runs (others' clients draw it). Clips play over the
 	effect (AnimationServiceServer:play) and never gate it: a refused, skipped or cut clip changes nothing
 	(AbilityClipUtils): the full-body clip only standing still with empty hands, the upper-body cut on the move,
 	nothing while the vacuum's wand is out or something is carried (their IK grip holds the arms); a playing clip
-	stops the moment that stops being true. Potted Plant puts the wand away as he plants, so the pot shows.
+	stops the moment that stops being true (AbilityClipSystem). Potted Plant puts the wand away as he plants, so the
+	pot shows.
 
 	Spec-exempt shell (Players, Humanoids, ByteNet, RunService, CollectionService); the decisions are the specced
-	AbilityRules, AbilityRegistry, AbilityCooldownTracker and AbilityTreasureUtils.
+	AbilityRules, AbilityRegistry, AbilityCooldownTracker and AbilityTreasureUtils. The plant and the clips were split
+	out into AbilityPlantSystem and AbilityClipSystem.
 
 	@class AbilityServiceServer
 ]=]
@@ -36,24 +38,22 @@ local Workspace = game:GetService("Workspace")
 local AbilityShared = ReplicatedStorage.Shared.Features.Ability
 local AbilityServer = ServerScriptService.Features.Ability
 local Observers = require(ReplicatedStorage.Packages.Observers)
-local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local AbilityConstants = require(AbilityShared.Data.AbilityConstants)
 local AbilityRegistry = require(AbilityShared.Data.AbilityRegistry)
 local AbilityTypes = require(AbilityShared.Data.AbilityTypes)
 local AbilityEvents = require(AbilityShared.Net.AbilityEvents)
 local AbilityRules = require(AbilityShared.Rules.AbilityRules)
-local AbilityClipUtils = require(AbilityShared.Utils.AbilityClipUtils)
 local AbilityCooldownTracker = require(AbilityServer.State.AbilityCooldownTracker)
 local AbilityTreasureUtils = require(AbilityServer.Utils.AbilityTreasureUtils)
-local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
+local AbilityClipSystem = require(AbilityServer.Systems.AbilityClipSystem)
+local AbilityPlantSystem = require(AbilityServer.Systems.AbilityPlantSystem)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
-local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -65,23 +65,13 @@ local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServi
 local SprintServiceServer = require(ServerScriptService.Features.Sprint.SprintServiceServer)
 local TipServiceServer = require(ServerScriptService.Features.Tip.TipServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
-local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
-local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 
 type AbilityDef = AbilityTypes.AbilityDef
 
 -- A timed effect's AbilityActive (Let's Go!, Spot It!): cleared at `untilTime` (os.clock).
 type Timed = { character: Model, untilTime: number }
--- A playing ability clip (Let's Go!, Spot It!): its kind, and os.clock until it would end on its own.
-type Playing = { key: string, kind: AbilityClipUtils.ClipKind, untilTime: number }
-
--- Above this flat speed (studs/s) a user counts as moving: the upper-body clip, and a full-body clip stops.
-local MOVING_SPEED = 1.5
-
-local log = Logger.new("AbilityServiceServer")
 local tracker = AbilityCooldownTracker.new()
 local timed: { [number]: Timed } = {}
-local playing: { [number]: Playing } = {}
 local stoppers: { () -> () } = {}
 local elapsed = 0
 local counters = { used = 0, refused = 0, plantsEnded = 0 }
@@ -98,11 +88,6 @@ local function aliveOf(player: Player, humanoid: Humanoid?): boolean
 	return humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player)
 end
 
-local function flatSpeed(root: BasePart): number
-	local velocity = root.AssemblyLinearVelocity
-	return Vector3.new(velocity.X, 0, velocity.Z).Magnitude
-end
-
 local function running(): boolean
 	return ShiftServiceServer:getShift().phase == "running"
 end
@@ -117,6 +102,14 @@ end
 local function publishReady(player: Player, readyAt: number)
 	player:SetAttribute(AbilityConstants.READY_AT_ATTRIBUTE, readyAt)
 end
+
+local plantContext: AbilityPlantSystem.Context = {
+	tracker = tracker,
+	counters = counters,
+	bodyOf = bodyOf,
+	aliveOf = aliveOf,
+	say = say,
+}
 
 -- The closest treasure to `origin`: a cargo part (CargoId, a grimy kind), not claimed, not in anyone's hands, still in
 -- the world. Buried items (CargoHidden) count: the glow shows which pile to vacuum.
@@ -150,30 +143,7 @@ local function closestTreasure(origin: Vector3): (number?, BasePart?)
 	return best, if best ~= nil then parts[best] else nil
 end
 
--- Whether `player`'s hands are busy: the vacuum's wand out, or something carried (their arms are on an IK grip).
-local function handsBusy(player: Player, character: Model?): boolean
-	return VacuumToolSystem.isEquipped(character) or CarryServiceServer:getCarried(player) ~= nil
-end
-
--- Plays an ability clip over the effect (never gates it), as AbilityClipUtils picks: the full-body one standing still,
--- the upper-body one moving, none with busy hands.
-local function playClip(player: Player, character: Model, root: BasePart, clips: AbilityTypes.AbilityClips)
-	local key, kind = AbilityClipUtils.pick(clips, flatSpeed(root) > MOVING_SPEED, handsBusy(player, character))
-	if key == nil or kind == nil then
-		return
-	end
-	local ok, reason = AnimationServiceServer:play(player, key)
-	if not ok then
-		log:debug(`{player.Name}: clip {key} not played ({reason})`)
-		return
-	end
-	local def = AnimationRegistry.get(key)
-	if def ~= nil and def.durationMs ~= nil then
-		local clipKind: AbilityClipUtils.ClipKind = if kind == "full" then "full" else "upper"
-		local entry: Playing = { key = key, kind = clipKind, untilTime = os.clock() + def.durationMs / 1000 }
-		playing[player.UserId] = entry
-	end
-end
+local playClip = AbilityClipSystem.play
 
 local function markTimed(player: Player, character: Model, def: AbilityDef)
 	character:SetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE, def.id)
@@ -202,65 +172,6 @@ local function spotIt(player: Player, character: Model, root: BasePart, def: Abi
 	AbilityEvents.packets.Spotted.sendTo({ cargoId = cargoId }, player)
 	markTimed(player, character, def)
 	playClip(player, character, root, def.clips)
-end
-
--- The plant's clips: enter, then the hold looping once the enter is done (if the same plant still runs).
-local function plantClips(player: Player, def: AbilityDef, startedAt: number)
-	local enter, hold = def.clips.enter, def.clips.hold
-	local enterDef = if enter ~= nil then AnimationRegistry.get(enter) else nil
-	if enter ~= nil then
-		AnimationServiceServer:play(player, enter)
-	end
-	if hold == nil then
-		return
-	end
-	local delay = if enterDef ~= nil and enterDef.durationMs ~= nil then enterDef.durationMs / 1000 else 0
-	task.delay(delay, function()
-		local plant = tracker:plantOf(player.UserId)
-		if plant ~= nil and plant.startedAt == startedAt and player.Parent ~= nil then
-			AnimationServiceServer:play(player, hold)
-		end
-	end)
-end
-
-local function pottedPlant(player: Player, character: Model, root: BasePart, def: AbilityDef)
-	NpcServiceServer:conceal(player, AbilityConstants.PLANT_SOURCE)
-	local startedAt = os.clock()
-	tracker:startPlant(player.UserId, { startedAt = startedAt, origin = root.Position, cancelled = false })
-	character:SetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE, def.id)
-	-- The wand goes away as he plants (its IK grip would fight the clip that brings out the pot); slot 1 brings it back.
-	if VacuumToolSystem.isEquipped(character) then
-		VacuumServiceServer:setEquipped(player, false)
-	end
-	plantClips(player, def, startedAt)
-end
-
--- Ends `player`'s plant: revealed to every monster at once, then the visuals (the exit clip only for a calm end).
-local function endPlant(player: Player, reason: AbilityTypes.EndReason, calm: boolean)
-	if tracker:plantOf(player.UserId) == nil then
-		return
-	end
-	NpcServiceServer:reveal(player, AbilityConstants.PLANT_SOURCE)
-	tracker:endPlant(player.UserId)
-	counters.plantsEnded += 1
-	local character = player.Character
-	if character ~= nil then
-		character:SetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE, nil)
-	end
-	local def = AbilityRegistry.get("pottedPlant")
-	local clips = if def ~= nil then def.clips else nil
-	if clips ~= nil then
-		if clips.enter ~= nil then
-			AnimationServiceServer:stop(player, clips.enter)
-		end
-		if clips.hold ~= nil then
-			AnimationServiceServer:stop(player, clips.hold)
-		end
-		if calm and clips.exit ~= nil then
-			AnimationServiceServer:play(player, clips.exit)
-		end
-	end
-	say(player, reason)
 end
 
 -- Every press of the power button that reaches the server, used or refused (training's power step counts a press).
@@ -308,7 +219,7 @@ local function onUse(player: Player)
 	elseif def.id == "spotIt" and cargoId ~= nil then
 		spotIt(player, character, root, def, cargoId)
 	elseif def.id == "pottedPlant" then
-		pottedPlant(player, character, root, def)
+		AbilityPlantSystem.plant(plantContext, player, character, root, def)
 	end
 end
 
@@ -333,43 +244,6 @@ local handleCancel = RequestHandler.wrap({
 	end,
 })
 
--- Whether `player` is doing anything but standing as a plant: sprinting, vacuuming, hiding, holding something.
-local function acting(player: Player): boolean
-	return SprintServiceServer:isSprinting(player)
-		or VacuumServiceServer:isVacuuming(player)
-		or HideServiceServer:isHidden(player)
-		or CarryServiceServer:getCarried(player) ~= nil
-end
-
-local function stepPlants(now: number)
-	for _, userId in tracker:planters() do
-		local player = Players:GetPlayerByUserId(userId)
-		local plant = tracker:plantOf(userId)
-		if player ~= nil and plant ~= nil then
-			local _, humanoid, root = bodyOf(player)
-			local moved = if root ~= nil
-				then Vector3.new(root.Position.X - plant.origin.X, 0, root.Position.Z - plant.origin.Z).Magnitude
-				else math.huge
-			local grounded = humanoid ~= nil and humanoid.FloorMaterial ~= Enum.Material.Air
-			local def = AbilityRegistry.get("pottedPlant")
-			local reason: AbilityTypes.EndReason? = AbilityRules.plantEnds({
-				now = now,
-				startedAt = plant.startedAt,
-				maxSeconds = if def ~= nil then def.duration else 0,
-				moved = moved,
-				grounded = grounded,
-				acting = acting(player),
-				alive = root ~= nil and aliveOf(player, humanoid),
-				caught = OccupantCatchSystem.isCatching(userId),
-				cancelled = plant.cancelled,
-			})
-			if reason ~= nil then
-				endPlant(player, reason, reason == "timeout" and grounded)
-			end
-		end
-	end
-end
-
 local function stepTimed(now: number)
 	for userId, entry in timed do
 		if now >= entry.untilTime then
@@ -377,20 +251,7 @@ local function stepTimed(now: number)
 			entry.character:SetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE, nil)
 		end
 	end
-	for userId, entry in playing do
-		local player = Players:GetPlayerByUserId(userId)
-		if now >= entry.untilTime or player == nil then
-			playing[userId] = nil
-			continue
-		end
-		local character, _, root = bodyOf(player)
-		local moving = root ~= nil and flatSpeed(root) > MOVING_SPEED
-		if not AbilityClipUtils.keeps(entry.kind, moving, handsBusy(player, character)) then
-			-- Moving cuts a full-body clip; busy hands cut any clip. The effect is untouched.
-			playing[userId] = nil
-			AnimationServiceServer:stop(player, entry.key)
-		end
-	end
+	AbilityClipSystem.step(now, bodyOf)
 end
 
 local function onHeartbeat(deltaTime: number)
@@ -400,7 +261,7 @@ local function onHeartbeat(deltaTime: number)
 	end
 	elapsed = 0
 	local now = os.clock()
-	stepPlants(now)
+	AbilityPlantSystem.step(plantContext, now)
 	stepTimed(now)
 end
 
@@ -418,7 +279,7 @@ local function onShift(state: ShiftTypes.ShiftState)
 	for _, userId in tracker:planters() do
 		local player = Players:GetPlayerByUserId(userId)
 		if player ~= nil then
-			endPlant(player, "cancelled", false)
+			AbilityPlantSystem.endPlant(plantContext, player, "cancelled", false)
 		else
 			tracker:endPlant(userId)
 		end
@@ -485,7 +346,7 @@ local AbilityServiceServer: AbilityServiceServer = {
 			NpcServiceServer:reveal(player, AbilityConstants.PLANT_SOURCE)
 			tracker:clear(player.UserId)
 			timed[player.UserId] = nil
-			playing[player.UserId] = nil
+			AbilityClipSystem.forget(player.UserId)
 		end)
 		table.insert(
 			stoppers,
@@ -509,7 +370,7 @@ local AbilityServiceServer: AbilityServiceServer = {
 		for _, userId in tracker:planters() do
 			local player = Players:GetPlayerByUserId(userId)
 			if player ~= nil then
-				endPlant(player, "cancelled", false)
+				AbilityPlantSystem.endPlant(plantContext, player, "cancelled", false)
 			end
 		end
 	end,
