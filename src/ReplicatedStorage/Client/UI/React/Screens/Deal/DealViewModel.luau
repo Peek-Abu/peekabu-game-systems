@@ -20,9 +20,9 @@ export type Banner = {
 	id: DealId,
 	name: string,
 	line: string,
-	-- "R$ 749" (Roblox's live price, else DealConstants'), or "Soon" until the product exists.
+	-- "R$ 899" (Roblox's live price, else DealConstants'), or "Soon" until the product exists.
 	price: string,
-	-- "-53%": DealRules.offPercent of the price shown.
+	-- "-57%": DealRules.offPercent of the price shown.
 	off: string,
 	buyable: boolean,
 	-- Who the card shows: the employees whose Legendary skins it can give.

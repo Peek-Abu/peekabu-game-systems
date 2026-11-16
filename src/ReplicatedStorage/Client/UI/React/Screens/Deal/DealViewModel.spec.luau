@@ -18,8 +18,11 @@ return function()
 		it("prices the card in Robux with its honest % off, and says Soon until the product exists", function()
 			local ready = VM.banner("pickLegendary", true)
 			expect(ready.name).to.equal("PICK A LEGENDARY")
-			expect(ready.price).to.equal("R$ 749")
-			expect(ready.off).to.equal("-53%")
+			-- The fallback price and its % off come from DealConstants and the Gleam packs, so a price or pack change
+			-- never needs this spec edited.
+			local legendary = DealRules.deal("pickLegendary").robux
+			expect(ready.price).to.equal(`R$ {legendary}`)
+			expect(ready.off).to.equal(`-{DealRules.offPercent("pickLegendary", legendary)}%`)
 			expect(ready.buyable).to.equal(true)
 			local soon = VM.banner("pickNewHire", false)
 			expect(soon.price).to.equal("Soon")
@@ -30,8 +33,9 @@ return function()
 			local live = VM.banner("pickLegendary", true, 599)
 			expect(live.price).to.equal("R$ 599")
 			expect(live.off).to.equal(`-{DealRules.offPercent("pickLegendary", 599)}%`)
-			local hire = VM.banner("pickNewHire", true, 799)
-			expect(hire.off).to.equal("-50%")
+			local hire = VM.banner("pickNewHire", true, 949)
+			expect(hire.price).to.equal("R$ 949")
+			expect(hire.off).to.equal(`-{DealRules.offPercent("pickNewHire", 949)}%`)
 		end)
 	end)
 
@@ -58,7 +62,9 @@ return function()
 	describe("hireButton", function()
 		it("shows the New Hire deal under a locked employee while the deal is offered", function()
 			local owns = ownsOf({ "Pippa" })
-			expect(VM.hireButton("Cappy", owns, DealRules.fresh(), true)).to.equal("R$ 799 + Legendary")
+			expect(VM.hireButton("Cappy", owns, DealRules.fresh(), true)).to.equal(
+				`R$ {DealRules.deal("pickNewHire").robux} + Legendary`
+			)
 			expect(VM.hireButton("Pippa", owns, DealRules.fresh(), true)).to.equal(nil)
 			local bought = { bought = { pickNewHire = true }, picks = {} }
 			expect(VM.hireButton("Cappy", owns, bought, true)).to.equal(nil)

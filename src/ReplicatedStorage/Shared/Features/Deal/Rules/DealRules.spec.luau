@@ -42,13 +42,13 @@ return function()
 		end
 
 		-- The best pack is 1,950 Gleam for R$ 1,699 (owner 11-16), so 2,400 Gleam is R$ 2,091.
-		it("is 64% and 62% at the owner's R$ 749 and R$ 799 (2,400 Gleam = R$ 2,091)", function()
-			expect(DealRules.offPercent("pickLegendary", 749)).to.equal(64)
-			expect(DealRules.offPercent("pickNewHire", 799)).to.equal(62)
+		it("is 57% and 55% at the owner's R$ 899 and R$ 949 (2,400 Gleam = R$ 2,091)", function()
+			expect(DealRules.offPercent("pickLegendary", 899)).to.equal(57)
+			expect(DealRules.offPercent("pickNewHire", 949)).to.equal(55)
 		end)
 
 		it("follows whatever Robux price is shown, from today's catalogue", function()
-			for _, robux in { 299, 449, 749, 799 } do
+			for _, robux in { 299, 449, 749, 799, 899, 949 } do
 				expect(DealRules.offPercent("pickLegendary", robux)).to.equal(expected("pickLegendary", robux))
 				expect(DealRules.offPercent("pickNewHire", robux)).to.equal(expected("pickNewHire", robux))
 			end
