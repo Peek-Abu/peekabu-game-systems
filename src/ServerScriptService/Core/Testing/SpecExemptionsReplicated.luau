@@ -449,6 +449,9 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard"] = "React HUD widget (notice specced in CatchViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredPanel"] = "presentational React component (story in CatchRehiredPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.useSpectateTarget"] = "React hook polling DeathServiceClient:spectating() (no logic)",
+	["ReplicatedStorage.Shared.Features.Event.Data.EventTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Event.Data.EventConstants"] = "static names and tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.Event.Net.EventEvents"] = "ByteNet packet definitions (no logic)",
 }
 
 return table.freeze(EXEMPT_MODULES)

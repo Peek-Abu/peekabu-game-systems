@@ -13,7 +13,7 @@ export type CurrencyDefinition = {
 }
 
 -- Define the type explicitly (must match CURRENCIES keys)
-export type CurrencyType = "gloom" | "credits"
+export type CurrencyType = "gloom" | "credits" | "acorns"
 
 -- Economy analytics: every currency the game can report a change for. Gleam is the Robux-bought
 -- `premium` account slice (see below), so it is reportable but is not a CurrencyType key.
@@ -57,6 +57,11 @@ local CURRENCIES: { [CurrencyType]: CurrencyDefinition } = {
 		name = "Credits",
 		icon = "💵",
 	},
+	-- An event's own money (EventRegistry): earned only, never sold; what is left turns into Credits after the event.
+	acorns = {
+		name = "Acorns",
+		icon = "🌰",
+	},
 	-- Add more SLOT-SCOPED (earned-in-play) currencies as needed:
 	-- tickets = {
 	-- 	name = "Tickets",
@@ -73,7 +78,7 @@ local CURRENCIES: { [CurrencyType]: CurrencyDefinition } = {
 --   - a union member (and mirror entry) with no CURRENCIES entry, or a mirror that fell behind a
 --     grown union+CURRENCIES → validateCurrencyTypes() below errors at boot.
 -- When adding a currency, update all three: CURRENCIES, CurrencyType, and this list.
-local CURRENCY_TYPE_MEMBERS: { CurrencyType } = { "gloom", "credits" }
+local CURRENCY_TYPE_MEMBERS: { CurrencyType } = { "gloom", "credits", "acorns" }
 
 -- Pure core of validateCurrencyTypes, split out (and exported) so the drift failure modes are
 -- spec-testable with synthetic inputs — the real inputs can't drift in a test without failing

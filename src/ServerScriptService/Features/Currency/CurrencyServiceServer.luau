@@ -22,6 +22,7 @@ local PlayerDataService = require(ServerScriptService.Features.PlayerData.Player
 local currencySlice = PlayerDataSliceSystem.registerSlot("currency", {
 	gloom = 0,
 	credits = 0,
+	acorns = 0,
 }, function(slot)
 	return slot.currency
 end, CurrencyUtils.validateCurrency)

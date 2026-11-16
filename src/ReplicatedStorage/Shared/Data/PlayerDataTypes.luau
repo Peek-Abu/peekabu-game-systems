@@ -130,6 +130,14 @@ export type Loadout = {
 	The account-wide Lockers slice (LockerServiceServer): keys held per Locker, opens since the last Epic-or-better per
 	Locker (the pity counter) and the total opens. Keyed by Locker id ("gloom", "gleam").
 ]=]
+--[=[
+	The account-wide events slice (EventServiceServer, server-only): the day number (EventUtils.day) a limited-time
+	event's first-shift-of-the-day bonus was last paid (0 = never). Mirrors EventTypes.Events.
+]=]
+export type Events = {
+	day: number,
+}
+
 export type Lockers = {
 	keys: { [string]: number },
 	pity: { [string]: number },
@@ -302,6 +310,7 @@ export type PlayerAccount = {
 	coffee: Coffee,
 	deals: Deals,
 	places: Places,
+	events: Events,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

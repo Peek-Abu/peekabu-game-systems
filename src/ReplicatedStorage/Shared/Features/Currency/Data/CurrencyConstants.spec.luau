@@ -36,7 +36,9 @@ return function()
 			end
 			expect(seen.gloom).to.equal(true)
 			expect(seen.credits).to.equal(true)
-			expect(#valid).to.equal(2)
+			-- The Thanksgiving event's earned-only money (EventRegistry).
+			expect(seen.acorns).to.equal(true)
+			expect(#valid).to.equal(3)
 		end)
 	end)
 

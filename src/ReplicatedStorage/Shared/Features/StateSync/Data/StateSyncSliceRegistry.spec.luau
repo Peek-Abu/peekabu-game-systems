@@ -52,6 +52,7 @@ return function()
 					coffee = { seconds = 0, since = 0 },
 					deals = { bought = {}, picks = {} },
 					places = { owned = {} },
+					events = { day = 0 },
 					loadout = {
 						current = "Pippa",
 						picked = false,
