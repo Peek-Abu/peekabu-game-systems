@@ -12,12 +12,13 @@
 	|---|---|---|
 	| lockerKey | Vice Grips 29 (SFX), ProSoundEffects, 9120409020 | the key turns in the lock |
 	| lockerRattle | Security Gate 4 (SFX), ProSoundEffects, 9118901593 | the shut door rattles (louder the rarer) |
-	| lockerBurst | Steel Door 3 (SFX), ProSoundEffects, 9119631707 | the door bursts open |
-	| lockerChimeLow | Roblox GUI - Notification Low, Roblox, 17208372272 | the prize chime: Uncommon (a layer on Legendary) |
 	| lockerChimeHigh | Roblox GUI - Notification High, Roblox, 17208361335 | the prize chime: Rare, Epic, Legendary |
 	| lockerChimeAura | Roblox GUI - Aura, Roblox, 17208327798 | the sparkle layer: Epic and Legendary only |
 
 	(Notification High is also the approved tutorial pop; here it is a separate, unapproved use.)
+
+	Owner 11-16 (heard in play): the key / lock sound is "alright"; the door-burst sound (Steel Door 3) and the Uncommon
+	chime (Notification Low) were hated and are gone: the door opens silent and Uncommon has no chime.
 
 	Static data + registration (spec-exempt).
 
@@ -32,14 +33,6 @@ local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTyp
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	lockerKey = { assetId = "rbxassetid://9120409020", group = "SFX", volume = 0.8, maxConcurrent = 1 },
 	lockerRattle = { assetId = "rbxassetid://9118901593", group = "SFX", volume = 0.7, maxConcurrent = 1 },
-	lockerBurst = { assetId = "rbxassetid://9119631707", group = "SFX", volume = 0.9, maxConcurrent = 1 },
-	lockerChimeLow = {
-		assetId = "rbxassetid://17208372272",
-		group = "SFX",
-		bus = "Reward",
-		volume = 1.6,
-		maxConcurrent = 1,
-	},
 	lockerChimeHigh = {
 		assetId = "rbxassetid://17208361335",
 		group = "SFX",

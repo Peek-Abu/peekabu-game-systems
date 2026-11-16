@@ -23,7 +23,7 @@
 	- `hasStage()` answers, before anything renders, whether the 3D stage is there, so LockerOpeningScreen never draws
 	  its 2D fallback for a frame first (owner 11-16: a screen flashed for about 0.1 s before the cutscene).
 	- Plays the beats' sounds (LockerAssets: library picks, NOT approved): the key click, the rattle (louder the
-	  rarer), the burst and the rarity's prize chime.
+	  rarer) and, from Rare up, the rarity's prize chime. The door bursts open silent (owner 11-16).
 	- Restores the camera and destroys temporary instances cleanly on finish or Skip.
 	- Returns `nil` from `start` when the 3D stage is absent so `LockerOpeningScreen` falls back to Stage 1.
 
@@ -375,7 +375,7 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 				handle:stop(0.1)
 				rattle = nil
 			end
-			SoundServiceClient:playOneShot("lockerBurst")
+			-- No burst sound: the owner prefers the door opening silent (11-16).
 			for _, id in fx.chime do
 				SoundServiceClient:playOneShot(id)
 			end

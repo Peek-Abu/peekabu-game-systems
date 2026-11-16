@@ -175,7 +175,8 @@ local RARITY_LABEL: { [Rarity]: string } = {
 	odd = "Odd",
 }
 
--- Uncommon and Rare stay plain; the sparkly Aura layer is kept for Epic and up (the sound rarity rule).
+-- Uncommon has no chime (owner 11-16 hated the Uncommon one); Rare a plain chime; the sparkly Aura layer only on Epic
+-- and up (the sound rarity rule).
 local RARITY_FX: { [Rarity]: RarityFx } = {
 	default = {
 		hold = 0.5,
@@ -185,7 +186,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0,
 		rays = 3,
 		flash = 0.55,
-		chime = { "lockerChimeLow" },
+		chime = {},
 	},
 	uncommon = {
 		hold = 0.5,
@@ -195,7 +196,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0,
 		rays = 3,
 		flash = 0.55,
-		chime = { "lockerChimeLow" },
+		chime = {},
 	},
 	rare = {
 		hold = 0.8,
@@ -225,7 +226,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0.12,
 		rays = 10,
 		flash = 0.88,
-		chime = { "lockerChimeHigh", "lockerChimeAura", "lockerChimeLow" },
+		chime = { "lockerChimeHigh", "lockerChimeAura" },
 	},
 	odd = {
 		hold = 1.7,
@@ -235,7 +236,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0.12,
 		rays = 10,
 		flash = 0.88,
-		chime = { "lockerChimeHigh", "lockerChimeAura", "lockerChimeLow" },
+		chime = { "lockerChimeHigh", "lockerChimeAura" },
 	},
 }
 
