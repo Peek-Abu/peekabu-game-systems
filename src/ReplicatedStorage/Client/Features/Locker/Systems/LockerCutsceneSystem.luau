@@ -223,6 +223,8 @@ local function buildLeak(
 	light.Name = "LeakLight"
 	light.Color = Color3.new(1, 1, 1)
 	light.Range = 6 + fx.brightness * 0.5
+	-- Shadowed: the shut door blocks it, so it spills out round the seams instead of lighting the door's face.
+	light.Shadows = true
 	light.Brightness = 0
 	light.Parent = cavity
 	folder.Parent = lockerModel
@@ -345,8 +347,8 @@ function LockerCutsceneSystem.start(outcome: LockerTypes.Outcome): (() -> ())?
 		fill.CFrame = LockerViewModel.STAGE_ORIGIN * CFrame.new(lx - 1, 9, -3)
 		local fillLight = Instance.new("PointLight")
 		fillLight.Color = Color3.fromRGB(255, 236, 210)
-		fillLight.Brightness = 0.8
-		fillLight.Range = 18
+		fillLight.Brightness = 1.6
+		fillLight.Range = 22
 		fillLight.Shadows = false
 		fillLight.Parent = fill
 		fill.Parent = stage
