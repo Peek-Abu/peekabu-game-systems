@@ -162,35 +162,36 @@ return function()
 	end)
 
 	describe("Gleam", function()
-		it("costs 150 Gleam for the same 30 minutes", function()
-			expect(CoffeeConstants.GLEAM_PRICE).to.equal(150)
+		it("costs 115 Gleam for the same 30 minutes", function()
+			expect(CoffeeConstants.GLEAM_PRICE).to.equal(115)
 		end)
 
-		it("is affordable with 150 Gleam or more", function()
-			expect(CoffeeRules.affords(150)).to.equal(true)
+		it("is affordable with 115 Gleam or more", function()
+			expect(CoffeeRules.affords(115)).to.equal(true)
 			expect(CoffeeRules.affords(900)).to.equal(true)
-			expect(CoffeeRules.affords(149)).to.equal(false)
+			expect(CoffeeRules.affords(114)).to.equal(false)
 			expect(CoffeeRules.affords(nil)).to.equal(false)
 		end)
 
-		it("takes 150 Gleam off the balance, or refuses and leaves it", function()
+		it("takes 115 Gleam off the balance, or refuses and leaves it", function()
 			local rich = { balance = 200 }
 			expect(CoffeeRules.payGleam(rich)).to.equal(true)
-			expect(rich.balance).to.equal(50)
-			local poor = { balance = 149 }
+			expect(rich.balance).to.equal(85)
+			local poor = { balance = 114 }
 			expect(CoffeeRules.payGleam(poor)).to.equal(false)
-			expect(poor.balance).to.equal(149)
+			expect(poor.balance).to.equal(114)
 		end)
 
 		it("costs less in Gleam than the same Robux at the best Gleam pack", function()
-			-- 150 Gleam at the best pack (R$ 999 for 1,500) is R$ 99.9: the Robux price (R$ 99, owner 11-14) stays the
-			-- better deal, just. Compared in whole numbers (99 x 1,500 < 150 x 999), so rounding never flips it.
+			-- 115 Gleam at the best pack (R$ 1,699 for 1,950, owner 11-16) is about R$ 100: the Robux price (R$ 99, owner
+			-- 11-14) stays the better deal, just. Compared in whole numbers (99 x 1,950 < 115 x 1,699), so rounding never
+			-- flips it.
 			expect(CoffeeConstants.ROBUX_PRICE).to.equal(99)
-			expect(CoffeeConstants.ROBUX_PRICE * 1500 < CoffeeConstants.GLEAM_PRICE * 999).to.equal(true)
+			expect(CoffeeConstants.ROBUX_PRICE * 1950 < CoffeeConstants.GLEAM_PRICE * 1699).to.equal(true)
 		end)
 
 		it("tells a player who is short how much coffee costs", function()
-			expect(CoffeeRules.shortLine()).to.equal("You need 150 Gleam!")
+			expect(CoffeeRules.shortLine()).to.equal("You need 115 Gleam!")
 		end)
 	end)
 
