@@ -20,10 +20,10 @@
 	  floor head 0.5 stud off the floor in the brace: AnimationVacuumHarness, Studio 2026-10-17).
 
 	Owner plan A+B+C (2026-11-16, hands went INSIDE the body): the chest it guards is the visible one, the UpperTorso
-	and every piece worn on it (VacuumBodyUtils.chestBox); the hand targets and elbow poles ride the chest's animated
-	move from its rest pose (VacuumBodyFormulas.follow, VacuumMotionConstants.chestFollow), so the idle's sway never
-	swings the chest into the hands; and the wand turns about the point between the paws (VacuumBodyFormulas.pivot),
-	the left paw turning part way about its own grip.
+	and every piece worn on it (VacuumBodyUtils.chestBox). B, the hands riding the chest's sway (VacuumBodyFormulas
+	.follow), ships off (VacuumMotionConstants.chestFollow 0: the reach guard assumes root-held hands); C, turning about
+	the point between the paws (VacuumBodyFormulas.pivot), ships off too (turnAboutPaws false: it fought the reach
+	guard); the wand turns about the left paw's grip, the left paw part way about its own grip.
 
 	A Transform it wrote is recognised next frame: a joint the Animator did not rewrite is posed from the animation's
 	value again, never on top of its own last write. Setting an Attachment's CFrame and a Motor6D's Transform locally
