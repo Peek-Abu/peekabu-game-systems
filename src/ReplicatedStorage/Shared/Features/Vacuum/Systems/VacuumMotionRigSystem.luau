@@ -428,16 +428,25 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 		end
 		return through(through(CFrame.identity, rootJoint.motor, rootT), waist.motor, waistT)
 	end
-	local chestRest = chestFrame(CFrame.identity, CFrame.identity)
-	-- How the ANIMATION has moved the chest from rest this frame (its idle, walk and sway), Constants.chestFollow of it;
-	-- no move without the joints. Never the brace this rig writes itself: riding that tipped the wand into the floor
-	-- (vacuum harness, 2026-11-16: up to 1.2 studs under it), and the brace was designed round root-held hands.
+	-- The reference the chest's sway is measured from (VacuumBodyFormulas.settle): the chest where it first was, eased
+	-- after it, so a lean or offset the animation holds is not followed; its clock.
+	local reference: CFrame? = nil
+	local settledAt = os.clock()
+	-- How the ANIMATION has swayed and turned the chest this frame, Constants.chestFollow of it (VacuumBodyFormulas
+	-- .follow: never its tilt or height); no move without the joints. Never the brace this rig writes itself: riding
+	-- that tipped the wand into the floor (vacuum harness, 2026-11-16: up to 1.2 studs under it).
 	local function chestMove(): CFrame
 		local now = if rootJoint ~= nil and waist ~= nil then chestFrame(animated(rootJoint), animated(waist)) else nil
-		if chestRest == nil or now == nil then
+		if now == nil then
 			return CFrame.identity
 		end
-		return VacuumBodyFormulas.follow(chestRest, now, Constants.chestFollow)
+		local clock = os.clock()
+		local from = reference
+		reference = if from == nil
+			then now
+			else VacuumBodyFormulas.settle(from, now, clock - settledAt, Constants.chestSettle)
+		settledAt = clock
+		return VacuumBodyFormulas.follow(reference or now, now, Constants.chestFollow)
 	end
 
 	-- The wand last written (with its lift) and the lift held from it (VacuumMotionFormulas.floorLift).
@@ -500,6 +509,7 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 			end
 			released = true
 			applied, lifted = nil, 0
+			reference = nil
 			right.CFrame = rightRest
 			if left ~= nil and leftRest ~= nil then
 				left.CFrame = leftRest

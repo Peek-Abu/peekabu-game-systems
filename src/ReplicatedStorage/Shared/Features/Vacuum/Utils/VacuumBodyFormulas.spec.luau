@@ -55,6 +55,26 @@ return function()
 			expect((before - after).Magnitude).to.be.near(0, 1e-6)
 		end)
 
+		it(
+			"never follows the chest's tilt or height, only its sway and turn (the idle's standing lean tipped the wand into the floor)",
+			function()
+				local rest = CFrame.new(0, 0.7, 0)
+				-- Leaned 23 degrees forward and dropped 0.2, with no sway or turn.
+				local leaned = CFrame.new(0, 0.5, 0) * CFrame.Angles(math.rad(-23), 0, 0)
+				local delta = VacuumBodyFormulas.follow(rest, leaned, 1)
+				local hand = Vector3.new(0.4, 1.1, -0.8)
+				expect(((delta * hand) - hand).Magnitude).to.be.near(0, 1e-6)
+				-- Swayed and turned AND leaned: only the sway and the turn are followed, heights kept.
+				local moved = CFrame.new(0.28, 0.5, 0)
+					* CFrame.Angles(0, math.rad(13), 0)
+					* CFrame.Angles(math.rad(-23), 0, 0)
+				local follow = VacuumBodyFormulas.follow(rest, moved, 1)
+				expect((follow * hand).Y).to.be.near(hand.Y, 1e-6)
+				local _, yaw = follow:ToOrientation()
+				expect(yaw).to.be.near(math.rad(13), 1e-4)
+			end
+		)
+
 		it("is no move when the chest is at rest, and blends by `share`", function()
 			local rest = CFrame.new(0, 0.7, 0)
 			local function still(cf)
@@ -65,6 +85,27 @@ return function()
 			local now = CFrame.new(0.2, 0.7, 0)
 			expect(still(VacuumBodyFormulas.follow(rest, now, 0))).to.equal(true)
 			expect(VacuumBodyFormulas.follow(rest, now, 0.5).Position.X).to.be.near(0.1, 1e-6)
+		end)
+	end)
+
+	describe("settle", function()
+		it("eases the reference pose toward the chest, so a held lean or offset stops being followed", function()
+			local reference = CFrame.new(0, 0.7, 0)
+			local now = CFrame.new(0.3, 0.7, 0)
+			local after = VacuumBodyFormulas.settle(reference, now, 0.1, 1.5)
+			expect(after.Position.X > 0 and after.Position.X < 0.3).to.equal(true)
+			-- Held there long enough, the reference catches up and nothing is followed any more.
+			local caught = reference
+			for _ = 1, 600 do
+				caught = VacuumBodyFormulas.settle(caught, now, 1 / 60, 1.5)
+			end
+			expect((caught.Position - now.Position).Magnitude < 1e-2).to.equal(true)
+		end)
+
+		it("does not move in no time, and jumps there with no settle time", function()
+			local reference, now = CFrame.new(0, 0.7, 0), CFrame.new(0.3, 0.7, 0)
+			expect(VacuumBodyFormulas.settle(reference, now, 0, 1.5)).to.equal(reference)
+			expect(VacuumBodyFormulas.settle(reference, now, 0.1, 0)).to.equal(now)
 		end)
 	end)
 end

@@ -171,11 +171,13 @@ return table.freeze({
 	-- restore the old welded hands exactly.
 	handSmooth = 0.05,
 	poleFollow = 0.5,
-	-- Owner plan B (2026-11-16, hands went INSIDE the body): the hand targets and elbow poles ride the ANIMATION's move
-	-- of the upper body away from its rest pose (the idle swayed Cappy's chest 0.28 stud and 13 degrees under hands
-	-- pinned to the root), this share of it (VacuumBodyFormulas.follow). Never the brace the rig writes itself. 0
-	-- restores the old root-pinned hands exactly.
+	-- Owner plan B (2026-11-16, hands went INSIDE the body): the hand targets and elbow poles ride the ANIMATION's sway
+	-- and turn of the upper body (the idle swayed Cappy's chest 0.28 stud and 13 degrees under hands pinned to the
+	-- root), this share of it (VacuumBodyFormulas.follow: never its tilt or height, never the brace the rig writes
+	-- itself), measured from a reference that settles after the chest over `chestSettle` seconds, so a lean the
+	-- animation holds is not followed. chestFollow 0 restores the old root-pinned hands exactly.
 	chestFollow = 1,
+	chestSettle = 1.5,
 	-- Owner plan C (2026-11-16): the wand turns about the point between the paws (true) or about the left paw as before
 	-- (false). Studio only, the Workspace attribute TURN_ABOUT_PAWS_ATTRIBUTE, a boolean, overrides it on every
 	-- machine, so both can be measured on one build (the shipped value is this one).
