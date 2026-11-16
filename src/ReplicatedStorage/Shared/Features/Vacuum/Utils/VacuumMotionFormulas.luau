@@ -20,12 +20,17 @@
 	  and ankle turns that drop the hips with the feet planted.
 	- `step`: one damped spring.
 
+	The look half (`encodeAim` / `decodeAim`, `encodeYaw` / `decodeYaw`, `heading`, `faceToward`, `relativeYaw`,
+	`pointerLook`, `lookHeading`, `lookDistance`) was split out into VacuumLookFormulas and is re-exported here under
+	the same names.
+
 	@class VacuumMotionFormulas
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
+local VacuumLookFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumLookFormulas)
 
 -- The left paw's hold (root space, at rest): its point on the wand (GripLower), its shoulder, and the arm's reach.
 export type LeftHold = { at: Vector3, shoulder: Vector3, reach: number }
@@ -77,15 +82,23 @@ export type AimTuning = {
 
 local VacuumMotionFormulas = {}
 
+-- The look half lives in VacuumLookFormulas; re-exported here under the old names, so callers are unchanged.
+VacuumMotionFormulas.encodeAim = VacuumLookFormulas.encodeAim
+VacuumMotionFormulas.decodeAim = VacuumLookFormulas.decodeAim
+VacuumMotionFormulas.heading = VacuumLookFormulas.heading
+VacuumMotionFormulas.faceToward = VacuumLookFormulas.faceToward
+VacuumMotionFormulas.relativeYaw = VacuumLookFormulas.relativeYaw
+VacuumMotionFormulas.pointerLook = VacuumLookFormulas.pointerLook
+VacuumMotionFormulas.lookHeading = VacuumLookFormulas.lookHeading
+VacuumMotionFormulas.lookDistance = VacuumLookFormulas.lookDistance
+VacuumMotionFormulas.encodeYaw = VacuumLookFormulas.encodeYaw
+VacuumMotionFormulas.decodeYaw = VacuumLookFormulas.decodeYaw
+
+local wrapAngle = VacuumLookFormulas.wrapAngle
+
 -- A floor clamp flattens the wand by at most this much (radians) before it lifts it instead.
 local MAX_FLATTEN = 0.8
 local BISECTIONS = 24
--- The look pitch on the wire: whole quanta of degrees from -90.
-local AIM_LOW = -90
-local AIM_STEPS = 36
--- The look yaw on the wire: whole quanta of degrees from -YAW_RANGE.
-local YAW_RANGE = 60
-local YAW_STEPS = 24
 
 --[=[
 	Advances a damped spring (`frequency` Hz, `damping` ratio) toward `target` by `dt`, exactly (the closed-form
@@ -140,116 +153,6 @@ function VacuumMotionFormulas.aim(look: number, tuning: AimTuning): (number, num
 	return raise, reach
 end
 
---[=[
-	The look pitch (radians) as the byte the client sends: whole quanta of degrees from -90, clamped to +-90.
-]=]
-function VacuumMotionFormulas.encodeAim(look: number): number
-	local quantum = math.deg(Constants.aim.quantum)
-	return math.clamp(math.round((math.deg(look) - AIM_LOW) / quantum), 0, AIM_STEPS)
-end
-
---[=[
-	The look pitch in degrees a sent byte stands for; nil for anything the client cannot send.
-]=]
-function VacuumMotionFormulas.decodeAim(byte: number): number?
-	if byte ~= byte or byte ~= math.floor(byte) or byte < 0 or byte > AIM_STEPS then
-		return nil
-	end
-	return AIM_LOW + byte * math.deg(Constants.aim.quantum)
-end
-
---[=[
-	A look's flat heading (radians, left positive, -pi..pi; 0 is the -Z axis).
-]=]
-function VacuumMotionFormulas.heading(look: Vector3): number
-	return math.atan2(-look.X, -look.Z)
-end
-
-local function wrapAngle(angle: number): number
-	return (angle + math.pi) % (2 * math.pi) - math.pi
-end
-
---[=[
-	The body's next heading as it eases from `heading` toward the camera's `target` over `dt` (Constants.face): the
-	short way round, a share of the gap each frame (time constant `ease`), never faster than `maxRate`.
-]=]
-function VacuumMotionFormulas.faceToward(heading: number, target: number, dt: number): number
-	if dt <= 0 then
-		return heading
-	end
-	local tuning = Constants.face
-	local gap = wrapAngle(target - heading)
-	local turn = gap * (1 - math.exp(-math.min(dt, Constants.maxStep) / tuning.ease))
-	local most = tuning.maxRate * dt
-	return wrapAngle(heading + math.clamp(turn, -most, most))
-end
-
---[=[
-	Where the camera looks relative to the body, left or right (radians, left positive, -pi..pi): the flat headings of
-	the camera's look and the body's look.
-]=]
-function VacuumMotionFormulas.relativeYaw(cameraLook: Vector3, bodyLook: Vector3): number
-	return wrapAngle(VacuumMotionFormulas.heading(cameraLook) - VacuumMotionFormulas.heading(bodyLook))
-end
-
--- Closer than this (studs, flat) to the body, where the pointer meets the floor gives no steady heading.
-local POINTER_NEAR = 0.75
-
---[=[
-	The look (pitch and yaw off the body, radians: up and left positive) of a pointer whose ray leaves `origin` along
-	`direction` (the camera through the mouse cursor), for a body at `body` (its root frame) over a floor at height
-	`floorY` (P1 2026-11-14: the nozzle follows the mouse). The pitch is the ray's own, so a cursor low on the screen
-	brings the floor head in and one high on it sends it out, exactly as tilting the camera does (`aim`); the yaw is
-	where the ray meets the floor seen from the body, so the nozzle turns toward the very spot under the cursor. A ray
-	that never meets the floor ahead (above the horizon), or meets it right at the body's feet, turns by its own heading.
-]=]
-function VacuumMotionFormulas.pointerLook(
-	origin: Vector3,
-	direction: Vector3,
-	body: CFrame,
-	floorY: number
-): (number, number)
-	local unit = if direction.Magnitude > 1e-6 then direction.Unit else body.LookVector
-	local pitch = math.asin(math.clamp(unit.Y, -1, 1))
-	if unit.Y < -1e-3 then
-		local along = (floorY - origin.Y) / unit.Y
-		if along > 0 then
-			local spot = body:PointToObjectSpace(origin + unit * along)
-			local flat = Vector3.new(spot.X, 0, spot.Z)
-			if flat.Magnitude >= POINTER_NEAR then
-				return pitch, VacuumMotionFormulas.heading(flat)
-			end
-		end
-	end
-	return pitch, VacuumMotionFormulas.relativeYaw(unit, body.LookVector)
-end
-
---[=[
-	The look's heading off the body (radians, left positive) the wand aims at: `relative` within Constants.aim.maxLook
-	either way; looking back past the side, it eases back to straight ahead (0 straight behind), so a look swung
-	across the back never snaps the wand from one side to the other.
-]=]
-function VacuumMotionFormulas.lookHeading(relative: number): number
-	local most = Constants.aim.maxLook
-	local turn = wrapAngle(relative)
-	local size = math.abs(turn)
-	if size <= math.pi / 2 then
-		return math.clamp(turn, -most, most)
-	end
-	local side = if turn >= 0 then 1 else -1
-	return side * most * (math.pi - size) / (math.pi / 2)
-end
-
---[=[
-	How far out on the floor (studs from the root) a look `pitch` (radians, up positive) lands, within near..far:
-	near at nearPitch and below, far at farPitch and above.
-]=]
-function VacuumMotionFormulas.lookDistance(pitch: number): number
-	local aim = Constants.aim
-	local share = math.clamp((pitch - aim.nearPitch) / (aim.farPitch - aim.nearPitch), 0, 1)
-	return aim.near + (aim.far - aim.near) * share
-end
-
 -- The floor head's centre at rest (root space): the middle of its bottom corners.
 local function headCentre(rest: WandRest): Vector3
 	local sum = Vector3.zero
@@ -302,24 +205,6 @@ function VacuumMotionFormulas.aimYaw(rest: WandRest, heading: number, distance: 
 	local want = VacuumMotionFormulas.heading(Vector3.new(target.X - pivot.X, 0, target.Z - pivot.Z))
 	local now = VacuumMotionFormulas.heading(Vector3.new(head.X - pivot.X, 0, head.Z - pivot.Z))
 	return math.clamp(wrapAngle(want - now), -VacuumMotionFormulas.turnLimit(rest), aim.maxYawLeft)
-end
-
---[=[
-	The look yaw (radians, relative to the body) as the byte the client sends: whole quanta of degrees from -60, clamped.
-]=]
-function VacuumMotionFormulas.encodeYaw(relative: number): number
-	local quantum = math.deg(Constants.aim.quantum)
-	return math.clamp(math.round((math.deg(relative) + YAW_RANGE) / quantum), 0, YAW_STEPS)
-end
-
---[=[
-	The look yaw in degrees a sent byte stands for; nil for anything the client cannot send.
-]=]
-function VacuumMotionFormulas.decodeYaw(byte: number): number?
-	if byte ~= byte or byte ~= math.floor(byte) or byte < 0 or byte > YAW_STEPS then
-		return nil
-	end
-	return -YAW_RANGE + byte * math.deg(Constants.aim.quantum)
 end
 
 --[=[

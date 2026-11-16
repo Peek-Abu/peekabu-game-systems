@@ -23,7 +23,8 @@
 	  swing, HideDoorSystem), and the `entered` / `exited` signals.
 
 	Spec-exempt shell (Instances, Players, ByteNet, signals); the decisions are the specced HideRules, HideSpotUtils and
-	HideOccupancyTracker.
+	HideOccupancyTracker. Where the body goes in and comes out (the hug frame, the clear exit) was split out into
+	HideBodyUtils.
 
 	@class HideServiceServer
 ]=]
@@ -46,10 +47,9 @@ local HideConstants = require(HideShared.Data.HideConstants)
 local HideTypes = require(HideShared.Data.HideTypes)
 local HideEvents = require(HideShared.Net.HideEvents)
 local HideRules = require(HideShared.Rules.HideRules)
-local HideHugFormulas = require(HideShared.Utils.HideHugFormulas)
 local HideSpotUtils = require(HideShared.Utils.HideSpotUtils)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
-local HideRigUtils = require(ServerScriptService.Features.Hide.Utils.HideRigUtils)
+local HideBodyUtils = require(ServerScriptService.Features.Hide.Utils.HideBodyUtils)
 local HideOccupancyTracker = require(ServerScriptService.Features.Hide.State.HideOccupancyTracker)
 local HideSpotSystem = require(ServerScriptService.Features.Hide.Systems.HideSpotSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -70,6 +70,8 @@ export type Witness = (player: Player) -> boolean
 export type BeforeEnter = (player: Player) -> ()
 
 local log = Logger.new("HideServiceServer")
+local hideFrame = HideBodyUtils.hideFrame
+local standHeight = HideBodyUtils.standHeight
 
 local entered: SignalTyped.Signal<Player, SpotInfo> = SignalTyped.new()
 local exited: SignalTyped.Signal<Player, string, ExitReason> = SignalTyped.new()
@@ -89,17 +91,6 @@ local holds: { [number]: number } = {}
 local stoppers: { () -> () } = {}
 local campElapsed = 0
 
-local function rootOf(player: Player): BasePart?
-	local character = player.Character
-	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	return if root ~= nil and root:IsA("BasePart") then root else nil
-end
-
-local function humanoidOf(player: Player): Humanoid?
-	local character = player.Character
-	return if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
-end
-
 -- The size of what the player holds (nil when empty-handed; "unknown" for a held thing that is not cargo).
 local function heldSize(player: Player): string?
 	local carried = CarryServiceServer:getCarried(player)
@@ -109,35 +100,6 @@ local function heldSize(player: Player): string?
 	local kind = carried:GetAttribute(CarryConstants.KIND_ATTRIBUTE)
 	local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
 	return if def ~= nil then def.size else "unknown"
-end
-
--- The root's height over the feet: where a standing character's root sits.
-local function standHeight(root: BasePart, humanoid: Humanoid): number
-	return humanoid.HipHeight + root.Size.Y / 2
-end
-
--- Where the hiding root goes: a desk or table's hug frame (the posed body on the floor, back to the furniture) from
--- the character's measured rig, else the spot's standing-height frame (a cabinet, or a rig that cannot be measured).
-local function hideFrame(spot: Spot, character: Model?, fallback: CFrame): CFrame
-	local def = HideConstants.FURNITURE[spot.noun]
-	local free = if def ~= nil then def.free else nil
-	local rig = if character ~= nil and free ~= nil then HideRigUtils.read(character) else nil
-	if free == nil or rig == nil then
-		return fallback
-	end
-	local low, high = HideHugFormulas.extents(rig, HideHugFormulas.pose())
-	-- No piece was reachable: extents is (inf, -inf).
-	if
-		low.X == math.huge
-		or low.Y == math.huge
-		or low.Z == math.huge
-		or high.X == -math.huge
-		or high.Y == -math.huge
-		or high.Z == -math.huge
-	then
-		return fallback
-	end
-	return HideHugFormulas.hugFrame(spot.frame, spot.furniture.Size, free, low, high, HideConstants.HUG_BACK_GAP)
 end
 
 local spotSystem: HideSpotSystem.HideSpotSystem
@@ -157,47 +119,6 @@ local function infoOf(player: Player): SpotInfo?
 		since = stay.since,
 		seenEntering = stay.seenEntering,
 	}
-end
-
--- The first exit with room for a body (nothing collidable but the furniture's own parts), else the front one.
-local function exitFrame(spot: Spot, root: BasePart, humanoid: Humanoid, entry: CFrame?): CFrame
-	local frames = HideSpotUtils.frames(spot.noun, spot.frame, spot.furniture.Size, standHeight(root, humanoid))
-	local exclude: { Instance } = { spot.furniture }
-	for _, other in Players:GetPlayers() do
-		if other.Character ~= nil then
-			table.insert(exclude, other.Character)
-		end
-	end
-	local overlap = OverlapParams.new()
-	overlap.FilterType = Enum.RaycastFilterType.Exclude
-	overlap.FilterDescendantsInstances = exclude
-	overlap.RespectCanCollide = true
-	local rays = RaycastParams.new()
-	rays.FilterType = Enum.RaycastFilterType.Exclude
-	rays.FilterDescendantsInstances = exclude
-	rays.RespectCanCollide = true
-	-- The front of the furniture at waist height: an exit must be reachable from it with no wall between.
-	local size = spot.furniture.Size
-	local mouth = (spot.frame * CFrame.new(0, -size.Y / 2 + 2, -size.Z / 2)).Position
-	local function usable(frame: CFrame): boolean
-		local at = frame.Position
-		-- Room for a body (clear of the floor and its carpet skin), a floor under it, and no wall in the way.
-		local body = frame * CFrame.new(0, HideConstants.EXIT_PROBE.Y / 2 - standHeight(root, humanoid) + 0.6, 0)
-		return #Workspace:GetPartBoundsInBox(body, HideConstants.EXIT_PROBE, overlap) == 0
-			and Workspace:Raycast(at, Vector3.new(0, -(standHeight(root, humanoid) + 3), 0), rays) ~= nil
-			and Workspace:Raycast(mouth, Vector3.new(at.X, mouth.Y, at.Z) - mouth, rays) == nil
-	end
-	-- Back where they went in from first, then in front, behind, either side.
-	local candidates = table.clone(frames.exits)
-	if entry ~= nil then
-		table.insert(candidates, 1, entry)
-	end
-	for _, frame in candidates do
-		if usable(frame) then
-			return frame
-		end
-	end
-	return entry or frames.exits[1]
 end
 
 -- Ends a stay: the body comes out (unless its character is gone), the spot reopens, the attributes clear.
@@ -229,7 +150,7 @@ local function leave(player: Player, reason: ExitReason): boolean
 	if body ~= nil and body.root.Parent ~= nil then
 		-- A living body comes out at an exit (also when the furniture went with them in it); a dead one just drops.
 		if spot ~= nil and body.humanoid.Health > 0 then
-			body.root.CFrame = exitFrame(spot, body.root, body.humanoid, body.entry)
+			body.root.CFrame = HideBodyUtils.exitFrame(spot, body.root, body.humanoid, body.entry)
 			outAt = body.root.Position
 		end
 		body.root.Anchored = false
@@ -255,8 +176,8 @@ end
 
 -- Puts `player` into `spot` if the rules allow. Never yields.
 local function enter(player: Player, spot: Spot): (boolean, string?)
-	local root = rootOf(player)
-	local humanoid = humanoidOf(player)
+	local root = HideBodyUtils.rootOf(player)
+	local humanoid = HideBodyUtils.humanoidOf(player)
 	local now = os.clock()
 	local ok, reason = HideRules.canEnter({
 		-- Knocked down (Death's knockdown) cannot climb in until they are up.

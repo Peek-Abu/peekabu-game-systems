@@ -16,16 +16,16 @@
 
 	Spec-exempt shell (ProximityPrompts, Camera, PlayerModule, ByteNet); the words are the specced HideViewModel and the
 	state the specced HideStore.
+	The prompt lookups (HidePromptUtils), the peek camera's mode (HidePeekUtils) and hiding the local body from itself
+	(HideBodySystem) were split out.
 
 	@class HideServiceClient
 ]=]
 
-local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
@@ -35,11 +35,13 @@ local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideCo
 local HideEvents = require(ReplicatedStorage.Shared.Features.Hide.Net.HideEvents)
 local HideRules = require(ReplicatedStorage.Shared.Features.Hide.Rules.HideRules)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
-local CameraTypes = require(ReplicatedStorage.Client.Features.Camera.Data.CameraTypes)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore)
+local HideBodySystem = require(ReplicatedStorage.Client.Features.Hide.Systems.HideBodySystem)
 local HideDoorSystem = require(ReplicatedStorage.Client.Features.Hide.Systems.HideDoorSystem)
 local HidePoseSystem = require(ReplicatedStorage.Client.Features.Hide.Systems.HidePoseSystem)
+local HidePeekUtils = require(ReplicatedStorage.Client.Features.Hide.Utils.HidePeekUtils)
+local HidePromptUtils = require(ReplicatedStorage.Client.Features.Hide.Utils.HidePromptUtils)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local InputControlsSystem = require(ReplicatedStorage.Client.Features.Input.Systems.InputControlsSystem)
@@ -65,19 +67,6 @@ local hiddenSpot: string? = nil
 local hiddenSince = 0
 local cooling: { [string]: number } = {}
 local counters = { exits = 0, entered = 0 }
-
--- A spot's prompt: on its tagged anchor, or on one of its other sides (an untagged HideReach attachment carrying the
--- spot's id: a desk or a table is reached from all round).
-local function isHidePrompt(instance: Instance): boolean
-	local parent = instance.Parent
-	return instance:IsA("ProximityPrompt")
-		and instance.Name == HideConstants.PROMPT_NAME
-		and parent ~= nil
-		and (
-			parent:HasTag(HideConstants.SPOT_TAG)
-			or (parent.Name == HideConstants.REACH_NAME and parent:GetAttribute(HideConstants.SPOT_ID_ATTRIBUTE) ~= nil)
-		)
-end
 
 -- The hand item's size, or nil when empty-handed.
 local function heldSize(): string?
@@ -136,74 +125,11 @@ local function settleRanges()
 	end
 end
 
-local function spotAnchor(spotId: string): Attachment?
-	for _, tagged in CollectionService:GetTagged(HideConstants.SPOT_TAG) do
-		if tagged:IsA("Attachment") and tagged:GetAttribute(HideConstants.SPOT_ID_ATTRIBUTE) == spotId then
-			return tagged
-		end
-	end
-	return nil
-end
-
--- What setBodyShown(false) hid. Showing restores exactly these, wherever they are now: a vacuum hidden in the hand and
--- put away meanwhile (its Tool in the Backpack) is no longer in the character, and nothing else would show it again
--- (the engine's own fade skips anything inside a Tool), so it came out invisible.
-local hiddenParts: { [BasePart]: true } = {}
-local hiddenDecals: { [Decal]: true } = {}
-
--- The local body hidden from (or shown back to) its own peek camera.
-local function setBodyShown(shown: boolean)
-	if shown then
-		for part in hiddenParts do
-			part.LocalTransparencyModifier = 0
-		end
-		for decal in hiddenDecals do
-			decal.LocalTransparencyModifier = 0
-		end
-		table.clear(hiddenParts)
-		table.clear(hiddenDecals)
-	end
-	local character = player.Character
-	if character == nil then
-		return
-	end
-	for _, piece in character:GetDescendants() do
-		if piece:IsA("BasePart") then
-			piece.LocalTransparencyModifier = if shown then 0 else 1
-			if not shown then
-				hiddenParts[piece] = true
-			end
-		elseif piece:IsA("Decal") then
-			piece.LocalTransparencyModifier = if shown then 0 else 1
-			if not shown then
-				hiddenDecals[piece] = true
-			end
-		end
-	end
-end
-
 local function requestExit()
 	if hiddenSpot ~= nil then
 		counters.exits += 1
 		HideEvents.packets.Exit.send(true)
 	end
-end
-
--- The peek: the spot's frame, turned toward the mouse (or the last touch) within PEEK_YAW / PEEK_PITCH.
-local function peekMode(base: CFrame): CameraTypes.ModeDef
-	return {
-		kind = "custom",
-		update = function(_dt: number): (CFrame, number?)
-			local camera = Workspace.CurrentCamera
-			local viewport = if camera ~= nil then camera.ViewportSize else Vector2.new(1, 1)
-			local mouse = UserInputService:GetMouseLocation()
-			local x = math.clamp((mouse.X / math.max(viewport.X, 1)) * 2 - 1, -1, 1)
-			local y = math.clamp((mouse.Y / math.max(viewport.Y, 1)) * 2 - 1, -1, 1)
-			local turn = CFrame.Angles(0, -x * math.rad(HideConstants.PEEK_YAW), 0)
-				* CFrame.Angles(-y * math.rad(HideConstants.PEEK_PITCH), 0, 0)
-			return base * turn, HideConstants.PEEK_FOV
-		end,
-	}
 end
 
 -- Watches the door of the furniture `anchor` hangs on (nil: stops watching), mirroring it into HideStore.
@@ -253,7 +179,7 @@ local function onHiddenChanged()
 		end
 		watchDoor(nil)
 		HideStore.setHidden(nil)
-		setBodyShown(true)
+		HideBodySystem.setShown(player, true)
 		ProximityPromptService.Enabled = true
 		task.spawn(InputControlsSystem.setLocked, "hide", false)
 		settleRanges()
@@ -262,7 +188,7 @@ local function onHiddenChanged()
 	counters.entered += 1
 	hiddenSince = if type(since) == "number" then since else Workspace:GetServerTimeNow()
 	release()
-	local anchor = spotAnchor(nextSpot)
+	local anchor = HidePromptUtils.spotAnchor(nextSpot)
 	local kind = if anchor ~= nil then anchor:GetAttribute(HideConstants.SPOT_KIND_ATTRIBUTE) else nil
 	local noun = if anchor ~= nil then anchor:GetAttribute(HideConstants.SPOT_NOUN_ATTRIBUTE) else nil
 	local peek = if anchor ~= nil then anchor:GetAttribute(HideConstants.PEEK_ATTRIBUTE) else nil
@@ -275,9 +201,9 @@ local function onHiddenChanged()
 	syncHeld()
 	watchDoor(anchor)
 	if typeof(peek) == "CFrame" then
-		peekToken = CameraServiceClient:pushMode(peekMode(peek), HideConstants.PEEK_PRIORITY)
+		peekToken = CameraServiceClient:pushMode(HidePeekUtils.peekMode(peek), HideConstants.PEEK_PRIORITY)
 	end
-	setBodyShown(false)
+	HideBodySystem.setShown(player, false)
 	ProximityPromptService.Enabled = false
 	task.spawn(InputControlsSystem.setLocked, "hide", true)
 	settleRanges()
@@ -350,7 +276,7 @@ local HideServiceClient: HideServiceClient = {
 
 	start = function(_self)
 		for _, instance in Workspace:GetDescendants() do
-			if instance:IsA("ProximityPrompt") and isHidePrompt(instance) then
+			if instance:IsA("ProximityPrompt") and HidePromptUtils.isHidePrompt(instance) then
 				adopt(instance)
 			end
 		end
@@ -358,7 +284,7 @@ local HideServiceClient: HideServiceClient = {
 			if instance:IsA("ProximityPrompt") and instance.Name == HideConstants.PROMPT_NAME then
 				-- The attachment's tag may land a frame after the prompt replicates.
 				task.defer(function()
-					if isHidePrompt(instance) then
+					if HidePromptUtils.isHidePrompt(instance) then
 						adopt(instance)
 						settleRanges()
 					end
@@ -371,7 +297,7 @@ local HideServiceClient: HideServiceClient = {
 			end
 		end)
 		local shown = ProximityPromptService.PromptShown:Connect(function(prompt: ProximityPrompt)
-			if not isHidePrompt(prompt) then
+			if not HidePromptUtils.isHidePrompt(prompt) then
 				return
 			end
 			adopt(prompt)
