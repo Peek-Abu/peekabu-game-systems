@@ -20,23 +20,24 @@
 	the sweeteners on the shared fixed-point anchors), and each emitter gets one idle voice the first time the running
 	shift's office shows it (SoundServiceClient:prewarm), which its rings or its typing loop then reuse.
 
-	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OfficeAmbienceUtils.
+	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OfficeAmbienceUtils, and where the
+	sounds come from (the tagged emitters, the crew, a yard one-shot's source) is OfficeAmbienceSourceUtils (split out
+	of this file).
 
 	@class OfficeAmbienceSystem
 ]=]
 
-local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local OfficeClient = ReplicatedStorage.Client.Features.Office
-local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local OfficeAssets = require(OfficeClient.Data.OfficeAssets)
 local OfficeAtmosphereConstants = require(OfficeClient.Data.OfficeAtmosphereConstants)
 local OfficeAmbienceUtils = require(OfficeClient.Utils.OfficeAmbienceUtils)
+local OfficeAmbienceSourceUtils = require(OfficeClient.Utils.OfficeAmbienceSourceUtils)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 
@@ -113,30 +114,9 @@ local function warm(parts: { BasePart })
 	end
 end
 
-local function emitters(): ({ OfficeAmbienceUtils.Emitter }, { BasePart })
-	local list: { OfficeAmbienceUtils.Emitter } = {}
-	local parts: { BasePart } = {}
-	for _, instance in CollectionService:GetTagged(OfficeDecorConstants.AMBIENT_TAG) do
-		local kind = instance:GetAttribute(OfficeDecorConstants.AMBIENT_KIND_ATTRIBUTE)
-		if instance:IsA("BasePart") and type(kind) == "string" then
-			table.insert(list, { kind = kind, position = instance.Position })
-			table.insert(parts, instance)
-		end
-	end
-	return list, parts
-end
-
-local function crew(): { Vector3 }
-	local positions: { Vector3 } = {}
-	for _, player in Players:GetPlayers() do
-		local character = player.Character
-		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-		if root ~= nil and root:IsA("BasePart") then
-			table.insert(positions, root.Position)
-		end
-	end
-	return positions
-end
+local emitters = OfficeAmbienceSourceUtils.emitters
+local crew = OfficeAmbienceSourceUtils.crew
+local yardSource = OfficeAmbienceSourceUtils.yardSource
 
 local function silence(typist: Typist)
 	local handle = typist.handle
@@ -188,40 +168,6 @@ local function schedule(now: number)
 	end
 end
 
--- Where a yard one-shot of `kind` sounds: a rolled point inside one of its source volumes within `reach` of the
--- camera; nil when none is (it stays quiet rather than play from the wrong place).
-local function yardSource(
-	kind: string,
-	reach: number,
-	center: Vector3,
-	list: { OfficeAmbienceUtils.Emitter },
-	parts: { BasePart }
-): Vector3?
-	local sources: { BasePart } = {}
-	local distances: { number } = {}
-	for index, emitter in list do
-		if emitter.kind == kind then
-			local part = parts[index]
-			table.insert(sources, part)
-			table.insert(distances, OfficeAmbienceUtils.boxDistance(center, part.CFrame, part.Size))
-		end
-	end
-	local picked = OfficeAmbienceUtils.pickNear(distances, reach, rng:NextNumber())
-	if picked == nil then
-		return nil
-	end
-	local part = sources[picked]
-	return OfficeAmbienceUtils.pointInReach(
-		center,
-		part.CFrame,
-		part.Size,
-		reach,
-		rng:NextNumber(),
-		rng:NextNumber(),
-		rng:NextNumber()
-	)
-end
-
 -- Each sweetener kind of the listener's place whose wait is up sounds one of its variants: indoors somewhere round the
 -- camera, in the yard from its source (the other place's kinds keep their waits: a kind due while you were away sounds
 -- as you come back).
@@ -242,7 +188,7 @@ local function stepSweeteners(now: number, list: { OfficeAmbienceUtils.Emitter }
 			local at: Vector3? = nil
 			if yard then
 				local def = SoundRegistry.get(ids[1])
-				at = yardSource(kind, if def ~= nil then def.rollOffMaxDistance or 0 else 0, center, list, parts)
+				at = yardSource(rng, kind, if def ~= nil then def.rollOffMaxDistance or 0 else 0, center, list, parts)
 			else
 				at = OfficeAmbienceUtils.sweetenerAt(
 					center,
