@@ -1,11 +1,12 @@
 --!strict
 --[=[
-	DepotBellVfxSystem: the shift bell's ring on this client (launch VFX 2026-11-16; DepotSpotSystem calls `play` on
-	every DepotEvents.Bell). Two gold rings burst from the bell's cup and three pairs of gold "(( ))" sound marks pop
-	up its sides (camera-facing BillboardGuis, full-colour textures with their edge baked in, so they read on the hub's
-	dark walls and its yellow floor lines), gold soap bubbles float up, a short warm glow lights the bell (skipped on
-	low graphics), and a "DING!" pops above it (DepotBellFormulas.TUNING.word). One RenderStepped connection drives it
-	all until DepotBellFormulas.duration(), then everything is destroyed. Client-local instances.
+	DepotBellVfxSystem: the shift bell's ring on this client (launch VFX 2026-11-16, owner pick B; DepotSpotSystem calls
+	`play` on every DepotEvents.Bell, as it swings the bell). One gold ring bursts from the bell's cup (a camera-facing
+	BillboardGui, a full-colour image with its edge baked in, so it reads on the hub's dark walls and its yellow floor
+	lines), a big "DING!" pops above it, gold soap bubbles float up and a short warm glow lights the bell (skipped on
+	low graphics). The glow's PointLight is made at brightness 0, fades up, holds and fades back to 0 before it is
+	removed (owner: never snap a light; DepotBellFormulas.glow). One RenderStepped connection drives it all until
+	DepotBellFormulas.duration(), then everything is destroyed. Client-local instances.
 
 	Spec-exempt shell (Instances, RunService); the shapes over time are the specced DepotBellFormulas.
 
@@ -94,7 +95,7 @@ end
 local function word(folder: Folder, at: Vector3): (Part, TextLabel, UIStroke)
 	local part = host(folder, at)
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromScale(5, 2)
+	gui.Size = UDim2.fromScale(T.wordStuds, T.wordStuds * 0.4)
 	gui.LightInfluence = 0
 	gui.Adornee = part
 	gui.Parent = part
@@ -129,10 +130,6 @@ function DepotBellVfxSystem.play(cup: Vector3)
 	for _ in T.waves do
 		table.insert(waves, billboard(folder, cup, VfxAssets.TEXTURES.bellWave))
 	end
-	local marks: { Billboard } = {}
-	for _, pair in T.marks do
-		table.insert(marks, billboard(folder, cup + Vector3.new(0, pair.lift, 0), VfxAssets.TEXTURES.bellMarks))
-	end
 	local light: PointLight? = nil
 	if UserSettings():GetService("UserGameSettings").SavedQualityLevel.Value > VfxConstants.LIGHT_MIN_QUALITY then
 		local made = Instance.new("PointLight")
@@ -158,14 +155,6 @@ function DepotBellVfxSystem.play(cup: Vector3)
 			wave.gui.Enabled = shape.live
 			wave.gui.Size = UDim2.fromScale(shape.studs, shape.studs)
 			wave.image.ImageTransparency = shape.transparency
-		end
-		for index, mark in marks do
-			local shape = DepotBellFormulas.marks(index, elapsed)
-			mark.gui.Enabled = shape.live
-			mark.gui.Size = UDim2.fromScale(shape.studs, shape.studs / 2)
-			mark.image.Size = UDim2.fromScale(shape.scale, shape.scale)
-			mark.image.ImageTransparency = shape.transparency
-			mark.host.CFrame = CFrame.new(cup + Vector3.new(0, shape.lift + shape.rise, 0))
 		end
 		if light ~= nil then
 			light.Brightness = DepotBellFormulas.glow(elapsed)

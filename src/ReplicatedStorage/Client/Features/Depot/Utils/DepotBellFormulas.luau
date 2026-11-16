@@ -1,9 +1,11 @@
 --!strict
 --[=[
-	DepotBellFormulas: the shift bell's ring over time (launch VFX 2026-11-16, owner: "ringing bell in lobby vfx").
-	A gold Gleam moment, tier 3 (game-vfx-design): two gold rings burst out of the bell's cup one after another, three
-	pairs of gold "(( ))" sound marks pop up its sides on the swing's beats, a short warm glow, and (TUNING.word) a
-	"DING!" that pops above it. Gold soap bubbles float up too (DepotBellVfxSystem; no sparkle stars).
+	DepotBellFormulas: the shift bell's ring over time (launch VFX 2026-11-16; owner pick B: "the bigger DING with one
+	ring and bubbles"). A gold Gleam moment, tier 3 (game-vfx-design): one gold ring bursts out of the bell's cup, a
+	big "DING!" pops above it, gold soap bubbles float up (DepotBellVfxSystem; no sparkle stars) and a short warm glow
+	lights the bell, while the bell itself swings (DepotSpotSystem). The glow never snaps (owner: "enable at 0
+	brightness and do a super quick tween to proper brightness! same with fade out!"): it rises from 0 over glowIn,
+	holds, and eases back to 0 over glowOut.
 
 	Each part's shape at `elapsed` seconds after the ring; `live` is false before its delay and after its end. Pure.
 
@@ -11,44 +13,34 @@
 ]=]
 
 export type Wave = { live: boolean, studs: number, transparency: number }
-export type Marks = { live: boolean, studs: number, scale: number, lift: number, rise: number, transparency: number }
 export type Word = { live: boolean, scale: number, rotation: number, rise: number, transparency: number }
 
 local TUNING = table.freeze({
-	-- The gold rings: each `delay` after the ring, from `waveStart` studs across, growing `grow` over waveSeconds,
-	-- starting at transparency `alpha`.
+	-- The gold ring: `delay` after the ring, from `waveStart` studs across, growing `grow` over waveSeconds, starting
+	-- at transparency `alpha`.
 	waves = table.freeze({
-		table.freeze({ delay = 0, grow = 6.5, alpha = 0 }),
-		table.freeze({ delay = 0.16, grow = 5, alpha = 0.3 }),
+		table.freeze({ delay = 0, grow = 5, alpha = 0 }),
 	}),
 	waveStart = 1.2,
 	waveSeconds = 0.7,
-	-- The sound-mark pairs: each `delay` after the ring, `studs` wide, `lift` over the bell's cup.
-	marks = table.freeze({
-		table.freeze({ delay = 0, studs = 3.6, lift = 0.3 }),
-		table.freeze({ delay = 0.2, studs = 4.2, lift = 0.75 }),
-		table.freeze({ delay = 0.4, studs = 4.8, lift = 1.2 }),
-	}),
-	marksSeconds = 0.65,
-	marksStart = 0.5,
-	marksPop = 0.22,
-	marksGrow = 0.15,
-	marksRise = 1,
-	marksHold = 0.55,
 	overshoot = 1.9,
-	-- The warm glow (a PointLight in the Gleam gold): its peak brightness and its whole time.
+	-- The warm glow (a PointLight in the Gleam gold): its brightness, how long it takes to fade in from 0, to hold and
+	-- to fade back to 0 (seconds), and its range.
 	glowBrightness = 3,
-	glowSeconds = 0.4,
+	glowIn = 0.06,
+	glowHold = 0.08,
+	glowOut = 0.26,
 	glowRange = 12,
-	-- The "DING!" over the bell (owner pick B on the VFX picks page; false: pick A, no word).
+	-- The "DING!" over the bell's cup: `wordStuds` wide (its height is 0.4 of that), `wordLift` over the cup.
 	word = true,
 	wordText = "DING!",
-	wordLift = 2.6,
+	wordStuds = 7,
+	wordLift = 2.2,
 	wordRise = 0.8,
 	wordSeconds = 1.1,
 	wordHold = 0.6,
 	-- Gold soap bubbles floating up.
-	bubbles = 8,
+	bubbles = 6,
 })
 
 local DepotBellFormulas = {}
@@ -79,28 +71,28 @@ function DepotBellFormulas.wave(index: number, elapsed: number): Wave
 	}
 end
 
-function DepotBellFormulas.marks(index: number, elapsed: number): Marks
-	local pair = TUNING.marks[index]
-	local t = (elapsed - pair.delay) / TUNING.marksSeconds
-	local k = math.clamp(t, 0, 1)
-	local pop = TUNING.marksPop
-	return {
-		live = t >= 0 and t <= 1,
-		studs = pair.studs,
-		scale = if k < pop
-			then TUNING.marksStart + (1 - TUNING.marksStart) * backOut(k / pop)
-			else 1 + TUNING.marksGrow * (k - pop) / (1 - pop),
-		lift = pair.lift,
-		rise = TUNING.marksRise * easeOutCubic(k),
-		transparency = fadeAfter(k, TUNING.marksHold),
-	}
+-- The glow's whole time: in, hold and out.
+function DepotBellFormulas.glowSeconds(): number
+	return TUNING.glowIn + TUNING.glowHold + TUNING.glowOut
 end
 
 function DepotBellFormulas.glow(elapsed: number): number
-	if elapsed < 0 or elapsed > TUNING.glowSeconds then
+	local peak = TUNING.glowBrightness
+	if elapsed <= 0 or elapsed >= DepotBellFormulas.glowSeconds() then
 		return 0
 	end
-	return TUNING.glowBrightness * math.sin(elapsed / TUNING.glowSeconds * math.pi)
+	if elapsed < TUNING.glowIn then
+		-- Quad out up from 0: quick, but never a snap.
+		local t = elapsed / TUNING.glowIn
+		return peak * (1 - (1 - t) ^ 2)
+	end
+	local out = elapsed - TUNING.glowIn - TUNING.glowHold
+	if out <= 0 then
+		return peak
+	end
+	-- Quad in down to 0.
+	local t = out / TUNING.glowOut
+	return peak * (1 - t * t)
 end
 
 function DepotBellFormulas.word(elapsed: number): Word
@@ -118,12 +110,9 @@ end
 
 -- Seconds from the ring until its last part is gone.
 function DepotBellFormulas.duration(): number
-	local longest = math.max(TUNING.wordSeconds, TUNING.glowSeconds)
+	local longest = math.max(TUNING.wordSeconds, DepotBellFormulas.glowSeconds())
 	for _, wave in TUNING.waves do
 		longest = math.max(longest, wave.delay + TUNING.waveSeconds)
-	end
-	for _, pair in TUNING.marks do
-		longest = math.max(longest, pair.delay + TUNING.marksSeconds)
 	end
 	return longest
 end
