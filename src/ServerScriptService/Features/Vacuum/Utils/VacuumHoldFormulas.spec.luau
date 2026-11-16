@@ -349,6 +349,27 @@ return function()
 			expect((hold.leftAt - LEFT.shoulder).Magnitude <= (LEFT.upper + LEFT.lower) * 0.95 + 1e-6).to.equal(true)
 		end)
 
+		it("moves a short left arm's hold out only as far as the paw still reaches the wand, never back in", function()
+			-- A short left arm (Cappy's): the full extraForward would put the whole wand out of its reach.
+			local SHORT = { shoulder = LEFT.shoulder, upper = 0.5, lower = 1.1 }
+			local slide = { leftSlide = true, maxShift = 0.3 }
+			local base = VacuumHoldFormulas.hold(RIGHT, SHORT, FLOOR, WAND, tuned(slide))
+			local moved = VacuumHoldFormulas.hold(
+				RIGHT,
+				SHORT,
+				FLOOR,
+				WAND,
+				tuned({ leftSlide = true, maxShift = 0.3, extraForward = 0.6 })
+			)
+			local out = base.rightAt.Z - moved.rightAt.Z
+			-- Moved forward, but less than asked, and straight ahead (no shift toward the left shoulder).
+			expect(out > 0).to.equal(true)
+			expect(out < 0.6).to.equal(true)
+			expect(moved.rightAt.X).to.be.near(base.rightAt.X, 1e-6)
+			expect(moved.rightAt.Y).to.be.near(base.rightAt.Y, 1e-6)
+			expect(moved.left ~= nil).to.equal(true)
+		end)
+
 		it("plans the left paw on the moved wand (it slides to where it reaches)", function()
 			local hold = VacuumHoldFormulas.hold(
 				RIGHT,

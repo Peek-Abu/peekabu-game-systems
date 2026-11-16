@@ -178,10 +178,10 @@ export type EmployeeDef = {
 	backpack: BackpackFit?,
 	-- How much further out in front (studs, at its spawned size) its vacuum hold sits than the shared plan
 	-- (VacuumHoldFormulas Tuning.extraForward). Why it exists: every employee shares one skeleton, and the planner's
-	-- clearance check reads the body's COLLISION surface, but a visible body can be bulkier than that surface (Prickles'
-	-- round middle), and its arms then sink into it while the check sees no clash. Set it for every
+	-- clearance check reads the body's COLLISION surface, but a visible body can be bulkier than that surface (Cappy's
+	-- hoodie, Prickles' round middle), and its arms then sink into it while the check sees no clash. Set it for every
 	-- new employee from a Shift Play camera sweep and the vacuum harness (characters/launch/new-employee-requirements.md);
-	-- nil = 0 (Pippa, Cappy).
+	-- the planner moves it only as far as the left paw still reaches the wand. nil = 0 (Pippa).
 	-- Launch IK fix 2026-11-16 (owner: hands went INSIDE the body).
 	vacuumHoldForward: number?,
 	-- The company uniform it wears over every skin: names of fitted-gear Models under
@@ -449,9 +449,9 @@ EMPLOYEES.Cappy = {
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
 	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32, "cappyfidget"),
-	-- No vacuumHoldForward: moved out, his left paw (the shortest reach) left its grip in the vacuum harness, and the
-	-- planner's left-paw shift then pulled his hold back in (Shift Play 2026-11-16: 0.35 -> 20/84 clipping looks,
-	-- ~0.2 -> 13/84, none -> 7/84). His fix needs the left-paw plan, not this offset.
+	-- His hoodie. The planner moves it out only as far as his short left arm still reaches the wand (a full 0.35 with
+	-- the old left-paw shift pulled the hold back into him: 20/84 clipping looks, Shift Play 2026-11-16).
+	vacuumHoldForward = 0.35,
 }
 
 EMPLOYEES.Prickles = {
