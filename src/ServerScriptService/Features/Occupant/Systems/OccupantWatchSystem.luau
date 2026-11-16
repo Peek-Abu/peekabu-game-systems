@@ -17,8 +17,9 @@
 	  kid the head held (OccupantHeadRules.lunge: not hidden, not knocked down) is kept for the brain's next think
 	  (`takeLunge`, read into Senses.lunge): "when nobody watches, it lunges at that kid".
 
-	`parseReport`, `points` and `freezes` are specced; the rest is a Players/raycast/ByteNet shell around the specced
-	OccupantWatchRules and OccupantHeadRules.
+	`parseReport` (OccupantCameraReportUtils), `points` and `freezes` are specced; the perch spots are measured by
+	OccupantPerchSpotTracker; the rest is a Players/raycast/ByteNet shell around the specced OccupantWatchRules and
+	OccupantHeadRules.
 
 	@class OccupantWatchSystem
 ]=]
@@ -41,8 +42,9 @@ local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local OccupantHeadRules = require(OccupantServer.Rules.OccupantHeadRules)
-local OccupantPerchRules = require(OccupantServer.Rules.OccupantPerchRules)
 local OccupantWatchRules = require(OccupantServer.Rules.OccupantWatchRules)
+local OccupantPerchSpotTracker = require(OccupantServer.State.OccupantPerchSpotTracker)
+local OccupantCameraReportUtils = require(OccupantServer.Utils.OccupantCameraReportUtils)
 local OccupantSightUtils = require(OccupantServer.Utils.OccupantSightUtils)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
@@ -81,50 +83,11 @@ local counters = { checks = 0, freezes = 0, reports = 0 }
 
 local OccupantWatchSystem = {}
 
-local function finite(vector: Vector3): boolean
-	return vector.X == vector.X
-		and vector.Y == vector.Y
-		and vector.Z == vector.Z
-		and math.abs(vector.X) < math.huge
-		and math.abs(vector.Y) < math.huge
-		and math.abs(vector.Z) < math.huge
-end
-
 -- The camera report as it arrives (OccupantEvents.CameraReport).
-export type ReportData = { position: Vector3, look: Vector3, up: Vector3, fov: number, aspect: number }
+export type ReportData = OccupantCameraReportUtils.ReportData
 
-local function number(value: unknown): boolean
-	return type(value) == "number" and value == value and math.abs(value) < math.huge
-end
-
---[=[
-	A camera report as the server keeps it (OccupantWatchRules.Report, less its time): its position, unit look, an up
-	square to the look (world up when the sent one is broken or along the look) and its half-screen tangents
-	(OccupantWatchRules.screen: the FOV and aspect held to a real screen). Nil when the position, look, FOV or aspect is
-	not finite, or the look is (near) zero.
-]=]
-function OccupantWatchSystem.parseReport(data: ReportData): Report?
-	local position, look, up = data.position, data.look, data.up
-	if typeof(position) ~= "Vector3" or typeof(look) ~= "Vector3" then
-		return nil
-	end
-	if not finite(position) or not finite(look) or look.Magnitude < 1e-3 then
-		return nil
-	end
-	if not number(data.fov) or not number(data.aspect) then
-		return nil
-	end
-	local unit = look.Unit
-	local sent = if typeof(up) == "Vector3" and finite(up) then up else Vector3.yAxis
-	local square = sent - unit * sent:Dot(unit)
-	if square.Magnitude < 1e-3 then
-		-- A broken up, or one along the look: square world up (or, looking straight up or down, world forward).
-		local world = if math.abs(unit.Y) < 0.99 then Vector3.yAxis else Vector3.zAxis
-		square = world - unit * world:Dot(unit)
-	end
-	local tanV, tanH = OccupantWatchRules.screen(data.fov, data.aspect)
-	return { position = position, look = unit, up = square.Unit, tanV = tanV, tanH = tanH, receivedAt = 0 }
-end
+-- A camera report as the server keeps it: OccupantCameraReportUtils.parseReport.
+OccupantWatchSystem.parseReport = OccupantCameraReportUtils.parseReport
 
 -- How far over the ground its feet point sits (a ray to the ground itself would end in the floor).
 OccupantWatchSystem.FEET_LIFT = 0.2
@@ -247,89 +210,8 @@ local function inView(report: Report, points: { Vector3 }): boolean
 	return #onScreen(report, points) > 0
 end
 
--- Every perch part's spot, as measured on the map, once per part (the props never move during a run).
-local measured: { [BasePart]: OccupantTypes.Perch } = {}
-setmetatable(measured, { __mode = "k" })
-
--- How far up a ceiling is looked for; the heights over the top a landing's line out runs (just over the top surface,
--- where his tucked feet start, and about his body), and the radius of those lines; how far down a floor is looked for;
--- and how high over the top his body sits (for sight checks and distances). The low line rules out a landing along a
--- bank of props: Shift run 11-14, a drop along the lockers passed just over the next locker's top (its hitbox stands
--- 0.26 over the visible top he sits on).
-local CEILING_LOOK = 60
-local LANDING_RADIUS = 1.2
-local LANDING_LINE_HEIGHTS = { LANDING_RADIUS + 0.05, 2 }
-local FLOOR_LOOK = 40
-local BODY_UP = 2
-
 --[=[
-	Measures the perch spot of `instance` (a PERCH_TAG part, a child of its prop's proxy): the centre of the prop's
-	visible top (its ArtVisual's box, else the proxy's: the owner's play-check 11-14 had him floating over the hitbox),
-	the room over it to the ceiling, and its landings: each OccupantPerchRules.landingCandidate PERCH_LANDING_OUT past
-	the prop's edge with clear, body-wide lines out to it from just over the top and higher, and a floor under it, lower
-	than the top
-	(so the drop never passes through a wall or lands on another prop). Rays skip the prop itself, the rigs and the crew.
-]=]
-local function measure(instance: BasePart, rig: Rig): OccupantTypes.Perch
-	local known = measured[instance]
-	if known ~= nil then
-		return known
-	end
-	local proxy = instance.Parent
-	local exclude: { Instance } = { rig.model }
-	for _, player in Players:GetPlayers() do
-		local character = player.Character
-		if character ~= nil then
-			table.insert(exclude, character)
-		end
-	end
-	local frame, size = instance.CFrame, instance.Size
-	if proxy ~= nil and proxy:IsA("BasePart") then
-		table.insert(exclude, proxy)
-		frame, size = proxy.CFrame, proxy.Size
-		local visual = proxy:FindFirstChild("ArtVisual")
-		if visual ~= nil and visual:IsA("Model") then
-			frame, size = visual:GetBoundingBox()
-		end
-	end
-	local top = (frame * CFrame.new(0, size.Y / 2, 0)).Position
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = exclude
-	params.RespectCanCollide = true
-	local up = Workspace:Raycast(top + Vector3.new(0, 0.05, 0), Vector3.new(0, CEILING_LOOK, 0), params)
-	local landings: { Vector3 } = {}
-	local reach = math.max(size.X, size.Z) / 2 + OccupantConstants.PERCH_LANDING_OUT
-	for _, spot in OccupantPerchRules.landingCandidates(top, reach) do
-		local out = (spot - top) * Vector3.new(1, 0, 1)
-		local clear = true
-		for _, height in LANDING_LINE_HEIGHTS do
-			if Workspace:Spherecast(top + Vector3.new(0, height, 0), LANDING_RADIUS, out, params) ~= nil then
-				clear = false
-				break
-			end
-		end
-		if not clear then
-			continue
-		end
-		local floor = Workspace:Raycast(spot + Vector3.new(0, 2, 0), Vector3.new(0, -FLOOR_LOOK, 0), params)
-		if floor ~= nil and floor.Position.Y < top.Y - 1 then
-			table.insert(landings, floor.Position)
-		end
-	end
-	local perch: OccupantTypes.Perch = {
-		id = instance:GetFullName(),
-		top = top,
-		at = top + Vector3.new(0, BODY_UP, 0),
-		headroom = if up ~= nil then up.Position.Y - top.Y else math.huge,
-		landings = landings,
-	}
-	measured[instance] = perch
-	return perch
-end
-
---[=[
-	Every perch on the map (OccupantConstants.PERCH_TAG parts in the Workspace, measured once: `measure`) and
+	Every perch on the map (OccupantConstants.PERCH_TAG parts in the Workspace, measured once: OccupantPerchSpotTracker.measure) and
 	whether any crew camera sees it right now: a fresh camera report (anyone's, hidden or not) with the top in its look
 	cone and range and a clear ray to it (B4, OccupantPerchRules: he only goes up where nobody can see). Empty when
 	this system is not watching `rig`.
@@ -345,7 +227,7 @@ function OccupantWatchSystem.perches(rig: Rig): { OccupantTypes.PerchView }
 		if not instance:IsA("BasePart") or not instance:IsDescendantOf(Workspace) then
 			continue
 		end
-		local perch = measure(instance, rig)
+		local perch = OccupantPerchSpotTracker.measure(instance, rig)
 		local seen = false
 		for _, report in reports do
 			if

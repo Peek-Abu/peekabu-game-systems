@@ -11,7 +11,7 @@
 	- chase: anyone within sightRange, inside the sightAngle cone, with a clear line of sight; a target he can
 	  still see is kept over a nearer player; within CATCH_RANGE the intent is `attack` (the catch). Far down a clear
 	  line (longRange, the narrow longAngle cone) he first stops and turns his head to look for a notice beat that
-	  grows with the distance (OccupantMindUtils.noticeDelay), then chases; his target stays seen down that cone;
+	  grows with the distance (OccupantNoticeRules, OccupantMindUtils.noticeDelay), then chases; his target stays seen down that cone;
 	  after CHASE_GIVE_UP_SECONDS on the same runner without a catch he sighs, patrols and leaves them be
 	  CHASE_COOLDOWN_SECONDS (their grace);
 	- search: lost sight → run to where he last saw them, look around SEARCH_SECONDS, sigh, patrol; a hiding spot
@@ -62,6 +62,7 @@ local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Dat
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantDirectorRules = require(OccupantServer.Rules.OccupantDirectorRules)
+local OccupantNoticeRules = require(OccupantServer.Rules.OccupantNoticeRules)
 local OccupantPerchRules = require(OccupantServer.Rules.OccupantPerchRules)
 local OccupantStareRules = require(OccupantServer.Rules.OccupantStareRules)
 local OccupantStuckRules = require(OccupantServer.Rules.OccupantStuckRules)
@@ -280,55 +281,6 @@ local function lookAround(current: Mind, senses: Senses): Step
 	return { mind = current, intent = IDLE }
 end
 
--- The modes in which he looks down his long cone (not at a desk, at a spot, on his break or over a catch).
-local LOOKING_FAR: { [string]: boolean } = { patrol = true, investigate = true, search = true }
-
--- Seconds since the last think (the notice beat's clock), like the director's.
-local function tick(mind: Mind, senses: Senses): number
-	return math.clamp(senses.now - (mind.lastThink or senses.now), 0, 0.5)
-end
-
--- Someone far down his long cone: count the beat up (a step that stops him, head turned to them) or, once it is long
--- enough for the distance, chase them. Nil when there is no one there (or he is busy).
-local function notice(current: Mind, senses: Senses): Step?
-	if not LOOKING_FAR[current.mode] then
-		return nil
-	end
-	local glimpse = M.distant(current, senses)[1]
-	if glimpse == nil then
-		return nil
-	end
-	local carried = if current.noticeId == glimpse.userId then current.noticeSeconds or 0 else 0
-	local seconds = carried + tick(current, senses)
-	if seconds >= M.noticeDelay((glimpse.position - senses.position).Magnitude) then
-		local step = M.chase(current, senses, glimpse, false)
-		step.mind.noticeId = nil
-		step.mind.noticeSeconds = nil
-		return step
-	end
-	local nextMind = table.clone(current)
-	nextMind.noticeId = glimpse.userId
-	nextMind.noticeSeconds = seconds
-	nextMind.point = glimpse.position
-	nextMind.swivelUntil = senses.now + 0.3
-	return { mind = nextMind, intent = IDLE }
-end
-
--- Nobody far down his cone this think: a noticing in progress falls back (NOTICE_DECAY a second) and is dropped at 0.
-local function fade(current: Mind, senses: Senses): Mind
-	local seconds = current.noticeSeconds
-	if seconds == nil then
-		return current
-	end
-	local nextMind = table.clone(current)
-	local left = seconds - tick(current, senses) * OccupantConstants.NOTICE_DECAY
-	nextMind.noticeSeconds = if left > 0 then left else 0
-	if left <= 0 then
-		nextMind.noticeId = nil
-	end
-	return nextMind
-end
-
 local function think(mind: Mind, senses: Senses): Step
 	local now = senses.now
 
@@ -420,11 +372,11 @@ local function think(mind: Mind, senses: Senses): Step
 	end
 
 	-- Far down a clear line: a beat to notice (he stops, his head turned to them), then the chase.
-	local noticing = notice(current, senses)
+	local noticing = OccupantNoticeRules.notice(current, senses)
 	if noticing ~= nil then
 		return noticing
 	end
-	current = fade(current, senses)
+	current = OccupantNoticeRules.fade(current, senses)
 
 	-- Someone beside him long enough: the head turn.
 	local glanced, turning = OccupantAlertRules.glance(current, senses)
