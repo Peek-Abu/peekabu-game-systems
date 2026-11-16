@@ -138,8 +138,11 @@ local EmployeeConstants = {
 	TAIL_BONE_PATTERN = "^Tail(%a+)(%d+)Bone$",
 	TAIL_STEP = 1 / 30,
 	TAIL_MAX_STEPS = 3,
-	TAIL_STIFFNESS = 0.18,
-	TAIL_DAMPING = 0.22,
+	-- Owner 11-15: livelier tails. Tuned on the offline clipping gate with forward travel (ss_pose.py gate S_stiff/S_damp):
+	-- 0.06 / 0.10 swings about 3.4x the first tuning (0.18 / 0.22) in walk with no new clipping; damping under ~0.1
+	-- lets the tails cut into the legs when running.
+	TAIL_STIFFNESS = 0.06,
+	TAIL_DAMPING = 0.10,
 	TAIL_GRAVITY = 0.0025,
 	TAIL_UPPER_LEG_RADIUS = 0.33,
 	TAIL_LOWER_LEG_RADIUS = 0.24,
