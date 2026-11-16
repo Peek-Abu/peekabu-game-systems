@@ -6,8 +6,8 @@
 	every monster at once, then the visuals and a toast saying why. Split out of AbilityServiceServer, which owns the
 	bookkeeping (the AbilityCooldownTracker, its counters) and passes it in with its body reads (a Context).
 
-	Spec-exempt shell (Players, Humanoids, NpcServiceServer, AnimationServiceServer); the decisions are the specced
-	AbilityRules and AbilityCooldownTracker.
+	A shell over Players, Humanoids, NpcServiceServer and AnimationServiceServer; the decisions are the specced
+	AbilityRules and AbilityCooldownTracker. Its spec covers `endAll` for planters who already left.
 
 	@class AbilityPlantSystem
 ]=]
@@ -151,6 +151,22 @@ function AbilityPlantSystem.step(ctx: Context, now: number)
 			if reason ~= nil then
 				AbilityPlantSystem.endPlant(ctx, player, reason, reason == "timeout" and grounded)
 			end
+		end
+	end
+end
+
+--[=[
+	Ends every plant (a shift change, the service stopping): a planter still in the game gets the full end (revealed,
+	the visuals), one who already left (`playerOf` finds no Player) only loses the bookkeeping.
+]=]
+function AbilityPlantSystem.endAll(ctx: Context, playerOf: (userId: number) -> Player?)
+	local tracker = ctx.tracker
+	for _, userId in tracker:planters() do
+		local player = playerOf(userId)
+		if player ~= nil then
+			AbilityPlantSystem.endPlant(ctx, player, "cancelled", false)
+		else
+			tracker:endPlant(userId)
 		end
 	end
 end

@@ -103,6 +103,10 @@ local function publishReady(player: Player, readyAt: number)
 	player:SetAttribute(AbilityConstants.READY_AT_ATTRIBUTE, readyAt)
 end
 
+local function playerOf(userId: number): Player?
+	return Players:GetPlayerByUserId(userId)
+end
+
 local plantContext: AbilityPlantSystem.Context = {
 	tracker = tracker,
 	counters = counters,
@@ -276,14 +280,7 @@ local function onShift(state: ShiftTypes.ShiftState)
 		end
 		return
 	end
-	for _, userId in tracker:planters() do
-		local player = Players:GetPlayerByUserId(userId)
-		if player ~= nil then
-			AbilityPlantSystem.endPlant(plantContext, player, "cancelled", false)
-		else
-			tracker:endPlant(userId)
-		end
-	end
+	AbilityPlantSystem.endAll(plantContext, playerOf)
 	for userId, entry in timed do
 		timed[userId] = nil
 		entry.character:SetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE, nil)
@@ -367,12 +364,8 @@ local AbilityServiceServer: AbilityServiceServer = {
 			stop()
 		end
 		table.clear(stoppers)
-		for _, userId in tracker:planters() do
-			local player = Players:GetPlayerByUserId(userId)
-			if player ~= nil then
-				AbilityPlantSystem.endPlant(plantContext, player, "cancelled", false)
-			end
-		end
+		-- A planter who already left loses the bookkeeping too, as on a shift change.
+		AbilityPlantSystem.endAll(plantContext, playerOf)
 	end,
 
 	--[=[
