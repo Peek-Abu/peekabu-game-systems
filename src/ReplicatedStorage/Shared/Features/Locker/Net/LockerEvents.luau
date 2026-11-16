@@ -40,6 +40,11 @@ local LockerEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.unknown,
 				reliabilityType = "reliable",
 			}),
+			-- client -> server: { locker } (buy one key with the live event's money; refusals come back as Refused)
+			KeyRequest = ByteNet.definePacket({
+				value = ByteNet.unknown,
+				reliabilityType = "reliable",
+			}),
 			-- server -> client: what an open gave (LockerTypes.Outcome)
 			Opened = ByteNet.definePacket({
 				value = ByteNet.struct({

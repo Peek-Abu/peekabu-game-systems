@@ -7,20 +7,22 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local LockerConstants = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerConstants)
 local LockerTypes = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerTypes)
 
 local MAX_ID = 64
 
 export type OpenRequest = { locker: LockerTypes.LockerId }
 export type BuyRequest = { locker: LockerTypes.LockerId, item: string }
+export type KeyRequest = { locker: LockerTypes.LockerId }
 
 local LockerRequestRules = {}
 
 local function lockerOf(value: unknown): LockerTypes.LockerId?
-	if value == "gloom" then
-		return "gloom"
-	elseif value == "gleam" then
-		return "gleam"
+	for _, id: LockerTypes.LockerId in LockerConstants.ORDER do
+		if id == value then
+			return id
+		end
 	end
 	return nil
 end
@@ -31,6 +33,18 @@ end
 
 function LockerRequestRules.buildBuy(locker: LockerTypes.LockerId, item: string): BuyRequest
 	return { locker = locker, item = item }
+end
+
+function LockerRequestRules.buildKey(locker: LockerTypes.LockerId): KeyRequest
+	return { locker = locker }
+end
+
+function LockerRequestRules.parseKey(payload: unknown): LockerTypes.LockerId?
+	if type(payload) ~= "table" then
+		return nil
+	end
+	local fields = payload :: { [string]: unknown } -- unknown -> indexable at the trust boundary; the field is shape-checked below
+	return lockerOf(fields.locker)
 end
 
 function LockerRequestRules.parseOpen(payload: unknown): LockerTypes.LockerId?
@@ -50,12 +64,11 @@ function LockerRequestRules.parseBuy(payload: unknown): (LockerTypes.LockerId?, 
 	if type(item) ~= "string" or #item == 0 or #item > MAX_ID then
 		return nil, nil
 	end
-	if fields.locker == "gloom" then
-		return "gloom", item
-	elseif fields.locker == "gleam" then
-		return "gleam", item
+	local locker: LockerTypes.LockerId? = lockerOf(fields.locker)
+	if locker == nil then
+		return nil, nil
 	end
-	return nil, nil
+	return locker, item
 end
 
 return LockerRequestRules

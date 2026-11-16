@@ -6,6 +6,7 @@ local LockerRules = require(script.Parent.LockerRules)
 return function()
 	local GLOOM = LockerConstants.LOCKERS.gloom
 	local GLEAM = LockerConstants.LOCKERS.gleam
+	local HARVEST = LockerConstants.LOCKERS.harvest
 
 	local function item(id, rarity)
 		return { id = id, kind = "skin", name = id, rarity = rarity, source = "gloomLocker", employee = "Pippa" }
@@ -34,6 +35,39 @@ return function()
 				expect(it_.id ~= "Cappy.GhostDebunker").to.equal(true)
 				expect(it_.id ~= "Prickles.PotKnight").to.equal(true)
 			end
+		end)
+	end)
+
+	describe("an event's Locker (owner R5)", function()
+		it("is looked up like the others and listed after them", function()
+			expect(LockerRules.get("harvest")).to.equal(HARVEST)
+			expect(LockerRules.get("attic")).to.equal(nil)
+			expect(table.concat(LockerConstants.ORDER, ",")).to.equal("gloom,gleam,harvest")
+		end)
+
+		it("holds the Gloom Locker's items plus its event's items, opened with the event's money", function()
+			local ids = {}
+			for _, entry in LockerRules.pool(HARVEST) do
+				ids[entry.id] = true
+				expect(entry.source == "gloomLocker" or entry.event == "harvest").to.equal(true)
+				expect(entry.kind).never.to.equal("sticker")
+			end
+			for _, entry in LockerRules.pool(GLOOM) do
+				expect(ids[entry.id]).to.equal(true)
+			end
+			expect(ids.HarvestPack).to.equal(true)
+			expect(HARVEST.currency).to.equal("acorns")
+			expect(HARVEST.paidRandom).to.equal(false)
+		end)
+
+		it("opens only while its event is live", function()
+			local _, closed = LockerRules.checkOpen(HARVEST, 6, 1, 9999, false, nil)
+			expect(closed).to.equal("not on")
+			local _, other = LockerRules.checkOpen(HARVEST, 6, 1, 9999, false, "winter")
+			expect(other).to.equal("not on")
+			expect((LockerRules.checkOpen(HARVEST, 6, 0, HARVEST.keyPrice, false, "harvest"))).to.equal(true)
+			-- A Locker with no event ignores it.
+			expect((LockerRules.checkOpen(GLOOM, 6, 1, 0, false, nil))).to.equal(true)
 		end)
 	end)
 
@@ -151,6 +185,7 @@ return function()
 		it("accepts the default and rejects negative or unknown counts", function()
 			expect(LockerRules.validate({ keys = {}, pity = {}, opened = 0 })).to.equal(true)
 			expect(LockerRules.validate({ keys = { gloom = 2 }, pity = { gleam = 3 }, opened = 5 })).to.equal(true)
+			expect(LockerRules.validate({ keys = { harvest = 1 }, pity = { harvest = 2 }, opened = 3 })).to.equal(true)
 			expect(LockerRules.validate({ keys = { gloom = -1 }, pity = {}, opened = 0 })).to.equal(false)
 			expect(LockerRules.validate({ keys = { nope = 1 }, pity = {}, opened = 0 })).to.equal(false)
 			expect(LockerRules.validate({ keys = {}, pity = {}, opened = 1.5 })).to.equal(false)

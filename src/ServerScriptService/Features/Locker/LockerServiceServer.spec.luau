@@ -50,11 +50,11 @@ local function makeFakeProfile(data)
 	}
 end
 
-local function makeProfileData(gloom, gleam, keys, pity)
+local function makeProfileData(gloom, gleam, keys, pity, acorns)
 	local slots = {}
 	for index = 1, PlayerDataConstants.MAX_SLOTS do
 		slots[index] = {
-			currency = { credits = 0, gloom = gloom or 0 },
+			currency = { credits = 0, gloom = gloom or 0, acorns = acorns or 0 },
 			inventory = { items = {} },
 			equippedTitle = {},
 		}
@@ -86,16 +86,20 @@ return function()
 	describe("LockerServiceServer", function()
 		local player = { UserId = 1, Name = "TestPlayer" }
 		local seeded = {}
-		local locked, restricted, clock, rolls, gleamPool, openedSent, refusedSent
+		local locked, restricted, clock, rolls, gleamPool, openedSent, refusedSent, liveEvent
 
-		local function seed(userId, gloom, gleam, keys, pity)
-			PlayerDataService:_setProfileForTesting(userId, makeFakeProfile(makeProfileData(gloom, gleam, keys, pity)))
+		local function seed(userId, gloom, gleam, keys, pity, acorns)
+			PlayerDataService:_setProfileForTesting(
+				userId,
+				makeFakeProfile(makeProfileData(gloom, gleam, keys, pity, acorns))
+			)
 			seeded[userId] = true
 		end
 
 		beforeEach(function()
 			locked = false
 			restricted = false
+			liveEvent = nil
 			clock = 100
 			rolls = { 0.0, 0.0 }
 			gleamPool = {
@@ -140,6 +144,9 @@ return function()
 					table.insert(refusedSent, { locker = locker, reason = reason })
 				end,
 				sendStatus = function() end,
+				live = function()
+					return liveEvent
+				end,
 			})
 		end)
 
@@ -221,6 +228,45 @@ return function()
 			gleamPool = {}
 			clock += 2
 			expect(select(2, LockerService:open(player, "gleam"))).to.equal("empty")
+		end)
+
+		describe("the event's Locker and keys", function()
+			local HARVEST = LockerConstants.LOCKERS.harvest
+
+			it("opens the event's Locker with acorns while the event is live", function()
+				liveEvent = "harvest"
+				seed(1, 0, 0, {}, {}, HARVEST.keyPrice)
+				local outcome, reason = LockerService:open(player, "harvest")
+				expect(reason).to.equal(nil)
+				expect(outcome ~= nil).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "acorns")).to.equal(0)
+				expect(CosmeticService:owns(1, outcome.item)).to.equal(true)
+			end)
+
+			it("refuses the event's Locker when the event is not live", function()
+				seed(1, 0, 0, {}, {}, 9999)
+				expect(select(2, LockerService:open(player, "harvest"))).to.equal("not on")
+				expect(CurrencyService:getCurrencyAmount(1, "acorns")).to.equal(9999)
+			end)
+
+			it("sells a Gloom Locker key for acorns during the event (EventRegistry keys)", function()
+				liveEvent = "harvest"
+				seed(1, 0, 0, {}, {}, 65)
+				local ok, reason = LockerService:buyKey(player, "gloom")
+				expect(reason).to.equal(nil)
+				expect(ok).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "acorns")).to.equal(5)
+				expect(LockerService:getLockers(1).keys.gloom).to.equal(1)
+				expect(select(2, LockerService:buyKey(player, "gloom"))).to.equal("short")
+			end)
+
+			it("sells no key outside the event, or for a Locker the event doesn't offer", function()
+				seed(1, 0, 0, {}, {}, 9999)
+				expect(select(2, LockerService:buyKey(player, "gloom"))).to.equal("not on sale")
+				liveEvent = "harvest"
+				expect(select(2, LockerService:buyKey(player, "gleam"))).to.equal("not on sale")
+				expect(CurrencyService:getCurrencyAmount(1, "acorns")).to.equal(9999)
+			end)
 		end)
 
 		it("lets a restricted player buy a paid Locker's item directly at the raised price", function()

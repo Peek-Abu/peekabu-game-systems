@@ -4,6 +4,13 @@ return function()
 	it("parses an open request for a known Locker", function()
 		expect(LockerRequestRules.parseOpen(LockerRequestRules.buildOpen("gloom"))).to.equal("gloom")
 		expect(LockerRequestRules.parseOpen(LockerRequestRules.buildOpen("gleam"))).to.equal("gleam")
+		expect(LockerRequestRules.parseOpen(LockerRequestRules.buildOpen("harvest"))).to.equal("harvest")
+	end)
+
+	it("parses a key request for a known Locker", function()
+		expect(LockerRequestRules.parseKey(LockerRequestRules.buildKey("gloom"))).to.equal("gloom")
+		expect(LockerRequestRules.parseKey({ locker = "attic" })).to.equal(nil)
+		expect(LockerRequestRules.parseKey(7)).to.equal(nil)
 	end)
 
 	it("rejects unknown Lockers and bad shapes", function()

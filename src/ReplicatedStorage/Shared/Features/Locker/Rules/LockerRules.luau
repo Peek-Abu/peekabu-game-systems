@@ -29,18 +29,22 @@ type Rarity = CosmeticTypes.Rarity
 local LockerRules = {}
 
 function LockerRules.get(id: string): Locker?
-	if id == "gloom" then
-		return LockerConstants.LOCKERS.gloom
-	elseif id == "gleam" then
-		return LockerConstants.LOCKERS.gleam
+	return LockerConstants.BY_ID[id]
+end
+
+-- Whether the Locker holds this catalogue item: its source is the Locker's, or it is the Locker's event's item
+-- (stickers come with their packs).
+function LockerRules.holds(locker: Locker, item: Item): boolean
+	if item.kind == "sticker" then
+		return false
 	end
-	return nil
+	return item.source == locker.source or (locker.event ~= nil and item.event == locker.event)
 end
 
 function LockerRules.pool(locker: Locker): { Item }
 	local list = {}
 	for _, item in CosmeticRegistry.all() do
-		if item.source == locker.source and item.kind ~= "sticker" then
+		if LockerRules.holds(locker, item) then
 			table.insert(list, item)
 		end
 	end
@@ -165,14 +169,19 @@ function LockerRules.directPrice(item: Item): number
 	return LockerConstants.DIRECT_PRICE[item.rarity] or LockerConstants.DEFAULT_DIRECT_PRICE
 end
 
--- `keys` held, `balance` of the Locker's currency, `restricted` from paid random items (server's check).
+-- `keys` held, `balance` of the Locker's currency, `restricted` from paid random items (server's check), `live` the
+-- live event's id (an event's Locker opens only while it is live).
 function LockerRules.checkOpen(
 	locker: Locker,
 	poolSize: number,
 	keys: number,
 	balance: number,
-	restricted: boolean
+	restricted: boolean,
+	live: string?
 ): (boolean, string?)
+	if locker.event ~= nil and locker.event ~= live then
+		return false, "not on"
+	end
 	if poolSize <= 0 then
 		return false, "empty"
 	end
@@ -196,7 +205,7 @@ function LockerRules.checkDirect(
 	if not locker.paidRandom or not restricted then
 		return false, "not restricted"
 	end
-	if item.source ~= locker.source or item.kind == "sticker" then
+	if not LockerRules.holds(locker, item) then
 		return false, "not in this locker"
 	end
 	if owned then

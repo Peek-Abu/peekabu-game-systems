@@ -10,16 +10,19 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 
-export type LockerId = "gloom" | "gleam"
+export type LockerId = "gloom" | "gleam" | "harvest"
 
--- What a key costs: Gloom (earned, a game currency) or Gleam (premium).
-export type Currency = "gloom" | "gleam"
+-- What a key costs: Gloom (earned, a game currency), Gleam (premium) or a limited-time event's money (acorns).
+export type Currency = "gloom" | "gleam" | "acorns"
 
 export type Locker = {
 	id: LockerId,
 	name: string,
 	-- The CosmeticRegistry source its items carry.
 	source: CosmeticTypes.Source,
+	-- A limited-time event's Locker (EventRegistry id): it also holds that event's items, and opens only while the
+	-- event is live.
+	event: string?,
 	currency: Currency,
 	keyPrice: number,
 	-- Chance weights by rarity (any scale); a rarity with no items in the pool drops out.

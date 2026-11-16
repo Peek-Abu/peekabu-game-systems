@@ -7,6 +7,9 @@
 	- `open`: checks not in a shift, cooldown (1 open/s), profile loaded, pool non-empty, PolicyService restriction for
 	  paid random Lockers, and key or currency balance. Rolls with the server's Random (pity forces Epic+ at `pityAt`),
 	  then commits key/currency spend + duplicate refund + item grant + pity update in ONE transaction.
+	- An event's Locker (LockerTypes.Locker.event) opens only while EventServiceServer:live() is its event, and is paid
+	  in the event's money; `buyKey` sells one key to another Locker for the live event's money at the event's price
+	  (EventRegistry keys), in one transaction.
 	- `buyDirect`: for players restricted from paid random items (`PolicyServiceServer:paidRandomItemsRestricted`),
 	  sells a paid Locker's item directly at `LockerRules.directPrice(item)` in one transaction and announces the
 	  reveal.
@@ -24,6 +27,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Data.CurrencyConstants)
+local EventRegistry = require(ReplicatedStorage.Shared.Features.Event.Data.EventRegistry)
 local Locker = ReplicatedStorage.Shared.Features.Locker
 local LockerConstants = require(Locker.Data.LockerConstants)
 local LockerEvents = require(Locker.Net.LockerEvents)
@@ -33,6 +37,7 @@ local LockerTypes = require(Locker.Data.LockerTypes)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
+local EventServiceServer = require(ServerScriptService.Features.Event.EventServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
@@ -40,8 +45,6 @@ local PolicyServiceServer = require(ServerScriptService.Features.Policy.PolicySe
 
 type LockerId = LockerTypes.LockerId
 type Outcome = LockerTypes.Outcome
-
-local GLOOM_CURRENCY: CurrencyConstants.CurrencyType = "gloom"
 
 local lockersSlice = PlayerDataSliceSystem.registerAccount(
 	LockerConstants.SLICE,
@@ -61,6 +64,8 @@ export type Deps = {
 	sendOpened: (player: Player, outcome: Outcome) -> (),
 	sendRefused: (player: Player, locker: string, reason: string) -> (),
 	sendStatus: (player: Player, restricted: boolean) -> (),
+	-- The live event's id (EventServiceServer:live()), nil when none.
+	live: () -> string?,
 }
 
 local log = Logger.new("LockerServiceServer")
@@ -99,17 +104,22 @@ local defaults: Deps = {
 			LockerEvents.packets.Status.sendTo({ restricted = restricted }, player)
 		end
 	end,
+	live = function(): string?
+		local event = EventServiceServer:live()
+		return if event ~= nil then event.id else nil
+	end,
 }
 local deps: Deps = defaults
 
 local function balanceOf(userId: number, currency: LockerTypes.Currency): number?
-	if currency == "gleam" then
+	local slot: CurrencyConstants.CurrencyType? = CurrencyConstants.toCurrencyType(currency)
+	if slot == nil then
 		return MarketplaceServiceServer:getPremium(userId)
 	end
 	if CurrencyServiceServer:getCurrency(userId) == nil then
 		return nil
 	end
-	return CurrencyServiceServer:getCurrencyAmount(userId, GLOOM_CURRENCY)
+	return CurrencyServiceServer:getCurrencyAmount(userId, slot)
 end
 
 local function currencyDeltaOp(
@@ -118,7 +128,8 @@ local function currencyDeltaOp(
 	spend: number,
 	refund: number
 ): PlayerDataService.TransactionOperation
-	if currency == "gleam" then
+	local slot: CurrencyConstants.CurrencyType? = CurrencyConstants.toCurrencyType(currency)
+	if slot == nil then
 		return MarketplaceServiceServer:premiumOp(userId, function(premium): boolean
 			if premium.balance < spend then
 				return false
@@ -127,12 +138,13 @@ local function currencyDeltaOp(
 			return true
 		end)
 	end
+	local key: CurrencyConstants.CurrencyType = slot
 	return CurrencyServiceServer:currencyOp(userId, function(wallet): boolean
-		local have = wallet[GLOOM_CURRENCY] or 0
+		local have = wallet[key] or 0
 		if have < spend then
 			return false
 		end
-		wallet[GLOOM_CURRENCY] = math.min(have - spend + refund, CurrencyConstants.MAX_CURRENCY)
+		wallet[key] = math.min(have - spend + refund, CurrencyConstants.MAX_CURRENCY)
 		return true
 	end)
 end
@@ -161,7 +173,7 @@ local function openImpl(player: Player, lockerId: string): (Outcome?, string?)
 	local keys = state.keys[locker.id] or 0
 	local pity = state.pity[locker.id] or 0
 	local restricted = deps.restricted(player)
-	local allowed, refusal = LockerRules.checkOpen(locker, #pool, keys, balance, restricted)
+	local allowed, refusal = LockerRules.checkOpen(locker, #pool, keys, balance, restricted, deps.live())
 	if not allowed then
 		return nil, refusal
 	end
@@ -207,6 +219,59 @@ local function openImpl(player: Player, lockerId: string): (Outcome?, string?)
 	end
 	opened:Fire(userId, outcome)
 	return outcome, nil
+end
+
+-- One key to `lockerId`, paid in the live event's money at the event's price (EventRegistry keys).
+local function buyKeyImpl(player: Player, lockerId: string): (boolean, string?)
+	local userId = player.UserId
+	Guard.userId(userId)
+	if deps.isLocked() then
+		return false, "locked during a shift"
+	end
+	local locker = LockerRules.get(lockerId)
+	if locker == nil then
+		return false, "unknown locker"
+	end
+	local live = deps.live()
+	local event = if live ~= nil then EventRegistry.get(live) else nil
+	local price: number? = nil
+	if event ~= nil then
+		for _, offer in event.keys do
+			if offer.locker == locker.id then
+				price = offer.price
+			end
+		end
+	end
+	if event == nil or price == nil then
+		return false, "not on sale"
+	end
+	local currency: CurrencyConstants.CurrencyType = event.currency
+	local cost: number = price
+	if lockersSlice.get(userId) == nil or CurrencyServiceServer:getCurrency(userId) == nil then
+		return false, "no profile loaded"
+	end
+	if CurrencyServiceServer:getCurrencyAmount(userId, currency) < cost then
+		return false, "short"
+	end
+	local committed, result = PlayerDataService:transaction({
+		CurrencyServiceServer:currencyOp(userId, function(wallet): boolean
+			local have = wallet[currency] or 0
+			if have < cost then
+				return false
+			end
+			wallet[currency] = have - cost
+			return true
+		end),
+		lockersSlice.op(userId, function(saved): boolean
+			saved.keys[locker.id] = (saved.keys[locker.id] or 0) + 1
+			return true
+		end),
+	})
+	if not committed then
+		return false, result.rejectionReason or "transaction failed"
+	end
+	log:audit(`userId={userId}`, "LOCKER_KEY_BOUGHT", locker.id, event.id, cost)
+	return true, nil
 end
 
 local function findInPool(pool: { CosmeticTypes.Item }, itemId: string): CosmeticTypes.Item?
@@ -292,6 +357,20 @@ local onBuyRequest = RequestHandler.wrap({
 	end,
 })
 
+local onKeyRequest = RequestHandler.wrap({
+	name = "LockerKeyRequest",
+	rateLimit = { maxRequests = 5, windowSeconds = 10 },
+	handler = function(payload: unknown, player: Player)
+		local lockerId = LockerRequestRules.parseKey(payload)
+		if lockerId == nil then
+			log:warn(`bad KeyRequest from {player.Name}`)
+			return
+		end
+		local ok, refusal = buyKeyImpl(player, lockerId)
+		deps.sendRefused(player, lockerId, if ok then "" else refusal or "failed")
+	end,
+})
+
 export type LockerServiceServer = {
 	dependencies: { string },
 	opened: SignalTyped.Signal<number, Outcome>,
@@ -301,11 +380,14 @@ export type LockerServiceServer = {
 	addKeys: (self: LockerServiceServer, userId: number, lockerId: LockerId, amount: number) -> boolean,
 	open: (self: LockerServiceServer, player: Player, lockerId: LockerId) -> (Outcome?, string?),
 	buyDirect: (self: LockerServiceServer, player: Player, lockerId: LockerId, itemId: string) -> (boolean, string?),
+	-- One key to `lockerId` for the live event's money (EventRegistry keys); refused when no live event sells it.
+	buyKey: (self: LockerServiceServer, player: Player, lockerId: LockerId) -> (boolean, string?),
 	getState: (self: LockerServiceServer) -> { [string]: any },
 	-- TEST SEAMS
 	_setDeps: (replacement: Deps?) -> (),
 	_onOpenRequest: (payload: unknown, player: Player) -> any,
 	_onBuyRequest: (payload: unknown, player: Player) -> any,
+	_onKeyRequest: (payload: unknown, player: Player) -> any,
 }
 
 local LockerServiceServer: LockerServiceServer = {
@@ -316,6 +398,7 @@ local LockerServiceServer: LockerServiceServer = {
 		"CurrencyServiceServer",
 		"MarketplaceServiceServer",
 		"PolicyServiceServer",
+		"EventServiceServer",
 	},
 
 	init = function(_self)
@@ -331,6 +414,14 @@ local LockerServiceServer: LockerServiceServer = {
 			LockerEvents.packets.BuyRequest.listen(function(payload: unknown, player: Player?)
 				if player then
 					onBuyRequest(payload, player)
+				end
+			end),
+			true
+		)
+		janitor:Add(
+			LockerEvents.packets.KeyRequest.listen(function(payload: unknown, player: Player?)
+				if player then
+					onKeyRequest(payload, player)
 				end
 			end),
 			true
@@ -383,11 +474,16 @@ local LockerServiceServer: LockerServiceServer = {
 		return buyDirectImpl(player, lockerId, itemId)
 	end,
 
+	buyKey = function(_self, player, lockerId)
+		return buyKeyImpl(player, lockerId)
+	end,
+
 	getState = function(_self)
-		return {
-			gloomPool = #LockerRules.pool(LockerConstants.LOCKERS.gloom),
-			gleamPool = #LockerRules.pool(LockerConstants.LOCKERS.gleam),
-		}
+		local pools: { [string]: number } = {}
+		for id, locker in LockerConstants.BY_ID do
+			pools[id] = #LockerRules.pool(locker)
+		end
+		return { pools = pools }
 	end,
 
 	_setDeps = function(replacement)
@@ -397,6 +493,7 @@ local LockerServiceServer: LockerServiceServer = {
 
 	_onOpenRequest = onOpenRequest,
 	_onBuyRequest = onBuyRequest,
+	_onKeyRequest = onKeyRequest,
 }
 
 return LockerServiceServer

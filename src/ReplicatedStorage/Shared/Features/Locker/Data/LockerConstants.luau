@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	LockerConstants: the two Lost & Found Lockers and every number the design marks as tunable (design:
+	LockerConstants: the Lost & Found Lockers (the Gloom and Gleam Lockers, and a limited-time event's) and every number the design marks as tunable (design:
 	docs/superpowers/specs/2026-10-25-odd-hours-lockers-design.md). Static data (spec-exempt; checked through
 	LockerRules.spec).
 
@@ -28,6 +28,20 @@ local GLOOM: LockerTypes.Locker = {
 	paidRandom = false,
 }
 
+-- The Thanksgiving event's Locker (owner R5, 2026-11-16): the Gloom Locker's skins plus the event's items, opened
+-- with acorns only while the event is live. Odds draft from the plan page (uncommon 40 / rare 40 / epic 20); the key
+-- price is a placeholder until the owner sets prices (R4). Acorns are earned only, so it is not a paid random item.
+local HARVEST: LockerTypes.Locker = {
+	id = "harvest",
+	name = "Harvest Locker",
+	source = "gloomLocker",
+	event = "harvest",
+	currency = "acorns",
+	keyPrice = 50,
+	odds = { uncommon = 40, rare = 40, epic = 20 },
+	paidRandom = false,
+}
+
 local GLEAM: LockerTypes.Locker = {
 	id = "gleam",
 	name = "Gleam Locker",
@@ -50,13 +64,15 @@ local REFUND: { [Rarity]: number } = { uncommon = 0.15, rare = 0.3, epic = 0.6, 
 -- What a restricted player pays, in Gleam, to buy a paid Locker's item directly.
 local DIRECT_PRICE: { [Rarity]: number } = { uncommon = 150, rare = 300, epic = 750, legendary = 1500, odd = 1500 }
 
-local ORDER: { LockerTypes.LockerId } = { "gloom", "gleam" }
+local ORDER: { LockerTypes.LockerId } = { "gloom", "gleam", "harvest" }
 
-local LOCKERS = table.freeze({ gloom = GLOOM, gleam = GLEAM })
+local LOCKERS = table.freeze({ gloom = GLOOM, gleam = GLEAM, harvest = HARVEST })
 
 export type LockerConstants = {
 	SLICE: string,
-	LOCKERS: { gloom: LockerTypes.Locker, gleam: LockerTypes.Locker },
+	LOCKERS: { gloom: LockerTypes.Locker, gleam: LockerTypes.Locker, harvest: LockerTypes.Locker },
+	-- Every Locker by id (LockerRules.get).
+	BY_ID: { [string]: LockerTypes.Locker },
 	ORDER: { LockerTypes.LockerId },
 	RARITY_ORDER: { Rarity },
 	EPIC_PLUS: { [Rarity]: boolean },
@@ -71,6 +87,7 @@ export type LockerConstants = {
 local LockerConstants: LockerConstants = {
 	SLICE = "lockers",
 	LOCKERS = LOCKERS,
+	BY_ID = table.freeze({ gloom = GLOOM, gleam = GLEAM, harvest = HARVEST }),
 	-- The order the Shop shows them in.
 	ORDER = ORDER,
 	RARITY_ORDER = RARITY_ORDER,
