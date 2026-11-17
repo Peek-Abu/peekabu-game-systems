@@ -19,38 +19,6 @@ return function()
 	local rich = { gleam = 99999, credits = 99999 }
 	local broke = { gleam = 0, credits = 0 }
 
-	describe("cards", function()
-		it("names what an offer is and who it is for", function()
-			local skin = VM.card(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), rich)
-			expect(skin.name).to.equal("Bubble Buddy")
-			expect(skin.line).to.equal("Skin · Pippa")
-			expect(skin.price).to.equal("1,600")
-			expect(skin.currency).to.equal("gleam")
-			expect(skin.skinKey).to.equal("BubbleBuddy")
-			expect(skin.emote).never.to.be.ok()
-			-- an emote's card loops the emote on its employee
-			local emote = VM.card(ShopRegistry.get("Pippa.Bubbles"), owner(), rich)
-			expect(emote.emote).to.equal("Pippa.Bubbles")
-			expect(emote.employee).to.equal("Pippa")
-			-- No idle is on sale right now: fixture offers for an employee's idle and a shared one (a sticker).
-			local idle = table.clone(ShopRegistry.get("Pippa.Bubbles"))
-			idle.items = { "Cappy.Classic" }
-			expect(VM.card(idle, owner(), rich).line).to.equal("Idle · Cappy")
-			local shared = table.clone(ShopRegistry.get("CozyPack"))
-			shared.items = { "CozyPack.CocoaBreak" }
-			expect(VM.card(shared, owner(), rich).line).to.equal("Sticker · any employee")
-			expect(VM.card(ShopRegistry.get("CozyPack"), owner(), rich).line).to.equal("Sticker pack")
-			expect(VM.card(ShopRegistry.get("Prickles"), owner(), rich).line).to.equal("Employee")
-		end)
-
-		it("marks owned, affordable and too-dear offers", function()
-			local offer = ShopRegistry.get("Pippa.BubbleBuddy")
-			expect(VM.card(offer, owner({ "Pippa.BubbleBuddy" }), rich).state).to.equal("owned")
-			expect(VM.card(offer, owner(), rich).state).to.equal("afford")
-			expect(VM.card(offer, owner(), broke).state).to.equal("short")
-		end)
-	end)
-
 	describe("button", function()
 		it("buys when you can, says Owned when you have it, and shows the price even when you are short", function()
 			local offer = ShopRegistry.get("Pippa.BubbleBuddy")
@@ -239,58 +207,6 @@ return function()
 			expect(tabs[2].text).to.equal("Hire")
 			expect(tabs[2].soon).to.equal(false)
 		end)
-
-		it("lists every employee for sale and nothing else, hired ones last", function()
-			local employees = 0
-			for _, offer in ShopRegistry.all() do
-				if CosmeticRegistry.get(offer.items[1]).kind == "employee" then
-					employees += 1
-				end
-			end
-			expect(employees > 0).to.equal(true)
-			local cards = VM.hires(owner(), rich)
-			expect(#cards).to.equal(employees)
-			for _, card in cards do
-				expect(card.kind).to.equal("employee")
-				expect(card.currency).to.equal("credits")
-			end
-			local hired = VM.hires(owner({ cards[1].id }), rich)
-			expect(hired[#hired].id).to.equal(cards[1].id)
-			expect(hired[#hired].state).to.equal("owned")
-		end)
-	end)
-
-	describe("skins tab", function()
-		it("lists every offer but employees, filters by employee, puts what you own last", function()
-			local all = VM.skins(owner({ "Pippa.BubbleBuddy" }), rich, nil)
-			for _, card in all do
-				expect(card.kind ~= "employee").to.equal(true)
-			end
-			expect(all[#all].state).to.equal("owned")
-			for _, card in VM.skins(owner(), rich, "Cappy") do
-				-- A bundle's card is checked by its hero item.
-				local item = CosmeticRegistry.get(ShopRegistry.get(card.id).items[1])
-				expect(item.employee == nil or item.employee == "Cappy").to.equal(true)
-				-- Vacuum skins have their own filter (owner, 2026-11-13).
-				expect(item.kind).never.to.equal("vacuum")
-			end
-		end)
-
-		it("has a Vacuums filter right after All, before the employees, showing only vacuum skins", function()
-			local filters = VM.skinFilters({ "Pippa", "Cappy", "Prickles" })
-			expect(filters[1].text).to.equal("All")
-			expect(filters[1].value).to.equal(nil)
-			expect(filters[2].text).to.equal("Vacuums")
-			expect(filters[2].value).to.equal(VM.VACUUMS)
-			expect(filters[3].text).to.equal("Pippa")
-			expect(filters[3].value).to.equal("Pippa")
-			expect(#filters).to.equal(5)
-			local vacuums = VM.skins(owner(), rich, VM.VACUUMS)
-			expect(#vacuums > 0).to.equal(true)
-			for _, card in vacuums do
-				expect(card.kind).to.equal("vacuum")
-			end
-		end)
 	end)
 
 	describe("idles", function()
@@ -309,87 +225,6 @@ return function()
 			expect(view.line).to.equal("Idle only (no skin) for Prickles · cosmetic only")
 			expect(#view.inside).to.equal(1)
 		end)
-	end)
-
-	describe("gleam", function()
-		it("shows the six bundles, bought with Robux only once their products exist", function()
-			local bundles = VM.bundles({})
-			expect(#bundles).to.equal(6)
-			expect(bundles[1].amount).to.equal("100")
-			expect(bundles[1].bonus).to.equal(nil)
-			-- Worked out from the numbers: Gleam per Robux over the first pack's.
-			-- Owner 11-16: small bonuses, about Marvel Rivals' (its best pack is ~16% over its smallest).
-			expect(bundles[2].amount).to.equal("420")
-			expect(bundles[2].bonus).to.equal("+4%")
-			expect(bundles[3].bonus).to.equal("+9%")
-			expect(bundles[4].amount).to.equal("1,950")
-			expect(bundles[4].bonus).to.equal("+14%")
-			-- Owner 11-16, the two big packs: 5,400 for R$ 4,499 and 12,500 for R$ 9,999 (about 25% for the $99 size).
-			expect(bundles[5].amount).to.equal("5,400")
-			expect(bundles[5].bonus).to.equal("+19%")
-			expect(bundles[6].amount).to.equal("12,500")
-			expect(bundles[6].bonus).to.equal("+24%")
-			-- Each bigger pack is a better deal.
-			for index = 2, #ShopConstants.BUNDLES do
-				local a, b = ShopConstants.BUNDLES[index - 1], ShopConstants.BUNDLES[index]
-				expect(b.gleam / b.robux > a.gleam / a.robux).to.equal(true)
-			end
-			for _, bundle in bundles do
-				expect(bundle.available).to.equal(ShopConstants.PRODUCT_IDS[bundle.key] ~= nil)
-			end
-		end)
-
-		it("shows each bundle's product icon and price from Roblox, the known ones until Roblox answers", function()
-			local known = VM.bundles({})[1]
-			expect(known.robux).to.equal(`R$ {ShopConstants.BUNDLES[1].robux}`)
-			expect(known.image).to.equal(ShopConstants.BUNDLES[1].image)
-			expect(string.match(known.image, "^rbxassetid://%d+$")).to.be.ok()
-
-			local live = VM.bundles({ gleam100 = { price = 1099, icon = "rbxassetid://7" } })[1]
-			expect(live.robux).to.equal("R$ 1,099")
-			expect(live.image).to.equal("rbxassetid://7")
-
-			-- A product Roblox has no price or icon for keeps the known ones.
-			local partial = VM.bundles({ gleam100 = {} })[1]
-			expect(partial.robux).to.equal(known.robux)
-			expect(partial.image).to.equal(known.image)
-		end)
-
-		it("lays the packs out like a ladder: colour climbs blue, purple, gold and the picture grows", function()
-			-- Owner 11-16 ("more like marvel rivals: Dont make it stretched on top of each other", Gleam page round 5):
-			-- one row of tall cards, each bigger pack's card richer than the last.
-			local bundles = VM.bundles({})
-			local hues = {}
-			for index, bundle in bundles do
-				hues[index] = bundle.hue
-			end
-			expect(table.concat(hues, " ")).to.equal("sky sky grape grape gold gold")
-			expect(bundles[1].iconScale).to.equal(VM.BUNDLE_ICON_MIN)
-			expect(bundles[6].iconScale).to.equal(1)
-			for index = 2, #bundles do
-				expect(bundles[index].iconScale > bundles[index - 1].iconScale).to.equal(true)
-			end
-		end)
-
-		it("tags the popular pack and the best value", function()
-			local bundles = VM.bundles({})
-			expect(bundles[4].tag).to.equal("POPULAR")
-			expect(bundles[6].tag).to.equal("BEST VALUE")
-			for index = 1, 3 do
-				expect(bundles[index].tag).to.equal(nil)
-			end
-			expect(bundles[5].tag).to.equal(nil)
-		end)
-
-		it(
-			"keeps the Featured page's Gleam row to the first four packs, so each card has room for its amount",
-			function()
-				local featured = VM.featuredBundles(VM.bundles({}))
-				expect(#featured).to.equal(4)
-				expect(featured[1].amount).to.equal("100")
-				expect(featured[4].amount).to.equal("1,950")
-			end
-		)
 	end)
 
 	describe("passes", function()
@@ -482,56 +317,9 @@ return function()
 			expect(VM.returnNote(back, 1300)).to.equal("Get 300 more Gleam for Bubble Buddy!")
 			expect(VM.returnNote(back, 1600)).to.equal("You have enough for Bubble Buddy!")
 		end)
-
-		it("points at the smallest bundle that covers what is missing, else the biggest", function()
-			local smallest, biggest = nil, nil
-			for _, bundle in ShopConstants.BUNDLES do
-				if ShopConstants.PRODUCT_IDS[bundle.key] ~= nil then
-					if smallest == nil or bundle.gleam < smallest.gleam then
-						smallest = bundle
-					end
-					if biggest == nil or bundle.gleam > biggest.gleam then
-						biggest = bundle
-					end
-				end
-			end
-			expect(VM.bestBundle(1)).to.equal(smallest.key)
-			expect(VM.bestBundle(biggest.gleam + 1)).to.equal(biggest.key)
-			for _, bundle in ShopConstants.BUNDLES do
-				local best = VM.bestBundle(bundle.gleam)
-				local picked
-				for _, other in ShopConstants.BUNDLES do
-					if other.key == best then
-						picked = other
-					end
-				end
-				expect(picked.gleam >= bundle.gleam).to.equal(true)
-			end
-			local marked = 0
-			for _, card in VM.bundles({}, smallest.key) do
-				if card.best then
-					marked += 1
-					expect(card.key).to.equal(smallest.key)
-				end
-			end
-			expect(marked).to.equal(1)
-		end)
 	end)
 
 	describe("crossed-out prices", function()
-		it("crosses out a bundle's items-alone price with its percent off", function()
-			local card = VM.card(ShopRegistry.get("Bundle.BubbleBuddy"), owner(), rich)
-			local alone = 0
-			for _, id in ShopRegistry.get("Bundle.BubbleBuddy").items do
-				alone += CosmeticRegistry.get(id).price
-			end
-			expect(card.was).to.equal(
-				require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel).grouped(alone)
-			)
-			expect(card.off).to.be.a("string")
-			expect(VM.card(ShopRegistry.get("Pippa.Bubbles"), owner(), rich).was).to.equal(nil)
-		end)
-
 		it("says the percent off and when a sale ends", function()
 			expect(VM.off(960, 1200)).to.equal("-20%")
 			expect(VM.off(1220, 1750)).to.equal("-30%")
@@ -540,15 +328,6 @@ return function()
 			expect(VM.saleText(1000 + 6 * 3600 + 12 * 60, 1000)).to.equal("Sale ends in 6h 12m")
 			expect(VM.saleText(1000, 1000)).to.equal(nil)
 			expect(VM.saleText(nil, 1000)).to.equal(nil)
-		end)
-
-		it("shows today's sale on a card when given the time", function()
-			local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
-			local NOON = 1792929600
-			local id = next(ShopPriceRules.daily(NOON))
-			local card = VM.card(ShopRegistry.get(id), owner(), { gleam = 0, credits = 0, now = NOON })
-			expect(card.off).to.equal(`-{ShopConstants.DAILY_SALE.percent}%`)
-			expect(card.saleEnds).to.be.a("number")
 		end)
 	end)
 

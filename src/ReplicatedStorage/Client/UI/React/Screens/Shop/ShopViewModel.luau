@@ -8,6 +8,8 @@
 	(lore, styles, what's inside with each extra's own price, an employee's ability and five display stats), the Skins tab list, the Gleam bundles, the Passes cards
 	(every registered game pass: its words from ShopConstants.PASS_COPY, its price and icon as Roblox reported them,
 	Owned once bought), the countdowns, and a refused buy in kid words. Nothing here is per item: a new offer shows up by itself.
+	The offer card (ShopCardViewModel), the Gleam bundles (ShopBundleViewModel) and the Hire / Skins lists
+	(ShopListViewModel) are split out; this module still exposes them under its own name.
 
 	@class ShopViewModel
 ]=]
@@ -15,13 +17,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
-local CosmeticBundleRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticBundleRegistry)
-local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local LockerConstants = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerConstants)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
-local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
 local ShopRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopRules)
 local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopTopUpRules)
@@ -29,7 +28,9 @@ local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
-local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
+local ShopBundleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shop.ShopBundleViewModel)
+local ShopCardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shop.ShopCardViewModel)
+local ShopListViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shop.ShopListViewModel)
 local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 
 type Offer = ShopTypes.Offer
@@ -37,7 +38,11 @@ type Owns = (id: string) -> boolean
 
 -- What the player has, and `now`: the server time prices are worked out at (sales; nil: regular prices only). `acorns`:
 -- a live event's money (absent reads 0).
-export type Balances = { gleam: number, credits: number, acorns: number?, now: number? }
+export type Balances = ShopCardViewModel.Balances
+export type CardState = ShopCardViewModel.CardState
+export type OfferCard = ShopCardViewModel.OfferCard
+export type SkinFilter = ShopListViewModel.SkinFilter
+export type Bundle = ShopBundleViewModel.Bundle
 
 -- A game pass card: what its button says follows `state` (loading the price, on sale, owned, not for sale).
 export type PassState = "loading" | "buy" | "owned" | "unavailable"
@@ -52,39 +57,6 @@ export type PassCard = {
 }
 -- One colour style's chip on a product page: a short name and its colours (the fur, then the outfit).
 export type StyleChip = { name: string, swatch: { Color3 } }
-export type CardState = "owned" | "afford" | "short"
-
-export type OfferCard = {
-	id: string,
-	name: string,
-	-- "Skin · Pippa", "Idle · any employee", "Sticker pack", "Employee".
-	line: string,
-	kind: CosmeticTypes.Kind,
-	rarity: CosmeticTypes.Rarity,
-	currency: ShopTypes.Currency,
-	price: string,
-	-- A real, higher price to cross out (a bundle's items alone, the price before a sale); nil when there is none.
-	was: string?,
-	-- "-20%" next to a crossed-out price; nil when there is none.
-	off: string?,
-	-- When a sale price ends (server time); nil when it is the regular price.
-	saleEnds: number?,
-	state: CardState,
-	-- Who to show in 3D (the item's employee, the employee itself, or Pippa for a shared item).
-	employee: string,
-	-- The EmployeeRegistry skin key for a skin.
-	skinKey: string?,
-	-- A vacuum (Cosmetic id): its card shows the vacuum alone, its page shows it on your employee.
-	vacuum: string?,
-	-- An emote (Cosmetic id): its page loops the emote on its employee.
-	emote: string?,
-	-- An idle (the item's key after the dot): it plays on its employee in the Classic skin, never the skin it came
-	-- from, so nobody thinks they are buying the skin (owner, 2026-11-13).
-	idle: string?,
-}
-
--- One Skins-tab filter: its words and what it keeps (nil = everything).
-export type SkinFilter = { text: string, value: string? }
 
 export type Button = {
 	text: string,
@@ -122,44 +94,25 @@ export type Product = {
 	confirm: string,
 }
 
-export type Bundle = {
-	key: string,
-	amount: string,
-	robux: string,
-	bonus: string?,
-	-- The product's icon (rbxassetid).
-	image: string,
-	available: boolean,
-	-- The one that best covers what the player came for (the smallest that is enough; VM.bestBundle).
-	best: boolean,
-	-- The card's colour on the Gleam tab: it climbs with the pack (VM.BUNDLE_HUES).
-	hue: UIToonConstants.Hue,
-	-- The picture's size on its card, VM.BUNDLE_ICON_MIN for the smallest pack up to 1 for the biggest.
-	iconScale: number,
-	-- "POPULAR" / "BEST VALUE" on its card's corner, or nil.
-	tag: string?,
-}
-
-local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
-	employee = "Employee",
-	skin = "Skin",
-	idle = "Idle",
-	emote = "Emote",
-	stickerPack = "Sticker pack",
-	sticker = "Sticker",
-	vacuum = "Vacuum",
-}
-
-local RARITY_RANK: { [CosmeticTypes.Rarity]: number } = {
-	default = 0,
-	uncommon = 1,
-	rare = 2,
-	epic = 3,
-	legendary = 4,
-	odd = 5,
-}
+local KIND_WORD = ShopCardViewModel.KIND_WORD
+local main = ShopCardViewModel.main
+local bundleOf = ShopCardViewModel.bundleOf
+local bundleEmployee = ShopCardViewModel.bundleEmployee
+local balanceOf = ShopCardViewModel.balanceOf
 
 local VM = {}
+
+VM.card = ShopCardViewModel.card
+VM.off = ShopCardViewModel.off
+VM.bestBundle = ShopBundleViewModel.bestBundle
+VM.bundles = ShopBundleViewModel.bundles
+VM.featuredBundles = ShopBundleViewModel.featuredBundles
+VM.BUNDLE_ICON_MIN = ShopBundleViewModel.BUNDLE_ICON_MIN
+VM.FEATURED_BUNDLES = ShopBundleViewModel.FEATURED_BUNDLES
+VM.hires = ShopListViewModel.hires
+VM.skins = ShopListViewModel.skins
+VM.skinFilters = ShopListViewModel.skinFilters
+VM.VACUUMS = ShopListViewModel.VACUUMS
 
 VM.SCENE = "shop"
 
@@ -185,95 +138,6 @@ function VM.tabs(
 		table.insert(tabs, entry)
 	end
 	return tabs
-end
-
-local function main(offer: Offer): CosmeticTypes.Item?
-	return CosmeticRegistry.get(offer.items[1])
-end
-
--- The bundle an offer sells (nil for a single item's offer).
-local function bundleOf(offer: Offer): CosmeticTypes.Bundle?
-	return CosmeticBundleRegistry.get(offer.id)
-end
-
--- Whose a bundle is: the one employee all its items belong to, else nil (a bundle can mix employees).
-local function bundleEmployee(bundle: CosmeticTypes.Bundle): string?
-	local who: string? = nil
-	for _, id in bundle.items do
-		local item = CosmeticRegistry.get(id)
-		local employee = if item ~= nil then item.employee else nil
-		if employee ~= nil then
-			if who ~= nil and who ~= employee then
-				return nil
-			end
-			who = employee
-		end
-	end
-	return who
-end
-
-local function balanceOf(offer: Offer, balances: Balances): number
-	if offer.currency == "gleam" then
-		return balances.gleam
-	elseif offer.currency == "acorns" then
-		return balances.acorns or 0
-	end
-	return balances.credits
-end
-
-local function lineOf(item: CosmeticTypes.Item): string
-	local word = KIND_WORD[item.kind]
-	if item.kind == "employee" or item.kind == "stickerPack" then
-		return word
-	elseif item.kind == "vacuum" then
-		return `{word} · every employee`
-	end
-	return `{word} · {item.employee or "any employee"}`
-end
-
-function VM.card(listed: Offer, owns: Owns, balances: Balances): OfferCard
-	local offer = ShopPriceRules.forPlayer(listed, owns, balances.now)
-	local item = main(offer)
-	local state: CardState = if ShopRules.owned(offer, owns)
-		then "owned"
-		elseif balanceOf(offer, balances) >= offer.price then "afford"
-		else "short"
-	local employee = if item == nil
-		then "Pippa"
-		elseif item.kind == "employee" then item.id
-		else item.employee or "Pippa"
-	-- A bundle's card is the bundle's (its name and rarity), drawn with its first item (the hero).
-	local bundle = bundleOf(offer)
-	local bundleWho = if bundle ~= nil then bundleEmployee(bundle) else nil
-	return {
-		id = offer.id,
-		name = if bundle ~= nil then bundle.name elseif item ~= nil then item.name else offer.id,
-		line = if bundle ~= nil
-			then (if bundleWho ~= nil then `Bundle · {bundleWho}` else "Bundle")
-			elseif item ~= nil then lineOf(item)
-			else "",
-		kind = if item ~= nil then item.kind else "skin",
-		rarity = if bundle ~= nil then bundle.rarity elseif item ~= nil then item.rarity else "default",
-		currency = offer.currency,
-		price = ToonStyleViewModel.grouped(offer.price),
-		was = if offer.was ~= nil then ToonStyleViewModel.grouped(offer.was) else nil,
-		off = VM.off(offer.price, offer.was),
-		saleEnds = offer.saleEnds,
-		state = state,
-		employee = employee,
-		skinKey = if item ~= nil and item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
-		vacuum = if item ~= nil and item.kind == "vacuum" then item.id else nil,
-		emote = if item ~= nil and item.kind == "emote" then item.id else nil,
-		idle = if item ~= nil and item.kind == "idle" and bundle == nil then CosmeticRegistry.keyOf(item.id) else nil,
-	}
-end
-
--- "-20%": how much less than the crossed-out price, rounded to a whole percent; nil when nothing is crossed out.
-function VM.off(price: number, was: number?): string?
-	if was == nil or was <= price then
-		return nil
-	end
-	return `-{math.floor((was - price) / was * 100 + 0.5)}%`
 end
 
 -- "Sale ends in 6h 12m" while a sale price runs; nil otherwise.
@@ -408,24 +272,6 @@ function VM.returnNote(back: ShopStore.Return, gleam: number): string
 	return `Get {ToonStyleViewModel.grouped(missing)} more Gleam for {back.name}!`
 end
 
--- The bundle to point at for `missing` Gleam: the smallest one on sale that covers it, else the biggest on sale.
-function VM.bestBundle(missing: number): string?
-	local best: ShopTypes.GleamBundle? = nil
-	local biggest: ShopTypes.GleamBundle? = nil
-	for _, bundle in ShopConstants.BUNDLES do
-		if ShopConstants.PRODUCT_IDS[bundle.key] ~= nil then
-			if bundle.gleam >= missing and (best == nil or bundle.gleam < best.gleam) then
-				best = bundle
-			end
-			if biggest == nil or bundle.gleam > biggest.gleam then
-				biggest = bundle
-			end
-		end
-	end
-	local picked = best or biggest
-	return if picked ~= nil then picked.key else nil
-end
-
 function VM.product(listed: Offer, owns: Owns, balances: Balances): Product
 	local offer = ShopPriceRules.forPlayer(listed, owns, balances.now)
 	local item = main(offer)
@@ -504,126 +350,6 @@ function VM.itemProduct(id: string, owns: Owns, balances: Balances): Product?
 	end
 	local viewOnly: Offer = { id = item.id, items = { item.id }, currency = "gleam", price = 0, pool = "picks" }
 	return VM.product(viewOnly, owns, { gleam = balances.gleam, credits = balances.credits })
-end
-
--- The Hire tab: every employee for sale (a new hire shows up by itself), cheapest first, the ones already hired last.
-function VM.hires(owns: Owns, balances: Balances): { OfferCard }
-	local cards: { OfferCard } = {}
-	local prices: { [string]: number } = {}
-	for _, offer in ShopRegistry.all() do
-		local item = main(offer)
-		if item ~= nil and item.kind == "employee" then
-			table.insert(cards, VM.card(offer, owns, balances))
-			prices[offer.id] = offer.price
-		end
-	end
-	table.sort(cards, function(a: OfferCard, b: OfferCard): boolean
-		local ownedA, ownedB = a.state == "owned", b.state == "owned"
-		if ownedA ~= ownedB then
-			return ownedB
-		end
-		if prices[a.id] ~= prices[b.id] then
-			return prices[a.id] < prices[b.id]
-		end
-		return a.id < b.id
-	end)
-	return cards
-end
-
--- The Skins tab's Vacuums filter value.
-VM.VACUUMS = "vacuums"
-
--- The Skins tab's filters: All, then Vacuums, then one per employee (owner, 2026-11-13: vacuums right after All).
-function VM.skinFilters(employees: { string }): { SkinFilter }
-	local filters: { SkinFilter } = { { text = "All", value = nil }, { text = "Vacuums", value = VM.VACUUMS } }
-	for _, name in employees do
-		table.insert(filters, { text = name, value = name })
-	end
-	return filters
-end
-
---[=[
-	Every offer except employees (they are on the Hire tab, the pick screen and the Crew tab): all of them, only the
-	vacuum skins (`VM.VACUUMS`), or one employee's items and the shared ones (not the vacuums, which have their own
-	filter); what you can buy first (by rarity, highest first), what you own last.
-]=]
-function VM.skins(owns: Owns, balances: Balances, filter: string?): { OfferCard }
-	local cards: { OfferCard } = {}
-	for _, offer in ShopRegistry.all() do
-		local item = main(offer)
-		local keep = if item == nil or item.kind == "employee"
-			then false
-			elseif filter == nil then true
-			elseif filter == VM.VACUUMS then item.kind == "vacuum"
-			else item.kind ~= "vacuum" and (item.employee == nil or item.employee == filter)
-		if keep then
-			table.insert(cards, VM.card(offer, owns, balances))
-		end
-	end
-	table.sort(cards, function(a: OfferCard, b: OfferCard): boolean
-		local ownedA, ownedB = a.state == "owned", b.state == "owned"
-		if ownedA ~= ownedB then
-			return ownedB
-		end
-		if RARITY_RANK[a.rarity] ~= RARITY_RANK[b.rarity] then
-			return RARITY_RANK[a.rarity] > RARITY_RANK[b.rarity]
-		end
-		return a.id < b.id
-	end)
-	return cards
-end
-
--- The Gleam tab's cards climb like a ladder (owner 11-16, Gleam page round 5): blue for the two small packs, purple
--- for the middle two, gold for the two big ones (the same order as the pack icons' rays); a pack past the list keeps
--- the last colour.
-local BUNDLE_HUES: { UIToonConstants.Hue } = { "sky", "sky", "grape", "grape", "gold", "gold" }
--- The smallest pack's picture size on its card; the rest grow evenly up to 1 for the biggest.
-VM.BUNDLE_ICON_MIN = 0.62
--- The corner tags, by bundle key; the biggest pack is always BEST VALUE.
-local BUNDLE_TAGS: { [string]: string } = { gleam1950 = "POPULAR" }
-
--- The Gleam bundles; each one's price and icon as Roblox reported them in `infos` (by bundle key), the known ones
--- (ShopConstants.BUNDLES) until it does; `best` (a bundle key) is marked as the one to buy.
-function VM.bundles(infos: { [string]: ShopStore.ProductInfo }, best: string?): { Bundle }
-	local list: { Bundle } = {}
-	local function robuxOf(bundle: ShopTypes.GleamBundle): number
-		local info = infos[bundle.key]
-		return if info ~= nil and info.price ~= nil then info.price else bundle.robux
-	end
-	-- The bonus is worked out from the numbers: Gleam per Robux over the first (smallest) pack's.
-	local first = ShopConstants.BUNDLES[1]
-	local baseRate = if first ~= nil then first.gleam / robuxOf(first) else 0
-	local count = #ShopConstants.BUNDLES
-	for index, bundle in ShopConstants.BUNDLES do
-		local info = infos[bundle.key]
-		local price = robuxOf(bundle)
-		local step = if count > 1 then (index - 1) / (count - 1) else 1
-		local bonus = if baseRate > 0 and price > 0
-			then math.floor(((bundle.gleam / price) / baseRate - 1) * 100 + 0.5)
-			else 0
-		table.insert(list, {
-			key = bundle.key,
-			amount = ToonStyleViewModel.grouped(bundle.gleam),
-			robux = `R$ {ToonStyleViewModel.grouped(price)}`,
-			bonus = if bonus > 0 then `+{bonus}%` else nil,
-			image = if info ~= nil and info.icon ~= nil then info.icon else bundle.image,
-			available = ShopConstants.PRODUCT_IDS[bundle.key] ~= nil,
-			best = bundle.key == best,
-			hue = BUNDLE_HUES[math.min(index, #BUNDLE_HUES)],
-			iconScale = VM.BUNDLE_ICON_MIN + (1 - VM.BUNDLE_ICON_MIN) * step,
-			tag = if index == count and count > 1 then "BEST VALUE" else BUNDLE_TAGS[bundle.key],
-		})
-	end
-	return list
-end
-
--- How many packs the Featured page's Gleam row shows (desktop). Its cards are short and wide, with the amount beside
--- the art, so six would leave "12,500" no room; the Gleam tab shows them all.
-VM.FEATURED_BUNDLES = 4
-
--- The Featured page's Gleam row: the first VM.FEATURED_BUNDLES packs.
-function VM.featuredBundles(bundles: { Bundle }): { Bundle }
-	return { table.unpack(bundles, 1, math.min(#bundles, VM.FEATURED_BUNDLES)) }
 end
 
 -- The Passes tab's cards, one per pass key (in `keys`' order): its words (PASS_COPY, else its Dashboard name), its

@@ -163,6 +163,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Reveal.RevealStyleChips"] = "presentational React chip row, split out of RevealScreen (the style chips specced in RevealViewModel; story in RevealScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopPassesPanel"] = "presentational React component (pass cards specced in ShopViewModel; story in ShopPassesPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopProductPanel"] = "presentational React component (product page specced in ShopViewModel; story in ShopScreen.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopProductRows"] = "presentational React rows, split out of ShopProductPanel (inside items and style chips specced in ShopViewModel.product; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopScene"] = "scene registration at require (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickScene"] = "scene registration at require (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickCard"] = "presentational React card, split out of CharacterPickScreen (card values and tag frame specced in CharacterPickViewModel; story in CharacterPickScreen.story)",
