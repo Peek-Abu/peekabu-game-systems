@@ -29,6 +29,7 @@ local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
+local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 
 type Offer = ShopTypes.Offer
@@ -131,6 +132,12 @@ export type Bundle = {
 	available: boolean,
 	-- The one that best covers what the player came for (the smallest that is enough; VM.bestBundle).
 	best: boolean,
+	-- The card's colour on the Gleam tab: it climbs with the pack (VM.BUNDLE_HUES).
+	hue: UIToonConstants.Hue,
+	-- The picture's size on its card, VM.BUNDLE_ICON_MIN for the smallest pack up to 1 for the biggest.
+	iconScale: number,
+	-- "POPULAR" / "BEST VALUE" on its card's corner, or nil.
+	tag: string?,
 }
 
 local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
@@ -566,6 +573,15 @@ function VM.skins(owns: Owns, balances: Balances, filter: string?): { OfferCard 
 	return cards
 end
 
+-- The Gleam tab's cards climb like a ladder (owner 11-16, Gleam page round 5): blue for the two small packs, purple
+-- for the middle two, gold for the two big ones (the same order as the pack icons' rays); a pack past the list keeps
+-- the last colour.
+local BUNDLE_HUES: { UIToonConstants.Hue } = { "sky", "sky", "grape", "grape", "gold", "gold" }
+-- The smallest pack's picture size on its card; the rest grow evenly up to 1 for the biggest.
+VM.BUNDLE_ICON_MIN = 0.62
+-- The corner tags, by bundle key; the biggest pack is always BEST VALUE.
+local BUNDLE_TAGS: { [string]: string } = { gleam1950 = "POPULAR" }
+
 -- The Gleam bundles; each one's price and icon as Roblox reported them in `infos` (by bundle key), the known ones
 -- (ShopConstants.BUNDLES) until it does; `best` (a bundle key) is marked as the one to buy.
 function VM.bundles(infos: { [string]: ShopStore.ProductInfo }, best: string?): { Bundle }
@@ -577,9 +593,11 @@ function VM.bundles(infos: { [string]: ShopStore.ProductInfo }, best: string?): 
 	-- The bonus is worked out from the numbers: Gleam per Robux over the first (smallest) pack's.
 	local first = ShopConstants.BUNDLES[1]
 	local baseRate = if first ~= nil then first.gleam / robuxOf(first) else 0
-	for _, bundle in ShopConstants.BUNDLES do
+	local count = #ShopConstants.BUNDLES
+	for index, bundle in ShopConstants.BUNDLES do
 		local info = infos[bundle.key]
 		local price = robuxOf(bundle)
+		local step = if count > 1 then (index - 1) / (count - 1) else 1
 		local bonus = if baseRate > 0 and price > 0
 			then math.floor(((bundle.gleam / price) / baseRate - 1) * 100 + 0.5)
 			else 0
@@ -591,22 +609,12 @@ function VM.bundles(infos: { [string]: ShopStore.ProductInfo }, best: string?): 
 			image = if info ~= nil and info.icon ~= nil then info.icon else bundle.image,
 			available = ShopConstants.PRODUCT_IDS[bundle.key] ~= nil,
 			best = bundle.key == best,
+			hue = BUNDLE_HUES[math.min(index, #BUNDLE_HUES)],
+			iconScale = VM.BUNDLE_ICON_MIN + (1 - VM.BUNDLE_ICON_MIN) * step,
+			tag = if index == count and count > 1 then "BEST VALUE" else BUNDLE_TAGS[bundle.key],
 		})
 	end
 	return list
-end
-
--- `bundles` cut into rows of at most `perRow`, in order (the Gleam tab: six packs as two rows of three).
-function VM.bundleRows(bundles: { Bundle }, perRow: number): { { Bundle } }
-	local rows: { { Bundle } } = {}
-	for index, bundle in bundles do
-		local row = math.floor((index - 1) / perRow) + 1
-		if rows[row] == nil then
-			rows[row] = {}
-		end
-		table.insert(rows[row], bundle)
-	end
-	return rows
 end
 
 -- How many packs the Featured page's Gleam row shows (desktop). Its cards are short and wide, with the amount beside

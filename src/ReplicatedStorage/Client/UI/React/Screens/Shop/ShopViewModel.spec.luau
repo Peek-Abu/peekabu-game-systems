@@ -355,16 +355,30 @@ return function()
 			expect(partial.image).to.equal(known.image)
 		end)
 
-		it("lays six packs out as two rows of three on the Gleam tab", function()
-			local rows = VM.bundleRows(VM.bundles({}), 3)
-			expect(#rows).to.equal(2)
-			expect(#rows[1]).to.equal(3)
-			expect(rows[1][1].amount).to.equal("100")
-			expect(rows[2][3].amount).to.equal("12,500")
-			-- Four or fewer stay one row.
-			local four = VM.bundleRows({ table.unpack(VM.bundles({}), 1, 4) }, 4)
-			expect(#four).to.equal(1)
-			expect(#VM.bundleRows({}, 3)).to.equal(0)
+		it("lays the packs out like a ladder: colour climbs blue, purple, gold and the picture grows", function()
+			-- Owner 11-16 ("more like marvel rivals: Dont make it stretched on top of each other", Gleam page round 5):
+			-- one row of tall cards, each bigger pack's card richer than the last.
+			local bundles = VM.bundles({})
+			local hues = {}
+			for index, bundle in bundles do
+				hues[index] = bundle.hue
+			end
+			expect(table.concat(hues, " ")).to.equal("sky sky grape grape gold gold")
+			expect(bundles[1].iconScale).to.equal(VM.BUNDLE_ICON_MIN)
+			expect(bundles[6].iconScale).to.equal(1)
+			for index = 2, #bundles do
+				expect(bundles[index].iconScale > bundles[index - 1].iconScale).to.equal(true)
+			end
+		end)
+
+		it("tags the popular pack and the best value", function()
+			local bundles = VM.bundles({})
+			expect(bundles[4].tag).to.equal("POPULAR")
+			expect(bundles[6].tag).to.equal("BEST VALUE")
+			for index = 1, 3 do
+				expect(bundles[index].tag).to.equal(nil)
+			end
+			expect(bundles[5].tag).to.equal(nil)
 		end)
 
 		it(

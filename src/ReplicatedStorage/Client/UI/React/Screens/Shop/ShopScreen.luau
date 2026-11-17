@@ -7,7 +7,7 @@
 	  changes; owner, 2026-10-29: only a product page animates) and Today's picks (6 cards), with the Gleam bundles along the bottom;
 	- Skins: every item for sale, filterable by employee, owned ones stamped OWNED;
 	- Hire: every employee for sale (their card opens the hire page);
-	- Gleam: the six Gleam bundles, two rows of three (greyed "Soon" until their Robux products exist); when the player came here short
+	- Gleam: the six Gleam bundles side by side as tall cards (a sideways scroll on a phone) (greyed "Soon" until their Robux products exist); when the player came here short
 	  on Gleam for something (ShopStore.returnTo), it says how much more for what, marks the bundle that is just right,
 	  has a Back button, and goes back to that item with its Yes/No question up as soon as the Gleam arrives;
 	- Passes: every registered game pass (ShopPassesPanel), its price and icon as Roblox reported them, Owned once the
@@ -300,24 +300,54 @@ local function bundleCard(
 			}),
 		}
 	else
+		-- The Gleam tab (owner 11-16, Gleam page round 5): a tall card, the amount on top with its bonus under it, the
+		-- pack's picture in the middle (bigger for a bigger pack, VM iconScale) and the price at the bottom.
+		local top = if phone then 8 else 18
+		local amountH = amountSize + 4
+		local wordSize = if phone then 11 else 20
+		local chipH = if phone then 20 else 34
+		local chipTop = top + amountH + wordSize + (if phone then 4 else 8)
+		local artTop = chipTop + chipH + (if phone then 4 else 10)
+		local artBottom = DEPTH.lip + pillHeight + (if phone then 10 else 20)
+		local room = math.max(size.Y - DEPTH.drop - artTop - artBottom, 0)
+		local artSize = math.floor(math.min(room, (size.X - 16) * bundle.iconScale))
 		face = {
-			icon = e(ToonIcon, {
-				image = bundle.image,
-				anchor = Vector2.new(0.5, 0),
-				position = UDim2.new(0.5, 0, 0, if phone then 2 else 6),
-				size = UDim2.fromOffset(math.floor(size.Y * 0.5), math.floor(size.Y * 0.5)),
-				drop = 4,
-				greyed = not bundle.available,
-			}),
 			amount = e(ToonText, {
 				text = bundle.amount,
 				textSize = amountSize,
-				meaning = "white",
-				anchor = Vector2.new(0.5, 1),
-				position = UDim2.new(0.5, 0, 1, -DEPTH.lip - pillHeight - 16),
-				size = UDim2.new(1, -16, 0, amountSize + 4),
+				meaning = "gold",
+				anchor = Vector2.new(0.5, 0),
+				position = UDim2.new(0.5, 0, 0, top),
+				size = UDim2.new(1, -16, 0, amountH),
 				align = "center",
 				fit = true,
+			}),
+			word = e(ToonText, {
+				text = "GLEAM",
+				textSize = wordSize,
+				anchor = Vector2.new(0.5, 0),
+				position = UDim2.new(0.5, 0, 0, top + amountH),
+				size = UDim2.new(1, -16, 0, wordSize + 2),
+				align = "center",
+			}),
+			bonus = if bundle.bonus ~= nil
+				then e(ToonPill, {
+					text = `{bundle.bonus} BONUS`,
+					hue = "mint",
+					small = true,
+					textSize = if phone then 11 else 20,
+					anchor = Vector2.new(0.5, 0),
+					position = UDim2.new(0.5, 0, 0, chipTop),
+					size = UDim2.fromOffset(math.floor(size.X * 0.7), chipH),
+				})
+				else nil,
+			icon = e(ToonIcon, {
+				image = bundle.image,
+				anchor = Vector2.new(0.5, 0.5),
+				position = UDim2.new(0.5, 0, 0, artTop + math.floor(room / 2)),
+				size = UDim2.fromOffset(artSize, artSize),
+				drop = 4,
+				greyed = not bundle.available,
 			}),
 			robux = e(ToonButton, {
 				variant = if bundle.available then "primary" else "secondary",
@@ -327,7 +357,7 @@ local function bundleCard(
 				small = true,
 				anchor = Vector2.new(0.5, 1),
 				position = UDim2.new(0.5, 0, 1, -DEPTH.lip - 6),
-				size = UDim2.fromOffset(math.floor(size.X * 0.56), pillHeight),
+				size = UDim2.fromOffset(math.floor(size.X * 0.76), pillHeight),
 				onActivated = function()
 					onBuy(bundle.key)
 				end,
@@ -336,17 +366,21 @@ local function bundleCard(
 	end
 	local nodes: Nodes = {
 		surface = e(ToonSurface, {
-			hue = "sky",
+			-- The Gleam tab's cards climb blue, purple, gold with the pack; the Featured row keeps sky.
+			hue = if wide then "sky" else bundle.hue,
+			pattern = if wide then nil else "bubbles",
 			radius = 20,
 			small = phone,
 			size = UDim2.new(1, 0, 1, -DEPTH.drop),
 			children = face,
 		}),
 	}
-	if bundle.best then
+	-- The corner tag: "Just right!" for the pack the player came for, else POPULAR / BEST VALUE (the Gleam tab).
+	local tag = if bundle.best then "Just right!" elseif not wide then bundle.tag else nil
+	if tag ~= nil then
 		nodes.best = e(ToonFlag, {
-			text = "Just right!",
-			hue = "mint",
+			text = tag,
+			hue = if bundle.best then "mint" else "coral",
 			tilt = -5,
 			textSize = if phone then 11 else 20,
 			position = UDim2.fromOffset(-6, -10),
@@ -354,7 +388,7 @@ local function bundleCard(
 			zIndex = 6,
 		})
 	end
-	if bundle.bonus ~= nil then
+	if bundle.bonus ~= nil and wide then
 		nodes.bonus = e(ToonBurst, {
 			text = bundle.bonus,
 			sub = "BONUS",
@@ -395,8 +429,9 @@ local function bundleRow(
 	return group(nodes)
 end
 
--- The Gleam tab: the packs as rows of three (VM.bundleRows), stacked to fill `height`.
-local function bundleRows(
+-- The Gleam tab (owner 11-16: "more like marvel rivals: Dont make it stretched on top of each other"): every pack
+-- side by side as a tall card. On a phone the row scrolls sideways, about four cards in view.
+local function bundleLadder(
 	width: number,
 	height: number,
 	phone: boolean,
@@ -404,17 +439,34 @@ local function bundleRows(
 	bundles: { VM.Bundle },
 	onBuy: (key: string) -> ()
 ): React.ReactNode
-	local rows = VM.bundleRows(bundles, 3)
-	local rowHeight = math.floor((height - (#rows - 1) * gap) / math.max(#rows, 1))
-	local nodes: Nodes = {}
-	for index, row in rows do
-		nodes["row" .. index] = e("Frame", {
-			Position = UDim2.fromOffset(0, (index - 1) * (rowHeight + gap)),
-			Size = UDim2.new(1, 0, 0, rowHeight),
-			BackgroundTransparency = 1,
-		}, { row = bundleRow(width, rowHeight, phone, gap, row, onBuy) })
+	if not phone then
+		return bundleRow(width, height, phone, gap, bundles, onBuy)
 	end
-	return group(nodes)
+	local cardWidth = math.floor((width - 3 * gap) / 4.3)
+	local nodes: Nodes = {
+		list = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, gap),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+		-- Room for the corner tags and the last card's drop.
+		pad = e(
+			"UIPadding",
+			{ PaddingTop = UDim.new(0, 12), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 8) }
+		),
+	}
+	for index, bundle in bundles do
+		nodes[bundle.key] = bundleCard(bundle, Vector2.new(cardWidth, height - 20), phone, index, onBuy)
+	end
+	return e("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.fromOffset(0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		ScrollBarThickness = 4,
+	}, nodes)
 end
 
 local function heading(textValue: string, size: number, position: UDim2, width: number): React.ReactNode
@@ -939,6 +991,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				end,
 			})
 		end
+		-- The cards fill the page below the note, short of its bottom edge.
+		local ladderHeight =
+			math.floor(content.height - (layout.headingSize + size * 2 + 40) - (if phone then 6 else 24))
 		body = group({
 			heading = heading("GET GLEAM", layout.headingSize, UDim2.fromOffset(0, 0), 600),
 			back = backButton,
@@ -949,10 +1004,10 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			}, { note = note }),
 			row = e("Frame", {
 				Position = UDim2.fromOffset(0, layout.headingSize + size * 2 + 40),
-				Size = UDim2.new(1, 0, 0, math.floor(content.height * 0.6)),
+				Size = UDim2.new(1, 0, 0, ladderHeight),
 				BackgroundTransparency = 1,
 			}, {
-				rows = bundleRows(content.width, math.floor(content.height * 0.6), phone, gap + 10, bundles, buyBundle),
+				ladder = bundleLadder(content.width, ladderHeight, phone, gap + 10, bundles, buyBundle),
 			}),
 		})
 	else
