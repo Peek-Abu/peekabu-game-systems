@@ -23,8 +23,8 @@ return UILabs.CreateReactStory({
 		Item = "Pippa.BubbleBuddy",
 		Source = "shop",
 		Purchase = "",
-		Key = "gleam600",
-		Amount = 600,
+		Key = "gleam880",
+		Amount = 880,
 		Phone = false,
 	},
 }, function(props)

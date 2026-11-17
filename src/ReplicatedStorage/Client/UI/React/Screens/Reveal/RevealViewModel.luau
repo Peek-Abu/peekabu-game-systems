@@ -13,7 +13,7 @@
 	with its own button; the screen stays open after you use something and leaves only on Done (a single item closes
 	on its button, Later leaves it). An employee is a hire: "YOU'RE HIRED!", their ID card and ability, Start! after
 	the first-join pick, Equip! + Later after a purchase. A Robux buy that is not a cosmetic (owner 11-15: Fortnite and
-	Marvel Rivals both thank you) is "+600 GLEAM!" with the bundle's art, a pass's card (YOU GOT IT!), or COFFEE TIME!
+	Marvel Rivals both thank you) is "+880 GLEAM!" with the bundle's art, a pass's card (YOU GOT IT!), or COFFEE TIME!
 	with the cup: a gold screen, Thank you!, and one Nice! that closes it.
 
 	@class RevealViewModel

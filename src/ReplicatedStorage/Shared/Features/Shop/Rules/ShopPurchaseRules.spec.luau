@@ -59,10 +59,10 @@ return function()
 
 	describe("parse", function()
 		it("keeps a well-formed purchase", function()
-			local purchase = ShopPurchaseRules.parse({ kind = "gleam", key = "gleam600", amount = 600 })
+			local purchase = ShopPurchaseRules.parse({ kind = "gleam", key = "gleam880", amount = 880 })
 			expect(purchase).to.be.ok()
 			expect(purchase.kind).to.equal("gleam")
-			expect(purchase.amount).to.equal(600)
+			expect(purchase.amount).to.equal(880)
 		end)
 
 		it("refuses an unknown kind, a missing key or a bad amount", function()

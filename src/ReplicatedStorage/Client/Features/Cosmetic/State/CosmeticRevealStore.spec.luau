@@ -33,7 +33,7 @@ return function()
 		CosmeticRevealStore.push({
 			ids = {},
 			source = "robux",
-			purchase = { kind = "gleam", key = "gleam600", amount = 600 },
+			purchase = { kind = "gleam", key = "gleam880", amount = 880 },
 		})
 		local shown = CosmeticRevealStore.current()
 		expect(shown).to.be.ok()

@@ -17,23 +17,24 @@ local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 local BUNDLES: { ShopTypes.GleamBundle } = {
 	-- Owner, 11-16 (Gleam pack page: "if marvel rivals max bonus is 16%! I think ours should be around there"): small
 	-- bonuses, each bigger pack still a better deal (+4% / +9% / +14% over the first), each price 1 under a Roblox Robux
-	-- bundle, and the top pack covers a 1,900-Gleam Legendary bundle in one buy. The keys keep their old names (they are
-	-- the developer products' registration keys); the Robux prices must match the products' Dashboard prices. Later
+	-- bundle, and the top pack covers a 1,900-Gleam Legendary bundle in one buy. Each key names its pack's amount
+	-- (renamed 11-16 from the old sizes' gleam275 / gleam600 / gleam1500; receipts find the key from the product id at
+	-- runtime and saves keep only purchase ids, so the rename touches no saved data); the Robux prices must match the products' Dashboard prices. Later
 	-- (after launch, new products): 5,400 for 4,499 (+19%) and 12,500 for 9,999 (+24%). The bonus shown is worked out
 	-- from the numbers (ShopViewModel).
 	{ key = "gleam100", gleam = 100, robux = 99, image = "rbxassetid://112673750570330" },
-	{ key = "gleam275", gleam = 420, robux = 399, image = "rbxassetid://82923918698099" },
-	{ key = "gleam600", gleam = 880, robux = 799, image = "rbxassetid://138358363514131" },
-	{ key = "gleam1500", gleam = 1950, robux = 1699, image = "rbxassetid://138262914648345" },
+	{ key = "gleam420", gleam = 420, robux = 399, image = "rbxassetid://82923918698099" },
+	{ key = "gleam880", gleam = 880, robux = 799, image = "rbxassetid://138358363514131" },
+	{ key = "gleam1950", gleam = 1950, robux = 1699, image = "rbxassetid://138262914648345" },
 }
 
--- The developer product id of each bundle (owner, Creator Dashboard, 2026-10-24). The Gleam amounts and Robux prices
--- above are not final: change them here and on the products together.
+-- The developer product id of each bundle (owner, Creator Dashboard, 2026-10-24; renamed and repriced 11-16). Change a
+-- pack's Gleam amount or Robux price here and on its product (Dashboard price, name and description) together.
 local PRODUCT_IDS: { [string]: number } = {
 	gleam100 = 3722076056,
-	gleam275 = 3722076494,
-	gleam600 = 3722076599,
-	gleam1500 = 3722076697,
+	gleam420 = 3722076494,
+	gleam880 = 3722076599,
+	gleam1950 = 3722076697,
 }
 
 -- Gleam pays the rest when a player is short (ShopTopUpRules): how much of each currency one Gleam covers. Only the
