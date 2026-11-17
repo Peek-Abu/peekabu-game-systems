@@ -69,6 +69,49 @@ return function()
 
 	describe("cards", function()
 		it(
+			"shows the pity meter on the card: opens since the last Epic+ out of the pity number (owner 11-16 pick A)",
+			function()
+				local pityAt = LockerRules.odds(GLOOM).pityAt
+				local card = VM.card(
+					GLOOM,
+					{ keys = {}, pity = { gloom = pityAt - 5 }, opened = 9 },
+					{ gloom = 0, gleam = 0 },
+					false
+				)
+				expect(card.meter).to.be.ok()
+				expect(card.meter.fill).to.be.near((pityAt - 5) / pityAt)
+				expect(card.meter.label).to.equal(`{pityAt - 5} / {pityAt}`)
+				expect(card.meter.text).to.equal("Epic or better in 5 opens!")
+				expect(card.meter.kind).to.equal("gloom")
+
+				local next = VM.card(
+					GLOOM,
+					{ keys = {}, pity = { gloom = pityAt - 1 }, opened = 9 },
+					{ gloom = 0, gleam = 0 },
+					false
+				)
+				expect(next.meter.text).to.equal("Next open is Epic or better!")
+
+				local fresh = VM.card(GLOOM, { keys = {}, pity = {}, opened = 0 }, { gloom = 0, gleam = 0 }, false)
+				expect(fresh.meter.fill).to.equal(0)
+				expect(fresh.meter.label).to.equal(`0 / {pityAt}`)
+				expect(fresh.meter.text).to.equal(`Epic or better in {pityAt} opens!`)
+			end
+		)
+
+		it(
+			"has no meter where there is nothing to count: an empty Locker, or a paid one for a restricted player",
+			function()
+				local state = { keys = {}, pity = {}, opened = 0 }
+				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 0 }, false, {}).meter).to.equal(nil)
+				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 0 }, true, SAMPLE_POOL).meter).to.equal(nil)
+				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 0 }, false, SAMPLE_POOL).meter.kind).to.equal(
+					"stamina"
+				)
+			end
+		)
+
+		it(
 			"shows how much of its own money you have on the Gloom and event Lockers (owner 11-16 q2), not the Gleam one",
 			function()
 				local state = { keys = {}, pity = {}, opened = 0 }

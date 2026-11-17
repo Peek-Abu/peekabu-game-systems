@@ -51,6 +51,20 @@ export type LockerCard = {
 	-- whose Gleam is in the menu bar (owner 11-16: bars show only Gleam and Credits).
 	haveText: string?,
 	haveCurrency: LockerTypes.Currency?,
+	-- The pity meter (owner 11-16 pick A): opens since the last Epic or better, out of the pity number, as the kit's
+	-- ToonBar. nil when nothing counts (an empty Locker, or a paid one for a restricted player).
+	meter: PityMeter?,
+}
+
+export type PityMeter = {
+	-- 0..1 of the way to the guaranteed Epic or better.
+	fill: number,
+	-- "12 / 17" across the bar.
+	label: string,
+	-- "Epic or better in 5 opens!" (or "Next open is Epic or better!").
+	text: string,
+	-- The ToonBar kind: the Gleam Locker's gold, every other Locker's goo.
+	kind: "gloom" | "stamina",
 }
 
 export type InsideItem = {
@@ -402,6 +416,19 @@ function VM.card(
 		}
 	end
 
+	local meter: PityMeter? = nil
+	local pityAt = odds.pityAt
+	if pityAt ~= nil and #items > 0 and not isRestricted then
+		local count = math.clamp(pity, 0, pityAt)
+		local left = math.max(1, pityAt - count)
+		meter = {
+			fill = count / pityAt,
+			label = `{count} / {pityAt}`,
+			text = if left == 1 then "Next open is Epic or better!" else `Epic or better in {left} opens!`,
+			kind = if locker.currency == "gleam" then "stamina" else "gloom",
+		}
+	end
+
 	local keysText = if keys == 0 then "No keys" elseif keys == 1 then "1 key" else `{keys} keys`
 	return {
 		id = locker.id,
@@ -415,6 +442,7 @@ function VM.card(
 		button = button,
 		haveText = if locker.currency == "gleam" then nil else `You have {ToonStyleViewModel.grouped(balance)}`,
 		haveCurrency = if locker.currency == "gleam" then nil else locker.currency,
+		meter = meter,
 	}
 end
 

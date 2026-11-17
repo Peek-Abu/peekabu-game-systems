@@ -25,6 +25,7 @@ local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.Locke
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonBar = require(Toon.ToonBar)
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
@@ -194,6 +195,7 @@ local function lockerCardView(
 	local buttonHeight = if phone then 38 else 64
 	local rightX = pillWidth + pad + (if phone then 8 else 16)
 	local rightWidth = size.X - rightX - pad
+	local meter = card.meter
 	local haveIcon: UIAssets.ToonIcon? = if card.haveCurrency == "acorns"
 		then "acorns"
 		elseif card.haveCurrency == "gloom" then "gloom"
@@ -268,16 +270,39 @@ local function lockerCardView(
 				onOpenOdds(card.id)
 			end,
 		}),
-		pity = e(ToonText, {
-			text = card.pityText,
-			font = "body",
-			color = if card.id == "gleam" then COLOR.ink else COLOR.white,
-			textSize = math.max(12, textSize - 2),
-			position = UDim2.fromOffset(rightX, pad + nameSize + 6),
-			size = UDim2.fromOffset(rightWidth, textSize * 2 + 4),
-			wrapped = true,
-			fit = true,
-		}),
+		-- The pity meter (owner 11-16 pick A): big words and the kit's goo bar, filling one notch per open and
+		-- emptying on an Epic or better; the plain line stays for an empty Locker or a restricted paid one.
+		pity = if meter ~= nil
+			then e(ToonText, {
+				text = meter.text,
+				textSize = if phone then 16 else 26,
+				position = UDim2.fromOffset(rightX, pad + nameSize + (if phone then 8 else 14)),
+				size = UDim2.fromOffset(rightWidth, (if phone then 16 else 26) + 6),
+				fit = true,
+			})
+			else e(ToonText, {
+				text = card.pityText,
+				font = "body",
+				color = if card.id == "gleam" then COLOR.ink else COLOR.white,
+				textSize = math.max(12, textSize - 2),
+				position = UDim2.fromOffset(rightX, pad + nameSize + 6),
+				size = UDim2.fromOffset(rightWidth, textSize * 2 + 4),
+				wrapped = true,
+				fit = true,
+			}),
+		meter = if meter ~= nil
+			then e(ToonBar, {
+				kind = meter.kind,
+				fill = meter.fill,
+				label = meter.label,
+				labelSize = if phone then 14 else 22,
+				position = UDim2.fromOffset(
+					rightX,
+					pad + nameSize + (if phone then 8 else 14) + (if phone then 16 else 26) + (if phone then 8 else 12)
+				),
+				size = UDim2.fromOffset(math.floor(rightWidth * 0.8), if phone then 22 else 34),
+			})
+			else nil,
 		open = e(ToonButton, {
 			variant = if card.button.kind == "buy" or card.button.kind == "key"
 				then "primary"
