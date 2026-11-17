@@ -154,6 +154,10 @@ return table.freeze({
 		armClear = 0.08,
 		maxClear = 0.3,
 	}),
+	-- Studio only (rest-aim trial, 2026-11-16): a number Workspace attribute named this prefix plus a hold field
+	-- (DevVacuumHoldYaw in degrees, DevVacuumHoldOut, DevVacuumHoldForward in fractions of the reach) replaces that
+	-- field for holds planned after it is set, so one Play can compare tunings. Never read outside Studio.
+	HOLD_OVERRIDE_PREFIX = "DevVacuumHold",
 	-- Where a paw holds the wand (VacuumHoldFormulas.Arm.wrap): this far from its wrist toward its grip attachment.
 	-- Pippa's grip attachments sit on the very tip of her paws (0.34 stud from the paw's middle), so a hold on them
 	-- touched the wand with the fingertips; 0.6 of the way puts the wand through the paw, just past its middle, and

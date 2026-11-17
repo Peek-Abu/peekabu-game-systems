@@ -31,7 +31,9 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
@@ -181,6 +183,18 @@ local function visibleBody(holder: Model): { VacuumHoldFormulas.BodySlice }?
 end
 
 -- The hold for `holder` with a wand this big, or nil when its arms cannot be measured.
+-- A hold field, or its Studio-only trial override (VacuumVisualConstants.HOLD_OVERRIDE_PREFIX; angles in degrees).
+local function tuned(field: string, value: number, degrees: boolean): number
+	if not RunService:IsStudio() then
+		return value
+	end
+	local override = Workspace:GetAttribute(Constants.HOLD_OVERRIDE_PREFIX .. field)
+	if typeof(override) ~= "number" then
+		return value
+	end
+	return if degrees then math.rad(override) else override
+end
+
 local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: number): VacuumHoldFormulas.Hold?
 	local humanoid = holder:FindFirstChildOfClass("Humanoid")
 	local root = holder:FindFirstChild("HumanoidRootPart")
@@ -198,10 +212,10 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 		dims,
 		{
 			down = tuning.down,
-			forward = tuning.forward,
-			out = tuning.out,
+			forward = tuned("Forward", tuning.forward, false),
+			out = tuned("Out", tuning.out, false),
 			angle = tuning.angle,
-			yaw = tuning.yaw,
+			yaw = tuned("Yaw", tuning.yaw, true),
 			clearance = tuning.clearance * size,
 			minTube = tuning.minTube * size,
 			leftSlide = tuning.leftSlide,
