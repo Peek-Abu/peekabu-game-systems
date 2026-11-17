@@ -203,6 +203,12 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 		return nil
 	end
 	local tuning = Constants.hold
+	-- Studio-only grip layout trial: scales how far down the tube the left paw holds.
+	local lowerScale = tuned("LowerScale", 1, false)
+	if lowerScale ~= 1 then
+		dims = table.clone(dims)
+		dims.lower *= lowerScale
+	end
 	-- The body's visible surface at rest, clothes included, so the hold keeps the right forearm out of it.
 	local body = visibleBody(holder)
 	return VacuumHoldFormulas.hold(
