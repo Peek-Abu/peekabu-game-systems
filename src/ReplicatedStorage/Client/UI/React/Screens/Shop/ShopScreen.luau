@@ -263,7 +263,7 @@ local function bundleCard(
 	-- render on the left and the amount over the price on the right.
 	local wide = size.Y < size.X * 0.62
 	local amountSize = if phone then 18 else 40
-	local pillHeight = if phone then 22 else 44
+	local pillHeight = if phone then (if wide then 22 else 28) else (if wide then 44 else 52)
 	local face: Nodes
 	if wide then
 		local artSize = math.floor((size.Y - DEPTH.drop - DEPTH.lip) * 0.92)
@@ -302,10 +302,13 @@ local function bundleCard(
 	else
 		-- The Gleam tab (owner 11-16, Gleam page round 5): a tall card, the amount on top with its bonus under it, the
 		-- pack's picture in the middle (bigger for a bigger pack, VM iconScale) and the price at the bottom.
+		-- Bigger words than the Featured row's short cards (checked in Play 11-16: 40 read small at 75%), and nothing
+		-- under the phone floor (12 pt).
+		local bigSize = if phone then 24 else 56
 		local top = if phone then 8 else 18
-		local amountH = amountSize + 4
-		local wordSize = if phone then 11 else 20
-		local chipH = if phone then 20 else 34
+		local amountH = bigSize + 4
+		local wordSize = if phone then 12 else 22
+		local chipH = if phone then 22 else 36
 		local chipTop = top + amountH + wordSize + (if phone then 4 else 8)
 		local artTop = chipTop + chipH + (if phone then 4 else 10)
 		local artBottom = DEPTH.lip + pillHeight + (if phone then 10 else 20)
@@ -314,7 +317,7 @@ local function bundleCard(
 		face = {
 			amount = e(ToonText, {
 				text = bundle.amount,
-				textSize = amountSize,
+				textSize = bigSize,
 				meaning = "gold",
 				anchor = Vector2.new(0.5, 0),
 				position = UDim2.new(0.5, 0, 0, top),
@@ -335,10 +338,10 @@ local function bundleCard(
 					text = `{bundle.bonus} BONUS`,
 					hue = "mint",
 					small = true,
-					textSize = if phone then 11 else 20,
+					textSize = if phone then 12 else 22,
 					anchor = Vector2.new(0.5, 0),
 					position = UDim2.new(0.5, 0, 0, chipTop),
-					size = UDim2.fromOffset(math.floor(size.X * 0.7), chipH),
+					size = UDim2.fromOffset(math.floor(size.X * 0.62), chipH),
 				})
 				else nil,
 			icon = e(ToonIcon, {
@@ -352,7 +355,7 @@ local function bundleCard(
 			robux = e(ToonButton, {
 				variant = if bundle.available then "primary" else "secondary",
 				text = if bundle.available then bundle.robux else "Soon",
-				textSize = if phone then 12 else 24,
+				textSize = if phone then 15 else 30,
 				disabled = not bundle.available,
 				small = true,
 				anchor = Vector2.new(0.5, 1),
@@ -382,7 +385,7 @@ local function bundleCard(
 			text = tag,
 			hue = if bundle.best then "mint" else "coral",
 			tilt = -5,
-			textSize = if phone then 11 else 20,
+			textSize = if phone then 12 else 20,
 			position = UDim2.fromOffset(-6, -10),
 			size = UDim2.fromOffset(if phone then 90 else 170, if phone then 22 else 36),
 			zIndex = 6,
