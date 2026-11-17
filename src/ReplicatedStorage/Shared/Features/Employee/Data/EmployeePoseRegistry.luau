@@ -284,17 +284,19 @@ local IDLE_POSES: { [string]: { [string]: Vector3 } } = {
 		LeftKnee = Vector3.new(-53.4, 0, 0),
 		LeftAnkle = Vector3.new(26.3, -1.4, 5.7),
 	},
-	-- Prickles' idle: arms crossed (pricklesidle, read 2026-11-15).
+	-- Prickles' idle: arms crossed (pricklesidle, read 2026-11-15). The arms are the A3 idle's (owner 11-16: lower and
+	-- looser, out of his chest and head, the left paw resting on the right arm; read from the A3 clip's first keyframe
+	-- the same way); his body, legs and head are unchanged.
 	Prickles = {
 		Neck = Vector3.new(-2.7, 0, 1.5),
 		Waist = Vector3.new(1.9, -0.1, -0.3),
 		Root = Vector3.new(0.1, 0.1, -0.1),
-		RightShoulder = Vector3.new(81.6, 59.2, -129.1),
-		RightElbow = Vector3.new(0, 38.3, 0),
-		RightWrist = Vector3.new(0, 48.5, -46.5),
-		LeftShoulder = Vector3.new(87.8, -67.3, 121.1),
-		LeftElbow = Vector3.new(0, -45.1, 0),
-		LeftWrist = Vector3.new(0, -57.1, 29.3),
+		RightShoulder = Vector3.new(-10.9, 81.3, -26.9),
+		RightElbow = Vector3.new(-60.2, 38.4, 41.6),
+		RightWrist = Vector3.new(-23.7, 9.8, -17.1),
+		LeftShoulder = Vector3.new(56, -66, 71.3),
+		LeftElbow = Vector3.new(-35, -57.4, -31),
+		LeftWrist = Vector3.new(-23.9, -7.1, 26.7),
 		RightHip = Vector3.new(12.5, 0.8, 3.4),
 		RightKnee = Vector3.new(-22.5, 0, 0),
 		RightAnkle = Vector3.new(9, -14, -3.5),

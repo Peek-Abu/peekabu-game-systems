@@ -109,6 +109,27 @@ return function()
 			end
 		end)
 
+		-- Owner 11-16 ("Prickles recent A3 idle is good enough too!"): his idle's arms moved out of his chest and head,
+		-- lower and looser, the left paw resting on the right arm. The still must hold that same first frame, so swapping
+		-- the still for the moving model never jumps (the old high fold sank 0.23 studs into his chest).
+		it("holds Prickles in the A3 idle's arms, out of his chest", function()
+			local joints = EmployeePoseRegistry.IDLE_POSES.Prickles
+			local A3 = {
+				LeftShoulder = Vector3.new(56, -66, 71.3),
+				LeftElbow = Vector3.new(-35, -57.4, -31),
+				LeftWrist = Vector3.new(-23.9, -7.1, 26.7),
+				RightShoulder = Vector3.new(-10.9, 81.3, -26.9),
+				RightElbow = Vector3.new(-60.2, 38.4, 41.6),
+				RightWrist = Vector3.new(-23.7, 9.8, -17.1),
+			}
+			for joint, turn in A3 do
+				expect((joints[joint] - turn).Magnitude < 0.01).to.equal(true)
+			end
+			-- Only the arms changed: his body, legs and head keep the idle's first frame.
+			expect(joints.Neck).to.equal(Vector3.new(-2.7, 0, 1.5))
+			expect(joints.RightKnee).to.equal(Vector3.new(-22.5, 0, 0))
+		end)
+
 		it("leaves the rank places alone (profile, crew roster, ladder pose by rank)", function()
 			local set = EmployeePoseRegistry.get("Cappy")
 			for _, context in { "profile", "crew", "ladder" } do
