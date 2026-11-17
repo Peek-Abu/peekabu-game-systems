@@ -23,6 +23,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local ShiftEvents = require(ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents)
 local ShiftPlatformRules = require(ReplicatedStorage.Shared.Features.Shift.Rules.ShiftPlatformRules)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local AnalyticsConstants = require(AnalyticsServer.Data.AnalyticsConstants)
 local AnalyticsTypes = require(AnalyticsServer.Data.AnalyticsTypes)
@@ -35,6 +36,8 @@ local PlayerDataServiceServer = require(ServerScriptService.Features.PlayerData.
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 
 local log = Logger.new("AnalyticsSessionSystem")
+-- The versioned build, for server logs only. Events carry the bare BUILD_LABEL: a place version in a custom field
+-- makes a new value every publish and fills Roblox's 8,000-combination cap after a few weeks.
 local build = AnalyticsContextUtils.build(AnalyticsConstants.BUILD_LABEL, game.PlaceVersion)
 local tracker = AnalyticsContextTracker.new()
 
@@ -71,6 +74,9 @@ local function refreshCohort(userId: number)
 	end
 end
 
+--[=[
+	The versioned build ("w1-v42"), for logs and debug state; never sent in an event.
+]=]
 function AnalyticsSessionSystem.build(): string
 	return build
 end
@@ -103,7 +109,7 @@ function AnalyticsSessionSystem.contextOf(
 		platform = tracker:platformOf(player.UserId),
 		party = party,
 		cohort = tracker:cohortOf(player.UserId),
-		build = build,
+		build = AnalyticsConstants.BUILD_LABEL,
 	}
 end
 
@@ -115,7 +121,7 @@ function AnalyticsSessionSystem.field(player: Player, experimentIds: { string },
 end
 
 --[=[
-	Logs funnel step `stepName` once per player per session, with the fields `{player tags}|{cohort}|{build}`, the
+	Logs funnel step `stepName` once per player per session, with the fields `{player tags}|{cohort}|{label}`, the
 	detail ("-" when none) and `{platform}|{party}|{crew tags}`. False for an unknown step, a repeat, or before `start`.
 ]=]
 function AnalyticsSessionSystem.funnelStep(player: Player, stepName: string, detail: string?): boolean
@@ -135,7 +141,7 @@ function AnalyticsSessionSystem.funnelStep(player: Player, stepName: string, det
 	-- The crew experiments (a hub reads "-") ride in the tail, not field 1, which must match on every step.
 	local crew = AnalyticsSessionSystem.contextOf(player, AnalyticsConstants.FUNNEL_CREW_EXPERIMENTS, context.party)
 	-- Field 1 is stable across steps (so the funnel can be segmented); what changes per step rides in 2 and 3.
-	out.funnel(player, number, stepName, {
+	out.funnel(player, AnalyticsConstants.FUNNEL, number, stepName, {
 		AnalyticsContextUtils.funnelField(context.tags, context.cohort, AnalyticsConstants.BUILD_LABEL),
 		detail or "-",
 		AnalyticsContextUtils.funnelTail(context.platform, context.party, crew.tags),
@@ -204,7 +210,15 @@ function AnalyticsSessionSystem.start(out: AnalyticsTypes.Sender): () -> ()
 			onProfileLoaded(player.UserId)
 		end
 	end
-	local departing = QueueServiceServer.departing:Connect(function(_pad: BasePart, party: { Player })
+	-- A real truck out of the hub (not the Training truck, whose payload carries the training mode: that ride is the
+	-- training funnel's, and counting it here made a trainee read as a first real shift).
+	local leaving = QueueServiceServer.leaving:Connect(function(party: { Player }, role: string, payload)
+		if role ~= DepotConstants.ROLE_SHIFT or not QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) then
+			return
+		end
+		if payload[TrainingConstants.MODE_KEY] == TrainingConstants.MODE then
+			return
+		end
 		for _, member in party do
 			AnalyticsSessionSystem.funnelStep(member, "boarded_truck")
 		end
@@ -222,7 +236,7 @@ function AnalyticsSessionSystem.start(out: AnalyticsTypes.Sender): () -> ()
 	return function()
 		stopPlatform()
 		loaded:Disconnect()
-		departing:Disconnect()
+		leaving:Disconnect()
 		returned:Disconnect()
 		removing:Disconnect()
 		sender = nil

@@ -20,6 +20,8 @@ local EventRegistry = require(ReplicatedStorage.Shared.Features.Event.Data.Event
 local Locker = ReplicatedStorage.Shared.Features.Locker
 local LockerRules = require(Locker.Rules.LockerRules)
 local LockerTypes = require(Locker.Data.LockerTypes)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
+local AnalyticsEconomyUtils = require(ServerScriptService.Features.Analytics.Utils.AnalyticsEconomyUtils)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
@@ -120,6 +122,15 @@ local function buyKey(
 		return false, result.rejectionReason or "transaction failed"
 	end
 	log:audit(`userId={userId}`, "LOCKER_KEY_BOUGHT", locker.id, event.id, cost)
+	AnalyticsServiceServer:recordEconomy(userId, {
+		currency = currency,
+		flow = "sink",
+		amount = cost,
+		kind = "Shop",
+		sku = "locker_key",
+		item = locker.id,
+		where = event.id,
+	})
 	return true, nil
 end
 
@@ -175,6 +186,17 @@ local function buyDirect(
 		return false, result.rejectionReason or "transaction failed"
 	end
 	log:audit(`userId={userId}`, "LOCKER_DIRECT_BOUGHT", locker.id, item.id, price)
+	local sku, rarity = AnalyticsEconomyUtils.item(item.id)
+	AnalyticsServiceServer:recordEconomy(userId, {
+		currency = "gleam",
+		flow = "sink",
+		amount = price,
+		kind = "Shop",
+		sku = sku,
+		item = item.id,
+		rarity = rarity,
+		where = `direct:{locker.id}`,
+	})
 	CosmeticServiceServer.changed:Fire(userId)
 	CosmeticServiceServer:announce(userId, { item.id }, "locker")
 	return true, nil

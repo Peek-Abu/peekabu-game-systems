@@ -252,6 +252,18 @@ export type FirstSeen = {
 	at: number,
 }
 
+--[=[
+	The account's visit count for analytics (AnalyticsVisitSystem; server-only, never synced). `shifts`: every shift
+	worked, ever. `current`: shifts worked this visit (a visit spans the truck rides between the hub and the Shift
+	place). `handoffAt`: the unix time a truck ride last took the player (0: none), so the next server's load knows
+	the visit goes on.
+]=]
+export type Visit = {
+	shifts: number,
+	current: number,
+	handoffAt: number,
+}
+
 -- A stored setting value; which one a setting holds is its registered kind (SettingTypes).
 export type SettingValue = number | boolean | string
 
@@ -304,6 +316,7 @@ export type PlayerAccount = {
 	workOrder: WorkOrder,
 	rank: Rank,
 	firstSeen: FirstSeen,
+	visit: Visit,
 	loadout: Loadout,
 	lockers: Lockers,
 	social: Social,

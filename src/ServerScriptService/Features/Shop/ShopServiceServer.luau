@@ -15,6 +15,10 @@
 	Once a Robux buy of Gleam, coffee or a game pass is granted (MarketplaceServiceServer.productGranted / passBought),
 	the buyer gets ShopEvents.Purchased (ShopPurchaseRules) for the "You bought it!" screen.
 
+	Analytics (AnalyticsServiceServer:recordEconomy, after the commit): each buy's payment as a sink (a top-up's
+	two currencies as two), grouped by the offer's kind and rarity with the offer id, and each Robux Gleam pack's
+	Gleam as a source.
+
 	@class ShopServiceServer
 ]=]
 
@@ -37,6 +41,8 @@ local ShopRules = require(Shop.Rules.ShopRules)
 local ShopTopUpRules = require(Shop.Rules.ShopTopUpRules)
 local ShopTypes = require(Shop.Data.ShopTypes)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
+local AnalyticsEconomyUtils = require(ServerScriptService.Features.Analytics.Utils.AnalyticsEconomyUtils)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
 local DepotServiceServer = require(ServerScriptService.Features.Depot.DepotServiceServer)
 local EventServiceServer = require(ServerScriptService.Features.Event.EventServiceServer)
@@ -167,6 +173,30 @@ local function payOpsImpl(
 	return payGleam(userId, price)
 end
 
+-- Reports a committed buy's payment: the whole price, or a top-up's two parts.
+local function reportBuy(userId: number, offer: ShopTypes.Offer, plan: ShopTopUpRules.Plan?)
+	local sku, rarity = AnalyticsEconomyUtils.item(offer.id)
+	local where = if offer.pool == "featured" then "featured" elseif offer.pool == "event" then "event" else "shop"
+	local function spend(currency: CurrencyConstants.EconomyCurrency, amount: number, at: string)
+		AnalyticsServiceServer:recordEconomy(userId, {
+			currency = currency,
+			flow = "sink",
+			amount = amount,
+			kind = "Shop",
+			sku = sku,
+			item = offer.id,
+			rarity = rarity,
+			where = at,
+		})
+	end
+	if plan == nil then
+		spend(offer.currency, offer.price, where)
+		return
+	end
+	spend(offer.currency, plan.spend, where)
+	spend("gleam", plan.gleam, "topup")
+end
+
 local function buyImpl(userId: number, offerId: string, agreedGleam: number, seen: number?): (boolean, string?)
 	Guard.userId(userId)
 	local listed = ShopRegistry.get(offerId)
@@ -227,6 +257,7 @@ local function buyImpl(userId: number, offerId: string, agreedGleam: number, see
 	end
 	local gleam = if plan ~= nil then plan.gleam else 0
 	log:audit(`userId={userId}`, "SHOP_BOUGHT", offer.id, offer.currency, price, `topUpGleam={gleam}`)
+	reportBuy(userId, offer, plan)
 	CosmeticServiceServer:announce(userId, fresh, "shop")
 	return true, nil
 end
@@ -318,13 +349,26 @@ local ShopServiceServer: ShopServiceServer = {
 		"CurrencyServiceServer",
 		"MarketplaceServiceServer",
 		"EventServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	init = function(_self)
 		registerBundles()
 		janitor:Add(
 			MarketplaceServiceServer.productGranted:Connect(function(player: Player, key: string)
-				sendPurchase(player, ShopPurchaseRules.forProduct(key))
+				local purchase = ShopPurchaseRules.forProduct(key)
+				sendPurchase(player, purchase)
+				-- A Gleam pack's (or a deal's) Gleam, now saved.
+				if purchase ~= nil and purchase.kind == "gleam" then
+					AnalyticsServiceServer:recordEconomy(player.UserId, {
+						currency = "gleam",
+						flow = "source",
+						amount = purchase.amount,
+						kind = "IAP",
+						sku = `pack:{key}`,
+						where = "robux",
+					})
+				end
 			end),
 			"Disconnect"
 		)
@@ -337,8 +381,9 @@ local ShopServiceServer: ShopServiceServer = {
 		-- The places menu's School unlock pays the Shop's way (Credits, Gleam for the rest). Depot cannot require the
 		-- Shop (the Shop reaches Depot through Cosmetic and Shift), so the Shop hands it the payment.
 		DepotServiceServer:setPlacePayer(function(userId, price, gleam)
-			local ops, refusal = payOpsImpl(userId, "credits", price, gleam)
-			return ops, refusal
+			local ops, refusal, plan = payOpsImpl(userId, "credits", price, gleam)
+			local split = if plan ~= nil then { credits = plan.spend, gleam = plan.gleam } else nil
+			return ops, refusal, split
 		end)
 		janitor:Add(
 			ShopEvents.packets.BuyRequest.listen(function(payload: unknown, player: Player?)

@@ -38,6 +38,7 @@ local CoffeeRules = require(ReplicatedStorage.Shared.Features.Coffee.Rules.Coffe
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
@@ -138,6 +139,14 @@ local function buyWithGleam(player: Player)
 	end
 	counters.gleamBought += 1
 	log:audit(`userId={userId}`, "COFFEE_GLEAM_BOUGHT", CoffeeConstants.GLEAM_PRICE)
+	AnalyticsServiceServer:recordEconomy(userId, {
+		currency = "gleam",
+		flow = "sink",
+		amount = CoffeeConstants.GLEAM_PRICE,
+		kind = "ContextualPurchase",
+		sku = "coffee",
+		where = "coffee",
+	})
 	announce(player.DisplayName)
 end
 
@@ -221,6 +230,7 @@ local CoffeeServiceServer: CoffeeServiceServer = {
 		"ShiftServiceServer",
 		"StateSyncServiceServer",
 		"ToastServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	start = function(_self)

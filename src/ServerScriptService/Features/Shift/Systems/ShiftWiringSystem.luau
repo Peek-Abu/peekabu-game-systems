@@ -9,6 +9,7 @@
 	@class ShiftWiringSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -36,6 +37,8 @@ local ShiftTimeClockSystem = require(ShiftServer.Systems.ShiftTimeClockSystem)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
 local ShiftWorkOrderSystem = require(ShiftServer.Systems.ShiftWorkOrderSystem)
+local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -121,6 +124,49 @@ function ShiftWiringSystem.workOrders(deps: Deps, stoppers: { () -> () })
 end
 
 --[=[
+	The visit analytics (AnalyticsServiceServer): where the crew is as the phase changes (a run, its results screen, or
+	training), and each worked shift once its results exist (RankFormulas.workedIds, the rule pay and rank use; never a
+	training run). Returns the stopper.
+]=]
+local function reportVisits(deps: Deps): () -> ()
+	local run = deps.run
+	local lastPhase: string? = nil
+	local counted: { [number]: boolean } = {}
+	local connection = deps.changed:Connect(function(state: ShiftTypes.ShiftState)
+		if state.phase ~= lastPhase then
+			lastPhase = state.phase
+			local place: AnalyticsTypes.Place? = nil
+			if run.training then
+				place = "training"
+			elseif state.phase == "running" then
+				place = "shift"
+			elseif state.phase == "results" then
+				place = "results"
+			end
+			if place ~= nil then
+				for _, player in ShiftAnalyticsSystem.crew() do
+					AnalyticsServiceServer:place(player, place)
+				end
+			end
+		end
+		local results = run.results
+		if state.phase ~= "results" or run.training or results == nil or counted[state.shift] then
+			return
+		end
+		counted[state.shift] = true
+		for _, userId in RankFormulas.workedIds(results) do
+			local player = Players:GetPlayerByUserId(userId)
+			if player ~= nil then
+				AnalyticsServiceServer:shiftWorked(player)
+			end
+		end
+	end)
+	return function()
+		connection:Disconnect()
+	end
+end
+
+--[=[
 	Takes over Cargo's banking, starts the contract, analytics, review, pay, crew status, time clock, entrances, overtime
 	and clock-out subsystems, follows Round's phases, runs the clock's tick and opens the results vote, appending every
 	stopper.
@@ -132,6 +178,7 @@ function ShiftWiringSystem.start(deps: Deps, stoppers: { () -> () })
 	-- The contract's progress: every cleared pile and cleaning step adds its Gloom live (same gate and re-check).
 	table.insert(stoppers, ShiftGloomSystem.start(deps.banking.isOpen, deps.banking.afterBank))
 	table.insert(stoppers, ShiftAnalyticsWatchSystem.start(deps.changed, deps.caught, trip))
+	table.insert(stoppers, reportVisits(deps))
 	table.insert(stoppers, ShiftReviewSystem.start(deps.roster, deps.isRunning))
 	-- Pay: every crew member still here gets the full Credits and saved Gloom when the review opens.
 	table.insert(

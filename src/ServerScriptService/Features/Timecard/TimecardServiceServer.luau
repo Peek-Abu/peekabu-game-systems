@@ -35,6 +35,7 @@ local PlayerDataService = require(ServerScriptService.Features.PlayerData.Player
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local Currency = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local Marketplace = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local Locker = require(ServerScriptService.Features.Locker.LockerServiceServer)
 local Depot = require(ServerScriptService.Features.Depot.DepotServiceServer)
 local Shift = require(ServerScriptService.Features.Shift.ShiftServiceServer)
@@ -161,6 +162,7 @@ TimecardServiceServer = {
 		"CurrencyServiceServer",
 		"MarketplaceServiceServer",
 		"LockerServiceServer",
+		"AnalyticsServiceServer",
 	},
 	punched = punched,
 
@@ -271,6 +273,29 @@ TimecardServiceServer = {
 		local committed, result = PlayerDataService:transaction(ops)
 		if not committed then
 			return false, result.rejectionReason or "the punch was refused"
+		end
+		-- Analytics: what the default payout just paid (a game's own handler reports its own).
+		if payout == defaultPayout then
+			if preview.milestone == "stars" then
+				AnalyticsServiceServer:recordEconomy(player.UserId, {
+					currency = "gleam",
+					flow = "source",
+					amount = TimecardConstants.STAR_REWARD,
+					kind = "TimedReward",
+					sku = "reward:timecard_stars",
+					where = "timecard",
+				})
+			end
+			if preview.paycheck then
+				AnalyticsServiceServer:recordEconomy(player.UserId, {
+					currency = "credits",
+					flow = "source",
+					amount = TimecardConstants.PAYCHEQUE_CREDITS,
+					kind = "TimedReward",
+					sku = "reward:paycheque",
+					where = "timecard",
+				})
+			end
 		end
 		punched:Fire(player, preview)
 		return true, nil

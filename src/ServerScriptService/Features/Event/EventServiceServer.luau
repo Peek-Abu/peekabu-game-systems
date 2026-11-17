@@ -43,6 +43,7 @@ local EventPropSystem = require(ServerScriptService.Features.Event.Systems.Event
 local EventPickupSystem = require(ServerScriptService.Features.Event.Systems.EventPickupSystem)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
@@ -158,6 +159,15 @@ local function payShiftImpl(userId: number, event: Event, results: ShiftTypes.Sh
 		table.insert(parts, part)
 	end
 	log:audit(`userId={userId}`, "EVENT_PAID", event.id, total, table.concat(parts, "+"))
+	AnalyticsServiceServer:recordEconomy(userId, {
+		currency = currency,
+		flow = "source",
+		amount = total,
+		kind = "Gameplay",
+		sku = "reward:event_shift",
+		item = event.id,
+		where = if firstToday then "first_today" else "shift",
+	})
 	deps.sendPaid(userId, { event = event.id, total = total, parts = parts })
 	return true
 end
@@ -207,6 +217,24 @@ local function convertImpl(userId: number): boolean
 			if committed then
 				changed = true
 				log:audit(`userId={userId}`, "EVENT_CONVERTED", event.id, leftover, into)
+				AnalyticsServiceServer:recordEconomy(userId, {
+					currency = currency,
+					flow = "sink",
+					amount = leftover,
+					kind = "Gameplay",
+					sku = "event_convert",
+					item = event.id,
+					where = "event_end",
+				})
+				AnalyticsServiceServer:recordEconomy(userId, {
+					currency = into,
+					flow = "source",
+					amount = EventPayFormulas.converted(leftover, rate),
+					kind = "Gameplay",
+					sku = "event_convert",
+					item = event.id,
+					where = "event_end",
+				})
 			end
 		end
 	end
@@ -273,6 +301,7 @@ local EventServiceServer: EventServiceServer = {
 		"ShiftServiceServer",
 		"VacuumServiceServer",
 		"ToastServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	start = function(self)
@@ -335,6 +364,15 @@ local EventServiceServer: EventServiceServer = {
 						return false
 					end
 					log:audit(`userId={userId}`, "EVENT_PICKUP", event.id, amount)
+					AnalyticsServiceServer:recordEconomy(userId, {
+						currency = event.currency,
+						flow = "source",
+						amount = amount,
+						kind = "Gameplay",
+						sku = "reward:event_pickup",
+						item = event.id,
+						where = "shift",
+					})
 					local player = Players:GetPlayerByUserId(userId)
 					if player ~= nil then
 						ToastServiceServer:send(player, { text = `You found an acorn! +{amount}` })

@@ -226,6 +226,18 @@ function ShiftAnalyticsUtils.pileBucket(piles: number): string
 	return "piles_6_plus"
 end
 
+--[=[
+	A Load's item count, bucketed for cargo_banked (one event per Load).
+]=]
+function ShiftAnalyticsUtils.loadBucket(items: number): string
+	if items <= 1 then
+		return "load_1"
+	elseif items <= 3 then
+		return "load_2_3"
+	end
+	return "load_4_plus"
+end
+
 function ShiftAnalyticsUtils.dropOutcome(reason: string): AttemptOutcome?
 	return DROP_OUTCOMES[reason]
 end

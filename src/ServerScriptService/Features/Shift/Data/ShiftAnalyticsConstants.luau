@@ -59,6 +59,10 @@ local WORDS: { string } = {
 	"piles_1_2",
 	"piles_3_5",
 	"piles_6_plus",
+	-- cargo_banked: how many items a Load held.
+	"load_1",
+	"load_2_3",
+	"load_4_plus",
 	-- Where a cargo item came from.
 	"open",
 	"pile",

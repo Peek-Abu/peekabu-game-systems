@@ -9,6 +9,7 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local Data = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local Slices = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 local Toast = require(ServerScriptService.Features.Toast.ToastServiceServer)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local Currency = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local slice = Slices.registerAccount("workOrder", { day = 0, progress = 0, claimed = false }, function(account)
 	return account.workOrder
@@ -38,7 +39,12 @@ export type WorkOrderServiceServer = {
 	_setClock: (self: WorkOrderServiceServer, nextClock: (() -> number)?) -> (),
 }
 local Service: WorkOrderServiceServer = {
-	dependencies = { "PlayerDataServiceServer", "CurrencyServiceServer", "ToastServiceServer" },
+	dependencies = {
+		"PlayerDataServiceServer",
+		"CurrencyServiceServer",
+		"ToastServiceServer",
+		"AnalyticsServiceServer",
+	},
 	init = function(_self)
 		local connection = Data.profileLoaded:Connect(roll)
 		table.insert(stoppers, function()
@@ -103,6 +109,17 @@ local Service: WorkOrderServiceServer = {
 			)
 		end
 		local committed = Data:transaction(operations)
+		if committed and completes then
+			AnalyticsServiceServer:recordEconomy(player.UserId, {
+				currency = "credits",
+				flow = "source",
+				amount = Registry.REWARD_CREDITS,
+				kind = "TimedReward",
+				sku = "reward:work_order",
+				item = kind,
+				where = "work_order",
+			})
+		end
 		if committed and typeof(player) == "Instance" and player.Parent == Players then
 			local message =
 				Rules.feedback(preview.progress, math.min(order.target, preview.progress + amount), completes, order)

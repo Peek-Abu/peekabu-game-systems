@@ -17,7 +17,7 @@
 	It also keeps the session, each shift's salvage variant (`pickVariant`: ShiftVariantRules over the Workspace
 	override, ShiftConstants.VARIANT_MODE and the JobId, logged at info; not an experiment, its source is
 	contract_started's target) and the shift state the watch hands it. The platform and experiment tags come from
-	AnalyticsSessionSystem. `banked` (ShiftBankingSystem) sends cargo_banked per item and closes the loader's
+	AnalyticsSessionSystem. `banked` (ShiftBankingSystem) sends one cargo_banked per Load and closes the loader's
 	optional-salvage attempts; `closeAttempts` sends optional_salvage_attempted for each closed attempt. `banked` also
 	fires `loaded` (the loader, the items and salvage items in the Load, and how many are overtime loot), which
 	ShiftReviewSystem counts into the roster for the company rank's award.
@@ -236,7 +236,8 @@ function ShiftAnalyticsSystem.closeAttempts(attempts: { ShiftSalvageTracker.Atte
 end
 
 --[=[
-	A Load (ShiftBankingSystem, after the counters moved): cargo_banked per item (salvage at the credited value), then
+	A Load (ShiftBankingSystem, after the counters moved): one cargo_banked (its top item, its size, the value it
+	credited in all; salvage at the credited value), then
 	the loader's attempts for the banked salvage kinds close as banked.
 ]=]
 function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit)
@@ -254,18 +255,31 @@ function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit
 		end
 	end
 	loaded:Fire(player, #deposit.items, salvageCount, overtimeCount)
+	-- One event per Load (not per item, which spent most of the event budget): its most valuable item, how many items
+	-- it held, and the value it credited in all.
+	local total = 0
+	local top: string? = nil
+	local topValue = -1
 	for _, item in deposit.items do
 		local multiplier = if item.overtime == true
 			then ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER
 			else ShiftConstants.SALVAGE_MULTIPLIER
-		ShiftAnalyticsSystem.emit("cargo_banked", player, {
-			target = item.kind,
-			outcome = tag,
-			value = ShiftAnalyticsUtils.credited(item.category, item.value, multiplier),
-		})
+		local credited = ShiftAnalyticsUtils.credited(item.category, item.value, multiplier)
+		total += credited
+		if credited > topValue then
+			top, topValue = item.kind, credited
+		end
 		if item.category == "salvage" then
 			table.insert(salvageKinds, item.kind)
 		end
+	end
+	if #deposit.items > 0 then
+		ShiftAnalyticsSystem.emit("cargo_banked", player, {
+			target = top,
+			outcome = tag,
+			reason = ShiftAnalyticsUtils.loadBucket(#deposit.items),
+			value = total,
+		})
 	end
 	ShiftAnalyticsSystem.closeAttempts(salvage:resolveBanked(player.UserId, salvageKinds))
 end

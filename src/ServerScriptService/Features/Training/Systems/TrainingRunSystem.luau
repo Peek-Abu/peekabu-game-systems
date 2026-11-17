@@ -91,7 +91,8 @@ function TrainingRunSystem.new(
 	player: Player,
 	model: Model,
 	plan: TrainingMapRules.Plan,
-	finished: (player: Player) -> ()
+	finished: (player: Player) -> (),
+	stopDone: ((player: Player, stop: number) -> ())?
 ): Run
 	local state = TrainingStopRules.new()
 	local steps = TrainingStepRules.new(hasPower(player))
@@ -140,6 +141,9 @@ function TrainingRunSystem.new(
 		if not stopped and TrainingStopRules.complete(state, stop, goal) then
 			log:info(`stop {stop} done`)
 			openDone()
+			if stopDone ~= nil then
+				stopDone(player, stop)
+			end
 		end
 	end
 

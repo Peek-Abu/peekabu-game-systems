@@ -10,6 +10,8 @@
 	  Gleam paying the rest when they are short and said yes to that much), then ONE PlayerData transaction pays and
 	  unlocks the place. With no payer set (the Shop not started) nothing is sold.
 	  Either all of it happens or none: a player never pays without the place, or gets it without paying.
+	- A bought place is reported to analytics (AnalyticsServiceServer:recordEconomy): its Credits, and any Gleam that
+	  paid the rest, as sinks.
 	- `owns` is what DepotMapSystem asks before a host's pick counts: a truck plays only a place its host owns.
 
 	Spec-exempt shell (ByteNet, PlayerData and Shop wiring); the decisions are the specced DepotPlaceRules.
@@ -28,6 +30,7 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 
 local log = Logger.new("DepotPlaceSystem")
 
@@ -44,12 +47,13 @@ local placesSlice = PlayerDataSliceSystem.registerAccount(
 local bought = 0
 
 -- The operations that pay `price` Credits for `userId`, `gleam` Gleam at most paying the rest, or why not
--- (ShopServiceServer:payOps, set by the Shop).
+-- (ShopServiceServer:payOps, set by the Shop); with them, the Credits and the Gleam they spend.
+export type Payment = { credits: number, gleam: number }
 export type Payer = (
 	userId: number,
 	price: number,
 	gleam: number
-) -> ({ PlayerDataService.TransactionOperation }?, string?)
+) -> ({ PlayerDataService.TransactionOperation }?, string?, Payment?)
 
 local payer: Payer? = nil
 
@@ -67,7 +71,7 @@ local function buyImpl(userId: number, value: string, gleam: number): (boolean, 
 	if pay == nil then
 		return false, "no payment"
 	end
-	local payment, short = pay(userId, price, gleam)
+	local payment, short, split = pay(userId, price, gleam)
 	if payment == nil then
 		return false, short or "cannot pay"
 	end
@@ -84,6 +88,22 @@ local function buyImpl(userId: number, value: string, gleam: number): (boolean, 
 	end
 	bought += 1
 	log:audit(`userId={userId}`, "PLACE_BOUGHT", map, price, gleam)
+	local spent: Payment = split or { credits = price, gleam = 0 }
+	local function report(currency: "credits" | "gleam", amount: number, where: string)
+		if amount > 0 then
+			AnalyticsServiceServer:recordEconomy(userId, {
+				currency = currency,
+				flow = "sink",
+				amount = amount,
+				kind = "Shop",
+				sku = `place:{map}`,
+				item = map,
+				where = where,
+			})
+		end
+	end
+	report("credits", spent.credits, "places")
+	report("gleam", spent.gleam, "topup")
 	return true, nil
 end
 

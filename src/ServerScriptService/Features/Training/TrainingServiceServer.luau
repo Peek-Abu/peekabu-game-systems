@@ -24,6 +24,9 @@
 	- **The hotbar tour** (the shift role): when a run starts, each player there who has never had it (the tips slice,
 	  TipServiceServer:once) is sent TrainingEvents.Hotbar: the spotlight on the vacuum's slot, then the power.
 
+	Analytics (AnalyticsServiceServer): the training funnel's steps (the run starting, each stop done, the finish) and a
+	skip; the first-run Gleam is recorded as an economy source.
+
 	Spec-exempt shell (the data layer, Queue, Office, Shift, Instances); the decisions are the specced TrainingRules,
 	TrainingStopRules and TrainingMapRules.
 
@@ -47,6 +50,7 @@ local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Dat
 local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
@@ -137,6 +141,7 @@ local function skip(player: Player)
 	end)
 	if skipped then
 		counters.skipped += 1
+		AnalyticsServiceServer:trainingSkipped(player)
 		toast(player, TrainingConstants.TEXT.skipped)
 	end
 end
@@ -168,6 +173,14 @@ local function record(player: Player): number
 	})
 	if committed then
 		counters.rewarded += 1
+		AnalyticsServiceServer:recordEconomy(userId, {
+			currency = "gleam",
+			flow = "source",
+			amount = TrainingConstants.REWARD_GLEAM,
+			kind = "Onboarding",
+			sku = "reward:training",
+			where = "training",
+		})
 		return TrainingConstants.REWARD_GLEAM
 	end
 	return 0
@@ -228,6 +241,7 @@ local function begin(player: Player)
 	end
 	counters.runs += 1
 	local run = TrainingRunSystem.new(player, model, plan, function(done: Player)
+		AnalyticsServiceServer:trainingStep(done, "done")
 		task.spawn(function()
 			local paid = record(done)
 			if done.Parent == Players then
@@ -237,7 +251,14 @@ local function begin(player: Player)
 		leaving = task.delay(TrainingConstants.FINISH_WAIT, function()
 			leave(done, nil)
 		end)
+	end, function(runner: Player, stop: number)
+		local def = TrainingConstants.STOPS[stop]
+		if def ~= nil then
+			AnalyticsServiceServer:trainingStep(runner, def.id)
+		end
 	end)
+	AnalyticsServiceServer:place(player, "training")
+	AnalyticsServiceServer:trainingStep(player, "started")
 	current = { player = player, run = run }
 	OfficeServiceServer:useSite(TrainingSiteSystem.new(model, plan, function(piles, items)
 		run:track(piles, items)
@@ -269,6 +290,7 @@ local TrainingServiceServer: TrainingServiceServer = {
 		"TipServiceServer",
 		"StateSyncServiceServer",
 		"DepotServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	start = function(_self)

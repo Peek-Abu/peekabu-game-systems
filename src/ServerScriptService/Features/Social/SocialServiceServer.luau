@@ -33,6 +33,7 @@ local SocialConstants = require(ReplicatedStorage.Shared.Features.Social.Data.So
 local SocialEvents = require(ReplicatedStorage.Shared.Features.Social.Net.SocialEvents)
 local SocialRules = require(ReplicatedStorage.Shared.Features.Social.Rules.SocialRules)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
@@ -89,6 +90,18 @@ local function gleamOp(userId: number, amount: number): TransactionOperation
 		premium.balance += amount
 		return true
 	end)
+end
+
+-- Analytics: a committed Gleam reward.
+local function reportGleam(userId: number, amount: number, sku: string)
+	AnalyticsServiceServer:recordEconomy(userId, {
+		currency = "gleam",
+		flow = "source",
+		amount = amount,
+		kind = "Gameplay",
+		sku = sku,
+		where = "social",
+	})
 end
 
 local function gleamText(text: string, amount: number): string
@@ -158,6 +171,7 @@ SocialServiceServer = {
 		"MarketplaceServiceServer",
 		"ShiftServiceServer",
 		"ToastServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	init = function(_self)
@@ -256,6 +270,7 @@ SocialServiceServer = {
 		if not committed then
 			return false, result.rejectionReason or "the perk was refused"
 		end
+		reportGleam(player.UserId, SocialConstants.GROUP_GLEAM, "reward:group")
 		hooks.toast(player.UserId, gleamText(SocialConstants.TEXT.groupPaid, SocialConstants.GROUP_GLEAM))
 		return true, nil
 	end,
@@ -320,8 +335,10 @@ SocialServiceServer = {
 				local committed, result = PlayerDataService:transaction(ops)
 				if committed then
 					paid += 1
+					reportGleam(userId, SocialConstants.REFERRAL_GLEAM, "reward:referral")
 					hooks.toast(userId, gleamText(SocialConstants.TEXT.referralInvitee, SocialConstants.REFERRAL_GLEAM))
 					if payInviter then
+						reportGleam(inviter, SocialConstants.REFERRAL_GLEAM, "reward:referral")
 						hooks.toast(
 							inviter,
 							gleamText(SocialConstants.TEXT.referralInviter, SocialConstants.REFERRAL_GLEAM)

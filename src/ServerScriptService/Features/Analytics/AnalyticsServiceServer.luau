@@ -7,6 +7,11 @@
 	up to three values, and never throw into game code: each call is isolated, counted, and logged on
 	failure. In Studio nothing is sent; the event is logged at debug level instead.
 
+	It also takes what other features report for the tracking picks, each behind its own off switch
+	(AnalyticsSwitchConstants; Creator Hub's configs flip them live, AnalyticsSwitchSystem): `recordEconomy` (a
+	purchase or reward, after its transaction committed: AnalyticsEconomySystem), and for the visit events
+	(AnalyticsVisitSystem) `place`, `moment`, `shiftWorked`, `trainingStep` and `trainingSkipped`.
+
 	Spec-exempt shell (AnalyticsService); naming and fields are the specced AnalyticsRules.
 
 	@class AnalyticsServiceServer
@@ -20,13 +25,15 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local AnalyticsServer = ServerScriptService.Features.Analytics
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local AnalyticsConstants = require(AnalyticsServer.Data.AnalyticsConstants)
 local AnalyticsRules = require(AnalyticsServer.Rules.AnalyticsRules)
 -- Required at load so the firstSeen slice registers before PlayerDataServiceServer init (ServerHandler requires
 -- every service module first).
 local AnalyticsFirstSeenSystem = require(AnalyticsServer.Systems.AnalyticsFirstSeenSystem)
 local AnalyticsEconomySystem = require(AnalyticsServer.Systems.AnalyticsEconomySystem)
 local AnalyticsSessionSystem = require(AnalyticsServer.Systems.AnalyticsSessionSystem)
+local AnalyticsSwitchSystem = require(AnalyticsServer.Systems.AnalyticsSwitchSystem)
+-- Required at load too: it registers the "visit" slice.
+local AnalyticsVisitSystem = require(AnalyticsServer.Systems.AnalyticsVisitSystem)
 local AnalyticsTypes = require(AnalyticsServer.Data.AnalyticsTypes)
 
 export type ProgressionStatus = "start" | "complete" | "fail"
@@ -36,6 +43,8 @@ local counters = { sent = 0, skipped = 0, failed = 0 }
 local stopFirstSeen: (() -> ())? = nil
 local stopSession: (() -> ())? = nil
 local stopEconomy: (() -> ())? = nil
+local stopSwitches: (() -> ())? = nil
+local stopVisit: (() -> ())? = nil
 
 local function send(label: string, call: () -> ())
 	if RunService:IsStudio() then
@@ -87,6 +96,17 @@ export type AnalyticsServiceServer = {
 		levelName: string?,
 		fields: { string }?
 	) -> (),
+	-- A purchase or reward, reported once its transaction committed.
+	recordEconomy: (self: AnalyticsServiceServer, userId: number, record: AnalyticsTypes.EconomyRecord) -> (),
+	-- Where the player is now (quits).
+	place: (self: AnalyticsServiceServer, player: Player, place: AnalyticsTypes.Place) -> (),
+	-- A catch, chase or knock-out (quits).
+	moment: (self: AnalyticsServiceServer, player: Player, moment: AnalyticsTypes.Moment) -> (),
+	-- One real shift worked (shifts per visit).
+	shiftWorked: (self: AnalyticsServiceServer, player: Player) -> (),
+	-- A training funnel step (AnalyticsConstants.TRAINING_STEPS).
+	trainingStep: (self: AnalyticsServiceServer, player: Player, step: string) -> (),
+	trainingSkipped: (self: AnalyticsServiceServer, player: Player) -> (),
 	getState: (self: AnalyticsServiceServer) -> { [string]: any },
 }
 
@@ -104,6 +124,9 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 		assignment log, hub funnel) and the economy system, handing them a Sender over this service's own calls.
 	]=]
 	start = function(self)
+		if stopSwitches == nil then
+			stopSwitches = AnalyticsSwitchSystem.start()
+		end
 		if stopFirstSeen == nil then
 			stopFirstSeen = AnalyticsFirstSeenSystem.start()
 		end
@@ -112,8 +135,8 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 				custom = function(player, event, value, fields)
 					self:custom(player, event, value, fields)
 				end,
-				funnel = function(player, step, stepName, fields)
-					self:funnel(player, AnalyticsConstants.FUNNEL, step, stepName, fields)
+				funnel = function(player, funnel, step, stepName, fields)
+					self:funnel(player, funnel, step, stepName, fields)
 				end,
 				economy = function(player, call, fields)
 					self:economy(
@@ -130,10 +153,15 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 			}
 			stopSession = AnalyticsSessionSystem.start(sender)
 			stopEconomy = AnalyticsEconomySystem.start(sender)
+			stopVisit = AnalyticsVisitSystem.start(sender)
 		end
 	end,
 
 	stop = function(_self)
+		if stopVisit ~= nil then
+			stopVisit()
+			stopVisit = nil
+		end
 		if stopEconomy ~= nil then
 			stopEconomy()
 			stopEconomy = nil
@@ -145,6 +173,10 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 		if stopFirstSeen ~= nil then
 			stopFirstSeen()
 			stopFirstSeen = nil
+		end
+		if stopSwitches ~= nil then
+			stopSwitches()
+			stopSwitches = nil
 		end
 	end,
 
@@ -219,8 +251,34 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 		end)
 	end,
 
+	recordEconomy = function(_self, userId, record)
+		AnalyticsEconomySystem.record(userId, record)
+	end,
+
+	place = function(_self, player, place)
+		AnalyticsVisitSystem.place(player, place)
+	end,
+
+	moment = function(_self, player, moment)
+		AnalyticsVisitSystem.moment(player, moment)
+	end,
+
+	shiftWorked = function(_self, player)
+		AnalyticsVisitSystem.worked(player)
+	end,
+
+	trainingStep = function(_self, player, step)
+		AnalyticsVisitSystem.trainingStep(player, step)
+	end,
+
+	trainingSkipped = function(_self, player)
+		AnalyticsVisitSystem.trainingSkipped(player)
+	end,
+
 	getState = function(_self)
-		return table.clone(counters)
+		local state: { [string]: any } = table.clone(counters)
+		state.switches = AnalyticsSwitchSystem.states()
+		return state
 	end,
 }
 

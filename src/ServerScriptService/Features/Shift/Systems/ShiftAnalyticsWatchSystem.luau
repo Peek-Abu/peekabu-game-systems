@@ -24,7 +24,8 @@
 	  both; Round `runEnded` with the "wiped" outcome also sends crew_wiped to the crew, before shift_ended;
 	- Mr. Harlow's mode/target attributes (the `Occupant` tag; read, never required, since Occupant requires Shift):
 	  noise_investigation for the crew, with the noise he most likely heard (Noise `made`, kept a few seconds), and
-	  chase_started for the chased player, with what they hold. `investigated` tells the review who woke him
+	  chase_started for the chased player, with what they hold. A catch, a knock-out and a chase are also reported to
+	  AnalyticsServiceServer:moment, so a quit right after one says so. `investigated` tells the review who woke him
 	  (ShiftReviewSystem).
 	Gameplay events count only while the shift is running.
 
@@ -49,6 +50,7 @@ local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTyp
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local AnalyticsSessionSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -281,6 +283,8 @@ end
 local function onCaught(player: Player, livesLeft: number, elapsed: number)
 	local event, details = ShiftAnalyticsUtils.catchEvent(livesLeft, ShiftAnalyticsSystem.quotaTag(), elapsed)
 	ShiftAnalyticsSystem.emit(event, player, details)
+	-- A quit soon after says so (the knock-out kept apart from a catch).
+	AnalyticsServiceServer:moment(player, if livesLeft > 0 then "caught" else "knocked_out")
 end
 
 local function onNoise(event: NoiseTypes.NoiseEvent)
@@ -322,6 +326,7 @@ local function readHarlow(model: Instance, last: ShiftAnalyticsUtils.Harlow?): S
 	end
 	local victim = Players:GetPlayerByUserId(now.target)
 	if victim ~= nil then
+		AnalyticsServiceServer:moment(victim, "chased")
 		ShiftAnalyticsSystem.emit("chase_started", victim, {
 			target = held(victim),
 			outcome = ShiftAnalyticsSystem.quotaTag(),

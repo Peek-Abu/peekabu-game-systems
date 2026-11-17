@@ -37,6 +37,7 @@ local LockerRequestRules = require(Locker.Rules.LockerRequestRules)
 local LockerRules = require(Locker.Rules.LockerRules)
 local LockerTypes = require(Locker.Data.LockerTypes)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local EventServiceServer = require(ServerScriptService.Features.Event.EventServiceServer)
@@ -190,6 +191,32 @@ local function openImpl(player: Player, lockerId: string): (Outcome?, string?)
 	end
 	lastOpen[userId] = now
 	log:audit(`userId={userId}`, "LOCKER_OPENED", locker.id, item.id, outcome.duplicate, outcome.pity)
+	-- Analytics: the open's price (none when a key opened it) and a duplicate's refund, with the item and its rarity.
+	local how = if outcome.guaranteed then "pity" elseif useKey then "key" else "open"
+	if spend > 0 then
+		AnalyticsServiceServer:recordEconomy(userId, {
+			currency = locker.currency,
+			flow = "sink",
+			amount = spend,
+			kind = "Shop",
+			sku = `locker:{locker.id}`,
+			item = item.id,
+			rarity = outcome.rarity,
+			where = how,
+		})
+	end
+	if outcome.refund > 0 then
+		AnalyticsServiceServer:recordEconomy(userId, {
+			currency = locker.currency,
+			flow = "source",
+			amount = outcome.refund,
+			kind = "Gameplay",
+			sku = "locker_refund",
+			item = item.id,
+			rarity = outcome.rarity,
+			where = how,
+		})
+	end
 	if not outcome.duplicate then
 		CosmeticServiceServer.changed:Fire(userId)
 	end
@@ -271,6 +298,7 @@ local LockerServiceServer: LockerServiceServer = {
 		"MarketplaceServiceServer",
 		"PolicyServiceServer",
 		"EventServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	init = function(_self)

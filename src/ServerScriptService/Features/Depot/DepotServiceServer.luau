@@ -272,6 +272,7 @@ local DepotServiceServer: DepotServiceServer = {
 		"HostServiceServer",
 		-- DepotPlaceSystem's `places` slice (its payment is the Shop's, set through setPlacePayer).
 		"PlayerDataServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	--[=[
