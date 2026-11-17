@@ -385,7 +385,7 @@ local function bundleCard(
 			text = bundle.bonus,
 			sub = "BONUS",
 			hue = "mint",
-			size = if phone then 46 else if wide then 84 else 96,
+			size = if phone then (if wide then 46 else 62) else if wide then 84 else 96,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.new(1, 12, 0, -14),
 			zIndex = 5,
