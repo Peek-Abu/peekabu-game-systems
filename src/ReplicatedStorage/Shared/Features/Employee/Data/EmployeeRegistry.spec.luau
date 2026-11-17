@@ -95,7 +95,9 @@ return function()
 				expect(skin).to.be.ok()
 				-- Owner 11-16 ("I approve of making it the live one!"): the remake (one robe, folded lapels, violet coat)
 				-- replaces the first build; its hat is one of the outfit's own meshes, so no separate hat gear.
-				expect(skin.outfit).to.equal("PricklesShowstopperV2")
+				-- Owner 11-17 (SmartBone round 3, coordinator's call: "ship round 3 now"): the robe skirt and lapel fringe
+				-- swing (SmartBone chains + the outfit's own colliders), in the V3 outfit.
+				expect(skin.outfit).to.equal("PricklesShowstopperV3")
 				expect(#skin.accessories).to.equal(0)
 				-- The outfit hides his hard hat itself (its HideAccessories), so without the art he stays Classic; his
 				-- flower is never hidden (owner, 2026-11-10: "keep flower exactly how it is in base skin").

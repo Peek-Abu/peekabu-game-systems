@@ -489,13 +489,17 @@ EMPLOYEES.Prickles = {
 		-- gear. His own flower stays where the base skin has it, so nothing is listed in hidePieces, and a place without
 		-- the art leaves him Classic. One look, no styles; the outfit's meshes carry their own textures. Icey Labs model
 		-- 108833355972983; built in characters/skins/release/gloom_carnival/showstopper_remake (the first build,
-		-- PricklesShowstopper + PricklesShowstopperHat, stays in the places unused).
+		-- PricklesShowstopper + PricklesShowstopperHat, stays in the places unused). V3 (11-17, SmartBone round 3):
+		-- the same textured outfit with 6 skirt chains and 2 lapel-fringe chains that swing on SmartBone 2, the vent's
+		-- two edges riding their own side, and the outfit's own colliders (its TailPhysics / Tail* attributes and
+		-- SmartColliders; EmployeeTailSmartBoneUtils). Icey Labs model 101847990925723 rev 3. V2 stays in the places
+		-- for rollback.
 		Showstopper = {
 			name = "Showstopper",
 			paletteTextureId = nil,
 			facesFolder = nil,
 			accessories = {},
-			outfit = "PricklesShowstopperV2",
+			outfit = "PricklesShowstopperV3",
 		},
 		-- Legendary (Cosmetic Prickles.Sheriff): the skinned sheriff outfit (hat, vest, boots) over his body, plus the hose
 		-- lasso the emote shows (characters/skins/runtime-candidates-2026-10-26/sheriff_prickles). The outfit covers
