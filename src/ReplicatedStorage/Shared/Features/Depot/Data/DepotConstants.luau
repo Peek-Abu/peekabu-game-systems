@@ -103,6 +103,7 @@ local OFFICE_SITE: DepotTypes.MapSite = {
 	reviewTab = "SHIFT REVIEW · HARLOW & FINCH",
 	quote = ShiftConstants.REVIEW_QUOTES.met,
 	monster = "harlow",
+	danger = 1,
 }
 local SCHOOL_SITE: DepotTypes.MapSite = {
 	site = "School halls",
@@ -111,6 +112,7 @@ local SCHOOL_SITE: DepotTypes.MapSite = {
 	reviewTab = "SHIFT REVIEW · MAPLE HILL SCHOOL",
 	quote = table.freeze({ line = '"The halls have never been so shiny!"', by = "— Maple Hill School, Front Desk" }),
 	monster = "bramble",
+	danger = 2,
 }
 
 return table.freeze({

@@ -3,7 +3,8 @@
 	ShiftServiceClient: the shift on the client. Registers the Shift widgets in the HUD during init (before the UI
 	starts), and sends the local player's results vote whenever ShiftStore.myVote changes (clearing it when results
 	end). Pushes the performance review scene (ShiftScene) when results begin and removes it when they end; the
-	ShiftReviewTab widget reopens it after Escape while the vote runs. It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
+	ShiftReviewTab widget reopens it after Escape while the vote runs. Registers the landing status card's widget
+	(ShiftLandingHud). It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
 	registers the sticky-note, stamp and slip toast styles, and swaps the base toast stack for the paper one
 	(PaperToastStack: sticky notes top-right, stamps centre, appraisal slips bottom-right; ToastServiceClient:setDefaultWidget(false)). Starts
 	ShiftPromptSystem (the Interaction prompts drawn on paper) and registers the prompt chip; the chip and the phone
@@ -41,6 +42,7 @@ local ShiftTransitScreen = require(ReplicatedStorage.Client.UI.React.Screens.Shi
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local ShiftHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud)
+local ShiftLandingHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftLandingHud)
 local ShiftMobileButtons = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons)
 local ShiftPromptChip = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftPromptChip)
 local ShiftReviewTab = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewTab)
@@ -144,6 +146,9 @@ local ShiftServiceClient: ShiftServiceClient = {
 		end
 		if not HudRegistry.has("shiftPrompt") then
 			HudRegistry.register("shiftPrompt", PromptChipWidget, ShiftConstants.HUD_ORDER + 3)
+		end
+		if not HudRegistry.has("shiftLanding") then
+			HudRegistry.register("shiftLanding", ShiftLandingHud, ShiftConstants.HUD_ORDER + 4)
 		end
 	end,
 
