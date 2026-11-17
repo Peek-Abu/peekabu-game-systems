@@ -156,6 +156,11 @@ local EmployeeConstants = {
 	TAIL_ATTRIBUTE_PREFIX = "Tail",
 	TAIL_PHYSICS_ATTRIBUTE = "TailPhysics",
 	TAIL_PHYSICS_SMARTBONE = "SmartBone",
+	-- Outfit attributes starting with this are SmartBone's PER-BONE settings (TailBoneRotationLimit, TailBoneRadius,
+	-- TailBone<X|Y|Z>AxisLimits), put on every simulated bone below each chain's root; the lengths among them
+	-- (SMARTBONE_SCALED_BONE_SETTINGS) are scaled by the character's scale.
+	TAIL_BONE_ATTRIBUTE_PREFIX = "TailBone",
+	SMARTBONE_SCALED_BONE_SETTINGS = table.freeze({ "Radius", "XAxisLimits", "YAxisLimits", "ZAxisLimits" }),
 	SMARTBONE_TAG = "SmartBone",
 	SMARTBONE_COLLIDER_TAG = "SmartCollider",
 	-- Owner-approved test 11-15 (three-way comparison): "Spring" keeps the coat's flared rest shape ("Distance"

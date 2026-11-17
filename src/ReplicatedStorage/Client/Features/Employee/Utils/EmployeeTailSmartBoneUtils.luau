@@ -8,8 +8,9 @@
 	(Tail<side><n>Bone, see EmployeeConstants), so `prepare` nests every chain in place (each bone keeps its world
 	CFrame), marks the last one as the chain's end ("_end"), clears the outfit-bone mark so our own spring
 	(EmployeeTailSystem) leaves them alone, writes SmartBone's settings (EmployeeConstants.SMARTBONE_DEFAULTS, each
-	overridable by a Tail<name> attribute on the outfit) and tags the character's own legs as its colliders under a
-	collider key of its own. The local nesting never replicates; the server's flat bones stay as fitted.
+	overridable by a Tail<name> attribute on the outfit), puts the outfit's per-bone TailBone<name> settings on every
+	simulated bone below each chain's root (lengths scaled by the character's scale) and tags the character's own legs
+	as its colliders under a collider key of its own. The local nesting never replicates; the server's flat bones stay as fitted.
 
 	@class EmployeeTailSmartBoneUtils
 ]=]
@@ -43,16 +44,72 @@ function EmployeeTailSmartBoneUtils.wantsSmartBone(character: Model): boolean
 			== EmployeeConstants.TAIL_PHYSICS_SMARTBONE
 end
 
+-- A SmartBone setting as an attribute holds it.
+export type Setting = string | number | boolean | Vector3 | NumberRange
+export type Settings = { [string]: Setting }
+
+-- `value` as a SmartBone setting, or nil when it is no kind a setting can be (attributes read as unknown).
+local function asSetting(value: unknown): Setting?
+	if type(value) == "string" or type(value) == "number" or type(value) == "boolean" then
+		return value
+	elseif typeof(value) == "Vector3" or typeof(value) == "NumberRange" then
+		return value
+	end
+	return nil
+end
+
+-- Sets `result[name]` to `value` when `name` is a string and `value` is a setting.
+local function put(result: Settings, name: unknown, value: unknown)
+	local setting = asSetting(value)
+	if type(name) == "string" and setting ~= nil then
+		result[name] = setting
+	end
+end
+
+local function startsWith(name: string, prefix: string): boolean
+	return string.sub(name, 1, #prefix) == prefix
+end
+
 --[=[
 	SmartBone's settings for an outfit: EmployeeConstants.SMARTBONE_DEFAULTS, each replaced by the outfit folder's
-	Tail<name> attribute when it has one (TailPhysics itself is not a setting).
+	Tail<name> attribute when it has one (TailPhysics itself and the per-bone TailBone<name> ones are not).
 ]=]
-function EmployeeTailSmartBoneUtils.settings(folder: Instance): { [string]: any }
-	local result: { [string]: any } = table.clone(EmployeeConstants.SMARTBONE_DEFAULTS)
+function EmployeeTailSmartBoneUtils.settings(folder: Instance): Settings
+	local result: Settings = {}
+	for name, value in EmployeeConstants.SMARTBONE_DEFAULTS do
+		put(result, name, value)
+	end
 	local prefix = EmployeeConstants.TAIL_ATTRIBUTE_PREFIX
 	for name, value in folder:GetAttributes() do
-		if name ~= EmployeeConstants.TAIL_PHYSICS_ATTRIBUTE and string.sub(name, 1, #prefix) == prefix then
-			result[string.sub(name, #prefix + 1)] = value
+		if
+			name ~= EmployeeConstants.TAIL_PHYSICS_ATTRIBUTE
+			and startsWith(name, prefix)
+			and not startsWith(name, EmployeeConstants.TAIL_BONE_ATTRIBUTE_PREFIX)
+		then
+			put(result, string.sub(name, #prefix + 1), value)
+		end
+	end
+	return result
+end
+
+--[=[
+	SmartBone's per-bone settings for an outfit: its TailBone<name> attributes, the lengths
+	(EmployeeConstants.SMARTBONE_SCALED_BONE_SETTINGS) times `scale` (the character's scale).
+]=]
+function EmployeeTailSmartBoneUtils.boneSettings(folder: Instance, scale: number): Settings
+	local result: Settings = {}
+	local prefix = EmployeeConstants.TAIL_BONE_ATTRIBUTE_PREFIX
+	for name, value in folder:GetAttributes() do
+		if startsWith(name, prefix) then
+			local setting = string.sub(name, #prefix + 1)
+			local scaled = table.find(EmployeeConstants.SMARTBONE_SCALED_BONE_SETTINGS, setting) ~= nil
+			if scaled and type(value) == "number" then
+				result[setting] = value * scale
+			elseif scaled and typeof(value) == "NumberRange" then
+				result[setting] = NumberRange.new(value.Min * scale, value.Max * scale)
+			else
+				put(result, setting, value)
+			end
 		end
 	end
 	return result
@@ -103,6 +160,7 @@ function EmployeeTailSmartBoneUtils.prepare(character: Model): boolean
 		return false
 	end
 	local roots: { string } = {}
+	local perBone = EmployeeTailSmartBoneUtils.boneSettings(folder, character:GetScale())
 	for _, chain in found do
 		for _, bone in chain do
 			bone.Transform = CFrame.identity
@@ -112,6 +170,11 @@ function EmployeeTailSmartBoneUtils.prepare(character: Model): boolean
 			local world = chain[i].WorldCFrame
 			chain[i].Parent = chain[i - 1]
 			chain[i].WorldCFrame = world
+		end
+		for i = 2, #chain do
+			for name, value in perBone do
+				chain[i]:SetAttribute(name, value)
+			end
 		end
 		chain[#chain].Name ..= END_SUFFIX
 		table.insert(roots, chain[1].Name)
