@@ -1,0 +1,229 @@
+<title>Odd Hours Tracking Plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: one reading column; "today" strip, then pick cards with yes/no, then the question map. */
+:root{
+  --bg:#f3f1f8; --card:#ffffff; --fg:#231d33; --muted:#625a75; --line:#dcd6ea;
+  --gloom:#6b3fb8; --gleam:#1c8f86; --warn:#b5651d; --yes:#1f8a4c; --no:#b23a48;
+  --display:"Fredoka","Trebuchet MS",sans-serif; --body:"Nunito","Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17131f; --card:#221c2e; --fg:#eeeaf6; --muted:#a79fba; --line:#3a3150;
+  --gloom:#b08af0; --gleam:#4fd1c5; --warn:#f0a35e; --yes:#5fd08f; --no:#f07a88; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17131f; --card:#221c2e; --fg:#eeeaf6; --muted:#a79fba; --line:#3a3150;
+  --gloom:#b08af0; --gleam:#4fd1c5; --warn:#f0a35e; --yes:#5fd08f; --no:#f07a88; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding-block:28px 60px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:grid;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2rem;color:var(--gloom)}
+h2{font-size:1.35rem}
+h3{font-size:1.1rem}
+p{margin:0}
+.lead{color:var(--muted)}
+section{display:grid;gap:12px}
+.today{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:6px;min-width:0}
+.box b{font-family:var(--display);font-weight:600}
+.ok{color:var(--yes)} .bad{color:var(--no)} .meh{color:var(--warn)}
+ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.pick{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:10px;min-width:0}
+.pick header{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.num{font-family:var(--display);font-weight:700;color:var(--gleam)}
+.tells{color:var(--muted);font-size:.95rem}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:600 1rem var(--body);padding:8px 18px;border-radius:999px;border:2px solid var(--line);background:transparent;color:var(--fg);cursor:pointer}
+button:focus-visible{outline:3px solid var(--gleam);outline-offset:2px}
+button.y[aria-pressed="true"]{background:var(--yes);border-color:var(--yes);color:var(--bg)}
+button.n[aria-pressed="true"]{background:var(--no);border-color:var(--no);color:var(--bg)}
+.state{font-size:.9rem;color:var(--muted)}
+textarea{width:100%;box-sizing:border-box;font:inherit;font-size:.95rem;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-height:42px}
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.95rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:600}
+tr:last-child td{border-bottom:0}
+code{font-size:.85em;background:var(--bg);padding:1px 5px;border-radius:5px}
+.small{font-size:.9rem;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <h1>What should the game count?</h1>
+    <p class="lead">You asked if we can see where players leave and what they buy. Your picks are in and built. Below: the off switches, where to find each number, and how to read them.</p>
+  </header>
+
+  <section>
+    <h2>What we count today</h2>
+    <div class="today">
+      <div class="box"><b class="ok">Roblox counts for free</b>
+        <ul><li>Who comes back the next day, week and month</li><li>How long a visit lasts</li><li>Robux spent on each pack, Coffee, deal and the Big Crew pass</li></ul></div>
+      <div class="box"><b class="ok">We already count</b>
+        <ul><li>A new player's first steps: hub, truck, shift, clean, bank, results</li><li>Shift events: catches, knock-outs, wipes, how a shift ended</li><li>Credits and Gloom from shift pay</li></ul></div>
+      <div class="box"><b class="bad">Missing</b>
+        <ul><li>Anything bought with Gleam, Credits, Gloom or acorns</li><li>Where and when players quit</li><li>Time in the hub</li><li>Training steps</li><li>Shifts per visit</li></ul></div>
+    </div>
+    <p class="small">The big one: every shop, Locker, Coffee, hire and bundle buy is counted nowhere today. Robux buys still show up, because Roblox counts those by itself.</p>
+  </section>
+
+  <section id="picks">
+    <h2>The picks</h2>
+
+    <article class="pick" data-id="leave">
+      <header><span class="num">1</span><h3>Where players quit, and right after what</h3></header>
+      <p>When a player quits the game (not when they ride a truck), we note where they were (hub, training, shift or results screen) and what just happened: caught in the last minute, being chased, knocked out, or nothing.</p>
+      <p class="tells">Tells you things like: "30% of quits in a shift come right after a catch." Knock-outs are kept apart, so deaths don't mix in.</p>
+    </article>
+
+    <article class="pick" data-id="hub">
+      <header><span class="num">2</span><h3>Time in the hub</h3></header>
+      <p>Each hub visit, we note how many seconds the player stayed, whether they got on a truck or quit, and whether it was their first visit.</p>
+      <p class="tells">Tells you things like: "New players stay 4 minutes and 1 in 5 quit before a truck. Make the hub faster."</p>
+    </article>
+
+    <article class="pick" data-id="training">
+      <header><span class="num">3</span><h3>Training, step by step</h3></header>
+      <p>A list of steps: got on the training truck, then each of the 5 stops (goo, treasure, quiet hall, hide, done), then back in the hub. Players who skip training are counted too.</p>
+      <p class="tells">Tells you things like: "40% quit at the hide stop." Compare skippers and finishers: do skippers come back less?</p>
+    </article>
+
+    <article class="pick" data-id="shifts">
+      <header><span class="num">4</span><h3>Shifts per visit</h3></header>
+      <p>When a player quits, we note how many shifts they played that visit, and how many in total so far.</p>
+      <p class="tells">Tells you things like: "Players play 2.3 shifts and then quit. Most stop after shift 2."</p>
+    </article>
+
+    <article class="pick" data-id="economy">
+      <header><span class="num">5</span><h3>Every buy and every reward</h3></header>
+      <p>Every time Gleam, Credits, Gloom or acorns go in or out, we note the exact item and its rarity. That covers shop items, bundles, Coffee, Lockers (including pity and copies), hires, School, deals, packs and rewards.</p>
+      <p class="tells">Tells you things like: "Bubble Buddy sells 3 times more than any other Epic." "Most Gleam goes to Lockers, not the shop." "Players run out of Credits by shift 5."</p>
+    </article>
+
+    <article class="pick" data-id="shopfunnel">
+      <header><span class="num">6</span><h3>Look, then buy</h3></header>
+      <p>Each shop visit: opened the shop, looked at an item, bought it. We also note which item they looked at.</p>
+      <p class="tells">Tells you things like: "Lots of players look at this skin, but few buy it. The price may be too high."</p>
+    </article>
+
+    <article class="pick" data-id="cleanup">
+      <header><span class="num">7</span><h3>Fix what we count today</h3></header>
+      <p>Three small fixes. The training truck is counted as a "first real truck" right now, so it gets its own count. The game's version number is dropped from event details, because otherwise Roblox's detail limit fills up after about 25 updates. Banking sends one event per load instead of one per item, to save the event budget.</p>
+      <p class="tells">Without this, the new-player numbers come out wrong, and after a few weeks the details turn into "Other".</p>
+    </article>
+  </section>
+
+  <section>
+    <div class="box" style="border-color:var(--yes)">
+      <b class="ok">Built (17 Nov)</b>
+      <p>You said yes to picks 1, 2, 3, 4, 5 and 7, and no to 6 (the shop funnel). All of them are built and sent to the game branch. They start counting once the game is published.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>An off switch for each pick</h2>
+    <div class="box">
+      <p>Picks 1 to 5 each have their own on/off switch. When a switch is off, that tracking stops completely. Nothing for it runs and nothing is sent. Pick 7's fixes stay on all the time.</p>
+      <p><b>Way 1, no update needed:</b> Creator Hub → your game → Configs. Make a true/false config with the switch's name and publish it as <b>false</b>. Live servers pick it up in about a minute. Set it back to true (or delete it) to turn it on again.</p>
+      <p><b>Way 2, in the code:</b> the file <code>Features/Analytics/Data/AnalyticsSwitchConstants.luau</code> has one true/false line per pick. The game uses it when Way 1 has no value. Changing it takes an update.</p>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Pick</th><th>Switch name</th></tr></thead>
+      <tbody>
+        <tr><td>1. Where players quit</td><td><code>analytics_quits</code></td></tr>
+        <tr><td>2. Time in the hub</td><td><code>analytics_hub_time</code></td></tr>
+        <tr><td>3. Training steps</td><td><code>analytics_training</code></td></tr>
+        <tr><td>4. Shifts per visit</td><td><code>analytics_shifts_per_visit</code></td></tr>
+        <tr><td>5. Every buy and reward</td><td><code>analytics_economy</code></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Where to find it</h2>
+    <div class="box">
+      <p>Creator Hub → Creations → Odd Hours → <b>Analytics</b>. Then:</p>
+      <ul>
+        <li><b>Custom Events:</b> <code>left_game</code>, <code>hub_visit</code>, <code>visit_ended</code>, <code>training_skipped</code>. Split them by "Custom Field 1, 2 or 3" to see the details below.</li>
+        <li><b>Funnels:</b> <code>first_time</code> (a new player's first shift) and <code>training</code> (the training stops).</li>
+        <li><b>Economy:</b> Sources (money in) and Sinks (money out) for Gleam, Credits, Gloom and Acorns. Split by Item SKU, then by the custom fields for the exact item.</li>
+        <li><b>Retention, Engagement and Monetization:</b> free from Roblox. Who comes back, how long visits last, and Robux sales.</li>
+      </ul>
+      <p class="small">Only the live game sends data. Studio sends nothing. Numbers show up about a day later, and Roblox keeps them for 90 days.</p>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Event</th><th>Number</th><th>Field 1</th><th>Field 2</th><th>Field 3</th></tr></thead>
+      <tbody>
+        <tr><td><code>left_game</code></td><td>1 per quit</td><td>where: hub, training, shift, results</td><td>right after: caught, chased, knocked_out, nothing</td><td>new or returning player</td></tr>
+        <tr><td><code>hub_visit</code></td><td>seconds in the hub</td><td>how it ended: boarded, training, quit</td><td>first hub stay, or again after a shift</td><td>new or returning</td></tr>
+        <tr><td><code>visit_ended</code></td><td>shifts this visit</td><td>all shifts ever: 0, 1, 2, 3-4, 5-9, 10-24, 25-49, 50+</td><td>where they quit</td><td>new or returning</td></tr>
+        <tr><td>Economy</td><td>amount</td><td>exact item id</td><td>rarity</td><td>where (shop, featured, event, topup, pity, key, ...) and new or returning</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>How to read the numbers after launch</h2>
+    <p class="small">Wait about a week before you decide anything, so one odd day doesn't fool you. Then compare each week to the week before. These are starting guesses, not rules. Your first week's numbers become your normal.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>If you see this</th><th>It probably means</th><th>Things to try</th></tr></thead>
+      <tbody>
+        <tr><td>Lots of <code>left_game</code> with where = shift and after = caught</td><td>Getting caught feels too harsh</td><td>A softer first catch, a clearer warning before Mr. Harlow arrives, a quicker way back in</td></tr>
+        <tr><td>Lots of where = shift, after = nothing</td><td>The shift drags or gets boring</td><td>A shorter shift, or more happening in the middle</td></tr>
+        <tr><td>Lots of where = results</td><td>The end screen doesn't pull them into another shift</td><td>A bigger "next shift" button, or a reward for going again</td></tr>
+        <tr><td>The <code>training</code> funnel drops at one stop</td><td>That stop is confusing or too long</td><td>Fix that one stop first</td></tr>
+        <tr><td>Skippers come back as often as finishers (Retention, split by skip)</td><td>Training isn't helping much</td><td>Make it shorter, or optional</td></tr>
+        <tr><td><code>hub_visit</code> ending in quit after only a few seconds</td><td>Nothing in the hub grabs them</td><td>Make the truck easier to see, and the first step clearer</td></tr>
+        <tr><td><code>hub_visit</code> ending in quit after a long time</td><td>They are lost or stuck in the hub</td><td>Clearer arrows and signs</td></tr>
+        <tr><td><code>visit_ended</code> averages about 1 shift</td><td>One shift and done: the first shift's end needs a hook</td><td>A reward for the second shift, or something new on the results screen</td></tr>
+        <tr><td>Some rarities or items sell much more (Economy sinks by SKU)</td><td>That's what players want</td><td>Make more like it, and feature it in the Shop</td></tr>
+        <tr><td>Players earn far more Gleam than they spend (sources vs sinks)</td><td>Not enough worth buying</td><td>New items, or a better price at the rarities that sell</td></tr>
+        <tr><td>Lots of "topup" (Gleam paying the rest)</td><td>Credit prices feel too high</td><td>Check those prices</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small">Robux sales (packs, Coffee, deals, the Big Crew pass) are on the Monetization page. Roblox counts those by itself.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  const picks=[...document.querySelectorAll('.pick')];
+  const ui={};
+  for(const el of picks){
+    const id=el.dataset.id;
+    const row=document.createElement('div');row.className='btns';
+    const y=document.createElement('button');y.className='y';y.textContent='Yes';y.setAttribute('aria-pressed','false');y.id='yes-'+id;
+    const n=document.createElement('button');n.className='n';n.textContent='No';n.setAttribute('aria-pressed','false');n.id='no-'+id;
+    const st=document.createElement('span');st.className='state';st.textContent='Loading…';
+    row.append(y,n,st);
+    const note=document.createElement('textarea');note.id='note-'+id;note.placeholder='Anything to change? (optional)';
+    el.append(row,note);
+    ui[id]={y,n,st,note,answer:null};
+  }
+  function paint(id){const u=ui[id];u.y.setAttribute('aria-pressed',String(u.answer==='yes'));u.n.setAttribute('aria-pressed',String(u.answer==='no'));}
+  (async()=>{
+    let db=null;
+    try{ db=window.claude&&window.claude.use?await window.claude.use('db'):null; }catch(e){db=null;}
+    if(!db){for(const id in ui){ui[id].st.textContent='Sign in to answer';ui[id].y.disabled=ui[id].n.disabled=true;}return;}
+    const timer=setTimeout(()=>{for(const id in ui){if(ui[id].st.textContent==='Loading…')ui[id].st.textContent='Could not load answers';}},10000);
+    db.collection('picks').onSnapshot(snap=>{
+      clearTimeout(timer);
+      const seen={};
+      snap.docs.forEach(d=>{const v=d.data();seen[d.id]=v;});
+      for(const id in ui){const v=seen[id];const u=ui[id];u.answer=v&&v.answer||null;paint(id);
+        u.st.textContent=u.answer?('Saved: '+u.answer):'Not picked yet';
+        if(v&&typeof v.note==='string'&&document.activeElement!==u.note)u.note.value=v.note;}
+    },()=>{for(const id in ui)ui[id].st.textContent='Could not load answers';});
+    async function save(id,answer){const u=ui[id];u.answer=answer;paint(id);u.st.textContent='Saving…';
+      try{await db.doc('picks/'+id).set({answer,note:u.note.value.slice(0,500),at:new Date().toISOString()});u.st.textContent='Saved: '+answer;}
+      catch(e){u.st.textContent='Not saved. Try again.';}}
+    for(const id in ui){const u=ui[id];
+      u.y.addEventListener('click',()=>save(id,'yes'));
+      u.n.addEventListener('click',()=>save(id,'no'));
+      u.note.addEventListener('change',async()=>{if(!u.answer)return;try{await db.doc('picks/'+id).update({note:u.note.value.slice(0,500)});}catch(e){}});
+    }
+  })();
+})();
+</script>
