@@ -865,6 +865,376 @@ def snack():
         S2.finish2("hb_snack_bar", tex=256)
 
 
+# ------------------------------------------------- Harvest Hours event (11-17) ---
+# The Thanksgiving event's two hub props (owner A8/A9 11-17: "yes to banner and scarecrow!", from the concept in
+# characters/concepts/event/harvest-props-2026-11-16/props.png). Placed by the owner, tagged EventProp, Event = harvest.
+# Cloth, felt, burlap and patch are the Fabric036 scan; the pole and post are the oak scan. The banner's words are
+# Luckiest Guy (the game's title font) turned into raised felt letters, so they are geometry, not a printed decal.
+_FONT = os.environ.get("HUB_FONT", "E:/Projects/peekabu-game-systems/characters/identity/lanyards/fonts/LuckiestGuy-Regular.ttf")
+
+
+def _plaid(name, base, band, scale=1.1, studs=1.2):
+    """Shirt flannel: `band` stripes crossing in object X and Z over `base` (darker where they cross), on the fabric
+    scan's weave bump."""
+    m, N, L, b = H._new(name)
+    tc = N.new("ShaderNodeTexCoord")
+    sep = N.new("ShaderNodeSeparateXYZ"); L.new(tc.outputs["Object"], sep.inputs["Vector"])
+
+    def stripes(out):
+        mul = N.new("ShaderNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = math.pi / scale
+        L.new(out, mul.inputs[0])
+        sn = N.new("ShaderNodeMath"); sn.operation = "SINE"; L.new(mul.outputs[0], sn.inputs[0])
+        ab = N.new("ShaderNodeMath"); ab.operation = "ABSOLUTE"; L.new(sn.outputs[0], ab.inputs[0])
+        mr = N.new("ShaderNodeMapRange"); mr.inputs["From Min"].default_value = 0.62; mr.inputs["From Max"].default_value = 0.72
+        L.new(ab.outputs[0], mr.inputs["Value"])
+        return mr.outputs["Result"]
+    sx, sz = stripes(sep.outputs["X"]), stripes(sep.outputs["Z"])
+    add = N.new("ShaderNodeMath"); add.operation = "ADD"; L.new(sx, add.inputs[0]); L.new(sz, add.inputs[1])
+    mn = N.new("ShaderNodeMath"); mn.operation = "MINIMUM"; mn.inputs[1].default_value = 1.0
+    L.new(add.outputs[0], mn.inputs[0])
+    m1 = N.new("ShaderNodeMixRGB"); m1.inputs[1].default_value = (*base, 1); m1.inputs[2].default_value = (*band, 1)
+    L.new(mn.outputs[0], m1.inputs["Fac"])
+    both = N.new("ShaderNodeMath"); both.operation = "MULTIPLY"; L.new(sx, both.inputs[0]); L.new(sz, both.inputs[1])
+    m2 = N.new("ShaderNodeMixRGB"); m2.blend_type = "MULTIPLY"; m2.inputs[2].default_value = (0.55, 0.5, 0.5, 1)
+    L.new(both.outputs[0], m2.inputs["Fac"]); L.new(m1.outputs["Color"], m2.inputs[1])
+    L.new(m2.outputs["Color"], b.inputs["Base Color"])
+    mp = N.new("ShaderNodeMapping"); k = 1.0 / studs; mp.inputs["Scale"].default_value = (k, k, k)
+    L.new(tc.outputs["Object"], mp.inputs["Vector"])
+    hi = N.new("ShaderNodeTexImage"); hi.image = H._img(H._FABN[1], False); hi.projection = "BOX"; hi.projection_blend = 0.15
+    L.new(mp.outputs["Vector"], hi.inputs["Vector"])
+    bp = N.new("ShaderNodeBump"); bp.inputs["Strength"].default_value = 0.4; bp.inputs["Distance"].default_value = 0.02
+    L.new(hi.outputs["Color"], bp.inputs["Height"]); L.new(bp.outputs["Normal"], b.inputs["Normal"])
+    b.inputs["Roughness"].default_value = 0.85
+    return m
+
+
+H._SPEC.update({
+    "cloth_or": lambda: H._scan("cloth_or", *H._FABN, studs=2, bump=0.35, rough=0.85, tint=(1.0, 0.30, 0.02)),
+    "cloth_rust": lambda: H._scan("cloth_rust", *H._FABN, studs=2, bump=0.35, rough=0.85, tint=(0.50, 0.10, 0.04)),
+    "felt_cream": lambda: H._scan("felt_cream", *H._FABN, studs=1, bump=0.2, rough=0.9, tint=(1.0, 0.86, 0.58)),
+    "pole_wood": lambda: H._scan("pole_wood", *H._OAK, studs=3, bump=0.25, rough=0.5, tint=(0.80, 0.50, 0.28)),
+    "pole_wood_v": lambda: H._scan("pole_wood_v", *H._OAK, studs=3, bump=0.25, rough=0.5, tint=(0.70, 0.42, 0.24), along="Z"),
+    "pole_band": lambda: _paint("pole_band", (0.32, 0.16, 0.07), 0.6, 0.3, scale=20),
+    "rope": lambda: _paint("rope", (0.72, 0.58, 0.36), 0.9, 0.6, scale=45),
+    "acorn_cap": lambda: _paint("acorn_cap", (0.28, 0.15, 0.06), 0.85, 0.9, scale=40),
+    "acorn_nut": lambda: _paint("acorn_nut", (0.70, 0.43, 0.13), 0.55, 0.1, scale=10),
+    "burlap": lambda: H._scan("burlap", *H._FABN, studs=0.8, bump=0.7, rough=0.9, tint=(0.95, 0.74, 0.45)),
+    "patch": lambda: H._scan("patch", *H._FABN, studs=0.8, bump=0.5, rough=0.9, tint=(0.92, 0.76, 0.48)),
+    "straw": lambda: _paint("straw", (0.86, 0.63, 0.16), 0.7, 0.4, scale=30),
+    "straw_dk": lambda: _paint("straw_dk", (0.64, 0.44, 0.10), 0.75, 0.4, scale=30),
+    "straw_hat": lambda: H._weave("straw_hat", (0.56, 0.37, 0.09), (0.90, 0.68, 0.24), 70),
+    "hat_band": lambda: _paint("hat_band", (0.52, 0.08, 0.05), 0.6, 0.2, scale=20),
+    "plaid": lambda: _plaid("plaid", (0.80, 0.32, 0.05), (0.42, 0.09, 0.04)),
+    "button_br": lambda: _paint("button_br", (0.30, 0.16, 0.07), 0.4, 0.05, scale=10),
+    "button_blk": lambda: _paint("button_blk", (0.035, 0.03, 0.025), 0.35, 0.05, scale=10),
+    "stitch": lambda: _paint("stitch", (0.20, 0.09, 0.04), 0.8, 0.2, scale=30),
+    "corn_leaf": lambda: _paint("corn_leaf", (0.66, 0.56, 0.13), 0.6, 0.3, scale=18),
+    "corn_leaf2": lambda: _paint("corn_leaf2", (0.46, 0.48, 0.10), 0.6, 0.3, scale=18),
+    "corn_cob": lambda: _paint("corn_cob", (0.95, 0.68, 0.06), 0.35, 0.1, scale=12),
+    "dirt": lambda: _paint("dirt", (0.15, 0.085, 0.045), 0.95, 0.9, scale=12),
+})
+
+
+def _blade(name, p0, p1, p2, w, mat, n=8, up=(0, 0, 1), tip=0.0, thick=0.03):
+    """A tapered strip (a straw, a corn leaf, a husk) along the quadratic curve p0 -> p2 (pulled toward p1), `w` wide at
+    the base narrowing to `tip` x w, given a little thickness so its back is not culled."""
+    p0, p1, p2, up = Vector(p0), Vector(p1), Vector(p2), Vector(up)
+    bm = bmesh.new()
+    prev = None
+    for i in range(n + 1):
+        t = i / n
+        p = (1 - t) ** 2 * p0 + 2 * (1 - t) * t * p1 + t * t * p2
+        d = (2 * (1 - t) * (p1 - p0) + 2 * t * (p2 - p1)).normalized()
+        side = d.cross(up)
+        side = side.normalized() if side.length > 1e-4 else Vector((1, 0, 0))
+        hw = w * 0.5 * ((1 - t) + tip * t) * (0.75 + 0.25 * math.sin(t * math.pi))
+        a, b = bm.verts.new(p - side * hw), bm.verts.new(p + side * hw)
+        if prev:
+            bm.faces.new((prev[0], prev[1], b, a))
+        prev = (a, b)
+    ob = H._add(name, bm, mat, 0)
+    ob.modifiers.new("solid", "SOLIDIFY").thickness = thick
+    return ob
+
+
+def _disc(name, centre, normal, r, depth, mat, verts=16):
+    """A flat round button `depth` thick at `centre`, its face turned along `normal`."""
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=verts, radius1=r, radius2=r, depth=depth)
+    q = Vector(normal).normalized().to_track_quat("Z", "Y").to_matrix()
+    for v in bm.verts:
+        v.co = q @ v.co + Vector(centre)
+    return H._add(name, bm, mat, 0)
+
+
+def _text(name, body, width, height, depth=0.1):
+    """Words in the title font as a mesh lying in XY (reading along +X), centred, scaled to fit inside width x height,
+    about `depth` thick with a rounded bevel (puffy felt letters). Returns the bmesh, not yet added."""
+    cu = bpy.data.curves.new(name, "FONT")
+    cu.font = bpy.data.fonts.load(_FONT, check_existing=True)
+    cu.body = body; cu.align_x = "CENTER"; cu.align_y = "CENTER"
+    ob = bpy.data.objects.new(name, cu); bpy.context.scene.collection.objects.link(ob)
+    bpy.context.view_layer.update()
+    k = min(width / ob.dimensions.x, height / ob.dimensions.y)
+    cu.size = k
+    cu.extrude = depth * 0.3; cu.bevel_depth = depth * 0.2; cu.bevel_resolution = 0; cu.resolution_u = 3
+    bpy.context.view_layer.update()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(ob); bpy.data.curves.remove(cu)
+    bm = bmesh.new(); bm.from_mesh(me); bpy.data.meshes.remove(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    xs = [v.co.x for v in bm.verts]; ys = [v.co.y for v in bm.verts]; zs = [v.co.z for v in bm.verts]
+    cx, cy, z0 = (max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2, min(zs)
+    for v in bm.verts:
+        v.co = Vector((v.co.x - cx, v.co.y - cy, v.co.z - z0))
+    return bm
+
+
+def _acorn(name, at, scale, tilt):
+    """A little acorn: a tan nut under a scaly brown cap with a stub of stalk, its axis tipped `tilt` radians about Y."""
+    nut = [(0.0, -0.62), (0.12, -0.6), (0.3, -0.48), (0.42, -0.28), (0.46, -0.05), (0.44, 0.08), (0.0, 0.08)]
+    cap = [(0.0, 0.36), (0.12, 0.35), (0.34, 0.27), (0.5, 0.12), (0.52, 0.0), (0.46, -0.04), (0.0, -0.04)]
+    place = Matrix.Translation(at) @ Matrix.Rotation(tilt, 4, "Y") @ Matrix.Scale(scale, 4)
+    for nm, prof, mat in (("nut", nut, "acorn_nut"), ("cap", cap, "acorn_cap")):
+        lathe(f"{name}_{nm}", prof, mat, 20).data.transform(place)
+    rod(f"{name}_stalk", (0, 0, 0.3), (0.05, 0, 0.55), 0.06, "acorn_cap", 6).data.transform(place)
+
+
+@prop
+def banner():
+    """The event's hanging banner: HAPPY HARVEST, CREW! in cream felt letters on orange cloth with a rust hem and a
+    zigzag foot, a red and a yellow maple leaf at the top corners and an acorn at each bottom corner. The cloth hangs
+    from two rope loops off a round wooden pole. 18 wide (pole) x ~9.1 tall; the cloth's points touch z=0, the pole is
+    at the top. Front = -Y. Hung by the pole (the owner places it)."""
+    W, top, notch, teeth = 15.0, 8.0, 2.0, 3
+
+    def sway(x, z):
+        """The cloth's depth at (x, z): soft folds that grow toward the foot and a slight belly between the loops."""
+        drop = (top - z) / top
+        return 0.18 * math.sin(x * 0.9 + 0.6) * drop + 0.1 * math.sin(x * 2.1) * drop * drop - 0.12 * (1 - (x / (W / 2)) ** 2)
+
+    def shape(inset):
+        """The outline, `inset` in from the hem: straight top, straight sides, and a foot of `teeth` points at z=0 (one
+        at each corner, the rest between) with notches up to `notch` between them."""
+        x0, x1 = -W / 2 + inset, W / 2 - inset
+        pts = [(x0, top - inset * 0.6), (x1, top - inset * 0.6)]
+        k = teeth - 1
+        for i in range(k + 1):
+            pts.append((x1 - (x1 - x0) * i / k, inset * 1.4))
+            if i < k:
+                pts.append((x1 - (x1 - x0) * (i + 0.5) / k, notch + inset * 0.3))
+        return pts
+
+    def cloth(name, inset, mat, y_off, thick):
+        pts = shape(inset)
+        dense = []
+        for (a, b) in zip(pts, pts[1:] + pts[:1]):
+            n = max(1, int(math.dist(a, b) / 0.35))
+            dense += [(a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n) for j in range(n)]
+        bm = bmesh.new()
+        vs = [bm.verts.new((x, 0, z)) for (x, z) in dense]
+        es = [bm.edges.new((vs[i], vs[(i + 1) % len(vs)])) for i in range(len(vs))]
+        bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=es)
+        bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=1, use_grid_fill=True)
+        bmesh.ops.triangulate(bm, faces=list(bm.faces))
+        for v in bm.verts:
+            v.co.y = sway(v.co.x, v.co.z) + y_off
+        ret = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
+        for v in [e for e in ret["geom"] if isinstance(e, bmesh.types.BMVert)]:
+            v.co.y += thick
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+        return H._add(name, bm, mat, 0)
+
+    cloth("hem", 0.0, "cloth_rust", 0.12, 0.08)  # set back so the coarser cloth in front never lets it through
+    cloth("cloth", 0.32, "cloth_or", -0.04, 0.06)
+    front = -0.045  # the orange cloth's front face sits at sway(x, z) + front
+
+    def stand(bm, cx, cz, lift=0.0):
+        """Stands a flat XY mesh (z = its thickness) up on the cloth's front at (cx, cz), facing -Y, on the folds."""
+        for v in bm.verts:
+            x, z, d = v.co.x + cx, v.co.y + cz, v.co.z
+            v.co = Vector((x, sway(x, z) + front - d - lift, z))
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+
+    for i, (line, cz, w, h) in enumerate((("HAPPY", 6.05, 7.0, 1.85), ("HARVEST, CREW!", 3.9, 12.0, 1.85))):
+        bm = _text(f"words{i}", line, w, h, depth=0.12)
+        stand(bm, 0.0, cz)
+        H._add(f"words{i}", bm, "felt_cream", 0)
+    # maple leaves at the top corners, lying on the cloth
+    for k, (cx, mat, seed) in enumerate(((-5.9, "leaf_red", 3), (5.9, "leaf_yel", 9))):
+        leaf = _leafmesh(f"mleaf{k}", 1.5, mat, curl=0.0, seed=seed, lobes=5)
+        for ob in (leaf, H.parts[-1]):
+            bm = bmesh.new(); bm.from_mesh(ob.data)
+            bm.transform(Matrix.Translation((cx, 5.6, 0)) @ Matrix.Rotation(math.radians(-25 if k == 0 else 25), 4, "Z"))
+            for v in bm.verts:
+                x, z, d = v.co.x, v.co.y, v.co.z
+                v.co = Vector((x, sway(x, z) + front - 0.04 - d, z))
+            bm.to_mesh(ob.data); bm.free()
+    # acorns at the bottom corners, lying on the cloth
+    for k, cx in enumerate((-6.0, 6.0)):
+        cz = 2.7
+        _acorn(f"acorn{k}", (cx, sway(cx, cz) + front - 0.34, cz), 0.85, math.radians(20 if k == 0 else -20))
+    # the pole with its end bands; two rope loops round it, down through brass grommets in the hem
+    pz = top + 0.75
+    cylx("pole", -9.0, 9.0, 0.0, pz, 0.32, "pole_wood", 20)
+    for s in (-1, 1):
+        cylx(f"band{s}", s * 8.6 - 0.18, s * 8.6 + 0.18, 0.0, pz, 0.345, "pole_band", 20)
+        cylx(f"bandin{s}", s * 7.6 - 0.12, s * 7.6 + 0.12, 0.0, pz, 0.34, "pole_band", 20)
+        gx, gz = s * W * 0.36, top - 0.55
+        gy = sway(gx, gz) + front
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.2, minor_radius=0.06, major_segments=16, minor_segments=6,
+                                         location=(gx, gy - 0.02, gz), rotation=(math.pi / 2, 0, 0))
+        g = bpy.context.active_object; g.data.materials.append(H.M("brass_scan")); H.parts.append(g)
+        cz, rz, ry = (pz + gz) / 2, (pz - gz) / 2 + 0.38, 0.5
+        pts = [(gx, math.sin(a) * ry, cz + math.cos(a) * rz) for a in (i / 24 * math.tau for i in range(25))]
+        for j in range(24):
+            rod(f"rope{s}_{j}", pts[j], pts[j + 1], 0.09, "rope", 8)
+    S2.finish2("hb_banner_harvest", tex=2048)
+
+
+@prop
+def scarecrow():
+    """A friendly scarecrow on a wooden post, ~9 tall x 7.4 wide (arms): a burlap head with button eyes and a stitched
+    smile, a floppy straw hat with a red band, a too-big orange plaid shirt with two buttons and a patch, straw at the
+    neck, cuffs and hem, arms on a crossbar, and a corn plant with a cob either side, on a small mound of dirt.
+    Front = -Y, stands on z=0."""
+    rng = random.Random(11)
+    lumpy("mound", 0, 0, 0.0, 1.0, "dirt", sx=2.6, sy=1.6, sz=0.35, seed=4, amp=0.25)
+    cyl("post", 0, 0, 0.0, 6.4, 0.28, "pole_wood_v", 12)
+    cylx("crossbar", -3.7, 3.7, 0.0, 5.45, 0.22, "pole_wood", 12)
+    # shirt: a rounded body a little wider at the hem, sleeves over the crossbar
+    bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=4, use_grid_fill=True)
+    for v in bm.verts:
+        x, y, z = v.co  # each -0.5..0.5
+        flare = 1.0 + 0.18 * (0.5 - z)
+        rr = 1.0 - 0.06 * (abs(x * 2) ** 3 + abs(y * 2) ** 3)
+        v.co = Vector((x * 2.5 * flare * rr, y * 1.45 * flare * rr, 3.2 + (z + 0.5) * 2.75))
+    H._add("shirt", bm, "plaid", 0).modifiers.new("sub", "SUBSURF").levels = 1
+    for s in (-1, 1):
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=0.62, radius2=0.5, depth=2.0)
+        bm.transform(Matrix.Translation((s * 2.15, 0, 5.45)) @ Matrix.Rotation(s * math.pi / 2, 4, "Y"))  # a turn, never a mirror
+        H._add(f"sleeve{s}", bm, "plaid", 0)
+        for j in range(9):  # straw fanning out of the cuff, round the crossbar
+            a = j / 9 * math.tau + rng.uniform(-0.2, 0.2)
+            base = Vector((s * 3.05, math.sin(a) * 0.32, 5.45 + math.cos(a) * 0.32))
+            tipv = base + Vector((s * rng.uniform(0.55, 0.85), math.sin(a) * 0.35, math.cos(a) * 0.4 - 0.15))
+            _blade(f"cuff{s}_{j}", base, (base + tipv) / 2 + Vector((0, 0, 0.08)), tipv, 0.2,
+                   "straw" if j % 3 else "straw_dk", n=4, up=(1, 0, 0), tip=0.3)
+    for j in range(24):  # straw poking out under the shirt
+        x = -1.4 + j * (2.8 / 23) + rng.uniform(-0.05, 0.05)
+        y = -0.78 if j % 2 == 0 else 0.78
+        base = Vector((x, y, 3.3))
+        tipv = base + Vector((rng.uniform(-0.2, 0.2), y * 0.3, -rng.uniform(0.35, 0.8)))
+        _blade(f"hem{j}", base, (base + tipv) / 2, tipv, 0.13, "straw" if j % 3 else "straw_dk", n=3, up=(0, 1, 0), tip=0.3)
+    for s in (-1, 1):  # collar flaps
+        bm = bmesh.new()
+        vs = [bm.verts.new(p) for p in ((s * 0.1, -0.86, 5.95), (s * 0.85, -0.78, 5.95), (s * 0.45, -0.98, 5.35))]
+        bm.faces.new(vs if s > 0 else list(reversed(vs)))
+        H._add(f"collar{s}", bm, "plaid", 0).modifiers.new("solid", "SOLIDIFY").thickness = 0.06
+    for k, z in enumerate((4.9, 4.0)):  # two buttons with their four holes
+        y = -0.97 - 0.03 * k
+        _disc(f"button{k}", (0.15, y, z), (0, -1, 0), 0.2, 0.07, "button_br")
+        for hx, hz in ((-0.06, -0.06), (0.06, -0.06), (-0.06, 0.06), (0.06, 0.06)):
+            _disc(f"bhole{k}{hx}{hz}", (0.15 + hx, y - 0.035, z + hz), (0, -1, 0), 0.03, 0.02, "button_blk", 6)
+    box("patch", 0.55, 1.15, -1.0, -0.94, 3.75, 4.35, "patch", bevel=0.02)
+    for j in range(6):
+        x = 0.58 + j / 6 * 0.54
+        for nm, zz in (("pst", 4.3), ("psb", 3.8)):
+            box(f"{nm}{j}", x, x + 0.06, -1.01, -0.99, zz - 0.012, zz + 0.012, "stitch", bevel=0.0)
+    for j in range(16):  # neck straw ruff
+        a = j / 16 * math.tau
+        base = Vector((math.cos(a) * 0.5, math.sin(a) * 0.45, 6.0))
+        tipv = base + Vector((math.cos(a) * 0.45, math.sin(a) * 0.4, -0.35))
+        _blade(f"ruff{j}", base, base + Vector((math.cos(a) * 0.3, math.sin(a) * 0.3, 0.05)), tipv, 0.24,
+               "straw" if j % 3 else "straw_dk", n=3, up=(0, 0, 1), tip=0.3)
+    # head: a burlap sack ball, gathered at the neck
+    hz, hr = 7.2, 1.28
+    sphere("head", 0, 0, hz, hr, "burlap", 1.0, 0.95, 1.0)
+    cyl("neck", 0, 0, 5.9, 6.3, 0.42, "burlap", 16)
+
+    def onhead(ax, az, out=0.0):
+        """A point on the head's front, `ax` across and `az` up (radians), `out` beyond the skin."""
+        r = hr + out
+        return Vector((math.sin(ax) * math.cos(az) * r, -math.cos(ax) * math.cos(az) * r * 0.95, hz + math.sin(az) * r))
+    for s in (-1, 1):  # button eyes
+        c = onhead(s * 0.34, -0.02, 0.02)
+        n = (c - Vector((0, 0, hz))).normalized()
+        _disc(f"eye{s}", c, n, 0.22, 0.09, "button_blk", 18)
+        for hx, hz2 in ((-0.07, -0.07), (0.07, -0.07), (-0.07, 0.07), (0.07, 0.07)):
+            _disc(f"eyehole{s}{hx}{hz2}", c + n * 0.045 + Vector((hx, 0, hz2)), n, 0.035, 0.02, "button_br", 6)
+    smile = [onhead(-0.55 + 1.1 * i / 10, -0.36 - 0.16 * math.sin(math.pi * i / 10), 0.01) for i in range(11)]
+    for i in range(10):  # the stitched smile and its cross stitches
+        rod(f"smile{i}", smile[i], smile[i + 1], 0.035, "stitch", 6)
+    for i in range(1, 10, 2):
+        p = smile[i]
+        across = (smile[i + 1] - smile[i - 1]).normalized().cross((p - Vector((0, 0, hz))).normalized()).normalized() * 0.14
+        rod(f"cross{i}", p - across, p + across, 0.03, "stitch", 6)
+    for j in range(22):  # straw hair under the brim, round the sides and back, clear of the face
+        a = math.radians(-160 + j * (320 / 21)) - math.pi / 2
+        base = Vector((math.cos(a) * hr * 0.9, math.sin(a) * hr * 0.87, hz + 0.75))
+        if base.y < -0.5 and abs(base.x) < 0.75:
+            continue
+        tipv = base + Vector((math.cos(a) * 0.35, math.sin(a) * 0.35, -rng.uniform(0.6, 0.95)))
+        _blade(f"hair{j}", base, base + Vector((math.cos(a) * 0.35, math.sin(a) * 0.35, -0.1)), tipv, 0.22,
+               "straw" if j % 3 else "straw_dk", n=4, up=(0, 0, 1), tip=0.35)
+    # the hat: a floppy wavy brim, a dome crown, a red band and a straw fringe, tipped a little
+    hat = []
+    bm = bmesh.new()
+    rings = []
+    seg = 40
+    for k, (r, dz) in enumerate(((0.95, 0.0), (1.4, -0.05), (1.9, -0.18), (2.1, -0.32))):
+        ring = []
+        for i in range(seg):
+            a = i / seg * math.tau
+            rr = r + (0.08 * math.sin(a * 7) if k == 3 else 0.0)
+            ring.append(bm.verts.new((math.cos(a) * rr, math.sin(a) * rr, dz + 0.12 * math.sin(a * 3 + 1) * (k / 3))))
+        rings.append(ring)
+    for a_, b_ in zip(rings, rings[1:]):
+        for i in range(seg):
+            bm.faces.new((a_[i], a_[(i + 1) % seg], b_[(i + 1) % seg], b_[i]))
+    ob = H._add("brim", bm, "straw_hat", 0)
+    ob.modifiers.new("solid", "SOLIDIFY").thickness = 0.1
+    hat.append(ob)
+    hat.append(lathe("crown", [(0.0, 0.95), (0.4, 0.92), (0.72, 0.8), (0.9, 0.5), (0.98, 0.1), (1.0, -0.05), (0.0, -0.05)], "straw_hat", 32))
+    hat.append(lathe("hatband", [(0.995, 0.08), (1.03, 0.1), (1.04, 0.3), (1.0, 0.36)], "hat_band", 32))
+    for j in range(26):
+        a = j / 26 * math.tau
+        base = Vector((math.cos(a) * 2.05, math.sin(a) * 2.05, -0.3 + 0.12 * math.sin(a * 3 + 1)))
+        tipv = base + Vector((math.cos(a) * 0.3, math.sin(a) * 0.3, -0.12))
+        hat.append(_blade(f"fringe{j}", base, (base + tipv) / 2, tipv, 0.16, "straw_dk" if j % 2 else "straw", n=2, up=(0, 0, 1), tip=0.4))
+    place = (Matrix.Translation((0.05, 0.25, hz + 1.2)) @ Matrix.Rotation(math.radians(-8), 4, "Y")
+             @ Matrix.Rotation(math.radians(10), 4, "X") @ Matrix.Scale(1.22, 4))
+    for ob in hat:
+        ob.data.transform(place)
+    # a corn plant either side: long arching leaves, a stalk and a cob in its husk
+    for s in (-1, 1):
+        cx, cy = s * 1.85, -0.25
+        for j in range(7):
+            a = j / 7 * math.tau + rng.uniform(-0.3, 0.3) + (0.4 if s > 0 else 0)
+            ln = rng.uniform(2.2, 3.4)
+            out = Vector((math.cos(a), math.sin(a) * 0.8, 0))
+            p0 = Vector((cx, cy, 0.15))
+            p1 = p0 + out * ln * 0.2 + Vector((0, 0, ln * 0.85))
+            p2 = p0 + out * ln * 0.75 + Vector((0, 0, ln * 0.45))
+            _blade(f"corn{s}_{j}", p0, p1, p2, 0.42, "corn_leaf" if j % 3 else "corn_leaf2", n=10, up=(0, 0, 1), tip=0.05)
+        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=16, radius=1.0)
+        for v in bm.verts:
+            x, y, z = v.co
+            kern = 1 + 0.06 * abs(math.sin(math.atan2(y, x) * 8)) * abs(math.sin(z * 9))
+            tp = 1.0 - 0.25 * max(0.0, z)
+            v.co = Vector((x * 0.3 * kern * tp, y * 0.3 * kern * tp, z * 0.68))
+        tiltm = Matrix.Translation((cx + s * 0.2, cy - 0.35, 1.75)) @ Matrix.Rotation(math.radians(s * -18), 4, "Y") @ Matrix.Rotation(math.radians(12), 4, "X")
+        bm.transform(tiltm)
+        H._add(f"cob{s}", bm, "corn_cob", 0)
+        for k in (-1, 1):
+            _blade(f"husk{s}{k}", tiltm @ Vector((0, 0, -0.65)), tiltm @ Vector((k * 0.45, -0.1, -0.2)),
+                   tiltm @ Vector((k * 0.32, -0.15, 0.35)), 0.36, "corn_leaf", n=6, up=(0, 1, 0), tip=0.1)
+        rod(f"stalk{s}", (cx, cy, 0.1), (cx + s * 0.1, cy - 0.15, 1.2), 0.08, "corn_leaf2", 6)
+    S2.finish2("hb_scarecrow_harvest", tex=2048, smooth_angle=40)
+
+
 if __name__ == "__main__":
     for w in sys.argv[sys.argv.index("--") + 1:]:
         name, _, variant = w.partition(":")
