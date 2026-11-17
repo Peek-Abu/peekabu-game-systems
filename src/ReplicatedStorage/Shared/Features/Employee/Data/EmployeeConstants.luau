@@ -160,7 +160,11 @@ local EmployeeConstants = {
 	-- TailBone<X|Y|Z>AxisLimits), put on every simulated bone below each chain's root; the lengths among them
 	-- (SMARTBONE_SCALED_BONE_SETTINGS) are scaled by the character's scale.
 	TAIL_BONE_ATTRIBUTE_PREFIX = "TailBone",
-	SMARTBONE_SCALED_BONE_SETTINGS = table.freeze({ "Radius", "XAxisLimits", "YAxisLimits", "ZAxisLimits" }),
+	SMARTBONE_SCALED_BONE_SETTINGS = table.freeze({ "Radius", "XAxisLimits", "YAxisLimits", "ZAxisLimits", "Lift" }),
+	-- TailBoneLift (studs, scaled): each simulated bone's own ceiling is where it rests in its root part's space plus
+	-- this much (capped by a shared TailBoneYAxisLimits); not a SmartBone setting itself (owner 11-17: one shared
+	-- ceiling let the back hem fold up or squeezed the joints resting near the hips).
+	SMARTBONE_LIFT_SETTING = "Lift",
 	-- The body parts whose own tail chains (Tail<name><n>Bone under them) SmartBone simulates, each as a root of its
 	-- own: the skirt under LowerTorso, a coat's lapel fringe under UpperTorso.
 	SMARTBONE_ROOT_PARTS = table.freeze({ "LowerTorso", "UpperTorso" }),

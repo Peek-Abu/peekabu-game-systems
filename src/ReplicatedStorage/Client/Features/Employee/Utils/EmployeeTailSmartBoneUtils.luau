@@ -174,6 +174,19 @@ local function collidersOf(character: Model, folder: Instance?): { BasePart }
 	return legs
 end
 
+-- `bone`'s own Y range in `root`'s space: up to where it rests plus `lift`, capped by the `shared` range's top; down
+-- to the shared bottom (or far below).
+local function ownCeiling(root: BasePart, bone: Bone, lift: number, shared: Setting?): NumberRange
+	local restY = root.CFrame:PointToObjectSpace(bone.WorldPosition).Y
+	local top = restY + lift
+	local bottom = restY - 100
+	if typeof(shared) == "NumberRange" then
+		top = math.min(top, shared.Max)
+		bottom = shared.Min
+	end
+	return NumberRange.new(math.min(bottom, top), top)
+end
+
 --[=[
 	Sets `character` up for SmartBone (see the header). Returns false, changing nothing, when its outfit doesn't ask
 	for SmartBone or it has no tail chains.
@@ -195,6 +208,9 @@ function EmployeeTailSmartBoneUtils.prepare(character: Model): boolean
 		return false
 	end
 	local perBone = EmployeeTailSmartBoneUtils.boneSettings(folder, character:GetScale())
+	local lift = perBone[EmployeeConstants.SMARTBONE_LIFT_SETTING]
+	perBone[EmployeeConstants.SMARTBONE_LIFT_SETTING] = nil
+	local shared = perBone.YAxisLimits
 	local settings = EmployeeTailSmartBoneUtils.settings(folder)
 	local key = HttpService:GenerateGUID(false)
 	for _, collider in collidersOf(character, folder) do
@@ -219,6 +235,9 @@ function EmployeeTailSmartBoneUtils.prepare(character: Model): boolean
 			for i = 2, #chain do
 				for name, value in perBone do
 					chain[i]:SetAttribute(name, value)
+				end
+				if type(lift) == "number" then
+					chain[i]:SetAttribute("YAxisLimits", ownCeiling(entry.part, chain[i], lift, shared))
 				end
 			end
 			chain[#chain].Name ..= END_SUFFIX

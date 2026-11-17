@@ -163,6 +163,39 @@ return function()
 			end
 		)
 
+		-- Owner 11-17: one shared ceiling either let the back hem fold up or squeezed the joints resting near the hips.
+		-- Each bone's own ceiling = where it rests (in its root part's space) + the outfit's TailBoneLift.
+		it(
+			"gives each simulated bone its own ceiling: its rest height under its root part plus TailBoneLift",
+			function()
+				local model, lower, folder = makeCharacter(EmployeeConstants.TAIL_PHYSICS_SMARTBONE)
+				folder:SetAttribute("TailBoneLift", 0.2)
+				local restY = lower.CFrame:PointToObjectSpace(lower.TailR3Bone.WorldPosition).Y
+				EmployeeTailSmartBoneUtils.prepare(model)
+				local r3 = lower.TailR1Bone:FindFirstChild("TailR3Bone", true)
+				local limits = r3:GetAttribute("YAxisLimits")
+				expect(typeof(limits)).to.equal("NumberRange")
+				expect(math.abs(limits.Max - (restY + 0.2)) < 1e-4).to.equal(true)
+				-- a bone resting higher gets a higher ceiling
+				local r2 = lower.TailR1Bone:FindFirstChild("TailR2Bone", true)
+				expect(r2:GetAttribute("YAxisLimits").Max > limits.Max).to.equal(true)
+				EmployeeTailSmartBoneUtils.release(model)
+				model:Destroy()
+			end
+		)
+
+		it("keeps the shared ceiling where it is lower than a bone's own", function()
+			local model, lower, folder = makeCharacter(EmployeeConstants.TAIL_PHYSICS_SMARTBONE)
+			folder:SetAttribute("TailBoneLift", 5)
+			folder:SetAttribute("TailBoneYAxisLimits", NumberRange.new(-4, 0.05))
+			EmployeeTailSmartBoneUtils.prepare(model)
+			local r2 = lower.TailR1Bone:FindFirstChild("TailR2Bone", true)
+			expect(math.abs(r2:GetAttribute("YAxisLimits").Max - 0.05) < 1e-4).to.equal(true)
+			expect(math.abs(r2:GetAttribute("YAxisLimits").Min + 4) < 1e-4).to.equal(true)
+			EmployeeTailSmartBoneUtils.release(model)
+			model:Destroy()
+		end)
+
 		it("gives chains under UpperTorso (lapel fringe) their own SmartBone root, sharing the collider key", function()
 			local model, lower = makeCharacter(EmployeeConstants.TAIL_PHYSICS_SMARTBONE)
 			local upper = part(model, "UpperTorso", CFrame.new(0, 4, 0))
