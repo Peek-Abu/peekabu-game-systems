@@ -1,5 +1,8 @@
 # SmartBone cloth (skirts, coat tails, lapel fringe, capes)
 
+Only for cloth that should SWING. Stiff coat tails are part of the coat surface with chest + hips weights
+([SKILL.md](SKILL.md) section 2).
+
 Tested on Showstopper Prickles, rounds 1-4 (2026-11-17). Round 3 shipped as `PricklesShowstopperV3` (owner: "good
 enough especially for kids"); round 4 + per-bone ceilings ships as `PricklesShowstopperV4` (owner: "Yes its good
 enough!"). **Round 4 (bones on the cloth surface) + `TailBoneLift` is the recipe for every new skin**: build steps
@@ -30,9 +33,13 @@ below, then the last two sections. Check `EmployeeRegistry` for which outfit is 
 - The package is installed (`wally.toml`, pinned 0.5.2; 0.6 is a release candidate). If it ever changes: `wally install` in the SERVED worktree only in a window with both Rojo serves stopped; pull and
   install together (a client module hard-requires `Packages.SmartBone`).
 
-## Build recipe (`$SSR/ride_chains.py`, `place_sb.luau` / `place_v3.luau`)
+## Build recipe (`$SSR/ride_chains.py`, `place_v4.luau`)
 
-1. **Chains:** 6 skirt chains of 3 links (RF RS RB LF LS LB) on the robe's own skirt bones, under LowerTorsoBone, plus
+Written as Showstopper did it (round 3, 6 chains). For a NEW skin apply the later sections on top: joints on the
+cloth surface and full-size colliders ("Bones on the cloth surface"), `TailBoneLift` ("The hem ceiling rule"), 8
+chains and ~0.06 clearance over puffs ("What still clips").
+
+1. **Chains:** 8 chains of 3 links around a full skirt for a new skin (Showstopper shipped 6: RF RS RB LF LS LB) on the robe's own skirt bones, under LowerTorsoBone, plus
    a zero-weight end marker (Roblox drops it; the place script adds it back one link past the last).
 2. **Weights** (on the exported robe, `export_final_r7.blend` so UVs and maps stay valid):
    - the hips' share of every skirt point (1 - thigh-follow) moves onto the chains, fading in below the waist
@@ -44,14 +51,15 @@ below, then the last two sections. Check `EmployeeRegistry` for which outfit is 
      top). An even blend of both back chains held the split rigid while the panels swung ("rigid and weird").
 3. **Lapel fringe:** a 2-link chain per lapel under UpperTorsoBone, from the lapel top to its tip; the flap's points
    (the robe's own Lapel groups, same vertex order as the export) move onto it, more toward the tips (LAPK 0.6).
-4. **Colliders:** measure the VISIBLE surface (the bloomer puff, the boots, the coat's chest) from the exported meshes,
-   then shrink each until no chain bone point touches it at rest (bone radius + 0.02), or SmartBone pushes the cloth
-   out while he stands. Showstopper: thighs 0.32 (visible 0.39), seat 0.27 (0.37), shins/boots 0.20, chest 0.41 (0.54).
+4. **Colliders:** measure the VISIBLE surface (the bloomer puff, the boots, the coat's chest) from the exported meshes.
+   With joints on the cloth surface (round 4, the recipe now) they stay at that full visible size: thighs 0.39, seat
+   0.37, shins/boots 0.20, chest 0.54; check only that no simulated bone HEAD touches one at rest (bone radius +
+   0.02). Round 3 (joints inside the cloth) had to shrink them to 0.32 / 0.27 / 0.20 / 0.41.
 5. Place with the place script: Tail bones under their holder (`TailU*` → UpperTorso), end markers back, colliders
    from Blender coords through axes **solved from the imported bones** (three known Blender heads), settings as
    attributes. Separate test outfit first (`employeeoutfittest`), the live outfit only after the owner's OK.
 
-## Settings that shipped (round 3)
+## Settings that shipped (round 3; V4 keeps them all and adds `TailBoneLift` 0.15, the per-bone ceiling)
 
 | Root (outfit `Tail*`) | Value | Per bone (`TailBone*`) | Value |
 |---|---|---|---|
@@ -115,7 +123,7 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
 
 - Lower the lift (0.10) for a skin whose hem must stay further down; raise it only if the swing reads stiff and the
   hem-vs-hips gate still passes. The lapel chains get the same rule (their tips still swing 0.4-0.8).
-- Standing twitch stayed 0.004-0.005 at every lift. Test outfit: `PricklesShowstopperSB` (asset 139625595849758).
+- Standing twitch stayed 0.004-0.005 at every lift. Test outfit: `PricklesShowstopperSB` (asset 139625595849758, the same asset the live `PricklesShowstopperV4` now uses).
 
 ## What still clips (V4, owner 11-17: "It still clips through the puffed up pants though?")
 

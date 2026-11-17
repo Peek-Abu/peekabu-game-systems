@@ -52,7 +52,7 @@ after the ship, look approved). Load the **texture-pipeline** skill too: its sty
    "Textured outfits"). `EmployeeOutfitSystem.fit` clones each mesh with its own SurfaceAppearance (a style folder
    only replaces it when the skin names a style), so no code change.
 
-`ss_export_tex.py` still has a decimate branch for a robe over `MAX_TRIS` (16,000). It must never run on a mesh with
+`ss_export_tex.py` still has a decimate branch for a robe over `MAX_TRIS` (16,000; Roblox's own limit is 20,000). It must never run on a mesh with
 several colours (it shards colour borders): if it would trigger, split the mesh instead.
 
 ## One colour per garment, really

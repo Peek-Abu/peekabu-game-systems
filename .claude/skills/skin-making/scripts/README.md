@@ -20,7 +20,7 @@ Studio MCP `execute_luau` in Edit, with a slot, and are never saved into a place
 | `ss_export_remake.py` | weights (incl. crouch `UP0 UP1 SIDEB T1`), colour `PLUM=`, swatch texture, FBX (shape rounds) | `... -P ss_export_remake.py -- <dir> [k=v]` |
 | `gate_holes.py` + `gate_check.py` | 16-view hole gate | `... -P gate_holes.py -- <dir> [pose]`, `python gate_check.py <dir> [pose]` |
 | `pose_set_a3.py` | pose set from the LIVE clips -> `pose_a3.json` | see its header |
-| `pose_gate.py` | every-keyframe clipping on the exported outfit (maps `Tail*` chains to their root, rigid) | `POSESET=pose_a3.json ... -P pose_gate.py -- <dir>` |
+| `pose_gate.py` | every-keyframe clipping on the exported outfit (maps EVERY `Tail*` bone to LowerTorso, rigid: in your copy map `TailU*` to UpperTorso) | `POSESET=pose_a3.json ... -P pose_gate.py -- <dir>` |
 | `sleeve_gate.py` | sleeve points inside chest pieces (read with a render) | `POSESET=... -P sleeve_gate.py -- <dir>` |
 | `idle_clip_probe.py` | plain character's arms inside its own body | `... -P idle_clip_probe.py -- <out.json> [Clip]` |
 | `ss_bloomer_shell.py` | (texture round) overlapping pieces of one garment -> one closed shell, one colour | `... -P ss_bloomer_shell.py -- <src_dir> <dst_dir>` |
@@ -38,5 +38,6 @@ Studio MCP `execute_luau` in Edit, with a slot, and are never saved into a place
 | `tex_check_server.luau` | engine check: builder-made characters, no player or data, wearing the outfit and looping live clips | a temp Workspace Script `__TEMP_..._delete_me`, one muted Play, deleted after |
 
 Not copied (they live elsewhere, untracked): `idle_arms.py`, `render_idle.py`, `preview_server.luau` and the clip
-re-pose tools in `characters/prickles/idle-arms-2026-11-16/`; `gait_all.py` in `../showstopper_tails/`; the style
+re-pose tools (`clips/survey.py`, `repose.py`, `clip_gate.py`, `served_sig.py`, `served_cmp.py`) in
+`characters/prickles/idle-arms-2026-11-16/`; the older SmartBone placers (`place_sb.luau`, `place_sb4.luau`) in `$SSR`; `gait_all.py` in `../showstopper_tails/`; the style
 filter (`texstyle.py`, `style.json`, `measure_one.py`) in the texture-pipeline skill.

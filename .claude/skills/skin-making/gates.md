@@ -17,7 +17,8 @@ POSESET=$SSR/pose_a3.json B $SSR/sleeve_gate.py -- <dir>
 ## 1. Hole gate (`gate_holes.py` + `gate_check.py`)
 
 - `B gate_holes.py -- <dir> [pose]` then `python gate_check.py <dir> [pose]`.
-- The body is hidden exactly as the game skin hides it (all but head and hands). 16 views: 8 around at eye level, 8 from
+- The body is hidden exactly as the game skin hides it (Showstopper's HideParts: all but head and hands; YOUR outfit's
+  HideParts, which hide only what it covers). 16 views: 8 around at eye level, 8 from
   25 degrees above. Flat colours, **magenta** background, every garment's **inside (back faces) red**.
 - Red pixels = you can see into a garment (gap, open edge, flipped normal). Magenta shut inside the figure = a
   see-through hole. Magenta between separate parts that is only air is fine.
