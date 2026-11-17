@@ -7,7 +7,7 @@
 	  changes; owner, 2026-10-29: only a product page animates) and Today's picks (6 cards), with the Gleam bundles along the bottom;
 	- Skins: every item for sale, filterable by employee, owned ones stamped OWNED;
 	- Hire: every employee for sale (their card opens the hire page);
-	- Gleam: the four Gleam bundles (greyed "Soon" until their Robux products exist); when the player came here short
+	- Gleam: the six Gleam bundles, two rows of three (greyed "Soon" until their Robux products exist); when the player came here short
 	  on Gleam for something (ShopStore.returnTo), it says how much more for what, marks the bundle that is just right,
 	  has a Back button, and goes back to that item with its Yes/No question up as soon as the Gleam arrives;
 	- Passes: every registered game pass (ShopPassesPanel), its price and icon as Roblox reported them, Owned once the
@@ -391,6 +391,28 @@ local function bundleRow(
 	local cardWidth = math.floor((width - (#bundles - 1) * gap) / #bundles)
 	for index, bundle in bundles do
 		nodes[bundle.key] = bundleCard(bundle, Vector2.new(cardWidth, height), phone, index, onBuy)
+	end
+	return group(nodes)
+end
+
+-- The Gleam tab: the packs as rows of three (VM.bundleRows), stacked to fill `height`.
+local function bundleRows(
+	width: number,
+	height: number,
+	phone: boolean,
+	gap: number,
+	bundles: { VM.Bundle },
+	onBuy: (key: string) -> ()
+): React.ReactNode
+	local rows = VM.bundleRows(bundles, 3)
+	local rowHeight = math.floor((height - (#rows - 1) * gap) / math.max(#rows, 1))
+	local nodes: Nodes = {}
+	for index, row in rows do
+		nodes["row" .. index] = e("Frame", {
+			Position = UDim2.fromOffset(0, (index - 1) * (rowHeight + gap)),
+			Size = UDim2.new(1, 0, 0, rowHeight),
+			BackgroundTransparency = 1,
+		}, { row = bundleRow(width, rowHeight, phone, gap, row, onBuy) })
 	end
 	return group(nodes)
 end
@@ -930,7 +952,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				Size = UDim2.new(1, 0, 0, math.floor(content.height * 0.6)),
 				BackgroundTransparency = 1,
 			}, {
-				row = bundleRow(content.width, math.floor(content.height * 0.6), phone, gap + 10, bundles, buyBundle),
+				rows = bundleRows(content.width, math.floor(content.height * 0.6), phone, gap + 10, bundles, buyBundle),
 			}),
 		})
 	else
@@ -1207,7 +1229,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					content.height - rowY - headingSize - 14,
 					phone,
 					gap + 10,
-					bundles,
+					VM.featuredBundles(bundles),
 					buyBundle
 				),
 			})

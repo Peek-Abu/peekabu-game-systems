@@ -40,8 +40,8 @@ local DEALS: { [string]: Deal } = {
 		productId = LEGENDARY_PRODUCT,
 		robux = 899,
 		gleam = 500,
-		-- A Legendary bundle (1,900) + 500 Gleam = 2,400 Gleam = R$ 2,091 at the best pack (1,950 for R$ 1,699): R$ 899 is
-		-- 57% off (owner 11-16 on the Dashboard; DealRules.offPercent works it out from the price shown).
+		-- A Legendary bundle (1,900) + 500 Gleam = 2,400 Gleam = R$ 1,920 at the best pack (12,500 for R$ 9,999): R$ 899 is
+		-- 53% off (owner 11-16 on the Dashboard; DealRules.offPercent works it out from the price shown).
 		name = "Pick a Legendary",
 		line = "Pick any Legendary skin + its emote, stickers and idle. Plus 500 Gleam!",
 		chooseTitle = "PICK YOUR LEGENDARY!",
@@ -53,7 +53,7 @@ local DEALS: { [string]: Deal } = {
 		productId = NEW_HIRE_PRODUCT,
 		robux = 949,
 		gleam = 0,
-		-- A hire (5,000 Credits = 500 Gleam) + a Legendary bundle (1,900) = 2,400 Gleam = R$ 2,091: R$ 949 is 55% off.
+		-- A hire (5,000 Credits = 500 Gleam) + a Legendary bundle (1,900) = 2,400 Gleam = R$ 1,920: R$ 949 is 51% off.
 		name = "Pick a New Hire",
 		line = "Hire a new employee now + their Legendary skin, emote, stickers and idle!",
 		chooseTitle = "PICK YOUR NEW HIRE!",

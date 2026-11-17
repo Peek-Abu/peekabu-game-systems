@@ -312,9 +312,9 @@ return function()
 	end)
 
 	describe("gleam", function()
-		it("shows the four bundles, bought with Robux only once their products exist", function()
+		it("shows the six bundles, bought with Robux only once their products exist", function()
 			local bundles = VM.bundles({})
-			expect(#bundles).to.equal(4)
+			expect(#bundles).to.equal(6)
 			expect(bundles[1].amount).to.equal("100")
 			expect(bundles[1].bonus).to.equal(nil)
 			-- Worked out from the numbers: Gleam per Robux over the first pack's.
@@ -324,6 +324,11 @@ return function()
 			expect(bundles[3].bonus).to.equal("+9%")
 			expect(bundles[4].amount).to.equal("1,950")
 			expect(bundles[4].bonus).to.equal("+14%")
+			-- Owner 11-16, the two big packs: 5,400 for R$ 4,499 and 12,500 for R$ 9,999 (about 25% for the $99 size).
+			expect(bundles[5].amount).to.equal("5,400")
+			expect(bundles[5].bonus).to.equal("+19%")
+			expect(bundles[6].amount).to.equal("12,500")
+			expect(bundles[6].bonus).to.equal("+24%")
 			-- Each bigger pack is a better deal.
 			for index = 2, #ShopConstants.BUNDLES do
 				local a, b = ShopConstants.BUNDLES[index - 1], ShopConstants.BUNDLES[index]
@@ -349,6 +354,28 @@ return function()
 			expect(partial.robux).to.equal(known.robux)
 			expect(partial.image).to.equal(known.image)
 		end)
+
+		it("lays six packs out as two rows of three on the Gleam tab", function()
+			local rows = VM.bundleRows(VM.bundles({}), 3)
+			expect(#rows).to.equal(2)
+			expect(#rows[1]).to.equal(3)
+			expect(rows[1][1].amount).to.equal("100")
+			expect(rows[2][3].amount).to.equal("12,500")
+			-- Four or fewer stay one row.
+			local four = VM.bundleRows({ table.unpack(VM.bundles({}), 1, 4) }, 4)
+			expect(#four).to.equal(1)
+			expect(#VM.bundleRows({}, 3)).to.equal(0)
+		end)
+
+		it(
+			"keeps the Featured page's Gleam row to the first four packs, so each card has room for its amount",
+			function()
+				local featured = VM.featuredBundles(VM.bundles({}))
+				expect(#featured).to.equal(4)
+				expect(featured[1].amount).to.equal("100")
+				expect(featured[4].amount).to.equal("1,950")
+			end
+		)
 	end)
 
 	describe("passes", function()

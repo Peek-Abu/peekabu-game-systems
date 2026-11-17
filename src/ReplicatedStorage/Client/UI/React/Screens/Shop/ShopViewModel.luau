@@ -596,6 +596,28 @@ function VM.bundles(infos: { [string]: ShopStore.ProductInfo }, best: string?): 
 	return list
 end
 
+-- `bundles` cut into rows of at most `perRow`, in order (the Gleam tab: six packs as two rows of three).
+function VM.bundleRows(bundles: { Bundle }, perRow: number): { { Bundle } }
+	local rows: { { Bundle } } = {}
+	for index, bundle in bundles do
+		local row = math.floor((index - 1) / perRow) + 1
+		if rows[row] == nil then
+			rows[row] = {}
+		end
+		table.insert(rows[row], bundle)
+	end
+	return rows
+end
+
+-- How many packs the Featured page's Gleam row shows (desktop). Its cards are short and wide, with the amount beside
+-- the art, so six would leave "12,500" no room; the Gleam tab shows them all.
+VM.FEATURED_BUNDLES = 4
+
+-- The Featured page's Gleam row: the first VM.FEATURED_BUNDLES packs.
+function VM.featuredBundles(bundles: { Bundle }): { Bundle }
+	return { table.unpack(bundles, 1, math.min(#bundles, VM.FEATURED_BUNDLES)) }
+end
+
 -- The Passes tab's cards, one per pass key (in `keys`' order): its words (PASS_COPY, else its Dashboard name), its
 -- icon and price from `infos`, Owned when `owns(key)`.
 function VM.passes(

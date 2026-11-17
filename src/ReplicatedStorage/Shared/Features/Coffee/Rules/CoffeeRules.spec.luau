@@ -182,10 +182,11 @@ return function()
 			expect(poor.balance).to.equal(114)
 		end)
 
-		it("costs less in Gleam than the same Robux at the best Gleam pack", function()
-			-- 115 Gleam at the best pack (R$ 1,699 for 1,950, owner 11-16) is about R$ 100: the Robux price (R$ 99, owner
-			-- 11-14) stays the better deal, just. Compared in whole numbers (99 x 1,950 < 115 x 1,699), so rounding never
-			-- flips it.
+		it("costs less in Gleam than the same Robux at the 1,950 Gleam pack", function()
+			-- 115 Gleam at the 1,950 pack (R$ 1,699, owner 11-16) is about R$ 100: the Robux price (R$ 99, owner 11-14)
+			-- stays the better deal, just. Compared in whole numbers (99 x 1,950 < 115 x 1,699), so rounding never flips it.
+			-- The two big packs (5,400 / 12,500) make Gleam coffee a little cheaper than R$ 99 (about R$ 92 at 12,500):
+			-- a bulk buyer's reward, flagged to the owner 11-16.
 			expect(CoffeeConstants.ROBUX_PRICE).to.equal(99)
 			expect(CoffeeConstants.ROBUX_PRICE * 1950 < CoffeeConstants.GLEAM_PRICE * 1699).to.equal(true)
 		end)

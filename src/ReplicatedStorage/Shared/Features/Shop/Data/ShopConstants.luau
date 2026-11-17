@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShopConstants: how many picks a day, the UTC hour they change, how long an item counts as New! / its event's
-	last day, the four Gleam bundles (Robux developer products; a bundle without a product id shows greyed
+	last day, the six Gleam bundles (Robux developer products; a bundle without a product id shows greyed
 	"Soon"), and the Passes tab's words for each game pass (PASS_COPY, by its MarketplaceRegistry key; a registered
 	pass with no copy shows its Dashboard name). A pass's price and icon come from Roblox, never from here.
 
@@ -15,26 +15,32 @@ local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 -- `robux` and `image` are the products' price and icon on Roblox (Creator Dashboard, read 2026-11-12); the Shop shows
 -- what Roblox reports at runtime and these only until it answers, so a Dashboard change shows without a code change.
 local BUNDLES: { ShopTypes.GleamBundle } = {
-	-- Owner, 11-16 (Gleam pack page: "if marvel rivals max bonus is 16%! I think ours should be around there"): small
-	-- bonuses, each bigger pack still a better deal (+4% / +9% / +14% over the first), each price 1 under a Roblox Robux
-	-- bundle, and the top pack covers a 1,900-Gleam Legendary bundle in one buy. Each key names its pack's amount
-	-- (renamed 11-16 from the old sizes' gleam275 / gleam600 / gleam1500; receipts find the key from the product id at
-	-- runtime and saves keep only purchase ids, so the rename touches no saved data); the Robux prices must match the products' Dashboard prices. Later
-	-- (after launch, new products): 5,400 for 4,499 (+19%) and 12,500 for 9,999 (+24%). The bonus shown is worked out
-	-- from the numbers (ShopViewModel).
-	{ key = "gleam100", gleam = 100, robux = 99, image = "rbxassetid://112673750570330" },
-	{ key = "gleam420", gleam = 420, robux = 399, image = "rbxassetid://82923918698099" },
-	{ key = "gleam880", gleam = 880, robux = 799, image = "rbxassetid://138358363514131" },
-	{ key = "gleam1950", gleam = 1950, robux = 1699, image = "rbxassetid://138262914648345" },
+	-- Owner, 11-16 (Gleam pack page: "if marvel rivals max bonus is 16%! I think ours should be around there", and about
+	-- 25% for a $99-size pack): small bonuses, each bigger pack a better deal (+4% / +9% / +14% / +19% / +24% over the
+	-- first), each price 1 under a Roblox Robux bundle; 1,950 covers a 1,900-Gleam Legendary bundle in one buy. Each key
+	-- names its pack's amount (renamed 11-16 from the old sizes' gleam275 / gleam600 / gleam1500; receipts find the key
+	-- from the product id at runtime and saves keep only purchase ids, so the rename touched no saved data). The Robux
+	-- prices must match the products' Dashboard prices; the bonus shown is worked out from the numbers (ShopViewModel).
+	-- Icons (owner 11-16, Gleam pack page round 4; Icey Labs): blue rays for 100 / 420, purple for 880 / 1,950, gold
+	-- for 5,400 / 12,500.
+	{ key = "gleam100", gleam = 100, robux = 99, image = "rbxassetid://125903334352163" },
+	{ key = "gleam420", gleam = 420, robux = 399, image = "rbxassetid://116234829422550" },
+	{ key = "gleam880", gleam = 880, robux = 799, image = "rbxassetid://136110990934393" },
+	{ key = "gleam1950", gleam = 1950, robux = 1699, image = "rbxassetid://103104348542249" },
+	{ key = "gleam5400", gleam = 5400, robux = 4499, image = "rbxassetid://111601832018249" },
+	{ key = "gleam12500", gleam = 12500, robux = 9999, image = "rbxassetid://107441154376126" },
 }
 
--- The developer product id of each bundle (owner, Creator Dashboard, 2026-10-24; renamed and repriced 11-16). Change a
--- pack's Gleam amount or Robux price here and on its product (Dashboard price, name and description) together.
+-- The developer product id of each bundle (owner, Creator Dashboard: the first four 2026-10-24, renamed and repriced
+-- 11-16; 5,400 and 12,500 made 11-16). Change a pack's Gleam amount or Robux price here and on its product (Dashboard
+-- price, name and description) together.
 local PRODUCT_IDS: { [string]: number } = {
 	gleam100 = 3722076056,
 	gleam420 = 3722076494,
 	gleam880 = 3722076599,
 	gleam1950 = 3722076697,
+	gleam5400 = 3732585133,
+	gleam12500 = 3732585492,
 }
 
 -- Gleam pays the rest when a player is short (ShopTopUpRules): how much of each currency one Gleam covers. Only the
