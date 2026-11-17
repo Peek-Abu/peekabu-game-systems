@@ -35,7 +35,14 @@ Every row was built, shown to the owner and failed. The "why" is what to avoid, 
 | Hat as an Accessory | wrong size after `ScaleTo(1.25)` | Fitted gear Model with MountPart. |
 | LIFT on colours | jacket turned red in the depot light | Plain swatch colours, judged in warm light. |
 | Red-leaning plum #683256 | maroon in the depot | Bluer purple #6A3A8E shipped. |
-| Hard-coded Studio ids | worked in the lobby while thinking it was Shift | Ids change each restart. Match window name + placeId ("Odd Hours" = lobby 113354563835664, "Odd Hours: Shift" = 118845637680835). |
+| Bloomers as three overlapping closed pieces (seat + two legs) with pleat valleys | "loads of seams or areas of clipping" | Every crossing draws a dark line. One voxel-remeshed shell per garment ([textures.md](textures.md)). |
+| A designed dark cuff band on the bloomers | "a section of black" | Ask before any contrasting band on a plain garment. |
+| Flat swatch export shipped as the finish | "bland", "no textures" | No UVs, detail, normal or roughness: Roblox lights it like plastic. Texture round before shipping. |
+| DIFFUSE colour bake; AO across pieces | gold turned black; dark seam lines | EMIT bake; AO only_local. |
+| Coat recoloured, hat left alone | "make the hat violet too" | A prop with its own texture keeps its colour: recolour its texture by HSV. |
+| Trusting a PATCH because the server-built model drew fine | the owner's lobby Studio drew no bloomers or boots ("legs missing") | That client's mesh fetch had failed and stayed failed. Check client fetch status; nudge the geometry for a new mesh id. |
+| Granting the skin to a real account to test it (older handoffs) | data written to the owner's profile | No profile writes: builder or `employeeoutfittest`. |
+| Hard-coded Studio ids | worked in the lobby while thinking it was Shift | Ids change each restart. Match window name + placeId ([odd-hours.md](odd-hours.md)). |
 
 ## Tools tried and their verdict
 

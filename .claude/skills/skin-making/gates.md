@@ -32,6 +32,9 @@ POSESET=$SSR/pose_a3.json B $SSR/sleeve_gate.py -- <dir>
   matrix per body part, linear blend skinning with the `<Part>Bone` weights (what Roblox does).
 - **Poke** = a bloomer / boot / waistcoat point the robe covers at rest that ends on the other side of that same robe
   face in the pose (beyond 0.015).
+- The poke metric needs a garment UNDER another (bloomers under a skirt). For a single-layer garment (a cape, a
+  hoodie) count garment points inside the visible body instead, and set your own baseline from the first build the
+  owner approves. Piece names in the script (`SSR_*`, bloomer / boot roles) are Showstopper's: rename them.
 - The pose set MUST come from the **live** clips. `pose_set_a3.py` builds `pose_a3.json` from the files that serve now
   (idle, crouch idle, walk, run, crouch walk, fidget, nod, hire reveal, emote, plant in/out). An older set
   (`../showstopper_tails/pose_all.json`, built by `gait_all.py`) only has locomotion.
@@ -45,6 +48,7 @@ Real numbers (worst frame, out of 4,299 covered points):
 | Round 5 | 5 | 63 | 28 | 394 | 437 |
 | EB (shipped) | 13 | 47 | - | 145 | 147 |
 | Sides pushed harder (SIDEB 0.45-0.5) | - | 85-88 | - | ~120 | ~120 |
+| TX (textured, one-shell bloomers; live V2+) | 14 | 44 | 41 | 115 | 117 |
 
 Crouch is still open: the deep knee bend pushes the hip puff through the skirt sides. Its cause was a weight mismatch
 (bloomer top followed the thigh 100%, the skirt side ~40%, at the same height), not the puff size.
@@ -82,7 +86,28 @@ points that are also seen from outside.
 `B idle_clip_probe.py -- <out.json> [Clip]`: how far the plain character's arms go into his own torso and head per
 frame, no skin. Run it before blaming the outfit.
 
-## 7. Gate ledger
+## 7. Worn props (hat, glasses, bow)
+
+`head_gate.py` skips a hat that sits ON the head, and the pose gate only checks robe pokes, so a prop needs its own:
+- **Seated**: rest render from four sides; no gap under the brim, no prop point inside the head (ray test in the
+  head's rest frame, like `head_gate.py` with the hat included).
+- **Clearance on every keyframe of every clip**: the prop rides its mount part rigidly, but ears, spikes, the flower
+  and the hands move relative to it (Pippa's ears are also swung by code springs, which no clip shows: leave extra
+  room, ~0.1). Pose the character with the pose set, transform the prop with its mount part, and report the smallest
+  gap per clip (ears / spikes / flower / hands vs the prop).
+- In engine: watch the ears in walk, run and a jump on a builder-made character; captures from the side and back.
+- The hole gate (closed shell, 0 open edges, normals outward) and the texture round apply to a prop too: a shipped hat
+  is textured like Showstopper's felt hat.
+
+## 8. In engine (after an upload, in one muted Play)
+
+- **Client** `ContentProvider:GetAssetFetchStatus` = Success for every worn MeshPart's MeshId and every
+  SurfaceAppearance map ([troubleshooting.md](troubleshooting.md) for a Failure).
+- The skin on builder-made characters in the game's idle and light, unlit too; the live clips looped.
+- The shared poses with the skin on (vacuum hold, hide, sit, carry): report clipping; fixes stay generic.
+- SmartBone measures if it swings ([smartbone.md](smartbone.md) "Gates").
+
+## 9. Gate ledger
 
 Keep a `GATES.md` in the build folder: each gate, its command, the result and the evidence image. Builds without one
 (Backstage Cappy, Bell Jester Pippa) failed in front of the owner.

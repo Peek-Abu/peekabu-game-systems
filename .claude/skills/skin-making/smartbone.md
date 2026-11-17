@@ -1,7 +1,9 @@
-# SmartBone cloth (skirts, coat tails, lapel fringe)
+# SmartBone cloth (skirts, coat tails, lapel fringe, capes)
 
-Tested on Showstopper Prickles, rounds 1-3 (2026-11-17). Round 3 shipped as `PricklesShowstopperV3` (owner: "good
-enough especially for kids"). Round 4 (bones on the cloth surface) + per-bone ceilings (`TailBoneLift`) is the recipe for new skins: see the last two sections.
+Tested on Showstopper Prickles, rounds 1-4 (2026-11-17). Round 3 shipped as `PricklesShowstopperV3` (owner: "good
+enough especially for kids"); round 4 + per-bone ceilings ships as `PricklesShowstopperV4` (owner: "Yes its good
+enough!"). **Round 4 (bones on the cloth surface) + `TailBoneLift` is the recipe for every new skin**: build steps
+below, then the last two sections. Check `EmployeeRegistry` for which outfit is live.
 `$SSR` = `characters/skins/release/gloom_carnival/showstopper_remake` (main checkout, untracked).
 
 ## What it is
@@ -25,7 +27,7 @@ enough especially for kids"). Round 4 (bones on the cloth surface) + per-bone ce
   SmartBone capsule = the part's X axis is the segment (length = Size.X), radius = min(Size.Y, Size.Z) / 2.
 - SmartBone can only load on a client (its debug gizmo hooks RenderStepped as it loads): require it inside `start`,
   never at the top of a module the test runner loads on the server (TestEZ failed to load the spec once).
-- Adding the package: `wally install` in the SERVED worktree only in a window with both Rojo serves stopped; pull and
+- The package is installed (`wally.toml`, pinned 0.5.2; 0.6 is a release candidate). If it ever changes: `wally install` in the SERVED worktree only in a window with both Rojo serves stopped; pull and
   install together (a client module hard-requires `Packages.SmartBone`).
 
 ## Build recipe (`$SSR/ride_chains.py`, `place_sb.luau` / `place_v3.luau`)
@@ -65,8 +67,9 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
 
 ## Gates
 
-- Offline: the pose gate with the chains held rigid to their root part (`pose_gate.py` maps `Tail*` to LowerTorso)
-  must match the plain build within a few points (limit-4 can trim thigh weight: crouch 115 → 128 of 4,299).
+- Offline: the pose gate with the chains held rigid to their root part must match the plain build within a few points (limit-4 can trim thigh weight: crouch 115 → 128 of 4,299).
+  `pose_gate.py` maps EVERY `Tail*` bone to LowerTorso (line 45): that is wrong for `TailU*` chains (lapels, capes),
+  which ride UpperTorso. Map `TailU*` to UpperTorso in your copy before gating them.
 - In-engine (muted Play, test character from the builder, no profile writes; the owner's account may play another
   employee, so swap the Play character to a builder-made one on the server): per move, the largest hem-tip move from
   rest (swing), lapel-tip swing, the highest hem point vs the hips (flip check), frame-to-frame jitter standing
@@ -127,6 +130,34 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
 - **Build rule for new skins:** leave about 0.06 of clearance between a swinging skirt and anything puffy under it
   (or slim the puff where the skirt covers it), and use 8 chains around a full skirt instead of 6. Showstopper's own
   fix is a later rebuild.
+
+## Other cloth: capes, long tails, hoods (NOT yet built: start here, gate hard)
+
+Only skirt chains (LowerTorso root) and 2-link lapel chains (UpperTorso root) have shipped. For anything else, carry
+the same rules over and prove each in engine:
+- **Root at the part the cloth hangs from.** A cape hangs from the shoulders: UpperTorso (already in
+  `SMARTBONE_ROOT_PARTS`). The place scripts put chains whose names start with `TailU` under the UpperTorso holder and
+  the rest under LowerTorso, so name cape chains `TailU<letter><n>Bone` (or extend the script's rule). A new root part
+  (e.g. Head for long ears or a hood) needs a code change in `EmployeeConstants.SMARTBONE_ROOT_PARTS`, spec first.
+- **Chains across the width, links down the length**: start from the new-skin skirt density (8 chains around a full
+  circle, i.e. one every ~45 degrees of what the cloth spans, so a back-only cape over ~180 degrees gets 4-5; 3 links over ~1 stud of length, end marker after the
+  last); add a link per extra ~0.4 stud. Fewer, wider-spaced chains let the straight span between two chains cut
+  through whatever is under the cloth ("What still clips" above).
+- **Weights**: the top row (neckline, shoulder seam) stays 100 % on the root part; below it the cloth fades onto the
+  chains (blend the two nearest chains by angle, the two nearest links by length), most at the hem. A cape behind the
+  body has no thigh-follow to keep: nearly all of its hem weight can ride the chains. Points that pass near the arms
+  get no arm weight.
+- **Colliders**: whatever the cloth can swing into, at the size you SEE: back and seat for a cape, plus the upper arms
+  if the run's arm swing reaches behind (measure it on the live clip first). Same sizing: against bone heads, joints on
+  the cloth surface.
+- **What is already on the back**: Prickles' spines, Pippa's tail. A cape must not flatten, hide or swallow them:
+  hang it clear of them or ask the owner how the concept treats them (a tail slot, a cape that ends above the tail).
+- **The flip gate is relative to where it hangs**: for a cape, the highest cape point at or below the top of the
+  shoulders on every move, nothing ever above the head's underside; for a skirt, vs the hips. `TailBoneLift` works the same way for any root (each
+  bone may rise only `lift` above its own rest in the root part's space), so start at 0.15 and lower it if the jump
+  gate fails.
+- **Pose gate offline** still holds the chains rigid to their root: it shows the weights alone. Clipping into the body
+  for a cape (no layer under it) = cape points inside the body parts, not the robe-poke count.
 
 ## Failed / rejected
 

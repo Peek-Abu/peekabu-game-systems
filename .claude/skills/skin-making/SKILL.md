@@ -1,187 +1,212 @@
 ---
 name: skin-making
-description: Use when making, remaking, fitting, painting, recolouring, gating or shipping a skin or outfit for the team's Roblox employee characters (Odd Hours / Cleanup Crew - Pippa, Cappy, Prickles, any later employee or game) - coats, robes, skirts, sleeves, bloomers, boots, hats, lapels, collars, cuffs, props worn on the body - and when turning a 2D concept into a worn 3D skin. Also when a skin is called 2D, flat, painted-on, snug, "looks like two pieces", stitched, seamed, holes all over, torn at the armpits or shoulders, clipping, twitching, smudged, miscoloured, maroon or pink in the depot light, too slim, or "where are his knees / legs", when a skirt flips on a jump or pokes in crouch, when an outfit stays rigid in game, or when a new idle or clip makes arms go through a skin. Also when cloth should swing or sway (skirts, coat tails, lapel fringe) with SmartBone, or swinging cloth looks too rigid, twitches, flips up on a jump, or clips into the bloomers or body.
+description: Use when making, remaking, fitting, texturing, recolouring, gating, shipping or fixing a skin, outfit or worn cosmetic for the team's Roblox employee characters (Odd Hours / Cleanup Crew - Pippa, Cappy, Prickles, any later employee or game) - coats, robes, dresses, aprons, skirts, capes, hoodies, sleeves, bloomers, boots, hats, glasses, lapels, collars, cuffs, bows - and when turning a 2D concept into a worn 3D skin. Also when a skin is called 2D, flat, bland, plastic, painted-on, snug, "looks like two pieces", seamed, stitched, holes all over, torn at the armpits, clipping, twitching, smudged, miscoloured, maroon in the depot light, "a section of black", too slim, "where are his knees / legs", or when a piece or the legs vanish in previews or when worn, when a skirt or cape flips on a jump, clips when running or pokes in crouch, when cloth should swing (SmartBone) or looks too rigid, when an outfit stays rigid in game, or when a new idle makes arms go through a skin.
 ---
 
 # Skin making
 
-A **skin is the same employee plus additions**. Never remodel the character. The owner judges two things: **does it
-look exactly like the concept, in real 3D**, and **does it hold up in the real game clips and light**. Every route that
-missed either one failed (see [failed-routes.md](failed-routes.md)).
+A **skin is the same character plus additions**. Never remodel the character. The owner judges two things: **does it
+look exactly like the concept, in real 3D**, and **does it hold up in the real game clips and light**. Every route
+that missed either one failed ([failed-routes.md](failed-routes.md)).
 
-The route below is the one that worked: the **Showstopper Prickles remake** (round 5, then crouch weights "EB", violet
-coat; owner 2026-11-16: "THIS IS THE BEST SHOWSTOPPER HAS LOOKED", then "make it the live one"). Start every new skin
-from it. Do not start from an older route because it is already half built.
+The route here is the one that worked: the **Showstopper Prickles remake** (owner 11-16: "THIS IS THE BEST SHOWSTOPPER
+HAS LOOKED"; textured, then SmartBone V3/V4 11-17). Start every new skin from it, never from an older half-built route.
 
-Paths below use `$SSR` = `E:/Projects/peekabu-game-systems/characters/skins/release/gloom_carnival/showstopper_remake`
-(main checkout, **untracked**: `characters/` is never in git). Snapshot copies of the key scripts are in
-[scripts/](scripts/README.md) in case that folder is lost.
+**Files:** this page is the recipe. [odd-hours.md](odd-hours.md) holds every game-specific id, path, character file,
+code file and the rarity ladder. Details: [gates.md](gates.md), [textures.md](textures.md), [smartbone.md](smartbone.md),
+[ship-and-studio.md](ship-and-studio.md), [troubleshooting.md](troubleshooting.md), [clip-repose.md](clip-repose.md),
+[failed-routes.md](failed-routes.md), [scripts/](scripts/README.md).
 
-## 1. The owner's rules (check every one in your plan)
+## 0. Before anything
+
+- **A fix or a "why does X look wrong"?** Go to [troubleshooting.md](troubleshooting.md) first: check before code.
+- **What kind of job?** Pick the row; don't run the whole route for a hat.
+
+| Job | Route |
+|---|---|
+| New outfit skin (coat, dress, hoodie, robe...) | Sections 1-7, all of it |
+| One worn prop (hat, glasses, bow) | Rarity first (a lone accessory may not fit the ladder: ask). Plan page, build the prop (section 2 row), the prop gates (section 4), textures, place as fitted gear, register |
+| Recolour only | Rarity Uncommon: palettes, no mesh work. Judge unlit + warm light |
+| Re-texture an existing skin | [textures.md](textures.md) on its existing export; re-run every gate; new mesh ids -> fetch check |
+| Make cloth swing | [smartbone.md](smartbone.md) |
+| A skin exposes a bad clip | Section 7 |
+
+- **Session hygiene.** A build round is one fresh session with a brief file in the build folder (what is live, the
+  owner's notes verbatim, what to do, the rules). End each round with a handoff file and a lessons file; fold lessons
+  into this skill. Long jobs (bakes, renders) run in the background while you do other work; never spend a turn only
+  waiting. Subagents get an explicit model tier. Studio slots come from the coordinator ([odd-hours.md](odd-hours.md)).
+- **The build folder** is untracked (`characters/skins/...`), with copies of the scripts (paths changed) and a
+  `GATES.md` ledger: each gate, command, result and evidence image. Skins built without a ledger failed in front of
+  the owner.
+
+## 1. The owner's rules (state how each is met in your plan)
 
 | Rule | What it means in practice |
 |---|---|
-| Keep the base character | His own head, face, hands, spines, flower, ears and tail stay. Base pieces keep their base spot and size. Check in the live place what the base pieces ARE before copying any into a skin mesh. |
-| Never hide his limbs to make clothes fit | Hide only what the outfit truly covers (HideParts). "Why are his legs gone!?" / "where are his knees?!" both failed skins. |
-| Match the concept 1:1 | Same outline, volume and scale as the 2D. Render concept and model side by side from the same angle. Shape first, clip numbers second. |
-| Real 3D depth | Clothes are thick. Lapels, collars, cuffs, trim stand off the cloth. Painted-on or snug = "SUPER 2d" = fail. |
-| One garment = one piece | Never cut a garment across two body parts. A coat is ONE robe, not a top plus a skirt. |
-| One exact colour per plain cloth | No AI paint on plain cloth. Flat swatch colours; paint only small details. |
-| Rigid props stay props | Hat, flower, boots the owner already liked are reused, not rebuilt. |
-| Ask before effects | No goo or drips unless that skin's owner answer says so. No face on Gloom art. No 4-point sparkle star. |
-| Generic poses stay generic | Shared poses (hide, sit, vacuum) never get per-character fixes. A character's own personality clips (idle, fidget) may be edited. |
-| Owner approves each visual step | On an artifact page (he works over Remote Control). Yes/no questions by piece name. Never mark anything done. |
+| Keep the base character | Own head, face, hands, ears, tail, spines, flower stay, at their base spot and size. Check in the live place what the base pieces ARE before copying any into a skin. Code-driven parts (ears, tails) are never covered or stiffened. |
+| Never hide limbs to make clothes fit | Hide only what the outfit truly covers (HideParts / HideAccessories). "Why are his legs gone!?" and "where are his knees?!" both failed skins. |
+| Match the concept 1:1 | Same outline, volume and scale as the 2D, side by side from the same angle. "Make it look like the concept" is the bar; shape first, clip numbers second. |
+| Real 3D depth | Clothes are thick. Lapels, collars, cuffs, pockets, trim stand off the cloth. Painted-on or snug = "SUPER 2d" = fail. |
+| One garment = one piece | Never cut a garment across meshes or body parts; never several overlapping pieces for one garment. |
+| One exact colour per plain cloth | Flat concept colour; texture detail varies around it, never shifts it. No AI paint on plain cloth. No contrasting band unless asked. |
+| Rigid props stay props | Props the owner liked (hat, flower, boots) are reused, not rebuilt. |
+| Ask before effects | No goo, drips or glow unless that skin's owner answer says so. No face on Gloom art. No 4-point sparkle star. |
+| Generic poses stay generic | Shared poses (hide, sit, vacuum, carry) never get per-character or per-skin fixes. A character's own clips may be edited. |
+| The owner approves each visual step | Section 8. Never mark anything done. |
 
 ## 2. Pick the build for each piece
 
 | Piece kind | Build it as | Weights |
 |---|---|---|
-| Hat, crown, glasses, buckles, held props | Either a mesh **inside the outfit** weighted 100% to its body part (shipped Showstopper V2: `SSR_Hat`, 100% Head, so the separate hat gear went), or a rigid **fitted gear** Model (MountPart attribute). Never an Accessory (Accessories don't follow `ScaleTo(1.25)`). Inside the outfit is simpler; gear is for pieces worn on several skins. | 100% one part |
-| Boots | Built closed shapes, inside the outfit mesh | shin + foot |
-| Coat / robe / dress / apron / long skirt | **ONE skinned robe** from neckline to hem (section 3) | torso top, hips + thighs for the skirt |
-| Sleeves, trousers, bloomers | **Closed lofts**, bands and cuffs are rings OF THE SAME MESH with face colours | arm / leg parts, blend at elbow and knee |
-| Lapels, collar, cuffs, trim | A **real fold of the same mesh**, standing off 0.15 studs | same as the cloth under it |
-| Swinging cloth (skirt, tails, lapel fringe) | SmartBone chains ON TOP of the leg weights, the outfit's own colliders (section 9, [smartbone.md](smartbone.md)) | a share of the hips' and thighs' weight moves onto the chains |
-| A layer over another layer (apron over a dress, waistcoat under a coat) | Its own closed piece, standing off the cloth under it (>= 0.05), with **the same weights as the cloth under it** at each point (copy from the nearest robe point). Not yet built on a shipped skin: gate it hard. | copied from the layer below |
+| Hat, crown, glasses, buckles, bows | A rigid **fitted gear** Model (`MountPart`; [ship-and-studio.md](ship-and-studio.md)) when it is the whole skin or worn on several skins; or a mesh **inside the outfit** weighted 100 % to its part when the skin has an outfit anyway (Showstopper's hat). Never an Accessory (they don't follow `ScaleTo(1.25)`). Over long ears: the ears stay out (slots or a brim that sits between them), never hidden or bent. | 100 % one part |
+| Boots, shoes | Built closed shapes inside the outfit mesh; the character's own legs stay visible above them | shin + foot |
+| Coat, robe, dress, long skirt | **ONE skinned robe** from neckline to hem (section 3) | torso top, hips + thighs for the skirt |
+| Hoodie, sweater, short jacket (no skirt) | One closed skinned shell, real thickness, baggy where the concept is. Hood down = a folded roll of the same mesh behind the neck (like the collar roll), below the head's underside. Pocket = a real raised panel of the same mesh. Ribbed cuffs/hem = rings of the same mesh. | torso top -> LowerTorso at the hem; sleeves by distance from the arm axis |
+| Sleeves, trousers, bloomers | **Closed lofts**; bands and cuffs are rings OF THE SAME MESH. Several pieces of one garment (seat + legs) are unioned into one shell ([textures.md](textures.md)). | arm / leg parts, blend at elbow and knee |
+| Lapels, collar, cuffs, trim, pockets | A **real fold of the same mesh**, standing off 0.15 studs | same as the cloth under it |
+| A layer over another (apron over a dress, waistcoat under a coat) | Its own closed piece standing off the cloth under it (>= 0.05), with **the same weights as the cloth under it** at each point (copy from the nearest point), chains included if that cloth swings. Not yet built on a shipped skin: gate it hard. | copied from the layer below |
+| Swinging cloth (skirt, coat tails, lapel fringe, cape) | SmartBone chains ON TOP of the weights ([smartbone.md](smartbone.md)): 8 chains round a full skirt, ~0.06 clear of any puff under it | a share moves onto the chains |
+| Small shiny bits (bells, buttons) | Their own mesh, Metal + Reflectance ~0.25, `CastShadow` false | as the part they sit on |
 
-Close-fit Layered Clothing (cages) works only for snug, short garments and never for a long coat; see failed routes.
+Close-fit Layered Clothing (cages) works only for snug, short garments and reads painted-on; never for anything loose.
 
-**Another employee?** The recipe is the same; the files differ. Body: `characters/launch/animation-workbench/workflow/output/<name>/<Name>_controls.blend` (Pippa, Cappy, Prickles). Deform skeleton: `<Part>Bone` bones at that character's template joints; earlier per-character exports to copy from are `characters/skins/release/gloom_carnival/r2_pippa/p7_export.py` and `r2_cappy/c6_export.py`. Pose set: rebuild `pose_set_a3.py` from **that** employee's live clips (its registry entries: idle, crouch idle, walk, run, crouch walk, fidget, select, hire reveal, emote, ability clips). Numbers like the EB crouch weights are Prickles' starting point, not a rule: sweep them per skin with the pose gate.
+**Another employee:** same recipe, different files ([odd-hours.md](odd-hours.md) "Characters"): its controls blend,
+its deform skeleton export, its own pose set rebuilt from ITS live clips. Showstopper's numbers (crouch weights, chain
+shares, collider sizes) are starting points to sweep per skin, not rules.
 
-## 3. The route that works, step by step
+## 3. The route, step by step
 
-Tools: Blender 5.1 headless (`blender -b --disable-autoexec -P <script> -- <args>`). Body: the character's controls
-blend (Prickles: `characters/launch/animation-workbench/workflow/output/prickles/Prickles_controls.blend`), T pose,
-front is -Y, his left is +X, 1 unit = 1 stud.
+Blender 5.1 headless (`blender -b --disable-autoexec -P <script> -- <args>`). Body: the character's controls blend, T
+pose, front is -Y, its left is +X, 1 unit = 1 stud. Scripts: [scripts/](scripts/README.md) (Showstopper-shaped: copy
+into your build folder and change paths, pieces and numbers).
 
-1. **Plan page first.** Concept crop next to the plain character. List every piece with its build from section 2.
-   Ask the owner yes/no by piece name (hat, lapels, coat, bloomers, boots). Ask about goo/effects.
-2. **Blockout** (`ss_blockout.py`). Size every piece from the concept (measure px per stud from the head width and
-   height). Flat concept colours. Show front, side and three-quarter; get shape answers before detail.
-3. **Reuse approved props** (the old hat file, `route2_whole/r2_built.boots()`). Remake cloth, not liked props.
-4. **Build the robe** (`ss_robe.py`):
-   - one parametric grid from neckline to hem; both halves share the back centre column above the vent;
-   - warp grid columns so one column lies exactly on the lapel edge (or colour zones stair-step);
-   - lapels and collar: the cloth rolls outward at the front edges and neckline and folds back over the coat,
-     edge 0.15 off, gold piping on the flap edge, a notch where lapel meets collar so they never overlap;
-   - the skirt hangs by **cloth simulation** (top rows pinned) over the bloomers and boots, collision thickness 0.05;
-   - solidify with rim, so it is a closed shell.
-5. **Close everything.** Sleeves = one closed loft each. Bloomer legs = one closed piece from hip down INTO the boot
-   shaft. Recalculate every lofted normal OUTWARD (lofts come out inward, and Roblox culls back faces).
-6. **Head clearance.** Push every vertex 0.05 below the head's underside (ray up from below). Drop the neckline so the
-   collar roll clears without squashing. Big toon heads hide the upper chest: put chest detail lower than on a human.
+1. **Plan page first** (section 8): concept crop next to the plain character, every piece with its build from section
+   2, the rarity, what stays visible. Yes/no by piece name. Ask about effects and any contrasting bands.
+2. **Blockout** (`ss_blockout.py`): size every piece from the concept (px per stud from the head width and height).
+   Flat concept colours. Front, side and three-quarter. Shape answers before detail.
+3. **Reuse approved props** (old hat, built boots). Remake cloth, not liked props.
+4. **Build the robe** (`ss_robe.py`): one parametric grid neckline to hem (halves share the back centre column above any
+   vent); warp grid columns so one lies exactly on each lapel edge (else colour zones stair-step); lapels and collar
+   roll outward and fold back, edge 0.15 off, piping on the flap edge, a notch where lapel meets collar; the skirt hangs
+   by **cloth simulation** (top rows pinned) over what is under it, collision thickness 0.05 (this sets the rest SHAPE;
+   motion comes later from SmartBone); solidify with rim -> a closed shell.
+5. **Close everything.** Sleeves one closed loft each; bloomer legs from hip INTO the boot shaft; one garment one shell.
+   Recalculate every lofted normal OUTWARD (lofts come out inward; Roblox culls back faces).
+6. **Head clearance.** Every vertex 0.05 below the head's underside (ray up from below). Drop the neckline so a collar
+   or hood roll clears without squashing. Big toon heads hide the upper chest: put chest detail lower.
 7. **Weights** (`ss_export_remake.py`), limit 4, normalised:
    - robe top + lapels: UpperTorso, blending to LowerTorso at the waist;
    - skirt: hips + thighs. Hem: front panels follow their own thigh 0.95, sides 0.68, back 0.40, centre back split
      between both thighs; the waist row stays on the hips;
-   - **bloomer top and skirt side must follow the thigh by the same amount at the same height**, or crouch pushes the
-     puff through the skirt. Shipped crouch values "EB": `UP0=0.80 UP1=1.00 SIDEB=0.30 T1=0.40`;
-   - sleeves: UpperArm blending to LowerArm at the elbow, weighted by **distance from the arm axis, never by height
-     cuts**; bloomers: hips at top, shin below the knee; boots: shin + foot.
-8. **Export** with the game's deform skeleton (`route2_whole/export_r25/Showstopper_R2_final.blend`, bones named
-   `<Part>Bone`). Flat colours go into one small swatch texture per MeshPart. Each mesh under 20k triangles **without
-   decimating** (decimate mixes swatch colours into shards): split into more meshes instead (SSR_Robe, SSR_Upper,
-   SSR_Lower, SSR_Hat).
+   - **the layer under the skirt and the skirt side must follow the thigh by the same amount at the same height**, or
+     crouch pushes it through. Showstopper "EB": `UP0=0.80 UP1=1.00 SIDEB=0.30 T1=0.40` (sweep per skin);
+   - sleeves: UpperArm blending to LowerArm at the elbow, by **distance from the arm axis, never height cuts**;
+     bloomers: hips at top, shin below the knee; boots: shin + foot.
+8. **Export** with the game's deform skeleton (bones `<Part>Bone`). Shape rounds: flat swatch colours. Each mesh under
+   20,000 triangles: split into more meshes, don't decimate multi-colour meshes (decimate shards colour borders).
 9. **Offline gates** (section 4). All pass before any Studio work.
-10. **Colour check** unlit, then neutral light, then warm depot light (section 5).
-11. **Ship** (section 6).
-
-**When the owner looks**, in this order: (a) the plan page, (b) blockout renders, (c) each build round's offline
-renders + gate sheets next to the concept, on the skin's artifact page, (d) only after a test player in Studio looked
-right: `employeeoutfittest` in game, (e) his OK to make it the real skin. He never is the first to see it in game.
+10. **Textures** ([textures.md](textures.md)): real UVs + colour / normal / roughness maps before it ships. Judge unlit,
+    neutral, then warm depot light.
+11. **Ship** ([ship-and-studio.md](ship-and-studio.md)): test asset, place in both places, engine check with a test
+    character, the owner's `employeeoutfittest`, then registration on his OK.
 
 ## 4. Gates (every one, every round, before Studio)
 
-Details, commands and how to read them: [gates.md](gates.md).
+Commands and real numbers: [gates.md](gates.md). Log each in `GATES.md`.
 
 | Gate | Pass |
 |---|---|
-| Holes (`gate_holes.py` + `gate_check.py`): body hidden as the game hides it, 16 views, magenta background, garment insides red | 0 red, 0 open edges per piece |
-| Clipping on **every keyframe of every clip the skin will play** (`pose_gate.py`, pose set from the LIVE clips: idle, crouch idle, walk, run, crouch walk, fidget, nod, hire reveal, emote, ability in/out) | worst frame per clip reported; idle ~0; never worse than the last approved build. There is no fixed bar for crouch: report the numbers with renders and let the owner decide (Showstopper shipped at ~3% of points in crouch) |
-| Head (`head_gate.py`) | 0 vertices inside the head |
-| Hands, forearms and **spike / ear tips vs the head**, hand vs the other arm (`clip_gate.py`, `idle_arms.py` checks) | head gap > 0.06, no hand sinking > ~0.03 |
-| Holes again on the **posed** scenes from the pose gate | 0 red |
-| A "points inside" count | is not visible clipping. Check a render before gating on it (sleeves pressed into the coat behind their own front read clean) |
+| Holes (`gate_holes.py` + `gate_check.py`): body hidden as the game hides it, 16 views, garment insides red | 0 red, 0 open edges per piece |
+| Clipping on **every keyframe of every clip the skin plays** (`pose_gate.py`, pose set rebuilt from the LIVE clips) | worst frame per clip reported; never worse than the last approved build; no fixed crouch bar (report with renders, owner decides) |
+| Head (`head_gate.py`) | 0 vertices inside the head. It skips a hat ON the head: check a hat separately (below). |
+| Hands, forearms, spike / ear tips vs head, hand vs other arm (`clip_gate.py`, `idle_arms.py`) | head gap > 0.06, no hand sinking > ~0.03 |
+| Holes on the **posed** scenes | 0 red |
+| A worn prop (hat, glasses) | Seated: no gap under it, no point inside the head; ears (or spikes, flower) clear of it on every keyframe of every clip, in the prop's part space; renders from four sides |
+| "Points inside" counts | not visible clipping: check a render before gating on one |
 | Concept side by side, same angle | shape matches; owner says yes |
+| After textures | the same numbers as the untextured build, plus the map checks in [textures.md](textures.md) |
+| In engine (after upload) | client fetch status `Success` for every mesh and map; shared poses (vacuum, hide, sit) looked at with the skin on; SmartBone measures if any |
 
 Validate any new gate by reproducing a known approved number first.
 
-## 5. Colour and paint
+## 5. Colour and textures
 
-- Flat colour per garment zone in one swatch texture. Colours sampled from the approved 2D.
-- Check the texture **unlit from all sides first**, then lit.
-- The depot light is orange. Red-leaning plum (#683256) reads maroon there; bluer purples (#6A3A8E, #4F2D7F) stay
-  purple. Judge in neutral AND warm light (`render_idle.py ... PLUM=<hex> WARM=1`), then in the depot itself.
-- No LIFT on colours (it turned a jacket red in the depot).
-- A colour change = re-export (`ss_export_remake.py <dir> PLUM=6A3A8E`, hex without `#`) + re-PATCH + re-place,
-  about 10 minutes. A separately textured hat keeps its old colour (it has its own texture file): say so when offering
-  colours, and recolour its texture too if the owner wants it to match.
-- Mesh limit: each MeshPart under 20,000 triangles (Roblox's per-mesh limit).
-- For texture detail beyond flat colour (fabric weave, normal, roughness), use the **texture-pipeline** skill's
-  style filter, and check it does not bring back smudges.
+Shape rounds use flat swatch colours sampled from the approved 2D. **The shipped skin gets the texture round**
+([textures.md](textures.md)): CC0 scans through the style filter, ratio maps that keep each garment's exact colour on
+average, real UVs, EMIT colour bake, bump normal, roughness, SurfaceAppearance per mesh. Judge unlit from all sides
+first, then neutral, then the warm depot light (red-leaning purples read maroon there). A colour change = re-export +
+re-PATCH + re-place (~10 min). A prop with its own texture keeps its old colour: say so, recolour it if asked.
 
-## 6. Ship checklist
+## 6. Ship
 
-Full steps and Studio rules: [ship-and-studio.md](ship-and-studio.md).
-
-1. Offline gates on every clip pass.
-2. Export.
-3. Upload or PATCH the **test** asset: Icey Labs (group 189923277) **only**, never VentureMMO, only after the owner's OK.
-   New asset: `../showstopper_tails/create_model.py`; same id: `lc_pilot/tools/patch_model.py <id> <fbx>`.
-4. Place it (`place_remake.luau`: meshes in a Folder, Rig holders with `<Part>Bone` Bones at the template joints,
-   HideParts / HideAccessories / SoloMeshes; asserts bones line up within 0.02). Skinned meshes must be welded to
-   **LowerTorso**, not HumanoidRootPart, or they stay rigid.
-5. Engine check: temp Workspace script builds builder-made employees, `EmployeeOutfitSystem.fit`, loops the live clips;
-   one muted Play; captures; delete the temp.
-6. The owner tries `employeeoutfittest <OutfitModel>`.
-7. Only after his explicit OK: point `EmployeeRegistry`'s skin at the new outfit, art in **BOTH** places (lobby + Shift),
-   push on `game/cleanup-crew`, owner real-play check. The owner saves and publishes the places.
+[ship-and-studio.md](ship-and-studio.md). In short: test asset (group only, owner's OK) -> place in BOTH places ->
+engine check with builder-made characters in one muted Play, client fetch status -> `employeeoutfittest` by the owner
+-> on his explicit OK: final outfit Model (a NEW name if a live skin changes) placed in both places FIRST, then the four
+code files, spec first -> he saves and publishes -> his real-play check. Rollback = revert the commit; the old Model
+stays in the places.
 
 ## 7. When the skin exposes a bad clip
 
-A skin with anything on the chest shows arm poses that were always wrong (Prickles' shipped idle had a hand 0.23 inside
-his chest with no skin at all). Measure the plain character first (`idle_clip_probe.py`). Fixing his own idle means
-re-posing every clip that starts, ends or holds it, then overwriting them in place (Open Cloud PATCH, same ids, backups
-first). Full method: [clip-repose.md](clip-repose.md).
+A skin with anything on the chest shows arm poses that were always wrong (Prickles' idle had a hand 0.23 inside his
+chest with no skin at all). Measure the plain character first (`idle_clip_probe.py`). Fixing its own idle means
+re-posing every clip that starts, ends or holds it, then overwriting them in place (backups first). Method:
+[clip-repose.md](clip-repose.md). Shared poses: never per character.
 
-## 8. Plain answers to owner questions
+## 8. The owner's review
 
-- "Wouldn't robe collisions fix clipping?" No. Roblox does not collide skinned meshes with the body. A worn outfit
-  bends only by its weights.
-- "Wouldn't SmartBone fix it?" Only for parts that have bone chains. A skirt skinned straight to the thighs has none,
-  so it needs a chain rebuild, the code merge, the package, tuning and re-gating: a day-plus, not a ship-day fix.
-- "Can AI make the whole skin?" AI statues melt body and cloth together and smear paint. Use AI for rigid one-off
-  props only, then hand-built shapes for cloth.
+- **On an artifact page**: he works over Remote Control, so file cards and inline images don't reach him. One figure
+  per image, plain caption ("front, side, back; violet coat in depot light"), concept beside the model. Republish the
+  same page each round.
+- **Yes/no questions by piece name** ("Hat: yes / no?", "Lapels stand off enough: yes / no?"), split into look, fit
+  and rules. Never "approve 11 decisions".
+- **Order**: plan page -> blockout renders -> each round's renders + gate sheets next to the concept -> only after a
+  test player looked right in Studio: `employeeoutfittest` in game -> his OK to make it the real skin -> his real-play
+  check. **He is never the first to see it in game.**
+- Kid-simple words, the plain answer first. Real numbers, before/after, from the same angle.
+- His notes are short and loud ("where are his knees?!"): quote them verbatim in the brief and the ledger.
+- Never write "done" or "fixed": "ready for you to check". Only he marks done.
 
-## 9. SmartBone cloth
+## 9. SmartBone cloth (summary)
 
-Full recipe, settings, gates and failures: [smartbone.md](smartbone.md). Shipped on Showstopper (round 3, 11-17).
+Full recipe: [smartbone.md](smartbone.md). SmartBone 2 is in the game (`wally.toml`, `EmployeeTailSmartBoneUtils`); an
+outfit opts in by attributes. Chains ride ON TOP of the weights; joints on the cloth surface; the outfit's own
+colliders the size of what you see, sized against bone heads; `TailBoneLift` 0.15 + shared cap 0.05 so the hem never
+flips; soft settings stiffness 0.35, elasticity 4, damping 0.18, bend 35. Gate in engine per move.
 
-- Same mesh: chains ride ON TOP of the shipped weights. Move the hips' share plus part of the thigh weight (front flaps
-  ~45 %, sides/back ~35 %, toward the hem) onto the chains; never the waistband; the thigh-follow keeps crouch clean.
-- A back vent: below its top each edge rides only its own side's chains, or the split looks rigid.
-- Fringe and lapels are part of the robe: give them a short chain under UpperTorso (their own SmartBone root).
-- Put the chain joints ON the cloth surface (`ride_chains.py ... SURFACE=1`), then colliders can be the full size of
-  what you SEE (bloomer puff, boots, chest) in the outfit's SmartColliders folder; bone radius small (0.04). Size them
-  against the bone heads only (roots are pinned). Bare legs as colliders let the cloth sink into the bloomers.
-- Hem ceiling: `TailBoneLift = 0.15` on the outfit (each bone may rise only 0.15 above where it rests) plus the shared
-  cap `TailBoneYAxisLimits` -4 .. 0.05. Never a single low shared ceiling: it bends the rest shape. Soft settings:
-  stiffness 0.35, elasticity 4, damping 0.18, bend 35.
-- Gate in-engine per move: swing, flip height, standing jitter, clip depth into the visible volumes. Test outfit first.
+**Plan for it at build time, not after:** SmartBone moves only the joints, so the cloth BETWEEN two chains is a
+straight span that cuts into anything round under it. A new swinging skirt gets **8 chains around** (not 6) and **about
+0.06 of clearance over anything puffy under it** (or a slimmer puff where the skirt covers it). Growing the colliders
+past the visible size does not fix it: it pushes the cloth out at rest.
+
+## Plain answers to owner questions
+
+- "Wouldn't robe collisions fix clipping?" No. Roblox never collides skinned meshes with the body. A worn outfit bends
+  only by its weights; SmartBone pushes its bones (not the cloth between them) off colliders.
+- "Can SmartBone fix it?" For cloth that has chains, yes, and the game has it. A new chained piece still needs its
+  chains, weights, colliders and in-engine gates: about a day per skin.
+- "Can AI make the whole skin?" AI statues melt body and cloth together and smear paint. AI only for rigid one-off
+  props; built shapes for cloth.
 
 ## Red flags - stop and re-read
 
 | Thought | Reality |
 |---|---|
-| "The old build is already approved, I'll keep it" | Old approvals were placeholders until this route. Remake cloth; reuse only liked rigid props. |
-| "Hide his legs, the boots fit better" | Never hide his own limbs. Fix the boots. |
-| "Stretch this sleeve to cover the gap" | Rejected. Build true-size cloth. |
-| "Top plus separate skirt is easier" | Shows as a seam. One robe. |
+| "The old build is approved, I'll keep it" | Old approvals were placeholders until this route. Remake cloth; reuse only liked rigid props. |
+| "Hide his legs / her ears, it fits better" | Never hide the character's own parts. Fix the clothes. |
+| "Stretch this piece to cover the gap" | Rejected. Build true-size cloth. |
+| "Top plus separate skirt is easier" / "three bloomer pieces is fine" | Shows as seams. One piece per garment. |
 | "Raise the lapel colour zone a bit" | Reads 2D. Real fold, 0.15 off. |
-| "Decimate to get under 20k" | Shards the colours. Split meshes. |
-| "Gate passes at rest and in walk" | Gate every frame of every live clip, crouch and emote included. |
-| "It looks right in my render light" | Check unlit, then warm depot light, then the depot. |
-| "Bare legs are colliders enough" | The cloth sinks into the bloomers. Colliders the size of what you see. |
-| "Owner can look first, then I'll test in game" | Test player in the game's own idle and light first. |
-| "AI painted it, close enough" | Plain cloth = one exact colour. |
+| "Decimate to get under 20k" | Shards the colours. Split meshes. (Only a one-colour shell, before its UVs, may be decimated.) |
+| "Flat swatch is done" | Bland and plastic in game. Texture round before shipping. |
+| "Gate passes at rest and in walk" | Every frame of every live clip, crouch and emote included. |
+| "It looks right in my render light" | Unlit, then warm depot light, then the depot. |
+| "The concept shows a dark band, so I'll add it" | Ask first. |
+| "The piece vanished, let me read the code" | Client `GetAssetFetchStatus` first. |
+| "The PATCH worked, it shows on the server" | Check every worn mesh's fetch status on a fresh CLIENT. |
+| "Code first, art later" | Art in both places first; a place without it shows Classic. |
+| "Owner can look first, then I'll test in game" | Test player in the game's idle and light first. |
+| "Quick grant to test it on my character" | No profile writes. Builder or `employeeoutfittest`. |
+| "Content lock is tomorrow, skip crouch / textures this once" | Gates don't bend for dates on your own say-so. Offer scope cuts (fewer pieces, one look, ship after launch) with what each costs, shown on the page; the owner chooses. |
+| "He said 'just push it', that's the OK" | The OK counts only after he has seen the look on the page and the test in game. Show it first, then ask. |
+| "I'll wait here until the bake finishes" | Background it and work on, or end the turn with a report. |
 | "Use the Studio id from earlier" | Ids change each restart. Match window name AND placeId. |

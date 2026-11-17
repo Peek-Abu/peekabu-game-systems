@@ -62,7 +62,7 @@ coat:PivotTo(coat:GetPivot() + offset)
 local root = Instance.new("Model"); root.Name = NAME
 for k, v in live:GetAttributes() do root:SetAttribute(k, v) end
 for k, v in WOOL do root:SetAttribute(k, v) end
-root:SetAttribute("Source", "Showstopper remake, LIVE skin outfit from 17 Nov 2026 (Icey Labs " .. ASSET .. " rev 3, SmartBone round 3: skirt + lapel fringe chains, vent split, own colliders); characters/skins/release/gloom_carnival/showstopper_remake")
+root:SetAttribute("Source", "Showstopper remake, LIVE skin outfit from 17 Nov 2026 (Icey Labs " .. ASSET .. " rev 5 = the round 3 file, SmartBone round 3: skirt + lapel fringe chains, vent split, own colliders); characters/skins/release/gloom_carnival/showstopper_remake")
 local meshes = Instance.new("Folder"); meshes.Name = "Outfit"; meshes.Parent = root
 local rig = Instance.new("Folder"); rig.Name = "Rig"; rig.Parent = root
 local tails = 0
