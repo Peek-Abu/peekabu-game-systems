@@ -5,7 +5,6 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local TipRegistry = require(ReplicatedStorage.Shared.Features.Tip.Data.TipRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
-local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 local VM = {}
 
 -- The live event's chip beside the SHOP tile (owner Y2): your acorns and the days left; it opens the event tab.
@@ -180,9 +179,8 @@ end
 -- up, so it never covers one.
 VM.FIND_TRUCK_TEXT = "Find a truck!"
 
-function VM.eventChip(acorns: number, days: number, phone: boolean): EventChipView
-	local left = if days <= 1 then "Last day!" elseif phone then `{days}d` else `{days} days left`
-	return { text = `{ToonStyleViewModel.grouped(acorns)} · {left}` }
+function VM.eventChip(days: number, phone: boolean): EventChipView
+	return { text = if days <= 1 then "Last day!" elseif phone then `{days}d left` else `{days} days left` }
 end
 
 function VM.findTruck(aboard: boolean, promptUp: boolean): boolean

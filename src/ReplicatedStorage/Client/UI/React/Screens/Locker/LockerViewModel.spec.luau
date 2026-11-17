@@ -68,6 +68,24 @@ return function()
 	end)
 
 	describe("cards", function()
+		it(
+			"shows how much of its own money you have on the Gloom and event Lockers (owner 11-16 q2), not the Gleam one",
+			function()
+				local state = { keys = {}, pity = {}, opened = 0 }
+				local gloom = VM.card(GLOOM, state, { gloom = 1240, gleam = 50, acorns = 7 }, false)
+				expect(gloom.haveText).to.equal("You have 1,240")
+				expect(gloom.haveCurrency).to.equal("gloom")
+				local HARVEST = LockerConstants.LOCKERS.harvest
+				local harvest = VM.card(HARVEST, state, { gloom = 1240, gleam = 50, acorns = 7 }, false)
+				expect(harvest.haveText).to.equal("You have 7")
+				expect(harvest.haveCurrency).to.equal("acorns")
+				local none = VM.card(HARVEST, state, { gloom = 0, gleam = 0 }, false)
+				expect(none.haveText).to.equal("You have 0")
+				-- Gleam already sits in the menu bar.
+				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 50 }, false).haveText).to.equal(nil)
+			end
+		)
+
 		it("shows live pity remaining and uses a held key before asking for currency", function()
 			local pityAt = LockerRules.odds(GLOOM).pityAt
 			local withKey = VM.card(

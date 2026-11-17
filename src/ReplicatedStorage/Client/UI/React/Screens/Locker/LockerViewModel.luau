@@ -47,6 +47,10 @@ export type LockerCard = {
 	pityText: string,
 	restricted: boolean,
 	button: OpenButton,
+	-- "You have N" of the Locker's own money (Gloom, or the event's), drawn on the card; nil for the Gleam Locker,
+	-- whose Gleam is in the menu bar (owner 11-16: bars show only Gleam and Credits).
+	haveText: string?,
+	haveCurrency: LockerTypes.Currency?,
 }
 
 export type InsideItem = {
@@ -406,6 +410,8 @@ function VM.card(
 		pityText = pityText,
 		restricted = isRestricted,
 		button = button,
+		haveText = if locker.currency == "gleam" then nil else `You have {ToonStyleViewModel.grouped(balance)}`,
+		haveCurrency = if locker.currency == "gleam" then nil else locker.currency,
 	}
 end
 

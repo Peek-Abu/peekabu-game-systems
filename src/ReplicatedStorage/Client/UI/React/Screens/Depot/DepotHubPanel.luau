@@ -7,8 +7,9 @@
 	- under it the menu tiles (DepotHubViewModel.menuTiles; renders breaking their tiles): a column of INVENTORY, GUIDE
 	  and SETTINGS on desktop, where the Tonight card is the Jobs button (owner 11-16, one button per screen); a 2x2 grid
 	  of JOBS, INVENTORY, GUIDE and SETTINGS on phone, clear of the thumbstick;
-	- top-right: the Credits counter (the coin render overlapping a gold number), the Gloom counter left of it (the
-	  Gloom splat overlapping a grape number; owner P1 2026-11-14: there was nowhere to see your Gloom) and the
+	- top-right: the Credits counter (the coin render overlapping a gold number), the Gleam counter left of it (the
+	  Gleam render overlapping a gold number; owner 11-16: bars show only Gleam and Credits, Gloom shows on the Lockers
+	  tab and in shifts) and the
 	  calendar tile, the one daily button
 	  (PUNCH IN! with a "!" until today's punch, and a tap punches in; else the time to tomorrow's, and it opens the
 	  Timecard, and so the Company Clipboard: there is no CLIPBOARD tile); on desktop the Tonight card (tonight's building
@@ -51,9 +52,9 @@ export type DepotHubPanelProps = {
 	-- Whose character the profile ring shows (nil: the fallback photo, as in the story).
 	userId: number?,
 	profile: DepotHubViewModel.ProfileView,
-	-- The player's Credits and Gloom balances (the counters count to a new balance, M5).
+	-- The player's Credits and Gleam balances (the counters count to a new balance, M5).
 	credits: number,
-	gloom: number,
+	gleam: number,
 	gift: DepotHubViewModel.GiftView,
 	tonight: DepotHubViewModel.TonightView,
 	-- The full Next shift card; nil while the queue pad's own card shows (and in the hub, where the small tab shows).
@@ -267,18 +268,19 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			position = UDim2.fromScale(1, 0),
 			size = if phone then UDim2.fromOffset(176, 46) else UDim2.fromOffset(330, 82),
 		}),
-		-- Gloom, left of Credits on the same row: the same pill, the Gloom splat and the kit's Gloom number colour. The
-		-- gap clears the Credits ticket, which hangs past its pill's left edge.
-		gloom = e(ToonWallet, {
-			amount = props.gloom,
-			meaning = "grape",
+		-- Gleam, left of Credits on the same row (owner 11-16: the hub and menu bars show only Gleam and Credits; Gloom
+		-- shows on the Lockers and in shifts): the same pill, the Gleam render and the gold number. The gap clears the
+		-- Credits ticket, which hangs past its pill's left edge.
+		gleam = e(ToonWallet, {
+			amount = props.gleam,
+			meaning = "gold",
 			textSize = if phone then 30 else 56,
-			icon = "gloom",
+			icon = "gleam",
 			iconSize = if phone then 60 else 108,
 			small = phone,
 			anchor = Vector2.new(1, 0),
 			position = if phone then UDim2.fromOffset(-216, 0) else UDim2.fromOffset(-404, 0),
-			size = if phone then UDim2.fromOffset(130, 46) else UDim2.fromOffset(240, 82),
+			size = if phone then UDim2.fromOffset(150, 46) else UDim2.fromOffset(280, 82),
 		}),
 		-- Gleam's sparkles over the counter (the kit marks what you earn).
 		sparkles = e(ToonSparkle, {

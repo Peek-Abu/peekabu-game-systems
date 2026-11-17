@@ -23,6 +23,7 @@ local LockerTypes = require(ReplicatedStorage.Shared.Features.Locker.Data.Locker
 local LockerServiceClient = require(ReplicatedStorage.Client.Features.Locker.LockerServiceClient)
 local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
@@ -193,6 +194,10 @@ local function lockerCardView(
 	local buttonHeight = if phone then 38 else 64
 	local rightX = pillWidth + pad + (if phone then 8 else 16)
 	local rightWidth = size.X - rightX - pad
+	local haveIcon: UIAssets.ToonIcon? = if card.haveCurrency == "acorns"
+		then "acorns"
+		elseif card.haveCurrency == "gloom" then "gloom"
+		else nil
 	local openContent: Nodes? = nil
 	if card.button.kind == "buy" then
 		local priced: Nodes = {
@@ -215,6 +220,24 @@ local function lockerCardView(
 			size = UDim2.fromOffset(iconSize, iconSize),
 			drop = 5,
 		}),
+		-- How much of the Locker's own money you have (owner 11-16: Gloom shows here, not in the bars), above the button.
+		have = if card.haveText ~= nil
+			then e(ToonPill, {
+				text = card.haveText,
+				hue = "cream",
+				meaning = if card.haveCurrency == "acorns" then "gold" else "grape",
+				icon = haveIcon,
+				textSize = math.max(12, textSize - 3),
+				anchor = Vector2.new(0, 1),
+				position = UDim2.new(
+					0,
+					rightX + (if phone then 14 else 24),
+					1,
+					-DEPTH.lip - (if phone then 8 else 14) - buttonHeight - (if phone then 8 else 14)
+				),
+				size = UDim2.fromOffset(math.floor(rightWidth * 0.55), if phone then 26 else 44),
+			})
+			else nil,
 		keys = e(ToonPill, {
 			text = card.keysText,
 			hue = "night",

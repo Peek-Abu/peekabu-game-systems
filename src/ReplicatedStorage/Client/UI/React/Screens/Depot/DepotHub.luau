@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotHub: the depot hub's HUD widget (registered by DepotServiceClient). Reads the shift snapshot (never shown over a
-	crew's shift), the travel card (hidden under it), the player's published rank, their Credits and Gloom (the `credits` and `gloom` balances),
+	crew's shift), the travel card (hidden under it), the player's published rank, their Gleam and Credits (the `gleam` and `credits` balances; owner 11-16: the bars show only Gleam and Credits),
 	their weekly timecard on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
 	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the calendar tile opens the clipboard (no CLIPBOARD tile, and on desktop no JOBS tile, since the Tonight card opens the Jobs board: owner 11-16, DepotHubViewModel.menuTiles) and the invite row sits under the Tonight card; the calendar tile is the one daily button: PUNCH IN! with a "!" until today's punch (a tap punches), then the time to tomorrow's (a tap opens the Timecard)
@@ -71,6 +71,7 @@ local function DepotHub(): React.ReactNode
 	local card = ReactCharm.useAtom(DepotStore.card)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
+	local premium = ReactCharm.useAtom(StateSyncClientStore.premium)
 	local queue = ReactCharm.useAtom(QueueStore.snapshot)
 	local hosts = ReactCharm.useAtom(HostStore.snapshot)
 	local world = ReactCharm.useAtom(StateSyncClientStore.world)
@@ -145,7 +146,7 @@ local function DepotHub(): React.ReactNode
 				userId = player.UserId,
 				profile = VM.profile(player.DisplayName, rank),
 				credits = CurrencyUtils.getCurrencyAmount(currency, "credits"),
-				gloom = CurrencyUtils.getCurrencyAmount(currency, "gloom"),
+				gleam = premium.balance,
 				gift = daily,
 				tonight = VM.tonight(boardContract(), picked),
 				cta = nil,
@@ -160,11 +161,7 @@ local function DepotHub(): React.ReactNode
 					SceneStack.push(ShopViewModel.SCENE)
 				end,
 				event = if EventServiceClient:live() ~= nil
-					then VM.eventChip(
-						CurrencyUtils.getCurrencyAmount(currency, "acorns"),
-						EventServiceClient:daysLeft(),
-						phone
-					)
+					then VM.eventChip(EventServiceClient:daysLeft(), phone)
 					else nil,
 				onEvent = function()
 					ShopStore.openTab("event")
