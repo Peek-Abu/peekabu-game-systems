@@ -460,4 +460,64 @@ return function()
 		expect(EmployeePreviewSystem.emoteOf("Nobody.Nothing")).never.to.be.ok()
 		expect(EmployeePreviewSystem.EMOTE_PAUSE > 0).to.equal(true)
 	end)
+
+	-- Owner, 2026-11-16: the textured Showstopper's item page showed his coat and hat but no bloomers or boots (a new
+	-- mesh not loaded yet when the preview drew it).
+	describe("whenLoaded", function()
+		it("waits for the preload of exactly those instances, then calls back once", function()
+			local model = Instance.new("Model")
+			local seen, ready = nil, 0
+			EmployeePreviewSystem.whenLoaded({ model }, function()
+				ready += 1
+			end, function(instances)
+				seen = instances
+				task.wait(0.05)
+			end, 1)
+			expect(ready).to.equal(0)
+			task.wait(0.15)
+			expect(ready).to.equal(1)
+			expect(seen[1]).to.equal(model)
+			model:Destroy()
+		end)
+
+		it("shows anyway when the preload takes too long, and never calls back twice", function()
+			local ready = 0
+			EmployeePreviewSystem.whenLoaded({}, function()
+				ready += 1
+			end, function()
+				task.wait(0.3)
+			end, 0.05)
+			task.wait(0.15)
+			expect(ready).to.equal(1)
+			task.wait(0.3)
+			expect(ready).to.equal(1)
+		end)
+
+		it("calls back once even when the preload fails", function()
+			local ready = 0
+			EmployeePreviewSystem.whenLoaded({}, function()
+				ready += 1
+			end, function()
+				error("no content")
+			end, 1)
+			task.wait(0.05)
+			expect(ready).to.equal(1)
+		end)
+
+		it("never calls back once cancelled", function()
+			local ready = 0
+			local cancel = EmployeePreviewSystem.whenLoaded({}, function()
+				ready += 1
+			end, function()
+				task.wait(0.05)
+			end, 0.1)
+			cancel()
+			task.wait(0.2)
+			expect(ready).to.equal(0)
+		end)
+
+		it("waits at most as long as the 3D stage does by default", function()
+			expect(EmployeePreviewSystem.PRELOAD_SECONDS).to.equal(3)
+		end)
+	end)
 end

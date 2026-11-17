@@ -23,6 +23,10 @@
 	  comes along (the rank lanyard and badge, the vacuum pack), else the dressed template; then the outfit's vacuum
 	  goes on the pack (VacuumPreviewSystem.swap). Live (and its second result true) when asked and a slot is free,
 	  else posed and frozen like `static`.
+	- `whenLoaded(instances, onReady, preload?, seconds?)`: calls `onReady` once, when ContentProvider has loaded the
+	  instances' assets (meshes, textures) or after `seconds` (PRELOAD_SECONDS, as long as the 3D stage waits),
+	  whichever is first; a failed load still calls it. Returns a cancel. ToonViewport keeps a preview hidden until then
+	  (owner, 2026-11-16: an item page showed the textured Showstopper's coat and hat but not its new bloomer mesh).
 	- `idleOf` / `reachOf` / `fidgetOf` / `revealOf` / `reactionOf` / `emoteOf` (which clip a preview plays) live in
 	  EmployeePreviewClipUtils, and `playIdle` / `playReveal` / `playReaction` / `playFidgets` / `playEmote` in
 	  EmployeePreviewPlaySystem (both split out of this module); they are re-exported here under the same names.
@@ -30,6 +34,7 @@
 	@class EmployeePreviewSystem
 ]=]
 
+local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -50,9 +55,12 @@ local EmployeePreviewPlaySystem = require(EmployeeClient.Systems.EmployeePreview
 local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
 
 local LIVE_CAP = 2
+-- The longest a preview waits for its assets before it shows anyway (the same as EmployeeStageSystem).
+local PRELOAD_SECONDS = 3
 
 local EmployeePreviewSystem = {
 	LIVE_CAP = LIVE_CAP,
+	PRELOAD_SECONDS = PRELOAD_SECONDS,
 	EMOTE_PAUSE = EmployeePreviewPlaySystem.EMOTE_PAUSE,
 	REVEAL_FADE = EmployeePreviewPlaySystem.REVEAL_FADE,
 	-- The clip lookups (EmployeePreviewClipUtils) and the players (EmployeePreviewPlaySystem), under their old names.
@@ -334,6 +342,44 @@ function EmployeePreviewSystem.reset()
 		end
 		staticCache[source] = nil
 		staticCount[source] = nil
+	end
+end
+
+export type Preload = (instances: { Instance }) -> ()
+
+local function contentPreload(instances: { Instance })
+	ContentProvider:PreloadAsync(instances)
+end
+
+--[=[
+	Calls `onReady` once: when `preload` (default ContentProvider:PreloadAsync) has loaded `instances`, or after
+	`seconds` (default PRELOAD_SECONDS), whichever is first. A failed load still calls it. The returned function
+	cancels it (nothing is called after).
+]=]
+function EmployeePreviewSystem.whenLoaded(
+	instances: { Instance },
+	onReady: () -> (),
+	preload: Preload?,
+	seconds: number?
+): () -> ()
+	local done = false
+	local function finish()
+		if not done then
+			done = true
+			onReady()
+		end
+	end
+	local load: Preload = preload or contentPreload
+	task.spawn(function()
+		pcall(load, instances)
+		finish()
+	end)
+	local timer = task.delay(seconds or PRELOAD_SECONDS, finish)
+	return function()
+		done = true
+		if coroutine.status(timer) == "suspended" then
+			task.cancel(timer)
+		end
 	end
 end
 

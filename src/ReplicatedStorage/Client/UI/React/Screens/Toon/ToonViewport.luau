@@ -17,6 +17,8 @@
 	  else the employee's hire reveal in the skin), then its idle; its faces follow the clip's Face markers
 	  (EmoteEffectSystem, faces only here). Closing cancels it: the props hide and the clip's listeners go.
 	The model is rebuilt only when the employee, skin, colour style, framing or live flag changes, and destroyed with the component.
+	A new model shows only once its meshes and textures are loaded, or after EmployeePreviewSystem.PRELOAD_SECONDS
+	(`whenLoaded`): never half drawn (owner, 2026-11-16: a new outfit mesh missing on an item page).
 	A live full figure is re-measured while it moves and the camera eases out to take in anything that leaves the
 	fitted box (PortraitViewModel.grow), so a reveal or idle never cuts off an arm or ears.
 	`platform` stands the model on a round 3D platform in the given colours (built in the viewport, so it is lit and
@@ -296,6 +298,22 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			if stand ~= nil then
 				stand.Parent = frame
 			end
+			-- Hidden until its meshes and textures are in (EmployeePreviewSystem.whenLoaded; owner, 2026-11-16: an item
+			-- page showed the textured Showstopper's coat and hat but not its new bloomer mesh). A still copy is drawn
+			-- once, so it is put back in its frame once loaded to be drawn again with everything.
+			frame.ImageTransparency = 1
+			local drawn: Model, drawnIn: Instance, still = model, holder, not moving
+			local loading: { Instance } = { model }
+			if stand ~= nil then
+				table.insert(loading, stand)
+			end
+			local cancelLoad = EmployeePreviewSystem.whenLoaded(loading, function()
+				if still and drawn.Parent == drawnIn then
+					drawn.Parent = nil
+					drawn.Parent = drawnIn
+				end
+				frame.ImageTransparency = 0
+			end)
 			local untrack: { () -> () } = {}
 			if moving and who ~= nil then
 				table.insert(untrack, previewProps.track(model))
@@ -345,6 +363,8 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 				end)
 			end
 			return function()
+				cancelLoad()
+				frame.ImageTransparency = 0
 				applySpin.current = nil
 				hero.current = nil
 				local stop = stopReaction.current
