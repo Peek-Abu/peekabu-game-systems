@@ -1,7 +1,7 @@
 # SmartBone cloth (skirts, coat tails, lapel fringe)
 
 Tested on Showstopper Prickles, rounds 1-3 (2026-11-17). Round 3 shipped as `PricklesShowstopperV3` (owner: "good
-enough especially for kids"). Round 4 (bones on the cloth surface) is still to come; this file gets its result.
+enough especially for kids"). Round 4 (bones on the cloth surface) was tested and not shipped: see its section.
 `$SSR` = `characters/skins/release/gloom_carnival/showstopper_remake` (main checkout, untracked).
 
 ## What it is
@@ -74,12 +74,22 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
 - Showstopper round 3: skirt swing walk 0.87 / run 0.98 / stop 0.14 / jumps 1.14; lapel tips 0.54 / 0.70 / 0.10 /
   0.72; hem level with the hips on jumps; deepest clip walk 0.28 → 0.10 with the outfit colliders (run 0.20 both).
 
-## Known limit (round 4 is the fix)
+## Bones on the cloth surface (round 4, tested 11-17, not shipped)
 
-The skirt bones come from the robe rig and sit **inside** the draped cloth, not on it. Colliders act on bones, so they
-had to be trimmed below the visible size, and cloth between bones still touches the bloomers (running no better).
-Round 4: rebuild the chain bones ON the draped cloth surface, so colliders can be the full visible size; measure the
-clipping before and after.
+- The skirt bones from the robe rig sit **inside** the draped cloth, so colliders (which act on bones) must stay below
+  the visible size. Round 4 moved every non-root joint out onto the cloth (`ride_chains.py ... SURFACE=1`: each joint
+  keeps its height and angle, its radius becomes the robe's outer surface there minus half the cloth).
+- **Size colliders against the real collision points only:** SmartBone collides each simulated bone's position (its
+  head) with its radius; chain roots are pinned. Checking points along whole links (as round 3 did) trims the colliders
+  far more than needed. With joints on the surface and only real points checked, every collider reached full visible
+  size (thighs 0.39, seat 0.37, chest 0.54).
+- Result (same moves, same visible volumes), round 3 → round 4: points inside the visible body run 21 → 12, walk 16 →
+  13, jump 19 → 12; deepest run 0.20 → 0.10. Swing a little livelier (lapel tips walk 0.54 → 0.85).
+- **But the hem lifts above the hips** (walk 0.14, run 0.16, jumps 0.25 vs round 3 level): the joints are further out,
+  so the panels swing on longer levers. A lower shared Y ceiling (-0.06) cut it (jump 0.16) but bent the rest shape
+  (some middle joints rest at the ceiling; standing sway rose to 0.26). Not clearly better, so round 3 stayed live.
+- Next step for round 4: **per-chain ceilings** (back panels lower than front flaps), set on each chain's bones from
+  their rest height, then re-gate. Test asset 139625595849758, `place_sb4.luau`.
 
 ## Failed / rejected
 

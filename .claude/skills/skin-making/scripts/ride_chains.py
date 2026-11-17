@@ -23,6 +23,27 @@ print('THIGH SHARE', KV)
 ARM = bpy.data.objects['Showstopper_DeformSkeleton']; RIG = bpy.data.objects['RobeRig']; robe = bpy.data.objects['SSR_Robe']
 SIDES = ['RF', 'RS', 'RB', 'LF', 'LS', 'LB']
 links = {s: [(RIG.data.bones[f'Skirt{s}{n}'].head_local.copy(), RIG.data.bones[f'Skirt{s}{n}'].tail_local.copy()) for n in (1, 2, 3)] for s in SIDES}
+# round 4 (SURFACE=1): the chain joints move OUT onto the draped cloth. The robe rig's skirt bones sit inside the cloth,
+# so colliders (which act on bones) had to be smaller than the visible bloomers; on the surface they can be full size.
+# Each joint keeps its height and angle; its distance from the body axis becomes the cloth's outer surface there
+# (the 90th percentile of robe points within 10 degrees and 0.04 in height), minus half the cloth thickness.
+SURFACE = 'SURFACE=1' in sys.argv
+if SURFACE:
+    import numpy as _np
+    _R = _np.array([v.co[:] for v in robe.data.vertices])
+    _ang = _np.arctan2(_R[:, 1], _R[:, 0]); _rad = _np.hypot(_R[:, 0], _R[:, 1])
+    def _onto(pt):
+        a = math.atan2(pt.y, pt.x)
+        da = _np.abs((_ang - a + math.pi) % (2 * math.pi) - math.pi)
+        sel = (da < math.radians(10)) & (_np.abs(_R[:, 2] - pt.z) < 0.04)
+        if sel.sum() < 4: return pt.copy()
+        r = float(_np.percentile(_rad[sel], 90)) - 0.02
+        return Vector((r * math.cos(a), r * math.sin(a), pt.z))
+    for s_ in SIDES:
+        joints = [links[s_][0][0]] + [t for _, t in links[s_]]
+        moved_j = [joints[0]] + [_onto(j) for j in joints[1:]]       # the root stays at the waist
+        links[s_] = [(moved_j[k], moved_j[k + 1]) for k in range(3)]
+    print('SURFACE joints moved out')
 
 # ---- bones
 for o in bpy.context.view_layer.objects: o.select_set(False)
@@ -162,11 +183,12 @@ BONE_R = 0.04
 low = bpy.data.objects['SSR_Lower']
 LP = [v.co.copy() for v in low.data.vertices]
 RP = [v.co.copy() for v in robe.data.vertices]
-chain_pts = []
+# SmartBone collides each simulated bone's POSITION (its head) with its radius; a chain's root is pinned and never
+# collides. So the points that must clear the colliders at rest are the non-root joints and the chain ends.
+chain_pts, chain_names = [], []
 for b in ARM.data.bones:
-    if b.name.startswith('Tail'):
-        for k in range(5):
-            chain_pts.append(b.head_local.lerp(b.tail_local, k / 4))
+    if b.name.startswith('Tail') and not b.name.endswith('1Bone'):
+        chain_pts.append(b.head_local.copy()); chain_names.append(b.name)
 
 
 def seg_dist(p, a, b):
@@ -181,7 +203,10 @@ COLS = []
 def collider(name, body, a, b, pts, zr):
     seen = [seg_dist(p, a, b) for p in pts if zr[0] < p.z < zr[1]]
     r_vis = pct(seen, 0.5) if seen else 0.3
-    r_bone = min(seg_dist(p, a, b) for p in chain_pts) - BONE_R - 0.02
+    dists = [seg_dist(p, a, b) for p in chain_pts]
+    k_min = min(range(len(dists)), key=lambda i: dists[i])
+    r_bone = dists[k_min] - BONE_R - 0.02
+    print('LIMIT', name, chain_names[k_min], round(dists[k_min], 3))
     r = max(0.08, min(r_vis, r_bone))
     COLS.append(dict(name=name, body=body, a=list(a), b=list(b), r=round(r, 3), r_visible=round(r_vis, 3), r_bone_limit=round(r_bone, 3)))
 
