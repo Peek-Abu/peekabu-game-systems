@@ -385,7 +385,13 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 		end
 	end
 
-	local selectedCard = if selected == "gleam" then cards[2] else cards[1]
+	-- The selected Locker's card (the event's Locker too), else the first.
+	local selectedCard = cards[1]
+	for _, card in cards do
+		if card.id == selected then
+			selectedCard = card
+		end
+	end
 	local headerText = if selectedCard.restricted
 		then `BUY DIRECTLY  ·  {string.upper(selectedCard.name)}`
 		else `WHAT'S INSIDE  ·  {string.upper(selectedCard.name)}`

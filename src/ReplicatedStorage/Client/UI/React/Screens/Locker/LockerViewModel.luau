@@ -333,7 +333,8 @@ function VM.card(
 	local odds = LockerRules.odds(locker, items)
 	local keys = state.keys[locker.id] or 0
 	local pity = state.pity[locker.id] or 0
-	local isRestricted = locker.paidRandom and restricted
+	-- An empty Locker has nothing to buy directly either, so it reads as empty (not "Buy items directly below").
+	local isRestricted = locker.paidRandom and restricted and #items > 0
 	local priceText = ToonStyleViewModel.grouped(locker.keyPrice)
 	local balance = if locker.currency == "gleam"
 		then balances.gleam
