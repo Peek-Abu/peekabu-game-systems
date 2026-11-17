@@ -764,7 +764,7 @@ def vending():
     """A chunky snack machine, 3.6 wide x 3.12 deep x 7.4 tall (the hub machine's size): grape painted steel with mint
     and gold trim; on the left a window (2 x 4.7; the glass is its own part in the hub) onto four shelves with spiral
     coils and a lit cream back; on the right a panel of lit buttons, a coin slot and a card reader; a pickup tray with
-    a flap across the bottom; a header with a gold Gleam sparkle (no words, no brand). Stocked with the `snack` props
+    a flap across the bottom; a plain mint header (no words, no brand, no sparkle). Stocked with the `snack` props
     in the hub. Front = -Y."""
     W, D, Hh = 3.6, 3.12, 7.4
     fy = -D / 2
@@ -813,20 +813,8 @@ def vending():
     box("trayHole", x0 + 0.1, x1 - 0.1, fy - 0.06, fy - 0.04, 0.6, 1.5, "paint_ink", bevel=0.0)
     box("flap", x0 + 0.12, x1 - 0.12, fy - 0.1, fy - 0.06, 0.95, 1.48, "steel_dark", bevel=0.02)
     box("flapHandle", x0 + 0.6, x1 - 0.6, fy - 0.14, fy - 0.1, 1.3, 1.4, "chrome", bevel=0.01)
+    # A plain header (owner 11-16: the gold 4-point sparkle that sat in its middle read as a diamond; removed).
     box("header", -W / 2 + 0.15, W / 2 - 0.15, fy - 0.06, fy + 0.02, 6.85, 7.25, "paint_mint", bevel=0.02)
-    bm = bmesh.new()
-    cx, cz = 0.0, 7.05
-    ring = []
-    for k in range(8):
-        a = k * math.pi / 4
-        rr = 0.17 if k % 2 == 0 else 0.05
-        ring.append(bm.verts.new((cx + math.sin(a) * rr, fy - 0.07, cz + math.cos(a) * rr)))
-    bm.faces.new(ring)
-    ret = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
-    for vv in [e for e in ret["geom"] if isinstance(e, bmesh.types.BMVert)]:
-        vv.co.y -= 0.03
-    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
-    H._add("sparkle", bm, "paint_gold", 0)
     for x in (-W / 2 + 0.25, W / 2 - 0.25):
         for y in (fy + 0.25, D / 2 - 0.25):
             cyl(f"foot{x}{y}", x, y, -0.06, 0.0, 0.12, "steel_dark", 10)
