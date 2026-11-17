@@ -14,7 +14,6 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
-local SmartBone = require(ReplicatedStorage.Packages.SmartBone)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeEarSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeEarSystem)
 local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
@@ -79,6 +78,9 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 			end)
 		)
 		-- SmartBone 2 (MIT) drives the tails of outfits that ask for it (EmployeeTailSystem hands them over).
+		-- Required here, not at the top: SmartBone can only load on a client (its debug gizmo hooks RenderStepped as it
+		-- loads), and the test runner loads this module on the server (TestEZ 11-17: the spec failed to load).
+		local SmartBone = require(ReplicatedStorage.Packages.SmartBone)
 		local smartBone = SmartBone.Start()
 		if smartBone ~= nil then
 			table.insert(stoppers, smartBone.Stop)
