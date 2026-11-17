@@ -16,6 +16,10 @@
 	Buying asks Yes / No first, then sends ShopServiceClient:requestBuy (with the Gleam the player said yes to when
 	Gleam pays the rest of a Credits price); what was bought arrives through the synced
 	entitlements and the reveal. Values are ShopViewModel's. `preview` swaps the stores for fixed data (the story).
+	The parts are split out of this file: ShopTabBody (a list tab's body) with ShopFeaturedTab (Featured),
+	ShopOfferCard (an offer's card), ShopBundleCards (the Gleam bundles), ShopConfirmDialog (the Yes / No question),
+	the hooks useShopCarousel (the banner carousel) and useShopBuying ("Buying..."), and the shared pieces in
+	ShopScreenBlocks; this file keeps the stores, the bar, the product page and the backdrop.
 	Exempt (wires stores; story in ShopScreen.story).
 
 	@class ShopScreen
@@ -31,42 +35,22 @@ local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.R
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
-local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
-local DealRules = require(ReplicatedStorage.Shared.Features.Deal.Rules.DealRules)
-local DealServiceClient = require(ReplicatedStorage.Client.Features.Deal.DealServiceClient)
 local DealStore = require(ReplicatedStorage.Client.Features.Deal.State.DealStore)
-local ShopPriceRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopPriceRules)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
-local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.ShopRotationUtils)
-local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local MarketplaceConstants = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceConstants)
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
-local LockerServiceClient = require(ReplicatedStorage.Client.Features.Locker.LockerServiceClient)
 local EventServiceClient = require(ReplicatedStorage.Client.Features.Event.EventServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonArrival = require(Toon.ToonArrival)
 local ToonBackdrop = require(Toon.ToonBackdrop)
-local ToonMotionViewModel = require(Toon.ToonMotionViewModel)
 local ShopRarityLookViewModel = require(script.Parent.ShopRarityLookViewModel)
-local CarouselVM = require(script.Parent.ShopCarouselViewModel)
-local ToonBurst = require(Toon.ToonBurst)
-local ToonButton = require(Toon.ToonButton)
-local ToonFlag = require(Toon.ToonFlag)
-local ToonIcon = require(Toon.ToonIcon)
 local ToonMenuBar = require(Toon.ToonMenuBar)
-local ToonPill = require(Toon.ToonPill)
-local ToonPrice = require(Toon.ToonPrice)
-local ToonPressable = require(Toon.ToonPressable)
-local ToonStamp = require(Toon.ToonStamp)
-local ToonSurface = require(Toon.ToonSurface)
-local ToonText = require(Toon.ToonText)
-local ToonViewport = require(Toon.ToonViewport)
 local UIToonConstants = require(Toon.UIToonConstants)
 local useToonPlay = require(Toon.useToonPlay)
 local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
@@ -74,32 +58,23 @@ local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleV
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
-local LockerPanel = require(script.Parent.Parent.Locker.LockerPanel)
-local ShopPassesPanel = require(script.Parent.ShopPassesPanel)
-local DealBanner = require(script.Parent.Parent.Deal.DealBanner)
-local DealViewModel = require(script.Parent.Parent.Deal.DealViewModel)
 local ShopProductPanel = require(script.Parent.ShopProductPanel)
-local ShopEventPanel = require(script.Parent.ShopEventPanel)
-local EventVM = require(script.Parent.ShopEventViewModel)
+local ShopConfirmDialog = require(script.Parent.ShopConfirmDialog)
+local ShopScreenBlocks = require(script.Parent.ShopScreenBlocks)
+local ShopTabBody = require(script.Parent.ShopTabBody)
+local useShopBuying = require(script.Parent.useShopBuying)
+local useShopCarousel = require(script.Parent.useShopCarousel)
 local VM = require(script.Parent.ShopViewModel)
 
 local e = React.createElement
 
-local COLOR = UIToonConstants.COLOR
 local MOTION = UIToonConstants.MOTION
--- How dark the back gets behind the Yes / No question (its fill's opacity).
-local DIM = 0.6
--- The longest a "Buying..." waits for the server's answer before the button comes back (seconds).
-local BUY_WAIT = 5
-local DEPTH = UIToonConstants.DEPTH
--- Space inside the picks list for the flags that stick out over its cards.
-local PICK_PAD = 14
 -- Where the open item's model stands across the screen (its rays and its rarity word centre on it).
 local HERO_X = 0.72
 
-type Nodes = { [string]: React.ReactNode }
+type Nodes = ShopScreenBlocks.Nodes
 
-export type Preview = { owns: (id: string) -> boolean, gleam: number, credits: number }
+export type Preview = ShopScreenBlocks.Preview
 
 export type ShopScreenProps = {
 	preview: Preview?,
@@ -109,367 +84,6 @@ export type ShopScreenProps = {
 	tab: string?,
 	item: string?,
 }
-
-local EMPLOYEES = { "Pippa", "Cappy", "Prickles" }
-
-local function group(children: Nodes): React.ReactNode
-	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children)
-end
-
--- The item on a card: in 3D (a skin, an employee, an emote or idle on its employee), or the sticker sheet for a sticker pack.
-local function art(card: VM.OfferCard, live: boolean?): React.ReactNode
-	if card.kind == "stickerPack" or card.kind == "sticker" then
-		return e(ToonIcon, {
-			icon = "stickers",
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromScale(0.5, 0.5),
-			size = UDim2.fromScale(0.7, 0.7),
-			drop = 4,
-		})
-	end
-	local vacuum = card.vacuum
-	return e(ToonViewport, {
-		-- A vacuum's card shows the vacuum on its own.
-		employee = if vacuum ~= nil then nil else card.employee,
-		vacuum = if vacuum ~= nil then CosmeticRegistry.keyOf(vacuum) else nil,
-		skin = card.skinKey,
-		-- An idle's card plays it (live) on its employee in the Classic skin.
-		idle = card.idle,
-		framing = "full",
-		live = live,
-		size = UDim2.fromScale(1, 1),
-	})
-end
-
-local function offerCard(
-	card: VM.OfferCard,
-	size: Vector2,
-	phone: boolean,
-	order: number,
-	onOpen: (id: string) -> ()
-): React.ReactNode
-	local shade = UIToonConstants.rarity(card.rarity)
-	local nameSize = if phone then 13 else 24
-	local footer = math.floor(nameSize * 2.6)
-	local stage: Nodes = {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
-		stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
-		gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(shade.hi, shade.base) }),
-		art = art(card),
-	}
-	local face: Nodes = {
-		stage = e("Frame", {
-			Position = UDim2.fromOffset(8, 8),
-			Size = UDim2.new(1, -16, 1, -footer - 8 - DEPTH.lip),
-			BackgroundColor3 = COLOR.white,
-			BorderSizePixel = 0,
-			ClipsDescendants = true,
-			ZIndex = 2,
-		}, stage),
-		name = e(ToonText, {
-			text = card.name,
-			textSize = nameSize,
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, 12, 1, -DEPTH.lip - math.floor(nameSize * 1.15)),
-			size = UDim2.new(0.62, -12, 0, nameSize + 4),
-			fit = true,
-			zIndex = 3,
-		}),
-		line = e(ToonText, {
-			text = card.line,
-			font = "body",
-			color = COLOR.white,
-			textSize = math.max(if phone then 11 else 17, nameSize - 8),
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, 12, 1, -DEPTH.lip - 4),
-			size = UDim2.new(0.62, -12, 0, nameSize),
-			fit = true,
-			zIndex = 3,
-		}),
-		price = if card.state == "owned"
-			then nil
-			else e(ToonPrice, {
-				currency = card.currency,
-				amount = card.price,
-				was = card.was,
-				textSize = nameSize + 2,
-				anchor = Vector2.new(1, 1),
-				position = UDim2.new(1, -10, 1, -DEPTH.lip - 6),
-				size = UDim2.new(0.4, 0, 0, nameSize + 12),
-				zIndex = 3,
-			}),
-	}
-	local nodes: Nodes = {
-		surface = e(ToonSurface, {
-			hue = "grape",
-			shade = { base = shade.lo:Lerp(shade.base, 0.4), hi = shade.base, lo = shade.lo },
-			radius = 20,
-			small = phone,
-			gloss = false,
-			size = UDim2.new(1, 0, 1, -DEPTH.drop),
-			children = face,
-		}),
-	}
-	if card.state == "owned" then
-		local stamp = math.floor(math.min(size.X, size.Y) * 0.5)
-		nodes.owned = e(ToonStamp, {
-			text = "OWNED",
-			size = stamp,
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromScale(0.5, 0.42),
-			zIndex = 6,
-		})
-	end
-	if card.off ~= nil and card.state ~= "owned" then
-		nodes.off = e(ToonBurst, {
-			text = card.off,
-			hue = "coral",
-			size = if phone then 40 else 68,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, 10, 0, -12),
-			zIndex = 7,
-		})
-	end
-	if card.rarity ~= "default" then
-		nodes.rarity = e(ToonFlag, {
-			text = string.upper(card.rarity),
-			rarity = card.rarity,
-			tilt = -5,
-			textSize = if phone then 10 else 15,
-			position = UDim2.fromOffset(-6, -8),
-			size = UDim2.fromOffset(if phone then 72 else 130, if phone then 20 else 30),
-			zIndex = 7,
-		})
-	end
-	return e(ToonPressable, {
-		size = UDim2.fromOffset(size.X, size.Y),
-		layoutOrder = order,
-		deal = order,
-		onActivated = function()
-			onOpen(card.id)
-		end,
-		children = nodes,
-	})
-end
-
-local function bundleCard(
-	bundle: VM.Bundle,
-	size: Vector2,
-	phone: boolean,
-	order: number,
-	onBuy: (key: string) -> ()
-): React.ReactNode
-	-- Tall cards (the Gleam tab) stack the render, the amount and the price; short ones (the Featured row) put the
-	-- render on the left and the amount over the price on the right.
-	local wide = size.Y < size.X * 0.62
-	local amountSize = if phone then 18 else 40
-	local pillHeight = if phone then (if wide then 22 else 28) else (if wide then 44 else 52)
-	local face: Nodes
-	if wide then
-		local artSize = math.floor((size.Y - DEPTH.drop - DEPTH.lip) * 0.92)
-		face = {
-			icon = e(ToonIcon, {
-				image = bundle.image,
-				anchor = Vector2.new(0, 0.5),
-				position = UDim2.new(0, 8, 0.5, -DEPTH.lip / 2),
-				size = UDim2.fromOffset(artSize, artSize),
-				drop = 4,
-				greyed = not bundle.available,
-			}),
-			amount = e(ToonText, {
-				text = bundle.amount,
-				textSize = amountSize,
-				meaning = "white",
-				position = UDim2.fromOffset(artSize + 14, 6),
-				size = UDim2.new(1, -artSize - 24, 0, amountSize + 4),
-				align = "center",
-				fit = true,
-			}),
-			robux = e(ToonButton, {
-				variant = if bundle.available then "primary" else "secondary",
-				text = if bundle.available then bundle.robux else "Soon",
-				textSize = if phone then 12 else 22,
-				disabled = not bundle.available,
-				small = true,
-				anchor = Vector2.new(0.5, 1),
-				position = UDim2.new(0, artSize + 14 + math.floor((size.X - artSize - 24) / 2), 1, -DEPTH.lip - 6),
-				size = UDim2.fromOffset(math.floor((size.X - artSize - 24) * 0.8), pillHeight),
-				onActivated = function()
-					onBuy(bundle.key)
-				end,
-			}),
-		}
-	else
-		-- The Gleam tab (owner 11-16, Gleam page round 5): a tall card, the amount on top with its bonus under it, the
-		-- pack's picture in the middle (bigger for a bigger pack, VM iconScale) and the price at the bottom.
-		-- Bigger words than the Featured row's short cards (checked in Play 11-16: 40 read small at 75%), and nothing
-		-- under the phone floor (12 pt).
-		local bigSize = if phone then 24 else 56
-		-- The amount sits just under the round bonus badge on the top-right corner (owner 11-16: "I did like the
-		-- banner / circular bonus and percentage"), so the badge never covers it; every card lines up the same.
-		local top = if phone then 24 else 56
-		local amountH = bigSize + 4
-		local wordSize = if phone then 12 else 22
-		local artTop = top + amountH + wordSize + (if phone then 6 else 14)
-		local artBottom = DEPTH.lip + pillHeight + (if phone then 10 else 20)
-		local room = math.max(size.Y - DEPTH.drop - artTop - artBottom, 0)
-		local artSize = math.floor(math.min(room, (size.X - 16) * bundle.iconScale))
-		face = {
-			amount = e(ToonText, {
-				text = bundle.amount,
-				textSize = bigSize,
-				meaning = "gold",
-				anchor = Vector2.new(0.5, 0),
-				position = UDim2.new(0.5, 0, 0, top),
-				size = UDim2.new(1, -16, 0, amountH),
-				align = "center",
-				fit = true,
-			}),
-			word = e(ToonText, {
-				text = "GLEAM",
-				textSize = wordSize,
-				anchor = Vector2.new(0.5, 0),
-				position = UDim2.new(0.5, 0, 0, top + amountH),
-				size = UDim2.new(1, -16, 0, wordSize + 2),
-				align = "center",
-			}),
-			icon = e(ToonIcon, {
-				image = bundle.image,
-				anchor = Vector2.new(0.5, 0.5),
-				position = UDim2.new(0.5, 0, 0, artTop + math.floor(room / 2)),
-				size = UDim2.fromOffset(artSize, artSize),
-				drop = 4,
-				greyed = not bundle.available,
-			}),
-			robux = e(ToonButton, {
-				variant = if bundle.available then "primary" else "secondary",
-				text = if bundle.available then bundle.robux else "Soon",
-				textSize = if phone then 15 else 30,
-				disabled = not bundle.available,
-				small = true,
-				anchor = Vector2.new(0.5, 1),
-				position = UDim2.new(0.5, 0, 1, -DEPTH.lip - 6),
-				size = UDim2.fromOffset(math.floor(size.X * 0.76), pillHeight),
-				onActivated = function()
-					onBuy(bundle.key)
-				end,
-			}),
-		}
-	end
-	local nodes: Nodes = {
-		surface = e(ToonSurface, {
-			-- The Gleam tab's cards climb blue, purple, gold with the pack; the Featured row keeps sky.
-			hue = if wide then "sky" else bundle.hue,
-			pattern = if wide then nil else "bubbles",
-			radius = 20,
-			small = phone,
-			size = UDim2.new(1, 0, 1, -DEPTH.drop),
-			children = face,
-		}),
-	}
-	-- The corner tag: "Just right!" for the pack the player came for, else POPULAR / BEST VALUE (the Gleam tab).
-	local tag = if bundle.best then "Just right!" elseif not wide then bundle.tag else nil
-	if tag ~= nil then
-		nodes.best = e(ToonFlag, {
-			text = tag,
-			hue = if bundle.best then "mint" else "coral",
-			tilt = -5,
-			textSize = if phone then 12 else 20,
-			position = UDim2.fromOffset(-6, -10),
-			size = UDim2.fromOffset(if phone then 90 else 170, if phone then 22 else 36),
-			zIndex = 6,
-		})
-	end
-	if bundle.bonus ~= nil then
-		nodes.bonus = e(ToonBurst, {
-			text = bundle.bonus,
-			sub = "BONUS",
-			hue = "mint",
-			size = if phone then (if wide then 46 else 62) else if wide then 84 else 96,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, 12, 0, -14),
-			zIndex = 5,
-		})
-	end
-	return e("Frame", {
-		Size = UDim2.fromOffset(size.X, size.Y),
-		BackgroundTransparency = 1,
-		LayoutOrder = order,
-	}, nodes)
-end
-
--- `onBuy` opens Roblox's purchase prompt for a bundle (nothing in the story).
-local function bundleRow(
-	width: number,
-	height: number,
-	phone: boolean,
-	gap: number,
-	bundles: { VM.Bundle },
-	onBuy: (key: string) -> ()
-): React.ReactNode
-	local nodes: Nodes = {
-		list = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal,
-			Padding = UDim.new(0, gap),
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		}),
-	}
-	local cardWidth = math.floor((width - (#bundles - 1) * gap) / #bundles)
-	for index, bundle in bundles do
-		nodes[bundle.key] = bundleCard(bundle, Vector2.new(cardWidth, height), phone, index, onBuy)
-	end
-	return group(nodes)
-end
-
--- The Gleam tab (owner 11-16: "more like marvel rivals: Dont make it stretched on top of each other"): every pack
--- side by side as a tall card. On a phone the row scrolls sideways, about four cards in view.
-local function bundleLadder(
-	width: number,
-	height: number,
-	phone: boolean,
-	gap: number,
-	bundles: { VM.Bundle },
-	onBuy: (key: string) -> ()
-): React.ReactNode
-	if not phone then
-		return bundleRow(width, height, phone, gap, bundles, onBuy)
-	end
-	local cardWidth = math.floor((width - 3 * gap) / 4.3)
-	local nodes: Nodes = {
-		list = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal,
-			Padding = UDim.new(0, gap),
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		}),
-		-- Room for the corner tags and the last card's drop.
-		pad = e(
-			"UIPadding",
-			{ PaddingTop = UDim.new(0, 12), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 8) }
-		),
-	}
-	for index, bundle in bundles do
-		nodes[bundle.key] = bundleCard(bundle, Vector2.new(cardWidth, height - 20), phone, index, onBuy)
-	end
-	return e("ScrollingFrame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		CanvasSize = UDim2.fromOffset(0, 0),
-		AutomaticCanvasSize = Enum.AutomaticSize.X,
-		ScrollingDirection = Enum.ScrollingDirection.X,
-		ScrollBarThickness = 4,
-	}, nodes)
-end
-
-local function heading(textValue: string, size: number, position: UDim2, width: number): React.ReactNode
-	return e(ToonText, {
-		text = textValue,
-		textSize = size,
-		position = position,
-		size = UDim2.fromOffset(width, size + 8),
-		fit = true,
-	})
-end
 
 local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local liveViewport = usePaperViewport()
@@ -489,16 +103,6 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
 	local deals = ReactCharm.useAtom(StateSyncClientStore.deals)
 	local dealPrices = ReactCharm.useAtom(DealStore.robux)
-	-- Which thing the Featured banner spot shows: the offered one-time deals first, then today's banner.
-	local slot, setSlot = React.useState(1)
-	-- The banner carousel (ShopCarouselViewModel): when its slide last changed, and whether the player picked it.
-	local picked, setPicked = React.useState(false)
-	local slideChanged = React.useRef(os.clock())
-	local function pickSlide(index: number)
-		slideChanged.current = os.clock()
-		setPicked(true)
-		setSlot(index)
-	end
 	local passKeys = MarketplaceRegistry.passKeys()
 	-- A live limited-time event (never in a preview): its tab comes first, and the Shop opens on it the first time
 	-- only (owner Y1, 11-16); the server remembers it in the `events` slice.
@@ -512,48 +116,14 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			EventServiceClient:markShown(firstEventId)
 		end
 	end, { firstEventId })
-	-- The carousel moves on by itself while the Featured tab is up with no product page open.
-	local carouselDeps: { unknown } = { slot, picked, tab, storeProduct ~= nil }
-	React.useEffect(function(): () -> ()
-		if tab ~= "featured" or storeProduct ~= nil then
-			return function() end
-		end
-		local alive = true
-		task.spawn(function()
-			while alive do
-				task.wait(0.25)
-				if alive and CarouselVM.due(os.clock() - slideChanged.current, picked) then
-					alive = false
-					slideChanged.current = os.clock()
-					setPicked(false)
-					setSlot(slot + 1)
-				end
-			end
-		end)
-		return function()
-			alive = false
-		end
-	end, carouselDeps)
+	local carousel = useShopCarousel(tab, storeProduct ~= nil)
+	local slot = carousel.slot
+	local pickSlide = carousel.pickSlide
 	local filter, setFilter = React.useState(function(): string?
 		return nil
 	end)
 	local confirming, setConfirming = React.useState(false)
-	-- The offer a yes was sent for, until its answer comes back (or BUY_WAIT passes): its button says "Buying..." (U2).
-	local buying, setBuying = React.useState("")
-	React.useEffect(function()
-		setBuying("")
-	end, { result })
-	React.useEffect(function(): () -> ()
-		if buying == "" then
-			return function() end
-		end
-		local waiting = task.delay(BUY_WAIT, function()
-			setBuying("")
-		end)
-		return function()
-			task.cancel(waiting)
-		end
-	end, { buying })
+	local buying, setBuying = useShopBuying(result)
 	-- The Yes / No question pops in over a back that dims (M6).
 	local asked = useToonPlay(MOTION.popSeconds, 0, if confirming then "ask" else "")
 	local returnTo = ReactCharm.useAtom(ShopStore.returnTo)
@@ -616,7 +186,6 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		PaperHudScaleViewModel.virtual(viewport - Vector2.new(0, PaperHudScaleViewModel.topShift(scale)), scale)
 	local layout = InventoryViewModel.layout(virtual, phone)
 	local content = layout.content
-	local gap = layout.gap
 	local size = layout.textSize
 
 	local function close()
@@ -737,551 +306,47 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			end,
 		})
 		if confirming then
-			local dialog: Nodes = {
-				question = e(ToonText, {
-					text = product.confirm,
-					textSize = size + 6,
-					meaning = "grape",
-					position = UDim2.fromOffset(24, 24),
-					size = UDim2.new(1, -48, 0, (size + 6) * 2 + 8),
-					wrapped = true,
-					fit = true,
-					align = "center",
-				}),
-				yes = e(ToonButton, {
-					variant = "primary",
-					text = "Yes!",
-					textSize = size + 6,
-					sound = "cta",
-					anchor = Vector2.new(1, 1),
-					position = UDim2.new(0.5, -10, 1, -24),
-					size = UDim2.new(0.5, -34, 0, if phone then 44 else 70),
-					onActivated = function()
-						setConfirming(false)
-						if preview == nil then
-							-- A yes to "Use 30 Gleam" is a yes to at most that much Gleam for the rest.
-							local gleam = if product.button.kind == "topup" then product.button.gleam else nil
-							-- The price the player saw: the server never charges more.
-							local seen = ShopPriceRules.forPlayer(offer, owns, balances.now).price
-							setBuying(offer.id)
-							ShopServiceClient:requestBuy(offer.id, gleam, seen)
-						end
-					end,
-				}),
-				no = e(ToonButton, {
-					variant = "secondary",
-					text = "No",
-					textSize = size + 6,
-					sound = "back",
-					anchor = Vector2.new(0, 1),
-					position = UDim2.new(0.5, 10, 1, -24),
-					size = UDim2.new(0.5, -34, 0, if phone then 44 else 70),
-					onActivated = function()
-						setConfirming(false)
-					end,
-				}),
-			}
-			modal = e("TextButton", {
-				Size = UDim2.fromScale(1, 1),
-				BackgroundColor3 = COLOR.ink,
-				BackgroundTransparency = asked:map(function(t: number): number
-					return 1 - DIM * math.min(1, t * MOTION.popSeconds / MOTION.dimSeconds)
-				end),
-				Text = "",
-				AutoButtonColor = false,
-				ZIndex = 20,
-			}, {
-				panel = e("Frame", {
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.fromScale(0.5, 0.5),
-					Size = UDim2.fromOffset(if phone then 380 else 640, if phone then 170 else 300),
-					BackgroundTransparency = 1,
-					ZIndex = 21,
-				}, {
-					pop = e("UIScale", { Scale = asked:map(ToonMotionViewModel.pop) }),
-					surface = e(ToonSurface, {
-						hue = "cream",
-						pattern = "rings",
-						radius = 28,
-						size = UDim2.fromScale(1, 1),
-						children = dialog,
-					}),
-				}),
-			})
-		end
-	elseif tab == "event" and liveEvent ~= nil then
-		local acorns = balances.acorns or 0
-		-- Live outside its dates: the admin preview.
-		local previewed = now < liveEvent.starts or now >= liveEvent.ends
-		body = e(ShopEventPanel, {
-			header = EventVM.header(liveEvent, now, previewed, acorns),
-			cards = EventVM.offers(liveEvent, owns, balances),
-			locker = EventVM.locker(liveEvent),
-			keys = EventVM.keys(liveEvent, acorns),
-			note = if keyResult ~= nil then EventVM.resultText(keyResult.reason) else nil,
-			width = content.width,
-			height = content.height,
-			headingSize = layout.headingSize,
-			textSize = size,
-			gap = gap,
-			phone = phone,
-			renderCard = function(card: VM.OfferCard, cellSize: Vector2, order: number): React.ReactNode
-				return offerCard(card, cellSize, phone, order, open)
-			end,
-			onLocker = function(id)
-				LockerStore.select(id)
-				setTab("lockers")
-			end,
-			onKey = function(id)
-				LockerServiceClient:requestKey(id)
-			end,
-		})
-	elseif tab == "skins" then
-		local chips: Nodes = {
-			list = e("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				Padding = UDim.new(0, 10),
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			}),
-		}
-		for index, option in VM.skinFilters(EMPLOYEES) do
-			local value = option.value
-			chips[option.text] = e(ToonButton, {
-				variant = "grape",
-				sound = "tab",
-				text = option.text,
-				textSize = size,
-				selected = filter == value,
-				receded = filter ~= value,
-				size = UDim2.fromOffset(if phone then 84 else 150, if phone then 34 else 54),
-				layoutOrder = index,
-				onActivated = function()
-					setFilter(value)
-				end,
-			})
-		end
-		local columns = if phone then 4 else 5
-		local cellWidth = math.floor((content.width - (columns - 1) * gap - 32) / columns)
-		local cell = Vector2.new(cellWidth, math.floor(cellWidth * 1.15))
-		local grid: Nodes = {
-			layout = e("UIGridLayout", {
-				CellSize = UDim2.fromOffset(cell.X, cell.Y),
-				CellPadding = UDim2.fromOffset(gap, gap + 6),
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			}),
-			-- Room for the rarity flags that stick out over the cards' top-left corners.
-			pad = e("UIPadding", {
-				PaddingLeft = UDim.new(0, 12),
-				PaddingRight = UDim.new(0, 8),
-				PaddingTop = UDim.new(0, 16),
-				PaddingBottom = UDim.new(0, 12),
-			}),
-		}
-		for index, card in VM.skins(owns, balances, filter) do
-			grid[card.id] = offerCard(card, cell, phone, index, open)
-		end
-		local chipHeight = if phone then 40 else 64
-		body = group({
-			chips = e("Frame", { Size = UDim2.new(1, 0, 0, chipHeight), BackgroundTransparency = 1 }, chips),
-			grid = e("ScrollingFrame", {
-				Position = UDim2.fromOffset(0, chipHeight + 4),
-				Size = UDim2.new(1, 0, 1, -chipHeight - 4),
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				CanvasSize = UDim2.fromOffset(0, 0),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y,
-				ScrollBarThickness = 6,
-			}, grid),
-		})
-	elseif tab == "hires" then
-		local columns = if phone then 3 else 4
-		local cellWidth = math.floor((content.width - (columns - 1) * gap - 32) / columns)
-		local cell = Vector2.new(cellWidth, math.floor(cellWidth * 1.3))
-		local grid: Nodes = {
-			layout = e("UIGridLayout", {
-				CellSize = UDim2.fromOffset(cell.X, cell.Y),
-				CellPadding = UDim2.fromOffset(gap, gap + 6),
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			}),
-			pad = e("UIPadding", {
-				PaddingLeft = UDim.new(0, 12),
-				PaddingRight = UDim.new(0, 8),
-				PaddingTop = UDim.new(0, 16),
-				PaddingBottom = UDim.new(0, 12),
-			}),
-		}
-		for index, card in VM.hires(owns, balances) do
-			grid[card.id] = offerCard(card, cell, phone, index, open)
-		end
-		local headingSize = math.floor(layout.headingSize * 0.75)
-		body = group({
-			heading = heading("HIRE A NEW EMPLOYEE", headingSize, UDim2.fromOffset(0, 0), 700),
-			grid = e("ScrollingFrame", {
-				Position = UDim2.fromOffset(0, headingSize + 14),
-				Size = UDim2.new(1, 0, 1, -headingSize - 14),
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				CanvasSize = UDim2.fromOffset(0, 0),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y,
-				ScrollBarThickness = 6,
-			}, grid),
-		})
-	elseif tab == "lockers" then
-		local gloom = if preview ~= nil then preview.credits else CurrencyUtils.getCurrencyAmount(currency, "gloom")
-		body = e(LockerPanel, {
-			owns = owns,
-			balances = { gloom = gloom, gleam = balances.gleam, acorns = balances.acorns },
-			layout = layout,
-			preview = preview ~= nil,
-			live = if liveEvent ~= nil then liveEvent.id else nil,
-			onGetGleam = function()
-				setTab("gleam")
-				if preview == nil then
-					ShopStore.setReturn(VM.lockerReturn(balances.gleam))
-				end
-			end,
-		})
-	elseif tab == "passes" then
-		body = e(ShopPassesPanel, {
-			cards = VM.passes(passKeys, passInfo, ownsPass),
-			width = content.width,
-			height = content.height,
-			headingSize = layout.headingSize,
-			textSize = size,
-			phone = phone,
-			onBuy = buyPass,
-		})
-	elseif tab == "gleam" then
-		local note = e(ToonText, {
-			text = if returnTo ~= nil
-				then VM.returnNote(returnTo, balances.gleam)
-				else "Gleam buys skins, emotes and stickers. Everything is cosmetic: it never makes you stronger.",
-			font = if returnTo ~= nil then "display" else "body",
-			color = COLOR.white,
-			textSize = size,
-			position = UDim2.fromOffset(0, 0),
-			size = UDim2.new(1, 0, 0, size * 2 + 6),
-			wrapped = true,
-			fit = true,
-		})
-		local backButton: React.ReactNode = nil
-		if returnTo ~= nil then
-			local back = returnTo
-			backButton = e(ToonButton, {
-				variant = "secondary",
-				text = `Back to {back.name}`,
-				textSize = if phone then 14 else 24,
-				small = true,
-				anchor = Vector2.new(1, 0),
-				position = UDim2.fromScale(1, 0),
-				size = UDim2.fromOffset(if phone then 190 else 360, if phone then 32 else 54),
-				onActivated = function()
-					-- Back without buying: the page, but no question.
-					setTab(back.tab)
-					ShopStore.goBack()
-					ShopStore.asked()
-				end,
-			})
-		end
-		-- The cards fill the page below the note, short of its bottom edge.
-		local ladderHeight =
-			math.floor(content.height - (layout.headingSize + size * 2 + 40) - (if phone then 6 else 24))
-		body = group({
-			heading = heading("GET GLEAM", layout.headingSize, UDim2.fromOffset(0, 0), 600),
-			back = backButton,
-			note = e("Frame", {
-				Position = UDim2.fromOffset(0, layout.headingSize + 12),
-				Size = UDim2.new(1, 0, 0, size * 2 + 6),
-				BackgroundTransparency = 1,
-			}, { note = note }),
-			row = e("Frame", {
-				Position = UDim2.fromOffset(0, layout.headingSize + size * 2 + 40),
-				Size = UDim2.new(1, 0, 0, ladderHeight),
-				BackgroundTransparency = 1,
-			}, {
-				ladder = bundleLadder(content.width, ladderHeight, phone, gap + 10, bundles, buyBundle),
-			}),
-		})
-	else
-		-- Featured: the banner, Today's picks, the Gleam row.
-		local live = ShopRotationUtils.live(ShopRegistry.all(), now)
-		local bannerWidth = math.floor(content.width * 0.47)
-		-- On a phone the Gleam row is left to the Gleam tab: the banner and the picks take the whole height.
-		local topHeight = if phone then content.height else math.floor(content.height * 0.64)
-		local nodes: Nodes = {}
-		local dealIds: { DealConstants.DealId } = if preview ~= nil then {} else DealRules.offeredList(deals, owns)
-		local slides = CarouselVM.slides(dealIds, live)
-		local spot = CarouselVM.at(slot, #slides)
-		local slide = slides[spot]
-		-- The item a featured slide shows (today's banner or another from the featured pool).
-		local noOffer: typeof(live.featured) = nil
-		local shown = noOffer
-		local today = false
-		if slide ~= nil and slide.kind == "today" then
-			shown, today = slide.offer, true
-		elseif slide ~= nil and slide.kind == "more" then
-			shown = slide.offer
-		end
-		local onNext = if #slides > 1
-			then function()
-				pickSlide(spot + 1)
-			end
-			else nil
-		if slide ~= nil and slide.kind == "deal" then
-			local dealId = slide.deal
-			nodes.banner = e(DealBanner, {
-				banner = DealViewModel.banner(dealId, DealServiceClient:productReady(dealId), dealPrices[dealId]),
+			modal = ShopConfirmDialog({
+				product = product,
+				offer = offer,
+				owns = owns,
+				balances = balances,
+				preview = preview,
+				size = size,
 				phone = phone,
-				textSize = size,
-				headingSize = layout.headingSize,
-				size = UDim2.fromOffset(bannerWidth, topHeight),
-				onBuy = function()
-					DealServiceClient:buy(dealId, nil)
-				end,
-				onNext = onNext,
-			})
-		elseif shown ~= nil then
-			local product = VM.product(shown, owns, balances)
-			local card = product.card
-			local nameSize = CarouselVM.nameSize(
-				math.floor(layout.headingSize * (if phone then 1 else 1.4)),
-				string.upper(card.name),
-				bannerWidth * 0.55
-			)
-			local priced: Nodes = {
-				price = e(ToonPrice, {
-					currency = card.currency,
-					amount = card.price,
-					was = card.was,
-					inline = true,
-					textSize = if phone then 20 else 44,
-					meaning = "white",
-					align = "center",
-					size = UDim2.new(1, 0, 1, -DEPTH.lip),
-				}),
-			}
-			local bannerFace: Nodes = {
-				hero = e("Frame", {
-					AnchorPoint = Vector2.new(1, 1),
-					Position = UDim2.fromScale(1, 1),
-					Size = UDim2.fromScale(0.55, 1.1),
-					BackgroundTransparency = 1,
-					ZIndex = 2,
-				}, { model = art(card) }),
-				ribbon = e(ToonFlag, {
-					text = if today then "Today's banner" else "Featured",
-					hue = "mint",
-					tilt = -5,
-					textSize = if phone then 13 else 24,
-					position = UDim2.fromOffset(if phone then 12 else 28, if phone then 10 else 26),
-					size = UDim2.fromOffset(if phone then 140 else 260, if phone then 26 else 44),
-					zIndex = 4,
-				}),
-				name = e(ToonText, {
-					text = string.upper(card.name),
-					textSize = nameSize,
-					position = UDim2.fromOffset(if phone then 12 else 28, if phone then 40 else 84),
-					size = UDim2.new(0.55, 0, 0, nameSize + 8),
-					fit = true,
-					zIndex = 4,
-				}),
-				line = e(ToonText, {
-					text = card.line,
-					font = "body",
-					color = COLOR.ink,
-					textSize = size,
-					position = UDim2.fromOffset(if phone then 12 else 28, (if phone then 40 else 84) + nameSize + 10),
-					size = UDim2.new(0.5, 0, 0, size + 4),
-					fit = true,
-					zIndex = 4,
-				}),
-				buy = e(ToonButton, {
-					variant = if product.button.kind == "owned" then "secondary" else "primary",
-					text = if product.button.kind == "owned" then "Owned" else nil,
-					content = if product.button.kind == "owned" then nil else priced,
-					textSize = if phone then 18 else 32,
-					disabled = product.button.kind == "owned",
-					anchor = Vector2.new(0, 1),
-					position = UDim2.new(0, if phone then 12 else 28, 1, -(if phone then 40 else 84)),
-					size = UDim2.new(0.46, 0, 0, if phone then 44 else 90),
-					onActivated = function()
-						open(shown.id)
-					end,
-					zIndex = 4,
-				}),
-				next = if onNext ~= nil
-					then e(ToonButton, {
-						variant = "night",
-						text = "Next",
-						textSize = if phone then 13 else 22,
-						small = true,
-						anchor = Vector2.new(1, 0),
-						position = UDim2.new(1, if phone then -12 else -28, 0, if phone then 10 else 24),
-						size = UDim2.fromOffset(if phone then 64 else 110, if phone then 28 else 46),
-						onActivated = onNext,
-						zIndex = 6,
-					})
-					else nil,
-				-- A real discount shows its "-xx%" like the offer cards (a bundle's 30%, a sale), on the buy button's
-				-- top-left corner, clear of the item art on the right.
-				off = if card.off ~= nil and product.button.kind ~= "owned"
-					then e(ToonBurst, {
-						text = card.off,
-						hue = "coral",
-						size = if phone then 40 else 68,
-						anchor = Vector2.new(0.5, 0.5),
-						position = UDim2.new(
-							0,
-							(if phone then 12 else 28) + 6,
-							1,
-							-((if phone then 40 else 84) + (if phone then 44 else 90)) + 6
-						),
-						zIndex = 7,
-					})
-					else nil,
-				timer = if today
-					then e(ToonPill, {
-						text = `Changes in {VM.timer(live.nextRotation - now)}`,
-						hue = "night",
-						textSize = size - 4,
-						anchor = Vector2.new(0, 1),
-						position = UDim2.new(0, if phone then 12 else 28, 1, -(if phone then 10 else 24)),
-						size = UDim2.fromOffset(if phone then 150 else 260, if phone then 24 else 44),
-						zIndex = 4,
-					})
-					else nil,
-			}
-			nodes.banner = e("Frame", {
-				Size = UDim2.fromOffset(bannerWidth, topHeight),
-				BackgroundTransparency = 1,
-			}, {
-				glow = e(ToonSurface, {
-					hue = "gold",
-					radius = 32,
-					pattern = "rings",
-					size = UDim2.new(1, 0, 1, -DEPTH.drop),
-					children = bannerFace,
-				}),
+				asked = asked,
+				setConfirming = setConfirming,
+				setBuying = setBuying,
 			})
 		end
-		-- The carousel's dots: one per slide (the current one gold), tap to jump. They sit in the text column under the
-		-- item's line, never over its art (owner: nothing covers an item preview).
-		if #slides > 1 then
-			local hit = if phone then 24 else 36
-			local dot = if phone then 12 else 16
-			local dots: Nodes = {
-				layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				}),
-			}
-			for index = 1, #slides do
-				dots[`dot{index}`] = e("TextButton", {
-					Text = "",
-					AutoButtonColor = false,
-					BackgroundTransparency = 1,
-					Size = UDim2.fromOffset(hit, hit),
-					LayoutOrder = index,
-					[React.Event.Activated] = function()
-						pickSlide(index)
-					end,
-				}, {
-					dot = e("Frame", {
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						Position = UDim2.fromScale(0.5, 0.5),
-						Size = UDim2.fromOffset(dot, dot),
-						-- The current dot is ink: gold vanished on the gold banner (play-check 2026-11-14).
-						BackgroundColor3 = if index == spot then COLOR.ink else COLOR.white,
-						BorderSizePixel = 0,
-					}, {
-						corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-						stroke = e("UIStroke", { Color = COLOR.ink, Thickness = if phone then 2 else 3 }),
-					}),
-				})
-			end
-			local nameSize = math.floor(layout.headingSize * (if phone then 1 else 1.4))
-			local pad = if phone then 12 else 28
-			nodes.dots = e("Frame", {
-				Position = UDim2.fromOffset(pad - (hit - dot) / 2, (if phone then 40 else 84) + nameSize + size + 28),
-				Size = UDim2.fromOffset(hit * #slides, hit),
-				BackgroundTransparency = 1,
-				ZIndex = 8,
-			}, dots)
-		end
-		-- Today's picks: 3 x 2.
-		local picksX = bannerWidth + gap + 10
-		local picksWidth = content.width - picksX
-		local headingSize = math.floor(layout.headingSize * 0.75)
-		-- Desktop: a 3 x 2 grid. Phone: one row of bigger cards that scrolls sideways.
-		-- PICK_PAD keeps the rarity flags (they stick out over the cards' top-left corners) inside the list.
-		local cellHeight = if phone
-			then topHeight - headingSize - 30 - PICK_PAD
-			else math.floor((topHeight - headingSize - 20 - gap - PICK_PAD) / 2)
-		local cellWidth = if phone
-			then math.floor(cellHeight * 0.8)
-			else math.floor((picksWidth - 2 * gap - PICK_PAD) / 3)
-		local grid: Nodes = {
-			pad = e("UIPadding", {
-				PaddingLeft = UDim.new(0, PICK_PAD),
-				PaddingTop = UDim.new(0, PICK_PAD),
-			}),
-			layout = if phone
-				then e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					Padding = UDim.new(0, gap),
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				})
-				else e("UIGridLayout", {
-					CellSize = UDim2.fromOffset(cellWidth, cellHeight),
-					CellPadding = UDim2.fromOffset(gap, gap),
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				}),
-		}
-		for index, pick in live.picks do
-			grid[pick.id] =
-				offerCard(VM.card(pick, owns, balances), Vector2.new(cellWidth, cellHeight), phone, index, open)
-		end
-		nodes.picksHeading =
-			heading("TODAY'S PICKS", headingSize, UDim2.fromOffset(picksX, 0), math.floor(picksWidth * 0.55))
-		nodes.picksTimer = e(ToonPill, {
-			text = `New in {VM.timer(live.nextRotation - now)}`,
-			hue = "night",
-			textSize = size - 4,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, 0, 0, 4),
-			size = UDim2.fromOffset(if phone then 130 else 240, if phone then 24 else 44),
+	else
+		body = ShopTabBody({
+			tab = tab,
+			setTab = setTab,
+			preview = preview,
+			liveEvent = liveEvent,
+			now = now,
+			owns = owns,
+			balances = balances,
+			keyResult = keyResult,
+			layout = layout,
+			phone = phone,
+			open = open,
+			filter = filter,
+			setFilter = setFilter,
+			currency = currency,
+			passKeys = passKeys,
+			passInfo = passInfo,
+			ownsPass = ownsPass,
+			buyPass = buyPass,
+			returnTo = returnTo,
+			bundles = bundles,
+			buyBundle = buyBundle,
+			deals = deals,
+			dealPrices = dealPrices,
+			slot = slot,
+			pickSlide = pickSlide,
 		})
-		nodes.picks = e("ScrollingFrame", {
-			Position = UDim2.fromOffset(picksX, headingSize + 20),
-			Size = UDim2.fromOffset(picksWidth, topHeight - headingSize - 20),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			CanvasSize = UDim2.fromOffset(0, 0),
-			AutomaticCanvasSize = if phone then Enum.AutomaticSize.X else Enum.AutomaticSize.None,
-			ScrollingDirection = Enum.ScrollingDirection.X,
-			ScrollBarThickness = if phone then 4 else 0,
-		}, grid)
-		-- The Gleam row along the bottom (desktop).
-		if not phone then
-			local rowY = topHeight + gap + 6
-			nodes.gleamHeading = heading("GET GLEAM", headingSize, UDim2.fromOffset(0, rowY), 400)
-			nodes.gleam = e("Frame", {
-				Position = UDim2.fromOffset(0, rowY + headingSize + 14),
-				Size = UDim2.new(1, 0, 1, -rowY - headingSize - 14),
-				BackgroundTransparency = 1,
-			}, {
-				row = bundleRow(
-					content.width,
-					content.height - rowY - headingSize - 14,
-					phone,
-					gap + 10,
-					VM.featuredBundles(bundles),
-					buyBundle
-				),
-			})
-		end
-		body = group(nodes)
 	end
 
 	local screen: Nodes = {
