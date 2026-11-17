@@ -210,6 +210,22 @@ return function()
 			expect(CurrencyService:getCurrencyAmount(1, "gloom")).to.equal(second.refund)
 		end)
 
+		it(
+			"a restricted player still opens the Gloom Locker paying Gloom (earned only, not a paid random item)",
+			function()
+				restricted = true
+				seed(1, LockerConstants.LOCKERS.gloom.keyPrice, 500)
+				local outcome, reason = LockerService:open(player, "gloom")
+				expect(reason).to.equal(nil)
+				expect(outcome ~= nil).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "gloom")).to.equal(0)
+				expect(CosmeticService:owns(1, outcome.item)).to.equal(true)
+				-- ...but never the Gleam Locker, even with Gleam to spare.
+				clock += 2
+				expect(select(2, LockerService:open(player, "gleam"))).to.equal("restricted")
+			end
+		)
+
 		it("refuses in a shift, when restricted on a paid Locker, on an empty pool, or when short", function()
 			seed(1, 200, 500)
 			locked = true
@@ -241,6 +257,15 @@ return function()
 				expect(outcome ~= nil).to.equal(true)
 				expect(CurrencyService:getCurrencyAmount(1, "acorns")).to.equal(0)
 				expect(CosmeticService:owns(1, outcome.item)).to.equal(true)
+			end)
+
+			it("a restricted player still opens the event's Locker with acorns (earned only)", function()
+				liveEvent = "harvest"
+				restricted = true
+				seed(1, 0, 0, {}, {}, HARVEST.keyPrice)
+				local outcome, reason = LockerService:open(player, "harvest")
+				expect(reason).to.equal(nil)
+				expect(outcome ~= nil).to.equal(true)
 			end)
 
 			it("refuses the event's Locker when the event is not live", function()
