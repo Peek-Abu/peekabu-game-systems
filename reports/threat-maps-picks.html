@@ -1,0 +1,239 @@
+<title>More Scary, Less Maze</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: one narrow reading column; a "today" fact strip, then idea cards grouped NOW / AFTER LAUNCH, each with yes/no/later. */
+:root {
+  --bg: #f4f2f8;
+  --card: #ffffff;
+  --ink: #241f33;
+  --muted: #645d78;
+  --line: #ddd8e8;
+  --gloom: #6b3fa0;
+  --gleam: #1f8a78;
+  --warn: #b5541c;
+  --chip: #ece6f6;
+  --yes: #1f8a78;
+  --no: #b03a48;
+  --later: #8a6d1f;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17141f; --card: #221d2e; --ink: #ece8f5; --muted: #a79fbd; --line: #362f47;
+  --gloom: #b48ae8; --gleam: #4fc9b3; --warn: #e89a62; --chip: #2e2640;
+  --yes: #4fc9b3; --no: #e67b88; --later: #d9b85a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #17141f; --card: #221d2e; --ink: #ece8f5; --muted: #a79fbd; --line: #362f47;
+  --gloom: #b48ae8; --gleam: #4fc9b3; --warn: #e89a62; --chip: #2e2640;
+  --yes: #4fc9b3; --no: #e67b88; --later: #d9b85a; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 2rem; line-height: 1.15; }
+h2 { font-size: 1.35rem; color: var(--gloom); }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 62ch; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.fact { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 4px; }
+.fact b { font-family: var(--display); font-size: 1.5rem; font-weight: 600; color: var(--warn); font-variant-numeric: tabular-nums; }
+.fact span { color: var(--muted); font-size: .92rem; }
+section { display: grid; gap: 14px; }
+.when { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+.card[data-pick="yes"] { border-color: var(--yes); }
+.card[data-pick="no"] { border-color: var(--no); opacity: .8; }
+.card[data-pick="later"] { border-color: var(--later); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: .82rem; font-weight: 600; }
+.rec { font-size: .95rem; }
+.rec b { color: var(--gleam); }
+.picks { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.picks button { font: 600 .95rem var(--body); border: 2px solid var(--line); background: transparent; color: var(--ink); border-radius: 8px; padding: 6px 16px; cursor: pointer; }
+.picks button:focus-visible { outline: 3px solid var(--gloom); outline-offset: 2px; }
+.picks button[data-v="yes"][aria-pressed="true"] { background: var(--yes); border-color: var(--yes); color: var(--card); }
+.picks button[data-v="no"][aria-pressed="true"] { background: var(--no); border-color: var(--no); color: var(--card); }
+.picks button[data-v="later"][aria-pressed="true"] { background: var(--later); border-color: var(--later); color: var(--card); }
+.status { font-size: .82rem; color: var(--muted); }
+textarea { width: 100%; box-sizing: border-box; min-height: 2.6em; font: .95rem var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; resize: vertical; }
+.note { background: var(--chip); border-radius: 10px; padding: 12px 14px; font-size: .95rem; }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>More Scary, Less Maze</h1>
+    <p class="lede">You said cleaning feels too easy, the manager shows up too little, and the buildings feel like a twisty box. I measured the game. Here is what I found and what we can change. Pick <b>Yes</b>, <b>No</b> or <b>Later</b> on each idea. Your picks save by themselves.</p>
+  </header>
+
+  <section>
+    <h2>New plan, after your picks (17 Nov)</h2>
+    <p>You said yes to 3 ideas: the Gloom level, a second monster, and Floors mode (ideas first). Your notes also gave me 2 new ideas: <b>slow everyone down, with a bigger sprint gap</b>, and <b>more skill: see him and plan your way around him</b>. Here is the plan at our real speed. Each batch is small, so you can play-check it on its own.</p>
+    <div class="facts">
+      <div class="fact"><b>Batch 1 · Wed</b><span><b>Gloom level drops.</b> The map card and the landing show 1 or 2 Gloom drops for that map. No new rules. Check: 5 minutes.</span></div>
+      <div class="fact"><b>Batch 2 · Wed–Thu</b><span><b>Slower game, real escapes</b> (card below). One number file. Check: 2 shifts, one with a second player.</span></div>
+      <div class="fact"><b>Batch 3 · Thu–Sat</b><span><b>Second monster</b> joins at 4:30. Two sessions build it side by side. Check: 2 full shifts on each map.</span></div>
+      <div class="fact"><b>Batch 4 · Thu–Fri</b><span><b>Skill check while cleaning</b>, only if you say yes below. Built at the same time as batch 3.</span></div>
+      <div class="fact"><b>Floors mode</b><span>Idea page on Wed for you to pick from. Building it comes after launch (see below).</span></div>
+    </div>
+    <div class="note">
+      <p><b>What can make launch (lock: Sun 22 Nov):</b> batches 1, 2 and 4, for sure. Batch 3 can make it, but it is the risky one. Today the game is built for exactly one monster. About 20 parts assume that: the heartbeat, chase music, catching, hiding, and the lights. So we build it with an off switch. If your Saturday check finds bugs, it stays off for launch and ships in the first update.</p>
+      <p style="margin-top:8px"><b>Floors mode, honestly:</b> even at our speed, a good version is about 4–6 days. That means a new run flow, bigger contracts per floor, a lives screen, and new pay numbers. Rushing it into the last 5 days risks the whole launch. I'd make it the first update and pick the ideas this week, so building starts the day after launch.</p>
+      <p style="margin-top:8px"><b>Your map question (\"maze, or the opposite?\").</b> You're right, it's the opposite. Every room hangs one step off a loop of halls, so you are never far from a loop. Nothing is deep, and you never have to choose \"do I risk the far wing?\". Lethal Company is hallway-heavy too. What it has that we don't is <i>deep branches</i>: long wings where the good stuff sits at the end, and getting back out is the scary part. So keep our halls. They are our look, not Dandy's World's. After launch, add 1–2 deep wings per building (card below).</p>
+    </div>
+    <div id="plan"></div>
+  </section>
+
+  <section>
+    <h2>What the game does today</h2>
+    <div class="facts">
+      <div class="fact"><b>1 monster</b><span>The whole shift. No new monster ever comes, and more players do not add one.</span></div>
+      <div class="fact"><b>+1 speed</b><span>He only gets faster twice, at 2:00 and 4:00, by a tiny bit (chase 20 → 21).</span></div>
+      <div class="fact"><b>Lots of resting</b><span>He sits at a desk for 10–22 s every 35–70 s. When he gets mad he walks away for 30–60 s.</span></div>
+      <div class="fact"><b>56% hallway</b><span>Over half the floor is hallway. Every room has only one door, so every room is a dead end.</span></div>
+      <div class="fact"><b>~24 studs</b><span>How far you can usually see in a hall. He can see you from 125 away, so he spots you first.</span></div>
+      <div class="fact"><b>12–18 studs</b><span>The head start a full sprint gives you over him. Chases end fast.</span></div>
+      <div class="fact"><b>Same box</b><span>Every building is the same 4 × 3 grid. The far room is 323–335 studs away in 3 of 4 builds.</span></div>
+      <div class="fact"><b>13 s walk</b><span>Outside is safe and pretty, with 7 small spooky surprises, but nothing changes your shift.</span></div>
+    </div>
+    <p class="note">What other games do: Lethal Company sends in more monsters as the day goes on and rolls weather when you land. Dandy's World starts each run with 2 monsters and adds more each floor, up to 8, with quiet early floors. Both keep calm moments between scary ones, so the scary parts hit harder.</p>
+  </section>
+
+  <section>
+    <p class="when">Small changes · can be ready before content lock (Sun 22 Nov)</p>
+    <div id="now"></div>
+  </section>
+
+  <section>
+    <p class="when">Big changes · first update after launch</p>
+    <div id="later"></div>
+  </section>
+
+  <p class="status" id="dbstatus">Loading your picks…</p>
+</div>
+
+<script>
+const IDEAS = [
+  { id: "n1-gloom-levels", group: "plan", title: "Gloom level: Office 1 drop, School 2 drops?",
+    text: "Each map always shows the same level, because School's monster (Bramble) is faster and meaner. It shows on the map card in the depot and as a big sign when you land. Yes = these levels. No = tell me other ones in the note.",
+    effort: "Half a day (batch 1)", rec: "<b>Yes.</b>" },
+  { id: "n2-slower-game", group: "plan", title: "Slower game, real escapes",
+    text: "Everyone moves slower: walk 16 → 14, sprint 23 → 22, Harlow's chase 20–21 → 17–18, his stroll 10 → 9 (Bramble slowed the same way). Stamina still lasts 6 s, but refills in 12 s instead of 3.5 s. A full sprint now gets you about 30 studs away instead of 12–18, enough to really escape. But you get one good escape, then you must hide.",
+    effort: "Half a day + your feel check (batch 2)", rec: "<b>Yes.</b> Risk: shifts feel longer when walking is slower, so I'll also check that the contract can still be met in time." },
+  { id: "n3-second-monster-who", group: "plan", title: "Second monster for launch: the other map's monster?",
+    text: "At 4:30, Bramble joins Harlow in the Office, and Harlow joins Bramble in the School. Both already exist, so no new art is needed. New monsters (Safety Sam, the Lookalike) come in later updates. Yes = use the other map's monster. No = wait for a new one (after launch).",
+    effort: "2–3 days (batch 3)", rec: "<b>Yes.</b> It's the only way a second monster makes launch." },
+  { id: "n4-skill-check", group: "plan", title: "Skill check while cleaning",
+    text: "While you vacuum a big mess, a quick timing ring pops up now and then. Hit it and nothing happens. Miss it and the vacuum makes a loud clunk the monster can hear. Cleaning becomes a skill, and you choose when to clean (not while he's close).",
+    effort: "1–2 days (batch 4)", rec: "<b>Yes.</b> This is the Dandy's World skill idea you liked, done our way." },
+  { id: "n5-deep-wings", group: "plan", title: "Deep wings (after launch)",
+    text: "1–2 long branches per building, with the dirtiest, best-paying rooms at the far end. Going in is a choice, and getting out is the scary part.",
+    effort: "3–4 days", rec: "<b>Later.</b> This is the map change I'd make for our game." },
+  { id: "t1-busier-manager", group: "now", title: "The manager walks around faster and sits less",
+    text: "He walks at 12 instead of 10, and still gets a little faster at 2:00 and 4:00. After 4:00 he stops taking desk breaks.",
+    effort: "Half a day", rec: "<b>Yes.</b> This is the cheapest way to make him show up more. You play-check it before content lock." },
+  { id: "t2-shorter-rests", group: "now", title: "Shorter rests after he gets mad",
+    text: "When he gets mad, he walks away for 15–30 s instead of 30–60 s, so the calm part is shorter.",
+    effort: "An hour", rec: "<b>Yes.</b> You still get calm moments, just shorter ones." },
+  { id: "t3-comes-looking", group: "now", title: "He comes looking for the crew more often",
+    text: "He heads toward the crew every 18 s instead of every 28 s (solo: 26 s instead of 36 s).",
+    effort: "An hour", rec: "<b>Yes.</b> Pair it with the warning below, so it feels fair." },
+  { id: "t4-third-step", group: "now", title: "A third scary step at 6:00",
+    text: "At 6:00 the lights flicker again and he gets faster and hears better. The end of the shift is the scariest part.",
+    effort: "Half a day", rec: "<b>Yes.</b> This is the \"more threat over time\" feel, without adding a new monster yet." },
+  { id: "t5-warning", group: "now", title: "A warning when he heads your way",
+    text: "When he turns toward your crew, you hear a far-off door slam or the lights near you flicker once.",
+    effort: "Half a day", rec: "<b>Yes.</b> More threat feels fair only if you can hear it coming." },
+  { id: "m1-wide-halls", group: "now", title: "No more thin halls",
+    text: "Every hall is the wide 14-stud size. Today about 1 in 3 halls is a thin 10-stud one.",
+    effort: "An hour + a play-check", rec: "<b>Yes.</b> This makes the building feel less cramped and is very safe to change." },
+  { id: "o1-shift-report", group: "now", title: "A shift report when you land",
+    text: "A sign at the truck shows the Gloom level for this shift: 1, 2 or 3. A higher level means more dark rooms and an angrier manager sooner, but more pay.",
+    effort: "About 1 day", rec: "<b>Maybe.</b> It fits, but it is tight. I would build it right after launch, together with weather." },
+
+  { id: "s1-second-monster", group: "later", title: "A second monster joins partway through the shift",
+    text: "Around 5:00 a second monster shows up (Bramble in the Office, or a new one from your monster list). Calm start, busy end.",
+    effort: "3–5 days", rec: "<b>After launch.</b> Two monsters at once touches catching, music and hiding. That is too risky to add in 5 days." },
+  { id: "s2-floors-mode", group: "later", title: "Floors mode as the main way to play",
+    text: "You go down floor after floor in one run. Floor 1 is calm. Each floor is harder, with a bigger contract, the manager angry sooner, and more monsters later on. The run ends when you miss a contract or everyone runs out of lives.",
+    effort: "1–2 weeks", rec: "<b>After launch, as the first big update.</b> It fixes \"early floors are boring\" by making that the point." },
+  { id: "o2-weather", group: "later", title: "Weather that changes the shift",
+    text: "Rolled when you land. <b>Fog:</b> you and the manager both see less. <b>Blackout:</b> most rooms are dark. <b>Storm:</b> rain hides your footsteps but also his.",
+    effort: "3–4 days", rec: "<b>After launch, with Floors mode.</b> Each floor rolls its own weather." },
+  { id: "g1-two-doors", group: "later", title: "Rooms with two doors",
+    text: "Big rooms get a second door into another hall or into the next room. That makes fewer dead ends and gives you ways to escape and loop around.",
+    effort: "4–6 days", rec: "<b>After launch.</b> This is the biggest fix for the maze feel." },
+  { id: "g2-open-rooms", group: "later", title: "Big open rooms with long views",
+    text: "Some grid squares join into one big open office or atrium, so you can see him coming from far away.",
+    effort: "4–6 days + art", rec: "<b>After launch.</b> This fixes \"he is already close by the time I see him\"." },
+  { id: "g3-shapes-depth", group: "later", title: "Different building shapes, deeper buildings",
+    text: "Long, L-shaped and wide buildings instead of one box. The farthest room is 450–600 studs from the start, instead of about 340.",
+    effort: "1 week", rec: "<b>After launch.</b> This needs the cleaning and pay numbers re-tuned at the same time." },
+  { id: "g4-landmarks", group: "later", title: "Signs and colours so you know where you are",
+    text: "Each part of the building gets its own colour stripe and wall signs, so you stop feeling like you are going in circles.",
+    effort: "2–3 days", rec: "<b>After launch,</b> unless you want it sooner. It helps a lot for little cost." },
+  { id: "g5-under-building", group: "later", title: "Teleport to under the building",
+    text: "Good news: the inside is already its own space, 1,600 studs away from the outside, so it can get as big as we like without moving it. Moving it under the building would only matter if we want to see the outside from inside, and we chose closed windows. Do you still want it moved?",
+    effort: "1 day", rec: "<b>No need.</b> Bigger buildings work without it." },
+];
+
+const picks = {};
+let db = null;
+
+function card(idea) {
+  const el = document.createElement("article");
+  el.className = "card"; el.id = idea.id;
+  el.innerHTML = `
+    <h3>${idea.title}</h3>
+    <p>${idea.text}</p>
+    <div class="meta"><span class="chip">Work: ${idea.effort}</span></div>
+    <p class="rec">My pick: ${idea.rec}</p>
+    <div class="picks" role="group" aria-label="Your pick">
+      <button type="button" data-v="yes" aria-pressed="false">Yes</button>
+      <button type="button" data-v="no" aria-pressed="false">No</button>
+      <button type="button" data-v="later" aria-pressed="false">Later</button>
+      <span class="status" data-role="saved"></span>
+    </div>
+    <textarea id="note-${idea.id}" placeholder="Anything to add? (optional)" aria-label="Note for ${idea.title}"></textarea>`;
+  el.querySelectorAll("button").forEach(b => b.addEventListener("click", () => save(idea.id, { pick: b.dataset.v })));
+  const ta = el.querySelector("textarea");
+  ta.addEventListener("change", () => save(idea.id, { note: ta.value }));
+  return el;
+}
+
+function paint(id) {
+  const el = document.getElementById(id); const p = picks[id] || {};
+  el.dataset.pick = p.pick || "";
+  el.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === p.pick)));
+  const ta = el.querySelector("textarea");
+  if (document.activeElement !== ta && typeof p.note === "string") ta.value = p.note;
+}
+
+async function save(id, patch) {
+  picks[id] = Object.assign({}, picks[id], patch); paint(id);
+  const s = document.getElementById(id).querySelector('[data-role="saved"]');
+  if (!db) { s.textContent = "Not saved: picks can't be stored here."; return; }
+  s.textContent = "Saving…";
+  try {
+    await db.doc("picks/" + id).set(Object.assign({ title: IDEAS.find(i => i.id === id).title, at: new Date().toISOString() }, picks[id]));
+    s.textContent = "Saved";
+  } catch (e) { s.textContent = "Not saved: you may only have view access."; }
+}
+
+IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
+["plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+
+(async () => {
+  const status = document.getElementById("dbstatus");
+  const timer = setTimeout(() => { status.textContent = "Picks are taking a while to load."; }, 10000);
+  try { db = await window.claude?.use?.("db"); } catch (e) { db = null; }
+  if (!db) { clearTimeout(timer); status.textContent = "Picks can't be saved in this view."; return; }
+  db.collection("picks").onSnapshot(snap => {
+    clearTimeout(timer);
+    snap.docs.forEach(d => { const v = d.data() || {}; picks[d.id] = { pick: v.pick, note: v.note }; if (document.getElementById(d.id)) paint(d.id); });
+    const n = Object.values(picks).filter(p => p.pick).length;
+    status.textContent = `${n} of ${IDEAS.length} picked.`;
+  }, () => { clearTimeout(timer); status.textContent = "Couldn't load picks. Try reopening the page."; });
+})();
+</script>
