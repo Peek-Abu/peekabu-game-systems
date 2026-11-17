@@ -1,0 +1,104 @@
+{
+ "params": {
+  "LZ": 1.74,
+  "RZ": 1.68,
+  "HY": -0.6,
+  "LX": -0.1,
+  "RX": 0.1,
+  "W_BODY": 60.0,
+  "W_OUT": 8.0,
+  "W_TGT": 0.0,
+  "W_REG": 0.0,
+  "W_ORDER": 20.0,
+  "ITERS": 900,
+  "W_HAND": 600.0,
+  "W_WRIST": 1.0,
+  "LY": 0.0,
+  "RY": 0.0,
+  "HEAD_GAP": 0.09,
+  "W_HEADGAP": 1500.0,
+  "LFZ": 0.0,
+  "W_LFZ": 0.0,
+  "LH_ELEV": -99.0,
+  "W_ELEV": 0.0,
+  "HAND_MARGIN": 0.0,
+  "CROSS_X": 0.1,
+  "W_CROSS": 200.0,
+  "CONTACT": 0.02,
+  "W_CONTACT": 300.0,
+  "ELB_MIN": 80.0,
+  "W_ELB": 20.0,
+  "ELB_OUT": 0.55,
+  "W_ELBOUT": 100.0
+ },
+ "x": [
+  0.24751372053937468,
+  0.32649983306416724,
+  -0.08394084343464277,
+  -0.18122081861787007,
+  -0.29879655419641904,
+  -0.2587765039738039,
+  -0.3658989244641509,
+  0.8510429995776106,
+  -0.22080094075301052,
+  0.12371034630011468,
+  -0.11027537862340663,
+  0.5769173088918804,
+  -0.5733053367082528,
+  0.2882545562476715,
+  0.494535428481631,
+  -0.13702964775804582,
+  -0.551099160868739,
+  0.5812662641312398
+ ],
+ "cost": 6.8267907126967655,
+ "frame0": {
+  "lhand_to_right_arm": -0.007,
+  "lhand_x": -0.1,
+  "rhand_x": 0.07,
+  "head_gap_by_part": {
+   "LeftLowerArm": 0.076,
+   "LeftHand": 0.082,
+   "RightLowerArm": 0.291,
+   "RightHand": 0.426,
+   "LeftUpperArm": 0.017,
+   "RightUpperArm": 0.032
+  },
+  "head_gap_min": 0.017,
+  "lhand_elev": 1.5,
+  "body_pts": 2,
+  "body_depth": 0.006,
+  "outfit_pts": 196,
+  "hand_pts": 18,
+  "hand_depth": 0.024,
+  "hand_L": [
+   -0.1,
+   -0.78,
+   1.97
+  ],
+  "hand_R": [
+   0.07,
+   -0.6,
+   1.47
+  ],
+  "fore_L": [
+   0.28,
+   -0.52,
+   1.94
+  ],
+  "fore_R": [
+   -0.29,
+   -0.42,
+   1.67
+  ]
+ },
+ "every_frame": {
+  "body_points_inside_max": 2,
+  "body_depth_max": 0.006,
+  "outfit_points_inside_max": 196,
+  "hand_points_inside_other_arm_max": 18,
+  "hand_depth_max": 0.024,
+  "head_gap_min_forearms_hands": 0.064,
+  "head_gap_min_shoulders": 0.01
+ }
+}
