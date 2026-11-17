@@ -86,6 +86,16 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   </section>
 
   <section>
+    <h2>Your answers, round 2 (17 Nov, late)</h2>
+    <p><b>Building now:</b> the landing card. When you touch down, it shows Temp, Time, Weather and Danger (Office 1 drop, School 2) for a few seconds. It is always night. The temp and time are random, the weather is Clear, Cloudy or Windy, and the whole crew sees the same card. <b>On hold:</b> the second monster, until you pick which one. <b>Later:</b> the slower game.</p>
+    <div class="note">
+      <p><b>"Are we using Kruskal's?"</b> Close. We grow the halls like randomized Prim's: each step adds a random hall anywhere on the edge of what is built. Kruskal's looks the same. Both make lots of short, bushy branches, and that is why nothing feels deep. A DFS (the "recursive backtracker") keeps growing from the newest end. It makes long, winding paths with real dead ends, naturally and without forcing it. The catch: our grid has only 12 crossings (4 × 3), so even DFS can only make 1–2 deep branches. For real depth it also needs a bigger grid with shorter steps (for example 6 × 4). Work: about 2–3 days, then I measure 40 builds again and you do a feel check. Pick below.</p>
+    </div>
+    <p><b>Skill check ideas.</b> I think I understand your ring idea. Here it is, plus 3 others that are not the usual timing bar. Every one gets harder as the pile gets smaller, and a miss makes a noise the monster can hear. Each also works on a phone (drag) and a controller (stick).</p>
+    <div id="round2"></div>
+  </section>
+
+  <section>
     <h2>What the game does today</h2>
     <div class="facts">
       <div class="fact"><b>1 monster</b><span>The whole shift. No new monster ever comes, and more players do not add one.</span></div>
@@ -115,6 +125,21 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
+  { id: "k1-ring-gap", group: "round2", title: "Ring with a gap (your idea)",
+    text: "A ring shrinks toward the middle. It has one opening. Move your mouse around the circle to turn the opening so it lines up with a mark before the ring reaches the middle. Each ring is smaller and faster, until the pile is clean.",
+    effort: "1–2 days", rec: "<b>Yes, my favourite.</b> It's simple to read, it feels new, and it works with a stick." },
+  { id: "k2-clog-wiggle", group: "round2", title: "Clear the clog",
+    text: "The vacuum hose clogs, and a bulge of goo crawls up it. Wiggle left and right in time with the bulge to push it through. Wiggle too fast or too slow and the hose burps loudly.",
+    effort: "1–2 days", rec: "Fun and very vacuum-like, but it's harder to read for little kids." },
+  { id: "k3-trace-stain", group: "round2", title: "Trace the stain",
+    text: "A big stain shows a wiggly outline. Trace it in one go with your mouse or finger. If you slip off the line, the goo squelches loudly. Bigger stains have longer lines.",
+    effort: "1–2 days", rec: "Great on phones. It's slower, so it's best for the biggest messes only." },
+  { id: "k4-goo-tug", group: "round2", title: "Goo tug",
+    text: "A big glob holds on. Hold the button to pull. A goo strand stretches, and you let go when it glows. Too early and it snaps back. Too late and it pops loudly.",
+    effort: "1 day", rec: "The cheapest, but it's closest to common fishing mini-games." },
+  { id: "q1-maze-growth", group: "round2", title: "Grow halls like DFS, on a bigger grid",
+    text: "Switch the hall growth to DFS-style (keep growing from the newest end), and use a bigger grid with shorter steps. You get naturally deep, winding branches with real dead ends.",
+    effort: "2–3 days + measure + feel check", rec: "<b>After launch.</b> It changes every building, so not this close to content lock." },
   { id: "n1-gloom-levels", group: "plan", title: "Gloom level: Office 1 drop, School 2 drops?",
     text: "Each map always shows the same level, because School's monster (Bramble) is faster and meaner. It shows on the map card in the depot and as a big sign when you land. Yes = these levels. No = tell me other ones in the note.",
     effort: "Half a day (batch 1)", rec: "<b>Yes.</b>" },
@@ -222,7 +247,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
