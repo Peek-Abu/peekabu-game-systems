@@ -7,7 +7,8 @@
 	(LockerItemPanel, LockerStore.viewing) in place of the tab, where its direct buy and confirmation modal live.
 
 	Presentational React component over `LockerViewModel` and `LockerStore` (exempt; values specced in
-	`LockerViewModel`).
+	`LockerViewModel`). The Locker cards (LockerCardView) and the inside-grid item cards (LockerInsideCard) were split
+	out of this file.
 
 	@class LockerPanel
 ]=]
@@ -16,33 +17,27 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
-local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local LockerConstants = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerConstants)
 local LockerRules = require(ReplicatedStorage.Shared.Features.Locker.Rules.LockerRules)
 local LockerTypes = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerTypes)
 local LockerServiceClient = require(ReplicatedStorage.Client.Features.Locker.LockerServiceClient)
 local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
-local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
-local ToonBar = require(Toon.ToonBar)
 local ToonButton = require(Toon.ToonButton)
-local ToonFlag = require(Toon.ToonFlag)
-local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
-local ToonPrice = require(Toon.ToonPrice)
-local ToonStamp = require(Toon.ToonStamp)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
-local ToonViewport = require(Toon.ToonViewport)
 local UIToonConstants = require(Toon.UIToonConstants)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
+local LockerCardView = require(script.Parent.LockerCardView)
+local LockerInsideCard = require(script.Parent.LockerInsideCard)
 local LockerItemPanel = require(script.Parent.LockerItemPanel)
 local LockerOddsSheet = require(script.Parent.LockerOddsSheet)
 local VM = require(script.Parent.LockerViewModel)
 
 local e = React.createElement
-local COLOR, DEPTH = UIToonConstants.COLOR, UIToonConstants.DEPTH
+local COLOR = UIToonConstants.COLOR
 
 type Nodes = { [string]: React.ReactNode }
 type LockerId = LockerTypes.LockerId
@@ -56,299 +51,6 @@ export type LockerPanelProps = {
 	-- The live limited-time event's id: its Locker shows as a third card while it is live.
 	live: string?,
 }
-
-local function itemArt(item: VM.InsideItem): React.ReactNode
-	if item.kind == "stickerPack" or item.kind == "sticker" then
-		return e(ToonIcon, {
-			icon = "stickers",
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromScale(0.5, 0.5),
-			size = UDim2.fromScale(0.7, 0.7),
-			drop = 4,
-		})
-	end
-	local vacuum = item.vacuum
-	return e(ToonViewport, {
-		employee = if vacuum ~= nil then nil else item.employee,
-		vacuum = if vacuum ~= nil then CosmeticRegistry.keyOf(vacuum) else nil,
-		skin = item.skinKey,
-		framing = "full",
-		size = UDim2.fromScale(1, 1),
-	})
-end
-
-local function insideCard(
-	item: VM.InsideItem,
-	size: Vector2,
-	phone: boolean,
-	order: number,
-	onOpen: (item: VM.InsideItem) -> ()
-): React.ReactNode
-	local shade = UIToonConstants.rarity(item.rarity)
-	local nameSize = if phone then 13 else 22
-	local footer = math.floor(nameSize * 2.5)
-	local face: Nodes = {
-		stage = e("Frame", {
-			Position = UDim2.fromOffset(8, 8),
-			Size = UDim2.new(1, -16, 1, -footer - 8 - DEPTH.lip),
-			BackgroundColor3 = COLOR.white,
-			BorderSizePixel = 0,
-			ClipsDescendants = true,
-			ZIndex = 2,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
-			gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(shade.hi, shade.base) }),
-			art = itemArt(item),
-		}),
-		name = e(ToonText, {
-			text = item.name,
-			textSize = nameSize,
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, 10, 1, -DEPTH.lip - math.floor(nameSize * 1.15)),
-			size = UDim2.new(0.64, -10, 0, nameSize + 4),
-			fit = true,
-			zIndex = 3,
-		}),
-		line = e(ToonText, {
-			text = item.line,
-			font = "body",
-			color = COLOR.white,
-			textSize = math.max(if phone then 11 else 15, nameSize - 7),
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, 10, 1, -DEPTH.lip - 4),
-			size = UDim2.new(0.64, -10, 0, nameSize),
-			fit = true,
-			zIndex = 3,
-		}),
-		price = if not item.owned and item.directPrice ~= nil
-			then e(ToonPrice, {
-				currency = "gleam",
-				amount = item.directPrice,
-				textSize = nameSize,
-				anchor = Vector2.new(1, 1),
-				position = UDim2.new(1, -8, 1, -DEPTH.lip - 6),
-				size = UDim2.new(0.38, 0, 0, nameSize + 10),
-				zIndex = 3,
-			})
-			else nil,
-	}
-	local nodes: Nodes = {
-		surface = e(ToonSurface, {
-			hue = "grape",
-			shade = { base = shade.lo:Lerp(shade.base, 0.4), hi = shade.base, lo = shade.lo },
-			radius = 20,
-			small = phone,
-			gloss = false,
-			size = UDim2.new(1, 0, 1, -DEPTH.drop),
-			children = face,
-		}),
-		rarity = e(ToonFlag, {
-			text = string.upper(item.rarity),
-			rarity = item.rarity,
-			tilt = -5,
-			textSize = if phone then 10 else 14,
-			position = UDim2.fromOffset(-6, -8),
-			size = UDim2.fromOffset(if phone then 70 else 120, if phone then 20 else 28),
-			zIndex = 7,
-		}),
-		owned = if item.owned
-			then e(ToonStamp, {
-				text = "OWNED",
-				size = math.floor(math.min(size.X, size.Y) * 0.48),
-				anchor = Vector2.new(0.5, 0.5),
-				position = UDim2.fromScale(0.5, 0.42),
-				zIndex = 6,
-			})
-			else nil,
-	}
-	-- Every card opens the item's own page (LockerItemPanel), where a direct buy lives.
-	return e("TextButton", {
-		Size = UDim2.fromOffset(size.X, size.Y),
-		BackgroundTransparency = 1,
-		Text = "",
-		AutoButtonColor = false,
-		LayoutOrder = order,
-		[React.Event.Activated] = function()
-			onOpen(item)
-		end,
-	}, nodes)
-end
-
-local function lockerCardView(
-	card: VM.LockerCard,
-	selected: boolean,
-	size: Vector2,
-	phone: boolean,
-	textSize: number,
-	order: number,
-	onSelect: (id: LockerId) -> (),
-	onOpen: (id: LockerId) -> (),
-	onOpenOdds: (id: LockerId) -> (),
-	onGetGleam: () -> ()
-): React.ReactNode
-	local hue: UIToonConstants.Hue = if card.id == "gleam" then "gold" else "grape"
-	local pad = if phone then 12 else 20
-	local iconSize = math.floor(size.Y * 0.48)
-	local pillWidth = math.floor(size.Y * 0.62)
-	local nameSize = if phone then 20 else 36
-	local buttonHeight = if phone then 38 else 64
-	local rightX = pillWidth + pad + (if phone then 8 else 16)
-	local rightWidth = size.X - rightX - pad
-	local meter = card.meter
-	local haveIcon: UIAssets.ToonIcon? = if card.haveCurrency == "acorns"
-		then "acorns"
-		elseif card.haveCurrency == "gloom" then "gloom"
-		else nil
-	local openContent: Nodes? = nil
-	if card.button.kind == "buy" then
-		local priced: Nodes = {
-			price = e(ToonPrice, {
-				currency = card.button.currency,
-				amount = card.button.price,
-				textSize = if phone then 18 else 30,
-				meaning = "white",
-				align = "center",
-				size = UDim2.new(1, 0, 1, -DEPTH.lip),
-			}),
-		}
-		openContent = priced
-	end
-	local face: Nodes = {
-		art = e(ToonIcon, {
-			icon = "locker",
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.new(0, pad + math.floor(pillWidth / 2), 0.42, 0),
-			size = UDim2.fromOffset(iconSize, iconSize),
-			drop = 5,
-		}),
-		-- How much of the Locker's own money you have (owner 11-16: Gloom shows here, not in the bars), above the button.
-		have = if card.haveText ~= nil
-			then e(ToonPill, {
-				text = card.haveText,
-				hue = "cream",
-				meaning = if card.haveCurrency == "acorns" then "gold" else "grape",
-				icon = haveIcon,
-				-- Readable at the 75% laptop floor and on a phone (design px; the kit's 16 px / 12 pt floor).
-				textSize = if phone then 15 else 26,
-				iconSize = if phone then 32 else 56,
-				anchor = Vector2.new(0, 1),
-				position = UDim2.new(
-					0,
-					rightX + (if phone then 10 else 18),
-					1,
-					-DEPTH.lip - (if phone then 8 else 14) - buttonHeight - (if phone then 8 else 14)
-				),
-				size = UDim2.fromOffset(math.floor(rightWidth * 0.62), if phone then 28 else 48),
-			})
-			else nil,
-		keys = e(ToonPill, {
-			text = card.keysText,
-			hue = "night",
-			icon = "key",
-			textSize = math.max(11, textSize - 5),
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, pad, 1, -DEPTH.lip - 8),
-			size = UDim2.fromOffset(pillWidth, if phone then 24 else 38),
-		}),
-		name = e(ToonText, {
-			text = string.upper(card.name),
-			textSize = nameSize,
-			position = UDim2.fromOffset(rightX, pad),
-			size = UDim2.fromOffset(rightWidth - (if phone then 64 else 110), nameSize + 4),
-			fit = true,
-		}),
-		odds = e(ToonButton, {
-			variant = "secondary",
-			text = "Odds",
-			textSize = math.max(12, textSize - 2),
-			small = true,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -pad, 0, pad),
-			size = UDim2.fromOffset(if phone then 58 else 100, if phone then 26 else 42),
-			onActivated = function()
-				onOpenOdds(card.id)
-			end,
-		}),
-		-- The pity meter (owner 11-16 pick A): big words and the kit's goo bar, filling one notch per open and
-		-- emptying on an Epic or better; the plain line stays for an empty Locker or a restricted paid one.
-		pity = if meter ~= nil
-			then e(ToonText, {
-				text = meter.text,
-				textSize = if phone then 16 else 26,
-				position = UDim2.fromOffset(rightX, pad + nameSize + (if phone then 8 else 14)),
-				size = UDim2.fromOffset(rightWidth, (if phone then 16 else 26) + 6),
-				fit = true,
-			})
-			else e(ToonText, {
-				text = card.pityText,
-				font = "body",
-				color = if card.id == "gleam" then COLOR.ink else COLOR.white,
-				textSize = math.max(12, textSize - 2),
-				position = UDim2.fromOffset(rightX, pad + nameSize + 6),
-				size = UDim2.fromOffset(rightWidth, textSize * 2 + 4),
-				wrapped = true,
-				fit = true,
-			}),
-		meter = if meter ~= nil
-			then e(ToonBar, {
-				kind = meter.kind,
-				fill = meter.fill,
-				label = meter.label,
-				labelSize = if phone then 14 else 22,
-				position = UDim2.fromOffset(
-					rightX,
-					pad + nameSize + (if phone then 8 else 14) + (if phone then 16 else 26) + (if phone then 8 else 12)
-				),
-				size = UDim2.fromOffset(math.floor(rightWidth * 0.8), if phone then 22 else 34),
-			})
-			else nil,
-		open = e(ToonButton, {
-			variant = if card.button.kind == "buy" or card.button.kind == "key"
-				then "primary"
-				elseif card.button.kind == "short" and card.button.enabled then "gleam"
-				else "secondary",
-			text = if openContent == nil then card.button.text else nil,
-			content = openContent,
-			textSize = if phone then 16 else 28,
-			disabled = not card.button.enabled,
-			-- Paying for an open plays the Shop's buy sound (owner pick B, 11-16), not the plain confirm.
-			sound = if card.button.kind == "buy" or card.button.kind == "key" then "purchase" else nil,
-			small = phone,
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, rightX, 1, -DEPTH.lip - (if phone then 8 else 14)),
-			size = UDim2.fromOffset(rightWidth, buttonHeight),
-			onActivated = function()
-				onSelect(card.id)
-				if card.button.kind == "short" and card.button.enabled then
-					onGetGleam()
-				elseif card.button.enabled then
-					onOpen(card.id)
-				end
-			end,
-		}),
-	}
-	return e("TextButton", {
-		Size = UDim2.fromOffset(size.X, size.Y),
-		BackgroundTransparency = 1,
-		Text = "",
-		AutoButtonColor = false,
-		LayoutOrder = order,
-		[React.Event.Activated] = function()
-			onSelect(card.id)
-		end,
-	}, {
-		surface = e(ToonSurface, {
-			hue = hue,
-			pattern = "rings",
-			radius = 24,
-			selected = selected,
-			small = phone,
-			size = UDim2.new(1, 0, 1, -DEPTH.drop),
-			children = face,
-		}),
-	})
-end
 
 local function LockerPanel(props: LockerPanelProps): React.ReactNode
 	local lockers = ReactCharm.useAtom(StateSyncClientStore.lockers)
@@ -385,7 +87,7 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 	local leftNodes: Nodes =
 		{ list = e("UIListLayout", { Padding = UDim.new(0, gap), SortOrder = Enum.SortOrder.LayoutOrder }) }
 	for index, card in cards do
-		leftNodes[card.id] = lockerCardView(
+		leftNodes[card.id] = LockerCardView(
 			card,
 			card.id == selected,
 			Vector2.new(leftWidth, cardHeight),
@@ -424,7 +126,7 @@ local function LockerPanel(props: LockerPanelProps): React.ReactNode
 		}),
 	}
 	for index, item in inside do
-		grid[item.id] = insideCard(item, Vector2.new(cellWidth, cellHeight), phone, index, function(entry)
+		grid[item.id] = LockerInsideCard(item, Vector2.new(cellWidth, cellHeight), phone, index, function(entry)
 			LockerStore.view(entry.id)
 		end)
 	end

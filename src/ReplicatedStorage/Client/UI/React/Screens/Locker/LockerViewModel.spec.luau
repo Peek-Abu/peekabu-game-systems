@@ -2,7 +2,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local LockerConstants = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerConstants)
-local LockerRules = require(ReplicatedStorage.Shared.Features.Locker.Rules.LockerRules)
 local VM = require(script.Parent.LockerViewModel)
 
 return function()
@@ -65,131 +64,6 @@ return function()
 			expect(short.button.enabled).to.equal(false)
 			expect(VM.resultText("not on")).to.equal("This Locker is closed now.")
 		end)
-	end)
-
-	describe("cards", function()
-		it(
-			"shows the pity meter on the card: opens since the last Epic+ out of the pity number (owner 11-16 pick A)",
-			function()
-				local pityAt = LockerRules.odds(GLOOM).pityAt
-				local card = VM.card(
-					GLOOM,
-					{ keys = {}, pity = { gloom = pityAt - 5 }, opened = 9 },
-					{ gloom = 0, gleam = 0 },
-					false
-				)
-				expect(card.meter).to.be.ok()
-				expect(card.meter.fill).to.be.near((pityAt - 5) / pityAt)
-				expect(card.meter.label).to.equal(`{pityAt - 5} / {pityAt}`)
-				expect(card.meter.text).to.equal("Epic or better in 5 opens!")
-				expect(card.meter.kind).to.equal("gloom")
-
-				local next = VM.card(
-					GLOOM,
-					{ keys = {}, pity = { gloom = pityAt - 1 }, opened = 9 },
-					{ gloom = 0, gleam = 0 },
-					false
-				)
-				expect(next.meter.text).to.equal("Next open is Epic or better!")
-
-				local fresh = VM.card(GLOOM, { keys = {}, pity = {}, opened = 0 }, { gloom = 0, gleam = 0 }, false)
-				expect(fresh.meter.fill).to.equal(0)
-				expect(fresh.meter.label).to.equal(`0 / {pityAt}`)
-				expect(fresh.meter.text).to.equal(`Epic or better in {pityAt} opens!`)
-			end
-		)
-
-		it(
-			"has no meter where there is nothing to count: an empty Locker, or a paid one for a restricted player",
-			function()
-				local state = { keys = {}, pity = {}, opened = 0 }
-				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 0 }, false, {}).meter).to.equal(nil)
-				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 0 }, true, SAMPLE_POOL).meter).to.equal(nil)
-				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 0 }, false, SAMPLE_POOL).meter.kind).to.equal(
-					"stamina"
-				)
-			end
-		)
-
-		it(
-			"shows how much of its own money you have on the Gloom and event Lockers (owner 11-16 q2), not the Gleam one",
-			function()
-				local state = { keys = {}, pity = {}, opened = 0 }
-				local gloom = VM.card(GLOOM, state, { gloom = 1240, gleam = 50, acorns = 7 }, false)
-				expect(gloom.haveText).to.equal("You have 1,240")
-				expect(gloom.haveCurrency).to.equal("gloom")
-				local HARVEST = LockerConstants.LOCKERS.harvest
-				local harvest = VM.card(HARVEST, state, { gloom = 1240, gleam = 50, acorns = 7 }, false)
-				expect(harvest.haveText).to.equal("You have 7")
-				expect(harvest.haveCurrency).to.equal("acorns")
-				local none = VM.card(HARVEST, state, { gloom = 0, gleam = 0 }, false)
-				expect(none.haveText).to.equal("You have 0")
-				-- Gleam already sits in the menu bar.
-				expect(VM.card(GLEAM, state, { gloom = 0, gleam = 50 }, false).haveText).to.equal(nil)
-			end
-		)
-
-		it("shows live pity remaining and uses a held key before asking for currency", function()
-			local pityAt = LockerRules.odds(GLOOM).pityAt
-			local withKey = VM.card(
-				GLOOM,
-				{ keys = { gloom = 2 }, pity = { gloom = 5 }, opened = 5 },
-				{ gloom = 0, gleam = 0 },
-				false
-			)
-			expect(withKey.keysText).to.equal("2 keys")
-			expect(withKey.button.kind).to.equal("key")
-			expect(withKey.button.text).to.equal("Open (1 key)")
-			expect(withKey.button.enabled).to.equal(true)
-			expect(withKey.pityText).to.equal(`Epic or better in {pityAt - 5} opens or sooner.`)
-
-			local withMoney = VM.card(GLOOM, { keys = {}, pity = {}, opened = 0 }, { gloom = 300, gleam = 0 }, false)
-			expect(withMoney.button.kind).to.equal("buy")
-			expect(withMoney.button.price).to.equal("300")
-			expect(withMoney.button.enabled).to.equal(true)
-
-			local short = VM.card(GLOOM, { keys = {}, pity = {}, opened = 0 }, { gloom = 120, gleam = 0 }, false)
-			expect(short.button.kind).to.equal("short")
-			expect(short.button.text).to.equal("Need 180 more")
-			expect(short.button.enabled).to.equal(false)
-		end)
-
-		it("switches a paid Locker to direct purchase when restricted, and marks an empty Locker", function()
-			local restrictedCard = VM.card(
-				GLEAM,
-				{ keys = { gleam = 1 }, pity = {}, opened = 0 },
-				{ gloom = 0, gleam = 500 },
-				true,
-				SAMPLE_POOL
-			)
-			expect(restrictedCard.restricted).to.equal(true)
-			expect(restrictedCard.button.kind).to.equal("restricted")
-			expect(restrictedCard.button.text).to.equal("Buy directly")
-			expect(restrictedCard.button.enabled).to.equal(false)
-
-			local emptyCard = VM.card(
-				GLEAM,
-				{ keys = {}, pity = {}, opened = 0 },
-				{ gloom = 0, gleam = 500 },
-				false,
-				{}
-			)
-			expect(emptyCard.button.kind).to.equal("empty")
-			expect(emptyCard.button.text).to.equal("Coming soon")
-		end)
-
-		it(
-			"an empty paid Locker tells a restricted player what they can do there, not 'Buy items directly below'",
-			function()
-				local card = VM.card(GLEAM, { keys = {}, pity = {}, opened = 0 }, { gloom = 0, gleam = 500 }, true, {})
-				expect(card.restricted).to.equal(false)
-				expect(card.button.kind).to.equal("empty")
-				expect(card.pityText).to.equal("Nothing here yet. Soon you can buy its items one by one.")
-				-- Everyone else just sees it is empty.
-				local open = VM.card(GLEAM, { keys = {}, pity = {}, opened = 0 }, { gloom = 0, gleam = 500 }, false, {})
-				expect(open.pityText).to.equal("Nothing inside yet.")
-			end
-		)
 	end)
 
 	describe("inside", function()
@@ -302,147 +176,6 @@ return function()
 		end)
 	end)
 
-	describe("cutscenePose (stage 2 3D cutscene)", function()
-		it("walks through establishing, approach, key_turn and burst_open for both Lockers", function()
-			local start = VM.cutscenePose("gloom", 0)
-			expect(start.beat).to.equal("establishing")
-			expect(start.doorDeg).to.equal(0)
-			expect(start.glow).to.equal(false)
-
-			local approach = VM.cutscenePose("gloom", 0.35)
-			expect(approach.beat).to.equal("approach")
-			expect(approach.employeeCFrame.Position.X > 0).to.equal(true)
-			expect(VM.cutscenePose("gleam", 0.35).employeeCFrame.Position.X < 0).to.equal(true)
-
-			local turn = VM.cutscenePose("gloom", 0.65)
-			expect(turn.beat).to.equal("key_turn")
-			expect(turn.keyRollDeg > 0).to.equal(true)
-			expect(turn.doorDeg).to.equal(0)
-
-			local burst = VM.cutscenePose("gloom", 0.92)
-			expect(burst.beat).to.equal("burst_open")
-			expect(burst.doorDeg > 80).to.equal(true)
-			expect(burst.glow).to.equal(true)
-			expect(burst.flashTransparency < 1).to.equal(true)
-		end)
-
-		-- Owner check 11-16: the camera sat behind (then inside) the employee's head, so the locker, the key and the
-		-- door were never seen. The employee (about 3.5 studs wide) must stay clear of the camera's line to what it
-		-- looks at, and the camera clear of the employee, in every beat after the establishing shot.
-		it("never lets the employee block the camera's view of the locker", function()
-			for _, id in { "gloom", "gleam", "harvest" } do
-				for _, rarity in { "uncommon", "legendary" } do
-					for step = 0, 50 do
-						local alpha = 0.24 + 0.76 * step / 50
-						local pose = VM.cutscenePose(id, alpha, rarity)
-						local emp = pose.employeeCFrame.Position
-						local a = Vector2.new(pose.camPos.X, pose.camPos.Z)
-						local b = Vector2.new(pose.camLook.X, pose.camLook.Z)
-						local p = Vector2.new(emp.X, emp.Z)
-						local ab = b - a
-						local t = math.clamp((p - a):Dot(ab) / ab:Dot(ab), 0, 1)
-						local gap = (a + ab * t - p).Magnitude
-						expect(gap > 2.2).to.equal(true)
-						expect((a - p).Magnitude > 3).to.equal(true)
-					end
-				end
-			end
-		end)
-	end)
-
-	-- Owner picks 11-16: about 4 seconds, a door rattle with the prize's colour leaking out before the burst, held
-	-- longer, rattled harder, with more and brighter lights the rarer the prize.
-	describe("rarity build-up", function()
-		local LADDER = { "uncommon", "rare", "epic", "legendary" }
-
-		it("runs about 4 seconds, longer the rarer the prize", function()
-			expect(math.abs(VM.openingDuration("uncommon") - 4) < 0.25).to.equal(true)
-			for index = 2, #LADDER do
-				expect(VM.openingDuration(LADDER[index]) > VM.openingDuration(LADDER[index - 1])).to.equal(true)
-			end
-			expect(VM.openingDuration("odd") >= VM.openingDuration("legendary")).to.equal(true)
-		end)
-
-		it("rattles harder, with more and brighter lights and a bigger burst, the rarer the prize", function()
-			for index = 2, #LADDER do
-				local lower = VM.RARITY_FX[LADDER[index - 1]]
-				local higher = VM.RARITY_FX[LADDER[index]]
-				expect(higher.hold > lower.hold).to.equal(true)
-				expect(higher.lights > lower.lights).to.equal(true)
-				expect(higher.brightness > lower.brightness).to.equal(true)
-				expect(higher.rattleDeg > lower.rattleDeg).to.equal(true)
-				expect(higher.rays > lower.rays).to.equal(true)
-				expect(higher.flash >= lower.flash).to.equal(true)
-				expect(#higher.chime >= #lower.chime).to.equal(true)
-			end
-		end)
-
-		it("rattles the shut door with the light leaking out between the key turn and the burst", function()
-			for _, rarity in LADDER do
-				local duration = VM.openingDuration(rarity)
-				local fx = VM.RARITY_FX[rarity]
-				-- The middle of the hold: the last fx.hold seconds before the burst.
-				local burstAt = duration - VM.BURST_SECONDS
-				local mid = VM.cutscenePose("gloom", (burstAt - fx.hold / 2) / duration, rarity)
-				expect(mid.beat).to.equal("rattle")
-				expect(mid.glow).to.equal(false)
-				expect(mid.doorDeg <= fx.rattleDeg).to.equal(true)
-				expect(mid.leak > 0).to.equal(true)
-				expect(mid.keyRollDeg).to.equal(90)
-				local late = VM.cutscenePose("gloom", (burstAt - 0.02) / duration, rarity)
-				expect(late.leak > mid.leak).to.equal(true)
-				expect(VM.cutscenePose("gloom", (burstAt + 0.05) / duration, rarity).beat).to.equal("burst_open")
-			end
-		end)
-
-		-- Owner 11-16: the leak is plain white through the hold, then shows the prize's own colour about half a second
-		-- before the door opens (a glimpse of the rarity).
-		it("leaks plain white, then the prize's colour in the last half second before the burst", function()
-			for _, rarity in LADDER do
-				local duration = VM.openingDuration(rarity)
-				local burstAt = duration - VM.BURST_SECONDS
-				local late = VM.cutscenePose("gloom", (burstAt - 0.05) / duration, rarity)
-				expect(late.leakTint > 0.9).to.equal(true)
-				expect(VM.cutscenePose("gloom", (burstAt + 0.1) / duration, rarity).leakTint).to.equal(1)
-			end
-			local hold = VM.RARITY_FX.legendary.hold
-			local duration = VM.openingDuration("legendary")
-			local burstAt = duration - VM.BURST_SECONDS
-			local early = VM.cutscenePose("gloom", (burstAt - hold + 0.1) / duration, "legendary")
-			expect(early.beat).to.equal("rattle")
-			expect(early.leakTint).to.equal(0)
-			expect(VM.GLIMPSE_SECONDS).to.equal(0.5)
-		end)
-
-		-- Owner 11-16: the key floats in from screen right, never from the employee (who only idles).
-		it("brings the key in from the side away from the employee", function()
-			for _, id in { "gloom", "gleam" } do
-				local start = VM.cutscenePose(id, 0, "uncommon")
-				local emp = start.employeeCFrame.Position
-				for step = 0, 60 do
-					local pose = VM.cutscenePose(id, step / 60 * 0.7, "uncommon")
-					local key = pose.keyCFrame.Position
-					if key.Y > -50 then
-						expect((key - emp).Magnitude > 2.5).to.equal(true)
-						-- The employee stands at +X of the locker; the key comes from -X (screen right).
-						expect(key.X < emp.X - 2).to.equal(true)
-					end
-				end
-			end
-		end)
-
-		it("flashes brighter at the burst for a rarer prize", function()
-			local function brightest(rarity)
-				local least = 1
-				for step = 0, 100 do
-					least = math.min(least, VM.cutscenePose("gloom", step / 100, rarity).flashTransparency)
-				end
-				return least
-			end
-			expect(brightest("legendary") < brightest("uncommon")).to.equal(true)
-		end)
-	end)
-
 	describe("skipAfter", function()
 		it("waits a second on your first ever open, then lets you skip at once", function()
 			expect(VM.skipAfter(0)).to.equal(VM.SKIP_AFTER)
@@ -471,6 +204,17 @@ return function()
 			-- Another reveal (a Shop buy, a grant) leaves the music alone.
 			expect(VM.musicDucked(nil, { ids = { "Pippa.GloomTouched" }, source = "shop" })).to.equal(false)
 			expect(VM.MUSIC_DUCK_DB < -20).to.equal(true)
+		end)
+	end)
+
+	describe("the cutscene, re-exported from LockerCutsceneViewModel", function()
+		it("keeps the same functions and tuning under LockerViewModel", function()
+			local Cutscene = require(script.Parent.LockerCutsceneViewModel)
+			expect(VM.cutscenePose).to.equal(Cutscene.cutscenePose)
+			expect(VM.openingDuration).to.equal(Cutscene.openingDuration)
+			expect(VM.RARITY_FX).to.equal(Cutscene.RARITY_FX)
+			expect(VM.BURST_SECONDS).to.equal(Cutscene.BURST_SECONDS)
+			expect(VM.GLIMPSE_SECONDS).to.equal(Cutscene.GLIMPSE_SECONDS)
 		end)
 	end)
 end
