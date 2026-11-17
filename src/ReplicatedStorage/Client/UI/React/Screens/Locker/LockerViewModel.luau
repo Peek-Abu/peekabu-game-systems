@@ -337,7 +337,8 @@ function VM.card(
 	local odds = LockerRules.odds(locker, items)
 	local keys = state.keys[locker.id] or 0
 	local pity = state.pity[locker.id] or 0
-	-- An empty Locker has nothing to buy directly either, so it reads as empty (not "Buy items directly below").
+	-- An empty Locker has nothing to buy directly either, so it reads as empty and says what a restricted player
+	-- will be able to do there (not "Buy items directly below" over nothing).
 	local isRestricted = locker.paidRandom and restricted and #items > 0
 	local priceText = ToonStyleViewModel.grouped(locker.keyPrice)
 	local balance = if locker.currency == "gleam"
@@ -345,7 +346,9 @@ function VM.card(
 		elseif locker.currency == "acorns" then balances.acorns or 0
 		else balances.gloom
 
-	local pityText = "Nothing inside yet."
+	local pityText = if locker.paidRandom and restricted
+		then "Nothing here yet. Soon you can buy its items one by one."
+		else "Nothing inside yet."
 	if isRestricted then
 		pityText = "Buy items directly below."
 	elseif odds.pityAt ~= nil then

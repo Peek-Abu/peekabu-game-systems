@@ -135,12 +135,18 @@ return function()
 			expect(emptyCard.button.text).to.equal("Coming soon")
 		end)
 
-		it("an empty paid Locker reads as empty to a restricted player, not 'Buy items directly below'", function()
-			local card = VM.card(GLEAM, { keys = {}, pity = {}, opened = 0 }, { gloom = 0, gleam = 500 }, true, {})
-			expect(card.restricted).to.equal(false)
-			expect(card.button.kind).to.equal("empty")
-			expect(card.pityText).to.equal("Nothing inside yet.")
-		end)
+		it(
+			"an empty paid Locker tells a restricted player what they can do there, not 'Buy items directly below'",
+			function()
+				local card = VM.card(GLEAM, { keys = {}, pity = {}, opened = 0 }, { gloom = 0, gleam = 500 }, true, {})
+				expect(card.restricted).to.equal(false)
+				expect(card.button.kind).to.equal("empty")
+				expect(card.pityText).to.equal("Nothing here yet. Soon you can buy its items one by one.")
+				-- Everyone else just sees it is empty.
+				local open = VM.card(GLEAM, { keys = {}, pity = {}, opened = 0 }, { gloom = 0, gleam = 500 }, false, {})
+				expect(open.pityText).to.equal("Nothing inside yet.")
+			end
+		)
 	end)
 
 	describe("inside", function()

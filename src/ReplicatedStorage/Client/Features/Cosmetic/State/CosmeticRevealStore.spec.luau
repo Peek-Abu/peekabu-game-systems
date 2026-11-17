@@ -1,4 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local CosmeticRevealStore = require(script.Parent.CosmeticRevealStore)
+local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 
 return function()
 	afterEach(function()
@@ -30,14 +33,17 @@ return function()
 	end)
 
 	it("shows a Robux purchase with no items (Gleam, a pass, coffee)", function()
+		-- A real Gleam pack, read from the Shop's list so a price change never breaks this spec.
+		local bundle = ShopConstants.BUNDLES[1]
 		CosmeticRevealStore.push({
 			ids = {},
 			source = "robux",
-			purchase = { kind = "gleam", key = "gleam880", amount = 880 },
+			purchase = { kind = "gleam", key = bundle.key, amount = bundle.gleam },
 		})
 		local shown = CosmeticRevealStore.current()
 		expect(shown).to.be.ok()
 		expect(shown.purchase.kind).to.equal("gleam")
-		expect(shown.purchase.amount).to.equal(600)
+		expect(shown.purchase.key).to.equal(bundle.key)
+		expect(shown.purchase.amount).to.equal(bundle.gleam)
 	end)
 end
