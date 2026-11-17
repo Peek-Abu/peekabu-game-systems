@@ -520,4 +520,52 @@ return function()
 			expect(EmployeePreviewSystem.PRELOAD_SECONDS).to.equal(3)
 		end)
 	end)
+
+	-- Shift 11-16: waiting and redrawing on every open cost the warm Shop open ~30 ms; a look already loaded skips it.
+	describe("loaded", function()
+		local function look()
+			local model = Instance.new("Model")
+			local folder = Instance.new("Folder")
+			folder.Parent = model
+			local mesh = Instance.new("MeshPart")
+			mesh.Parent = folder
+			-- (a SurfaceAppearance's maps cannot be set from a script; its empty maps are skipped like any empty id)
+			Instance.new("SurfaceAppearance").Parent = mesh
+			local decal = Instance.new("Decal")
+			decal.Texture = "rbxassetid://4"
+			decal.Parent = model
+			return model, mesh
+		end
+
+		it("is true when every mesh, texture and map in it reports loaded", function()
+			local model = look()
+			local asked = {}
+			local ok = EmployeePreviewSystem.loaded({ model }, function(id)
+				asked[id] = true
+				return Enum.AssetFetchStatus.Success
+			end)
+			expect(ok).to.equal(true)
+			expect(asked["rbxassetid://4"]).to.equal(true)
+			expect(asked[""]).never.to.be.ok()
+			model:Destroy()
+		end)
+
+		it("is false when one texture deep inside is still loading", function()
+			local model, mesh = look()
+			mesh.TextureID = "rbxassetid://7"
+			local result = EmployeePreviewSystem.loaded({ model }, function(id)
+				return if id == "rbxassetid://7" then Enum.AssetFetchStatus.Loading else Enum.AssetFetchStatus.Success
+			end)
+			expect(result).to.equal(false)
+			model:Destroy()
+		end)
+
+		it("is false when a decal has not loaded", function()
+			local model = look()
+			expect(EmployeePreviewSystem.loaded({ model }, function()
+				return Enum.AssetFetchStatus.None
+			end)).to.equal(false)
+			model:Destroy()
+		end)
+	end)
 end

@@ -27,6 +27,8 @@
 	  instances' assets (meshes, textures) or after `seconds` (PRELOAD_SECONDS, as long as the 3D stage waits),
 	  whichever is first; a failed load still calls it. Returns a cancel. ToonViewport keeps a preview hidden until then
 	  (owner, 2026-11-16: an item page showed the textured Showstopper's coat and hat but not its new bloomer mesh).
+	  `loaded(instances, status?)` says whether all of it is in already, so a warm preview skips the wait and the redraw
+	  (Shift 11-16: they cost the warm Shop open ~30 ms).
 	- `idleOf` / `reachOf` / `fidgetOf` / `revealOf` / `reactionOf` / `emoteOf` (which clip a preview plays) live in
 	  EmployeePreviewClipUtils, and `playIdle` / `playReveal` / `playReaction` / `playFidgets` / `playEmote` in
 	  EmployeePreviewPlaySystem (both split out of this module); they are re-exported here under the same names.
@@ -346,6 +348,59 @@ function EmployeePreviewSystem.reset()
 end
 
 export type Preload = (instances: { Instance }) -> ()
+export type FetchStatus = (contentId: string) -> Enum.AssetFetchStatus
+
+local function fetchStatus(contentId: string): Enum.AssetFetchStatus
+	return ContentProvider:GetAssetFetchStatus(contentId)
+end
+
+-- Every mesh and texture id `item` draws with (empty ids skipped).
+local function contentIds(item: Instance, into: { string })
+	local function add(id: string)
+		if id ~= "" then
+			table.insert(into, id)
+		end
+	end
+	if item:IsA("MeshPart") then
+		add(item.MeshId)
+		add(item.TextureID)
+	elseif item:IsA("SpecialMesh") then
+		add(item.MeshId)
+		add(item.TextureId)
+	elseif item:IsA("SurfaceAppearance") then
+		-- Read in a pcall: the maps are locked to plugins in some Studio builds, and an unreadable map counts as loaded
+		-- rather than holding every preview back.
+		pcall(function()
+			add(item.ColorMap)
+			add(item.NormalMap)
+			add(item.RoughnessMap)
+			add(item.MetalnessMap)
+		end)
+	elseif item:IsA("Decal") then
+		add(item.Texture)
+	end
+end
+
+--[=[
+	True when every mesh, texture and SurfaceAppearance map in `instances` (and their descendants) has already loaded
+	(`status`, default ContentProvider:GetAssetFetchStatus, is Success for each): a preview of it can show at once.
+]=]
+function EmployeePreviewSystem.loaded(instances: { Instance }, status: FetchStatus?): boolean
+	local ids: { string } = {}
+	for _, root in instances do
+		contentIds(root, ids)
+		for _, item in root:GetDescendants() do
+			contentIds(item, ids)
+		end
+	end
+	local check: FetchStatus = status or fetchStatus
+	for _, id in ids do
+		if check(id) ~= Enum.AssetFetchStatus.Success then
+			return false
+		end
+	end
+	return true
+end
 
 local function contentPreload(instances: { Instance })
 	ContentProvider:PreloadAsync(instances)

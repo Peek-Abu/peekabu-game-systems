@@ -301,19 +301,24 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			-- Hidden until its meshes and textures are in (EmployeePreviewSystem.whenLoaded; owner, 2026-11-16: an item
 			-- page showed the textured Showstopper's coat and hat but not its new bloomer mesh). A still copy is drawn
 			-- once, so it is put back in its frame once loaded to be drawn again with everything.
-			frame.ImageTransparency = 1
+			-- Already loaded (a warm cache, the usual case): shown at once, no wait and no redraw (Shift 11-16: those cost
+			-- the warm Shop open ~30 ms).
 			local drawn: Model, drawnIn: Instance, still = model, holder, not moving
 			local loading: { Instance } = { model }
 			if stand ~= nil then
 				table.insert(loading, stand)
 			end
-			local cancelLoad = EmployeePreviewSystem.whenLoaded(loading, function()
-				if still and drawn.Parent == drawnIn then
-					drawn.Parent = nil
-					drawn.Parent = drawnIn
-				end
-				frame.ImageTransparency = 0
-			end)
+			local cancelLoad = function() end
+			if not EmployeePreviewSystem.loaded(loading) then
+				frame.ImageTransparency = 1
+				cancelLoad = EmployeePreviewSystem.whenLoaded(loading, function()
+					if still and drawn.Parent == drawnIn then
+						drawn.Parent = nil
+						drawn.Parent = drawnIn
+					end
+					frame.ImageTransparency = 0
+				end)
+			end
 			local untrack: { () -> () } = {}
 			if moving and who ~= nil then
 				table.insert(untrack, previewProps.track(model))
