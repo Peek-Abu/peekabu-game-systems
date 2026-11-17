@@ -492,14 +492,16 @@ EMPLOYEES.Prickles = {
 		-- PricklesShowstopper + PricklesShowstopperHat, stays in the places unused). V3 (11-17, SmartBone round 3):
 		-- the same textured outfit with 6 skirt chains and 2 lapel-fringe chains that swing on SmartBone 2, the vent's
 		-- two edges riding their own side, and the outfit's own colliders (its TailPhysics / Tail* attributes and
-		-- SmartColliders; EmployeeTailSmartBoneUtils). Icey Labs model 101847990925723 rev 5 (the round 3 file). V2 stays in the places
-		-- for rollback.
+		-- SmartColliders; EmployeeTailSmartBoneUtils). Icey Labs model 101847990925723 rev 5 (the round 3 file). V4 (11-17,
+		-- round 4, owner: "Yes its good enough!"): the chain joints sit on the cloth surface, so the colliders are the
+		-- bloomers' and chest's full visible size, and each cloth bone may rise only TailBoneLift above where it rests
+		-- (Icey Labs model 139625595849758). V3 and V2 stay in the places for rollback.
 		Showstopper = {
 			name = "Showstopper",
 			paletteTextureId = nil,
 			facesFolder = nil,
 			accessories = {},
-			outfit = "PricklesShowstopperV3",
+			outfit = "PricklesShowstopperV4",
 		},
 		-- Legendary (Cosmetic Prickles.Sheriff): the skinned sheriff outfit (hat, vest, boots) over his body, plus the hose
 		-- lasso the emote shows (characters/skins/runtime-candidates-2026-10-26/sheriff_prickles). The outfit covers

@@ -97,7 +97,9 @@ return function()
 				-- replaces the first build; its hat is one of the outfit's own meshes, so no separate hat gear.
 				-- Owner 11-17 (SmartBone round 3, coordinator's call: "ship round 3 now"): the robe skirt and lapel fringe
 				-- swing (SmartBone chains + the outfit's own colliders), in the V3 outfit.
-				expect(skin.outfit).to.equal("PricklesShowstopperV3")
+				-- Owner 11-17 on round 4 ("Yes its good enough!"): chain joints on the cloth surface, full-size colliders and
+				-- per-bone ceilings (TailBoneLift), in the V4 outfit.
+				expect(skin.outfit).to.equal("PricklesShowstopperV4")
 				expect(#skin.accessories).to.equal(0)
 				-- The outfit hides his hard hat itself (its HideAccessories), so without the art he stays Classic; his
 				-- flower is never hidden (owner, 2026-11-10: "keep flower exactly how it is in base skin").

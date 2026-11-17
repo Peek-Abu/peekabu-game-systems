@@ -114,6 +114,20 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
   hem-vs-hips gate still passes. The lapel chains get the same rule (their tips still swing 0.4-0.8).
 - Standing twitch stayed 0.004-0.005 at every lift. Test outfit: `PricklesShowstopperSB` (asset 139625595849758).
 
+## What still clips (V4, owner 11-17: "It still clips through the puffed up pants though?")
+
+- Measured per collider (points inside the VISIBLE bloomers): the seat puff 0.07-0.09 walking/running (0.02 standing);
+  the thigh puffs 0.12-0.20 on jumps, from the cloth BETWEEN two neighbouring chains (chord midpoints), not the joints.
+- Cause, measured in Blender at rest: over the hips' sides the robe's inner face already touches the bloomer puff (gap
+  -0.04 to +0.05). SmartBone pushes only the joints; the straight span between two chains 60 degrees apart cuts the
+  round puff.
+- Bigger colliders do NOT fix it: seat + thighs x1.12 / x1.25 push the front flaps out at rest (0.16 / 0.49) and make
+  the walk jumpier (clip spikes 0.47); seat only x1.12 measured the same as the baseline on a repeat, x1.2 starts
+  pushing the front flaps (0.11). Check rest drift (hem tips vs the fitted rest) before keeping any collider growth.
+- **Build rule for new skins:** leave about 0.06 of clearance between a swinging skirt and anything puffy under it
+  (or slim the puff where the skirt covers it), and use 8 chains around a full skirt instead of 6. Showstopper's own
+  fix is a later rebuild.
+
 ## Failed / rejected
 
 - Six skirt chains on the game's simple two-tail spring (round 4 of the remake, before SmartBone): twitched, clipped,
@@ -121,3 +135,4 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
 - Heavy wool (stiffness 0.55, elasticity 6, damping 0.25, bend 25): "too rigid".
 - Chains carrying only the hips' share: the front flaps barely moved (5 % at the front hem).
 - Bone radius 0.3 with body-size colliders: pushes the cloth out at rest.
+- Colliders grown past the visible size to stop the bloomer clipping (round 4): pushes the front flaps out at rest.
