@@ -10,8 +10,12 @@ local PolicyServiceServer = require(ServerScriptService.Features.Policy.PolicySe
 return function()
 	local player = { UserId = 42, Name = "TestPlayer" }
 
+	local DEV = PolicyServiceServer.DEV_RESTRICTED_ATTRIBUTE
+
 	afterEach(function()
 		PolicyServiceServer._setFetcher(nil)
+		PolicyServiceServer._setStudio(nil)
+		workspace:SetAttribute(DEV, nil)
 	end)
 
 	it("reads ArePaidRandomItemsRestricted once and caches it for the session", function()
@@ -52,6 +56,58 @@ return function()
 		PolicyServiceServer:setRestricted(player.UserId, true)
 		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(true)
 		PolicyServiceServer:setRestricted(player.UserId, nil)
+		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(false)
+	end)
+
+	it("names the Studio switch DevPaidRandomRestricted", function()
+		expect(DEV).to.equal("DevPaidRandomRestricted")
+	end)
+
+	it("in Studio, the Workspace switch plays a restricted (or unrestricted) country over PolicyService", function()
+		PolicyServiceServer._setFetcher(function()
+			return { ArePaidRandomItemsRestricted = false }
+		end)
+		PolicyServiceServer._setStudio(true)
+		workspace:SetAttribute(DEV, true)
+		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(true)
+
+		PolicyServiceServer._setFetcher(function()
+			return { ArePaidRandomItemsRestricted = true }
+		end)
+		workspace:SetAttribute(DEV, false)
+		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(false)
+	end)
+
+	it("in Studio with the switch unset, PolicyService decides", function()
+		PolicyServiceServer._setFetcher(function()
+			return { ArePaidRandomItemsRestricted = true }
+		end)
+		PolicyServiceServer._setStudio(true)
+		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(true)
+	end)
+
+	it("outside Studio, the Workspace switch is ignored", function()
+		PolicyServiceServer._setFetcher(function()
+			return { ArePaidRandomItemsRestricted = false }
+		end)
+		PolicyServiceServer._setStudio(false)
+		workspace:SetAttribute(DEV, true)
+		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(false)
+	end)
+
+	it("ignores a switch that is not true or false", function()
+		PolicyServiceServer._setFetcher(function()
+			return { ArePaidRandomItemsRestricted = false }
+		end)
+		PolicyServiceServer._setStudio(true)
+		workspace:SetAttribute(DEV, "yes")
+		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(false)
+	end)
+
+	it("a per-user override still wins over the Studio switch", function()
+		PolicyServiceServer._setStudio(true)
+		workspace:SetAttribute(DEV, true)
+		PolicyServiceServer:setRestricted(player.UserId, false)
 		expect(PolicyServiceServer:paidRandomItemsRestricted(player)).to.equal(false)
 	end)
 end

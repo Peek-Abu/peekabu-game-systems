@@ -438,6 +438,15 @@ local LockerServiceServer: LockerServiceServer = {
 			announceStatus(player)
 		end
 		janitor:Add(Players.PlayerAdded:Connect(announceStatus), "Disconnect")
+		-- Studio's restricted-country switch changed mid-Play: re-send everyone's flag.
+		janitor:Add(
+			PolicyServiceServer.devChanged:Connect(function()
+				for _, player in Players:GetPlayers() do
+					announceStatus(player)
+				end
+			end),
+			"Disconnect"
+		)
 		janitor:Add(
 			Players.PlayerRemoving:Connect(function(player: Player)
 				lastOpen[player.UserId] = nil
