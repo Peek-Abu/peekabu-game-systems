@@ -492,7 +492,7 @@ EMPLOYEES.Prickles = {
 		-- PricklesShowstopper + PricklesShowstopperHat, stays in the places unused). V3 (11-17, SmartBone round 3):
 		-- the same textured outfit with 6 skirt chains and 2 lapel-fringe chains that swing on SmartBone 2, the vent's
 		-- two edges riding their own side, and the outfit's own colliders (its TailPhysics / Tail* attributes and
-		-- SmartColliders; EmployeeTailSmartBoneUtils). Icey Labs model 101847990925723 rev 3. V2 stays in the places
+		-- SmartColliders; EmployeeTailSmartBoneUtils). Icey Labs model 101847990925723 rev 5 (the round 3 file). V2 stays in the places
 		-- for rollback.
 		Showstopper = {
 			name = "Showstopper",
