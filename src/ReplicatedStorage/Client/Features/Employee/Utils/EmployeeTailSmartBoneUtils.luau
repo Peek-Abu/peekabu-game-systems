@@ -9,8 +9,10 @@
 	CFrame), marks the last one as the chain's end ("_end"), clears the outfit-bone mark so our own spring
 	(EmployeeTailSystem) leaves them alone, writes SmartBone's settings (EmployeeConstants.SMARTBONE_DEFAULTS, each
 	overridable by a Tail<name> attribute on the outfit), puts the outfit's per-bone TailBone<name> settings on every
-	simulated bone below each chain's root (lengths scaled by the character's scale) and tags the character's own legs
-	as its colliders under a collider key of its own. The local nesting never replicates; the server's flat bones stay as fitted.
+	simulated bone below each chain's root (lengths scaled by the character's scale) and tags its colliders under a
+	collider key of its own: the outfit's own (the fitted SmartColliders, sized to what you see) when it has them, else
+	the character's bare legs. Each body part in EmployeeConstants.SMARTBONE_ROOT_PARTS that carries chains (the skirt
+	under LowerTorso, a lapel fringe under UpperTorso) becomes a SmartBone root of its own. The local nesting never replicates; the server's flat bones stay as fitted.
 
 	@class EmployeeTailSmartBoneUtils
 ]=]
@@ -145,72 +147,106 @@ local function chains(lower: BasePart): { { Bone } }
 	return result
 end
 
+-- The fitted outfit's own SmartBone colliders (EmployeeConstants.SMARTBONE_COLLIDERS_FOLDER parts in its folder).
+local function outfitColliders(folder: Instance): { BasePart }
+	local found: { BasePart } = {}
+	for _, child in folder:GetChildren() do
+		if child:IsA("BasePart") and child:GetAttribute(EmployeeConstants.SMARTBONE_COLLIDER_BODY_ATTRIBUTE) ~= nil then
+			table.insert(found, child)
+		end
+	end
+	return found
+end
+
+-- The parts SmartBone collides `character`'s cloth with: the outfit's own colliders, else its bare legs.
+local function collidersOf(character: Model, folder: Instance?): { BasePart }
+	local own = if folder ~= nil then outfitColliders(folder) else {}
+	if #own > 0 then
+		return own
+	end
+	local legs: { BasePart } = {}
+	for _, name in EmployeeConstants.SMARTBONE_LEG_COLLIDERS do
+		local leg = partOf(character, name)
+		if leg ~= nil then
+			table.insert(legs, leg)
+		end
+	end
+	return legs
+end
+
 --[=[
 	Sets `character` up for SmartBone (see the header). Returns false, changing nothing, when its outfit doesn't ask
 	for SmartBone or it has no tail chains.
 ]=]
 function EmployeeTailSmartBoneUtils.prepare(character: Model): boolean
 	local folder = outfitFolder(character)
-	local lower = partOf(character, "LowerTorso")
-	if folder == nil or lower == nil or not EmployeeTailSmartBoneUtils.wantsSmartBone(character) then
+	if folder == nil or not EmployeeTailSmartBoneUtils.wantsSmartBone(character) then
 		return false
 	end
-	local found = chains(lower)
-	if #found == 0 then
+	local rooted: { { part: BasePart, chains: { { Bone } } } } = {}
+	for _, name in EmployeeConstants.SMARTBONE_ROOT_PARTS do
+		local part = partOf(character, name)
+		local found = if part ~= nil then chains(part) else {}
+		if part ~= nil and #found > 0 then
+			table.insert(rooted, { part = part, chains = found })
+		end
+	end
+	if #rooted == 0 then
 		return false
 	end
-	local roots: { string } = {}
 	local perBone = EmployeeTailSmartBoneUtils.boneSettings(folder, character:GetScale())
-	for _, chain in found do
-		for _, bone in chain do
-			bone.Transform = CFrame.identity
-			bone:SetAttribute(EmployeeConstants.OUTFIT_BONE_ATTRIBUTE, nil)
-		end
-		for i = 2, #chain do
-			local world = chain[i].WorldCFrame
-			chain[i].Parent = chain[i - 1]
-			chain[i].WorldCFrame = world
-		end
-		for i = 2, #chain do
-			for name, value in perBone do
-				chain[i]:SetAttribute(name, value)
-			end
-		end
-		chain[#chain].Name ..= END_SUFFIX
-		table.insert(roots, chain[1].Name)
-	end
+	local settings = EmployeeTailSmartBoneUtils.settings(folder)
 	local key = HttpService:GenerateGUID(false)
-	for _, name in EmployeeConstants.SMARTBONE_LEG_COLLIDERS do
-		local leg = partOf(character, name)
-		if leg ~= nil then
-			leg:SetAttribute("ColliderKey", key)
-			leg:SetAttribute("ColliderShape", "Capsule")
-			CollectionService:AddTag(leg, EmployeeConstants.SMARTBONE_COLLIDER_TAG)
+	for _, collider in collidersOf(character, folder) do
+		collider:SetAttribute("ColliderKey", key)
+		if collider:GetAttribute("ColliderShape") == nil then
+			collider:SetAttribute("ColliderShape", "Capsule")
 		end
+		CollectionService:AddTag(collider, EmployeeConstants.SMARTBONE_COLLIDER_TAG)
 	end
-	for name, value in EmployeeTailSmartBoneUtils.settings(folder) do
-		lower:SetAttribute(name, value)
+	for _, entry in rooted do
+		local roots: { string } = {}
+		for _, chain in entry.chains do
+			for _, bone in chain do
+				bone.Transform = CFrame.identity
+				bone:SetAttribute(EmployeeConstants.OUTFIT_BONE_ATTRIBUTE, nil)
+			end
+			for i = 2, #chain do
+				local world = chain[i].WorldCFrame
+				chain[i].Parent = chain[i - 1]
+				chain[i].WorldCFrame = world
+			end
+			for i = 2, #chain do
+				for name, value in perBone do
+					chain[i]:SetAttribute(name, value)
+				end
+			end
+			chain[#chain].Name ..= END_SUFFIX
+			table.insert(roots, chain[1].Name)
+		end
+		for name, value in settings do
+			entry.part:SetAttribute(name, value)
+		end
+		entry.part:SetAttribute("Roots", table.concat(roots, ","))
+		entry.part:SetAttribute("ColliderKey", key)
+		-- Last: SmartBone reads the colliders and settings when the tag arrives.
+		CollectionService:AddTag(entry.part, EmployeeConstants.SMARTBONE_TAG)
 	end
-	lower:SetAttribute("Roots", table.concat(roots, ","))
-	lower:SetAttribute("ColliderKey", key)
-	-- Last: SmartBone reads the colliders and settings when the tag arrives.
-	CollectionService:AddTag(lower, EmployeeConstants.SMARTBONE_TAG)
 	return true
 end
 
 --[=[
-	Takes `character` out of SmartBone: removes its root-part and leg tags.
+	Takes `character` out of SmartBone: removes its root-part and collider tags.
 ]=]
 function EmployeeTailSmartBoneUtils.release(character: Model)
-	local lower = partOf(character, "LowerTorso")
-	if lower ~= nil then
-		CollectionService:RemoveTag(lower, EmployeeConstants.SMARTBONE_TAG)
-	end
-	for _, name in EmployeeConstants.SMARTBONE_LEG_COLLIDERS do
-		local leg = partOf(character, name)
-		if leg ~= nil then
-			CollectionService:RemoveTag(leg, EmployeeConstants.SMARTBONE_COLLIDER_TAG)
+	for _, name in EmployeeConstants.SMARTBONE_ROOT_PARTS do
+		local part = partOf(character, name)
+		if part ~= nil then
+			CollectionService:RemoveTag(part, EmployeeConstants.SMARTBONE_TAG)
 		end
+	end
+	for _, collider in collidersOf(character, outfitFolder(character)) do
+		CollectionService:RemoveTag(collider, EmployeeConstants.SMARTBONE_COLLIDER_TAG)
 	end
 end
 

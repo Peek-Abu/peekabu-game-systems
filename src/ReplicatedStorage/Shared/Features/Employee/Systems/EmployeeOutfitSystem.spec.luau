@@ -349,6 +349,44 @@ return function()
 			outfit:Destroy()
 		end)
 
+		-- Owner 11-17 ("loads of clipping into body and other parts"): SmartBone cloth needs colliders the size of what
+		-- you SEE (the bloomer puff), not the bare legs inside it.
+		it(
+			"welds the outfit's SmartBone colliders onto their body parts, hidden and weightless, at the scaled offset",
+			function()
+				local character, outfit = makeCharacter(), makeOutfit()
+				character:ScaleTo(1.25)
+				local colliders = Instance.new("Folder")
+				colliders.Name = EmployeeConstants.SMARTBONE_COLLIDERS_FOLDER
+				colliders.Parent = outfit
+				local seat = part(colliders, "Seat", CFrame.new(0.1, 2.6, 0) * CFrame.Angles(0, 0, math.pi / 2))
+				seat.Size = Vector3.new(0.6, 0.8, 0.8)
+				seat:SetAttribute(EmployeeConstants.SMARTBONE_COLLIDER_BODY_ATTRIBUTE, "LowerTorso")
+				seat:SetAttribute("ColliderShape", "Capsule")
+				local stray = part(colliders, "Stray", CFrame.new(0, 1, 0))
+				stray:SetAttribute(EmployeeConstants.SMARTBONE_COLLIDER_BODY_ATTRIBUTE, "LeftUpperLeg")
+				EmployeeOutfitSystem.fit(character, outfit, "Red")
+				local folder = character[EmployeeConstants.OUTFIT_FOLDER]
+				local worn = folder.Seat
+				expect(worn.Transparency).to.equal(1)
+				expect(worn.Anchored).to.equal(false)
+				expect(worn.Massless).to.equal(true)
+				expect(worn.CanCollide).to.equal(false)
+				expect(worn:GetAttribute("ColliderShape")).to.equal("Capsule")
+				expect((worn.Size - Vector3.new(0.75, 1, 1)).Magnitude < 1e-4).to.equal(true)
+				local weld = worn:FindFirstChildOfClass("Weld")
+				expect(weld.Part0).to.equal(character.LowerTorso)
+				local want =
+					EmployeeOutfitFormulas.scaled(outfit.Rig.LowerTorso.CFrame:ToObjectSpace(seat.CFrame), 1.25)
+				expect(near(weld.C0, want)).to.equal(true)
+				expect(near(worn.CFrame, character.LowerTorso.CFrame * want)).to.equal(true)
+				-- a collider whose body part the character (or the rig) lacks is skipped
+				expect(folder:FindFirstChild("Stray")).never.to.be.ok()
+				character:Destroy()
+				outfit:Destroy()
+			end
+		)
+
 		it("wears no twin for a prop without a holster, or whose holster part the character lacks", function()
 			local character, outfit = makeCharacter(), makeOutfit()
 			EmployeeOutfitSystem.fit(character, outfit, "Red")

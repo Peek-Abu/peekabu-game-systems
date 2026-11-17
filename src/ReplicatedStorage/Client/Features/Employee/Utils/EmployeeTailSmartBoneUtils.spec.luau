@@ -140,6 +140,49 @@ return function()
 			model:Destroy()
 		end)
 
+		it(
+			"collides with the outfit's own colliders (the visible bloomers) instead of the bare legs when it has them",
+			function()
+				local model, lower, folder = makeCharacter(EmployeeConstants.TAIL_PHYSICS_SMARTBONE)
+				local seat = Instance.new("Part")
+				seat.Name = "Seat"
+				seat:SetAttribute(EmployeeConstants.SMARTBONE_COLLIDER_BODY_ATTRIBUTE, "LowerTorso")
+				seat:SetAttribute("ColliderShape", "Capsule")
+				seat.Parent = folder
+				EmployeeTailSmartBoneUtils.prepare(model)
+				local key = lower:GetAttribute("ColliderKey")
+				expect(CollectionService:HasTag(seat, EmployeeConstants.SMARTBONE_COLLIDER_TAG)).to.equal(true)
+				expect(seat:GetAttribute("ColliderKey")).to.equal(key)
+				expect(seat:GetAttribute("ColliderShape")).to.equal("Capsule")
+				expect(CollectionService:HasTag(model.LeftUpperLeg, EmployeeConstants.SMARTBONE_COLLIDER_TAG)).to.equal(
+					false
+				)
+				EmployeeTailSmartBoneUtils.release(model)
+				expect(CollectionService:HasTag(seat, EmployeeConstants.SMARTBONE_COLLIDER_TAG)).to.equal(false)
+				model:Destroy()
+			end
+		)
+
+		it("gives chains under UpperTorso (lapel fringe) their own SmartBone root, sharing the collider key", function()
+			local model, lower = makeCharacter(EmployeeConstants.TAIL_PHYSICS_SMARTBONE)
+			local upper = part(model, "UpperTorso", CFrame.new(0, 4, 0))
+			for n = 1, 3 do
+				local bone = Instance.new("Bone")
+				bone.Name = "TailUL" .. n .. "Bone"
+				bone.CFrame = CFrame.new(0.4, -0.3 * n, -0.5)
+				bone:SetAttribute(EmployeeConstants.OUTFIT_BONE_ATTRIBUTE, true)
+				bone.Parent = upper
+			end
+			expect(EmployeeTailSmartBoneUtils.prepare(model)).to.equal(true)
+			expect(CollectionService:HasTag(upper, EmployeeConstants.SMARTBONE_TAG)).to.equal(true)
+			expect(upper:GetAttribute("Roots")).to.equal("TailUL1Bone")
+			expect(upper:GetAttribute("ColliderKey")).to.equal(lower:GetAttribute("ColliderKey"))
+			expect(upper.TailUL1Bone:FindFirstChild("TailUL3Bone_end", true)).to.be.ok()
+			EmployeeTailSmartBoneUtils.release(model)
+			expect(CollectionService:HasTag(upper, EmployeeConstants.SMARTBONE_TAG)).to.equal(false)
+			model:Destroy()
+		end)
+
 		it("gives each character its own collider key, so tails only hit their own legs", function()
 			local a = makeCharacter(EmployeeConstants.TAIL_PHYSICS_SMARTBONE)
 			local b = makeCharacter(EmployeeConstants.TAIL_PHYSICS_SMARTBONE)

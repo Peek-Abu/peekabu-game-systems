@@ -161,6 +161,15 @@ local EmployeeConstants = {
 	-- (SMARTBONE_SCALED_BONE_SETTINGS) are scaled by the character's scale.
 	TAIL_BONE_ATTRIBUTE_PREFIX = "TailBone",
 	SMARTBONE_SCALED_BONE_SETTINGS = table.freeze({ "Radius", "XAxisLimits", "YAxisLimits", "ZAxisLimits" }),
+	-- The body parts whose own tail chains (Tail<name><n>Bone under them) SmartBone simulates, each as a root of its
+	-- own: the skirt under LowerTorso, a coat's lapel fringe under UpperTorso.
+	SMARTBONE_ROOT_PARTS = table.freeze({ "LowerTorso", "UpperTorso" }),
+	-- An outfit's own SmartBone colliders (owner 11-17: "loads of clipping"): invisible parts in this folder of the
+	-- outfit Model, sized to the VISIBLE surface (the bloomer puff, the boots, the coat's chest), each naming its body
+	-- part in SMARTBONE_COLLIDER_BODY_ATTRIBUTE and its shape in "ColliderShape". The fit welds them on; the client
+	-- then tags them instead of the bare legs.
+	SMARTBONE_COLLIDERS_FOLDER = "SmartColliders",
+	SMARTBONE_COLLIDER_BODY_ATTRIBUTE = "Body",
 	SMARTBONE_TAG = "SmartBone",
 	SMARTBONE_COLLIDER_TAG = "SmartCollider",
 	-- Owner-approved test 11-15 (three-way comparison): "Spring" keeps the coat's flared rest shape ("Distance"

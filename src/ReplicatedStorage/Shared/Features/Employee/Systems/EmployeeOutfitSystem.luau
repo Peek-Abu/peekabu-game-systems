@@ -19,6 +19,8 @@
 	- Worn props: a prop with a `Holster` body part and `HolsterOffset` frame also gets a shown twin in
 	  EmployeeConstants.HOLSTER_FOLDER, welded there at the scaled offset (the duck ring at the waist, the hose on the
 	  hip). The emote hides it while the hand copy shows.
+	- SmartBone colliders: the outfit's SmartColliders parts (EmployeeConstants) are welded, hidden and weightless, to
+	  the body part each names, at its scaled offset from that part's Rig placeholder, in the Outfit folder.
 	- Covering: the body parts and template pieces or Accessories the outfit's HideParts / HideAccessories attributes
 	  name are made invisible.
 	A second fit replaces the first. An outfit missing its meshes or Rig, an outfit whose Bone is named like a body part
@@ -223,6 +225,30 @@ function EmployeeOutfitSystem.fit(character: Model, outfit: Model, style: string
 			weld.Part1 = copy
 			weld.Parent = copy
 			copy.Parent = folder
+		end
+	end
+	-- The outfit's SmartBone colliders (EmployeeConstants.SMARTBONE_COLLIDERS_FOLDER): hidden, weightless, welded to
+	-- their body part at the scaled offset they had from its Rig placeholder.
+	local colliders = outfit:FindFirstChild(EmployeeConstants.SMARTBONE_COLLIDERS_FOLDER)
+	if colliders ~= nil then
+		for _, collider in colliders:GetChildren() do
+			local bodyName = collider:GetAttribute(EmployeeConstants.SMARTBONE_COLLIDER_BODY_ATTRIBUTE)
+			local target = if type(bodyName) == "string" then bodyPart(character, bodyName) else nil
+			local holder = if type(bodyName) == "string" then rig:FindFirstChild(bodyName) else nil
+			if collider:IsA("BasePart") and target ~= nil and holder ~= nil and holder:IsA("BasePart") then
+				local offset = EmployeeOutfitFormulas.scaled(holder.CFrame:ToObjectSpace(collider.CFrame), scale)
+				local copy = collider:Clone()
+				copy.Size = collider.Size * scale
+				copy.CFrame = target.CFrame * offset
+				weightless(copy)
+				copy.Transparency = 1
+				local weld = Instance.new("Weld")
+				weld.Part0 = target
+				weld.Part1 = copy
+				weld.C0 = offset
+				weld.Parent = copy
+				copy.Parent = folder
+			end
 		end
 	end
 	folder.Parent = character
