@@ -19,10 +19,10 @@ local CoffeeConstants = {
 	PAY_SCALE = 2,
 	-- One coffee: seconds of shift time (30 minutes).
 	SECONDS = 1800,
-	-- The Gleam price of the same coffee (owner 11-10; 150, owner 11-14; 115, owner 11-16 "lower coffee to 115 gleam"), next to the Robux product.
-	GLEAM_PRICE = 115,
+	-- The Gleam price of the same coffee (owner 11-10; 150, owner 11-14; 115, owner 11-16; back to 150 the same day, "I want to push people towards robux coffee"), next to the Robux product.
+	GLEAM_PRICE = 150,
 	-- The Robux price the choice shows until Roblox reports the product's live one (the real price is the product's,
-	-- set on the Creator Dashboard). 99 (owner 11-14: "Keep R$ 99"); 115 Gleam at the best pack (1,950 for R$ 1,699) is about R$ 100.
+	-- set on the Creator Dashboard). 99 (owner 11-14: "Keep R$ 99"); 150 Gleam is R$ 120 even at the best pack (12,500 for R$ 9,999).
 	ROBUX_PRICE = 99,
 	-- How often the server takes a second off the coffee time it is spending.
 	TICK_SECONDS = 1,

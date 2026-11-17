@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CoffeeConstants = require(ReplicatedStorage.Shared.Features.Coffee.Data.CoffeeConstants)
 local CoffeeRules = require(ReplicatedStorage.Shared.Features.Coffee.Rules.CoffeeRules)
+local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 
 return function()
 	describe("fresh and validate", function()
@@ -162,37 +163,40 @@ return function()
 	end)
 
 	describe("Gleam", function()
-		it("costs 115 Gleam for the same 30 minutes", function()
-			expect(CoffeeConstants.GLEAM_PRICE).to.equal(115)
+		it("costs 150 Gleam for the same 30 minutes", function()
+			expect(CoffeeConstants.GLEAM_PRICE).to.equal(150)
 		end)
 
-		it("is affordable with 115 Gleam or more", function()
-			expect(CoffeeRules.affords(115)).to.equal(true)
+		it("is affordable with 150 Gleam or more", function()
+			expect(CoffeeRules.affords(150)).to.equal(true)
 			expect(CoffeeRules.affords(900)).to.equal(true)
-			expect(CoffeeRules.affords(114)).to.equal(false)
+			expect(CoffeeRules.affords(149)).to.equal(false)
 			expect(CoffeeRules.affords(nil)).to.equal(false)
 		end)
 
-		it("takes 115 Gleam off the balance, or refuses and leaves it", function()
+		it("takes 150 Gleam off the balance, or refuses and leaves it", function()
 			local rich = { balance = 200 }
 			expect(CoffeeRules.payGleam(rich)).to.equal(true)
-			expect(rich.balance).to.equal(85)
-			local poor = { balance = 114 }
+			expect(rich.balance).to.equal(50)
+			local poor = { balance = 149 }
 			expect(CoffeeRules.payGleam(poor)).to.equal(false)
-			expect(poor.balance).to.equal(114)
+			expect(poor.balance).to.equal(149)
 		end)
 
-		it("costs less in Gleam than the same Robux at the 1,950 Gleam pack", function()
-			-- 115 Gleam at the 1,950 pack (R$ 1,699, owner 11-16) is about R$ 100: the Robux price (R$ 99, owner 11-14)
-			-- stays the better deal, just. Compared in whole numbers (99 x 1,950 < 115 x 1,699), so rounding never flips it.
-			-- The two big packs (5,400 / 12,500) make Gleam coffee a little cheaper than R$ 99 (about R$ 92 at 12,500):
-			-- a bulk buyer's reward, flagged to the owner 11-16.
+		it("is always cheaper in Robux than in Gleam, whichever pack the Gleam came from", function()
+			-- Owner 11-16: "I want to push people towards robux coffee": 150 Gleam is R$ 120 even at the best pack
+			-- (12,500 for R$ 9,999), against R$ 99 (owner 11-14). Compared in whole numbers (99 x gleam < 150 x robux),
+			-- so rounding never flips it, and against every pack, so a new pack can't undercut it unnoticed.
 			expect(CoffeeConstants.ROBUX_PRICE).to.equal(99)
-			expect(CoffeeConstants.ROBUX_PRICE * 1950 < CoffeeConstants.GLEAM_PRICE * 1699).to.equal(true)
+			for _, pack in ShopConstants.BUNDLES do
+				expect(CoffeeConstants.ROBUX_PRICE * pack.gleam < CoffeeConstants.GLEAM_PRICE * pack.robux).to.equal(
+					true
+				)
+			end
 		end)
 
 		it("tells a player who is short how much coffee costs", function()
-			expect(CoffeeRules.shortLine()).to.equal("You need 115 Gleam!")
+			expect(CoffeeRules.shortLine()).to.equal("You need 150 Gleam!")
 		end)
 	end)
 
