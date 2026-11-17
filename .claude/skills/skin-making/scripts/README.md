@@ -1,4 +1,4 @@
-# Script snapshots (Showstopper remake, 2026-11-16)
+# Script snapshots (Showstopper remake, 2026-11-16; texture round and SmartBone, 2026-11-17)
 
 Copies of the scripts that built and gated the shipped Showstopper Prickles remake. The live originals sit in the
 untracked main-checkout folder
@@ -22,6 +22,11 @@ pieces and numbers. Do not edit `$SSR` while a skin session is working in it.
 | `sleeve_gate.py` | sleeve points inside chest pieces (read with a render) | `POSESET=... -P sleeve_gate.py -- <dir>` |
 | `idle_clip_probe.py` | plain character's arms inside his own body | `... -P idle_clip_probe.py -- <out.json> [Clip]` |
 | `place_remake.luau` | places the outfit Model in Studio Edit (never saved) | Studio MCP `execute_luau`, with a slot |
+| `ss_bloomer_shell.py` | (texture round) three overlapping bloomer pieces -> one closed shell, one colour | `... -P ss_bloomer_shell.py -- <src_dir> <dst_dir>` |
+| `tex_prep.py` + `tex_bake.py` + `ss_export_tex.py` | (texture round) scan ratio maps + violet hat; real UVs, baked colour/normal/roughness per mesh | `py -3.9 -I tex_prep.py <tex> <hat.png>`; `... -P ss_export_tex.py -- <dir> [k=v]` |
+| `fbx_notex.py` | the upload FBX without embedded textures (maps ship as images) | `blender -b <dir>/export/export_final.blend -P fbx_notex.py -- <out.fbx>` |
+| `ride_chains.py` | (SmartBone) skirt chains on top of the weights, thigh share, vent split, lapel fringe, collider sizes -> `sb3.json` | `blender -b <export_final.blend> -P ride_chains.py -- <out> KF=0.45 KS=0.35 KB=0.35 LAPK=0.6` |
+| `place_v3.luau` | (SmartBone) places the live V3 outfit: textures, chains, end markers, SmartColliders, Tail* settings | Studio MCP `execute_luau`, with a slot |
 
 Not copied (they live elsewhere, untracked): `idle_arms.py`, `render_idle.py`, `preview_server.luau` and the clip
 re-pose tools in `characters/prickles/idle-arms-2026-11-16/`; `create_model.py` and `gait_all.py` in

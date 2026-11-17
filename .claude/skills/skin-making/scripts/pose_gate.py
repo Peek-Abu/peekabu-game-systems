@@ -42,6 +42,7 @@ def posed(name, skin):
     out = np.zeros_like(co); h = np.c_[co, np.ones(len(co))]
     for k, g in enumerate(gn):
         part = g[:-4]
+        if part.startswith('Tail'): part = 'LowerTorso'   # SmartBone skirt chains: at rest they ride the hips (no sim here)
         M = np.array(skin[part]) if part in skin else np.eye(4)
         w = W[:, k]
         nz = w > 0

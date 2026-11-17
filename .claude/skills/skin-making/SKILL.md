@@ -1,6 +1,6 @@
 ---
 name: skin-making
-description: Use when making, remaking, fitting, painting, recolouring, gating or shipping a skin or outfit for the team's Roblox employee characters (Odd Hours / Cleanup Crew - Pippa, Cappy, Prickles, any later employee or game) - coats, robes, skirts, sleeves, bloomers, boots, hats, lapels, collars, cuffs, props worn on the body - and when turning a 2D concept into a worn 3D skin. Also when a skin is called 2D, flat, painted-on, snug, "looks like two pieces", stitched, seamed, holes all over, torn at the armpits or shoulders, clipping, twitching, smudged, miscoloured, maroon or pink in the depot light, too slim, or "where are his knees / legs", when a skirt flips on a jump or pokes in crouch, when an outfit stays rigid in game, or when a new idle or clip makes arms go through a skin. SmartBone cloth is part of this skill (section still to add).
+description: Use when making, remaking, fitting, painting, recolouring, gating or shipping a skin or outfit for the team's Roblox employee characters (Odd Hours / Cleanup Crew - Pippa, Cappy, Prickles, any later employee or game) - coats, robes, skirts, sleeves, bloomers, boots, hats, lapels, collars, cuffs, props worn on the body - and when turning a 2D concept into a worn 3D skin. Also when a skin is called 2D, flat, painted-on, snug, "looks like two pieces", stitched, seamed, holes all over, torn at the armpits or shoulders, clipping, twitching, smudged, miscoloured, maroon or pink in the depot light, too slim, or "where are his knees / legs", when a skirt flips on a jump or pokes in crouch, when an outfit stays rigid in game, or when a new idle or clip makes arms go through a skin. Also when cloth should swing or sway (skirts, coat tails, lapel fringe) with SmartBone, or swinging cloth looks too rigid, twitches, flips up on a jump, or clips into the bloomers or body.
 ---
 
 # Skin making
@@ -41,7 +41,7 @@ Paths below use `$SSR` = `E:/Projects/peekabu-game-systems/characters/skins/rele
 | Coat / robe / dress / apron / long skirt | **ONE skinned robe** from neckline to hem (section 3) | torso top, hips + thighs for the skirt |
 | Sleeves, trousers, bloomers | **Closed lofts**, bands and cuffs are rings OF THE SAME MESH with face colours | arm / leg parts, blend at elbow and knee |
 | Lapels, collar, cuffs, trim | A **real fold of the same mesh**, standing off 0.15 studs | same as the cloth under it |
-| Swinging cloth (tails, skirt sway) | SmartBone chains on top of the leg weights: **TO ADD**, section 9 | |
+| Swinging cloth (skirt, tails, lapel fringe) | SmartBone chains ON TOP of the leg weights, the outfit's own colliders (section 9, [smartbone.md](smartbone.md)) | a share of the hips' and thighs' weight moves onto the chains |
 | A layer over another layer (apron over a dress, waistcoat under a coat) | Its own closed piece, standing off the cloth under it (>= 0.05), with **the same weights as the cloth under it** at each point (copy from the nearest robe point). Not yet built on a shipped skin: gate it hard. | copied from the layer below |
 
 Close-fit Layered Clothing (cages) works only for snug, short garments and never for a long coat; see failed routes.
@@ -153,12 +153,19 @@ first). Full method: [clip-repose.md](clip-repose.md).
 - "Can AI make the whole skin?" AI statues melt body and cloth together and smear paint. Use AI for rigid one-off
   props only, then hand-built shapes for cloth.
 
-## 9. SmartBone cloth - TO ADD
+## 9. SmartBone cloth
 
-> **This section is not written yet.** The owner's plan: SmartBone is the next step after this skill, then this
-> section gets filled in from that work. Until then, do not ship SmartBone on a skin.
+Full recipe, settings, gates and failures: [smartbone.md](smartbone.md). Shipped on Showstopper (round 3, 11-17).
 
-Known so far (from the tails test, 2026-11-15): [smartbone.md](smartbone.md).
+- Same mesh: chains ride ON TOP of the shipped weights. Move the hips' share plus part of the thigh weight (front flaps
+  ~45 %, sides/back ~35 %, toward the hem) onto the chains; never the waistband; the thigh-follow keeps crouch clean.
+- A back vent: below its top each edge rides only its own side's chains, or the split looks rigid.
+- Fringe and lapels are part of the robe: give them a short chain under UpperTorso (their own SmartBone root).
+- Colliders the size of what you SEE (bloomer puff, boots, chest) in the outfit's SmartColliders folder, shrunk only
+  where a chain bone rests; bone radius small (0.04). Bare legs as colliders let the cloth sink into the bloomers.
+- A Y ceiling at the hips (TailBoneYAxisLimits max ~0.05) stops the jump flip. Soft settings: stiffness 0.35,
+  elasticity 4, damping 0.18, bend 35.
+- Gate in-engine per move: swing, flip height, standing jitter, clip depth into the visible volumes. Test outfit first.
 
 ## Red flags - stop and re-read
 
@@ -172,6 +179,7 @@ Known so far (from the tails test, 2026-11-15): [smartbone.md](smartbone.md).
 | "Decimate to get under 20k" | Shards the colours. Split meshes. |
 | "Gate passes at rest and in walk" | Gate every frame of every live clip, crouch and emote included. |
 | "It looks right in my render light" | Check unlit, then warm depot light, then the depot. |
+| "Bare legs are colliders enough" | The cloth sinks into the bloomers. Colliders the size of what you see. |
 | "Owner can look first, then I'll test in game" | Test player in the game's own idle and light first. |
 | "AI painted it, close enough" | Plain cloth = one exact colour. |
 | "Use the Studio id from earlier" | Ids change each restart. Match window name AND placeId. |
