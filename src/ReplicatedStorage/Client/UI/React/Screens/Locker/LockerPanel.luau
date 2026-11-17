@@ -227,15 +227,17 @@ local function lockerCardView(
 				hue = "cream",
 				meaning = if card.haveCurrency == "acorns" then "gold" else "grape",
 				icon = haveIcon,
-				textSize = math.max(12, textSize - 3),
+				-- Readable at the 75% laptop floor and on a phone (design px; the kit's 16 px / 12 pt floor).
+				textSize = if phone then 15 else 26,
+				iconSize = if phone then 32 else 56,
 				anchor = Vector2.new(0, 1),
 				position = UDim2.new(
 					0,
-					rightX + (if phone then 14 else 24),
+					rightX + (if phone then 10 else 18),
 					1,
 					-DEPTH.lip - (if phone then 8 else 14) - buttonHeight - (if phone then 8 else 14)
 				),
-				size = UDim2.fromOffset(math.floor(rightWidth * 0.55), if phone then 26 else 44),
+				size = UDim2.fromOffset(math.floor(rightWidth * 0.62), if phone then 28 else 48),
 			})
 			else nil,
 		keys = e(ToonPill, {
