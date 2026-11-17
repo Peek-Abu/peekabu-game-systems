@@ -88,21 +88,26 @@ return function()
 			end
 		end)
 
-		it("gives Prickles a Showstopper skin: its whole-body outfit and top hat, his own flower kept", function()
-			local skin = EmployeeRegistry.get("Prickles").skins.Showstopper
-			expect(skin).to.be.ok()
-			expect(skin.outfit).to.equal("PricklesShowstopper")
-			expect(table.concat(skin.accessories, ",")).to.equal("PricklesShowstopperHat")
-			-- The outfit hides his hard hat itself (its HideAccessories), so without the art he stays Classic; his
-			-- flower is never hidden (owner, 2026-11-10: "keep flower exactly how it is in base skin").
-			expect(skin.hidePieces).never.to.be.ok()
-			-- One look: no styles, and his body keeps its own palette under the outfit.
-			expect(skin.styles).never.to.be.ok()
-			expect(skin.paletteTextureId).never.to.be.ok()
-			local item = CosmeticRegistry.get("Prickles.Showstopper")
-			expect(item).to.be.ok()
-			expect(item.styles).never.to.be.ok()
-		end)
+		it(
+			"gives Prickles a Showstopper skin: the remade whole-body outfit with its own top hat, his own flower kept",
+			function()
+				local skin = EmployeeRegistry.get("Prickles").skins.Showstopper
+				expect(skin).to.be.ok()
+				-- Owner 11-16 ("I approve of making it the live one!"): the remake (one robe, folded lapels, violet coat)
+				-- replaces the first build; its hat is one of the outfit's own meshes, so no separate hat gear.
+				expect(skin.outfit).to.equal("PricklesShowstopperV2")
+				expect(#skin.accessories).to.equal(0)
+				-- The outfit hides his hard hat itself (its HideAccessories), so without the art he stays Classic; his
+				-- flower is never hidden (owner, 2026-11-10: "keep flower exactly how it is in base skin").
+				expect(skin.hidePieces).never.to.be.ok()
+				-- One look: no styles, and his body keeps its own palette under the outfit.
+				expect(skin.styles).never.to.be.ok()
+				expect(skin.paletteTextureId).never.to.be.ok()
+				local item = CosmeticRegistry.get("Prickles.Showstopper")
+				expect(item).to.be.ok()
+				expect(item.styles).never.to.be.ok()
+			end
+		)
 
 		it(
 			"gives Cappy a Backstage skin: its tailcoat outfit, bow and ace card, his own cap and sneakers recoloured",

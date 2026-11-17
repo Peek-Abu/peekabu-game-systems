@@ -483,17 +483,19 @@ EMPLOYEES.Prickles = {
 			accessories = {},
 		},
 		-- Gloom Locker Epic (Cosmetic Prickles.Showstopper), the first Gloom Carnival skin: a whole-body ringmaster outfit
-		-- (jacket, trousers, boots; it hides his body under it and his hard hat: its HideParts / HideAccessories) and a
-		-- top hat as fitted gear on his head. His own flower stays where the base skin has it (owner, 2026-11-10), so
-		-- nothing is listed in hidePieces, and a place without the art leaves him Classic. One look, no styles; the
-		-- outfit's meshes carry their own textures. Icey Labs models 123759504597910 (outfit) and 130595513137797 (hat);
-		-- built in characters/skins/release/gloom_carnival/route2_whole.
+		-- that hides his body under it and his hard hat (its HideParts / HideAccessories). The remake (owner 11-16: "I
+		-- approve of making it the live one!"): one violet robe with folded lapels and a skirt riding his hips and thighs,
+		-- sleeves, waistcoat, bloomers into the boots, and the top hat as one of the outfit's own meshes, so no hat
+		-- gear. His own flower stays where the base skin has it, so nothing is listed in hidePieces, and a place without
+		-- the art leaves him Classic. One look, no styles; the outfit's meshes carry their own textures. Icey Labs model
+		-- 108833355972983; built in characters/skins/release/gloom_carnival/showstopper_remake (the first build,
+		-- PricklesShowstopper + PricklesShowstopperHat, stays in the places unused).
 		Showstopper = {
 			name = "Showstopper",
 			paletteTextureId = nil,
 			facesFolder = nil,
-			accessories = { "PricklesShowstopperHat" },
-			outfit = "PricklesShowstopper",
+			accessories = {},
+			outfit = "PricklesShowstopperV2",
 		},
 		-- Legendary (Cosmetic Prickles.Sheriff): the skinned sheriff outfit (hat, vest, boots) over his body, plus the hose
 		-- lasso the emote shows (characters/skins/runtime-candidates-2026-10-26/sheriff_prickles). The outfit covers
