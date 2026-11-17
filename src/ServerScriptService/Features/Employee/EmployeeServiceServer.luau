@@ -4,10 +4,9 @@
 	StarterCharacter (EmployeeSpawnSystem), before any service starts loading characters; at start it respawns
 	anyone whose character loaded before that (a player who joined during boot), then runs the expression
 	pass (EmployeeExpressionSystem) every EXPRESSION_INTERVAL from the Manager's mind (Occupant) and each
-	player's activity (Vacuum, Carry, Cargo pockets) and condition (dead or ragdolled: Death). Every employee character that spawns is dressed in
-	its player's skin (EmployeeSkinSystem; who wears what is the player's Cosmetic loadout), then in the company
-	uniform over it (EmployeeGearSystem: the employee's `uniform`), whose lanyard and ID card show the player's name and
-	rank, repainted whenever Rank publishes a new rank for them.
+	player's activity (Vacuum, Carry, Cargo pockets) and condition (dead or ragdolled: Death). Every employee
+	character that spawns is dressed in its player's skin and the company uniform (EmployeeDressSystem), whose
+	lanyard is repainted whenever Rank publishes a new rank for them.
 
 	Each player plays as their own employee (character systems step 2): Death calls `spawnFor` for every join and
 	respawn (setCharacterLoader), which builds the character from the loadout (EmployeeCharacterSystem); the
@@ -30,22 +29,19 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
-local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
-local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeFaceRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeFaceRules)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
-local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local OccupantServiceServer = require(ServerScriptService.Features.Occupant.OccupantServiceServer)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local EmployeeCharacterSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeCharacterSystem)
+local EmployeeDressSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeDressSystem)
 local EmployeeExpressionSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeExpressionSystem)
 local EmployeeGearSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeGearSystem)
-local EmployeeSkinSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeSkinSystem)
 local EmployeeSpawnSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeSpawnSystem)
 local EmployeeStatSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeStatSystem)
 local EmployeeStatOverrideTracker = require(ServerScriptService.Features.Employee.State.EmployeeStatOverrideTracker)
@@ -58,15 +54,9 @@ local log = Logger.new("EmployeeServiceServer")
 local installed = false
 local installError: string? = nil
 local respawned = 0
--- Characters dressed in a skin that changed something, and the last skin each player was given.
-local skinned = 0
-local skinOf: { [number]: string } = {}
--- Characters given a uniform piece.
-local uniformed = 0
+-- What the dressing did: skinned / uniformed counts, each player's last skin and what their character was built as.
+local tally = EmployeeDressSystem.newTally()
 local connections: { RBXScriptConnection } = {}
--- What each player's current character was built as (employee, skin key and colour style), to tell whether a
--- loadout change needs a new character.
-local worn: { [number]: EmployeeSkinRules.Worn } = {}
 local swapped = 0
 -- The players whose first character in this server has been rebuilt once already (EmployeeConstants.WARM_SWAP_DELAY).
 local warmed: { [number]: true } = {}
@@ -116,132 +106,6 @@ local function subjects(): { EmployeeExpressionSystem.Subject }
 	return list
 end
 
-local function resolve(path: { string }): Instance?
-	local current: Instance? = ReplicatedStorage
-	for _, name in path do
-		if current == nil then
-			return nil
-		end
-		current = current:FindFirstChild(name)
-	end
-	return current
-end
-
-local function accessorySource(): Instance?
-	return resolve(EmployeeConstants.ACCESSORIES_PATH)
-end
-
--- The art-owned skinned outfits a skin can name (EmployeeOutfitSystem).
-local function outfitSource(): Instance?
-	return resolve(EmployeeConstants.OUTFITS_PATH)
-end
-
--- The player's general account rank level (1..7; level 1 until Rank has loaded it).
-local function rankLevelOf(userId: number)
-	local progress = RankServiceServer:progressOf(userId)
-	return if progress ~= nil then progress.level else RankFormulas.progress(0).level
-end
-
--- The player's lanyard: their name and their published rank (level 1 until Rank has loaded it).
-local function badgeOf(player: Player): EmployeeGearSystem.Badge
-	local level = rankLevelOf(player.UserId)
-	return {
-		holder = player.DisplayName,
-		title = level.name,
-		band = `RANK: {string.upper(level.name)}`,
-		colour = level.lanyard,
-	}
-end
-
--- The skin key (EmployeeRegistry `skins`) the player's loadout puts on `employee`: the Cosmetic skin id after the
--- dot (Pippa.OwnerSpecial -> OwnerSpecial); nil before the loadout loads. A skin without art yet falls back to the
--- Default (EmployeeSkinRules.select).
-local function skinKeyOf(userId: number, employee: string): string?
-	local look = CosmeticServiceServer:lookOf(userId, employee)
-	if look == nil then
-		return nil
-	end
-	return string.match(look.skin, "^[^%.]+%.(.+)$")
-end
-
--- The chosen idle item's key (after the dot) for `employee`: only a non-free idle that fits the worn skin
--- (CosmeticRules.lookFor already drops one that does not); nil = the skin's own idle.
-local function idleKeyOf(userId: number, employee: string): string?
-	local look = CosmeticServiceServer:lookOf(userId, employee)
-	local item = if look ~= nil then CosmeticRegistry.get(look.idle) else nil
-	if item == nil or item.source == "default" then
-		return nil
-	end
-	return CosmeticRegistry.keyOf(item.id)
-end
-
--- Names the idle the player's look picks on their character (Animate rebinds its idle when it changes): no rebuild.
-local function markIdle(userId: number, character: Model, employee: string)
-	local key = idleKeyOf(userId, employee)
-	if character:GetAttribute(EmployeeConstants.IDLE_ATTRIBUTE) ~= key then
-		character:SetAttribute(EmployeeConstants.IDLE_ATTRIBUTE, key)
-	end
-end
-
--- The colour style the player's loadout picks for `skin` on `employee`, clamped to one the skin has (1 before the
--- loadout loads, or for a skin with no styles).
-local function styleOf(userId: number, employee: string, skin: EmployeeRegistry.SkinDef): number
-	local look = CosmeticServiceServer:lookOf(userId, employee)
-	return EmployeeSkinRules.styleIndex(skin, if look ~= nil then look.style else nil)
-end
-
--- Names the vacuum the player's outfit wants on their character (VacuumServiceServer wears it, and swaps the pack
--- when it changes); nothing before the loadout loads (Standard Issue).
-local function markVacuum(userId: number, character: Model)
-	local outfit = CosmeticServiceServer:outfitOf(userId)
-	if outfit ~= nil then
-		local key = CosmeticRegistry.keyOf(outfit.vacuum)
-		if character:GetAttribute(VacuumConstants.SKIN_ATTRIBUTE) ~= key then
-			character:SetAttribute(VacuumConstants.SKIN_ATTRIBUTE, key)
-		end
-	end
-end
-
--- Dresses a spawned employee character in its player's skin, then the uniform over it (server-side, so it
--- replicates). The skin goes first: its palette is for the body's MeshParts, never the uniform's.
-local function dress(player: Player, character: Model)
-	local name = character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE)
-	local def = if type(name) == "string" then EmployeeRegistry.get(name) else nil
-	if def == nil then
-		return
-	end
-	local skin = EmployeeSkinRules.select(def, skinKeyOf(player.UserId, def.name))
-	if skin == nil then
-		log:warn(`{def.name} has no default skin {def.defaultSkin}`)
-		return
-	end
-	local style = styleOf(player.UserId, def.name, skin)
-	skinOf[player.UserId] = skin.name
-	worn[player.UserId] = { employee = def.name, skin = skin.name, style = style }
-	-- The skin the outfit asks for (its art may still be the Default's): a preview of the outfit matches on it.
-	character:SetAttribute(EmployeeConstants.SKIN_ATTRIBUTE, skinKeyOf(player.UserId, def.name) or skin.name)
-	character:SetAttribute(EmployeeConstants.STYLE_ATTRIBUTE, style)
-	markIdle(player.UserId, character, def.name)
-	character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, rankLevelOf(player.UserId).level)
-	for _, legacyName in { "PippaVest", "PippaLanyard" } do
-		local legacy = character:FindFirstChild(legacyName)
-		if legacy ~= nil then
-			legacy:Destroy()
-		end
-	end
-	local result = EmployeeSkinSystem.apply(character, skin, accessorySource(), style, outfitSource())
-	if skin.outfit ~= nil and not result.outfit then
-		log:warn(`{def.name} skin {skin.name}: outfit {skin.outfit} could not be fitted`)
-	end
-	if result.textured > 0 or result.facesSwapped or result.accessories > 0 or result.outfit then
-		skinned += 1
-	end
-	if EmployeeGearSystem.wear(character, def.uniform, accessorySource()) > 0 then
-		uniformed += 1
-		EmployeeGearSystem.badge(character, badgeOf(player))
-	end
-end
-
 -- The employee the player should be and its built character (falling back to the default employee when this place
 -- has no art for theirs); nil when even that is missing.
 local function buildFor(player: Player): Model?
@@ -281,7 +145,7 @@ local function warmSwap(player: Player)
 	if model == nil then
 		return
 	end
-	markVacuum(player.UserId, model)
+	EmployeeDressSystem.markVacuum(player.UserId, model)
 	warmSwaps += 1
 	EmployeeCharacterSystem.assign(player, model, character:GetPivot(), true)
 end
@@ -304,7 +168,7 @@ local function spawnFor(player: Player)
 		player:LoadCharacterAsync()
 		return
 	end
-	markVacuum(player.UserId, model)
+	EmployeeDressSystem.markVacuum(player.UserId, model)
 	EmployeeCharacterSystem.assign(player, model, nil, false)
 	if not warmed[player.UserId] then
 		warmed[player.UserId] = true
@@ -324,21 +188,26 @@ local function swapIfChanged(userId: number)
 		return
 	end
 	-- A new vacuum needs no rebuild: the pack is swapped on the character as it stands.
-	markVacuum(userId, character)
+	EmployeeDressSystem.markVacuum(userId, character)
 	local employee = CosmeticServiceServer:currentEmployee(userId)
 	-- A new idle needs no rebuild either: the character's idle attribute changes and its Animate rebinds.
-	local current = worn[userId]
+	local current = tally.worn[userId]
 	if current ~= nil and current.employee == employee then
-		markIdle(userId, character, employee)
+		EmployeeDressSystem.markIdle(userId, character, employee)
 	end
 	local def = EmployeeRegistry.get(employee)
 	if def == nil or current == nil then
 		return
 	end
-	local wantedSkin = EmployeeSkinRules.select(def, skinKeyOf(userId, employee))
+	local wantedSkin = EmployeeSkinRules.select(def, EmployeeDressSystem.skinKeyOf(userId, employee))
 	if
 		wantedSkin ~= nil
-		and not EmployeeSkinRules.wornChanged(current, employee, wantedSkin.name, styleOf(userId, employee, wantedSkin))
+		and not EmployeeSkinRules.wornChanged(
+			current,
+			employee,
+			wantedSkin.name,
+			EmployeeDressSystem.styleOf(userId, employee, wantedSkin)
+		)
 	then
 		return
 	end
@@ -347,23 +216,13 @@ local function swapIfChanged(userId: number)
 		return
 	end
 	model:SetAttribute(EmployeeConstants.SWAP_ATTRIBUTE, true)
-	markVacuum(userId, model)
+	EmployeeDressSystem.markVacuum(userId, model)
 	swapped += 1
 	EmployeeCharacterSystem.assign(player, model, character:GetPivot(), true)
 end
 
 local function watchSpawns(player: Player)
-	local watching: RBXScriptConnection? = spawnWatches[player]
-	if watching ~= nil then
-		return
-	end
-	spawnWatches[player] = player.CharacterAdded:Connect(function(character: Model)
-		dress(player, character)
-	end)
-	local character = player.Character
-	if character ~= nil then
-		dress(player, character)
-	end
+	EmployeeDressSystem.watch(tally, spawnWatches, player)
 end
 
 export type EmployeeServiceServer = {
@@ -427,8 +286,8 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			local player = Players:GetPlayerByUserId(userId)
 			local character = if player ~= nil then player.Character else nil
 			if player ~= nil and character ~= nil then
-				character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, rankLevelOf(userId).level)
-				EmployeeGearSystem.badge(character, badgeOf(player))
+				character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, EmployeeDressSystem.rankLevelOf(userId).level)
+				EmployeeGearSystem.badge(character, EmployeeDressSystem.badgeOf(player))
 			end
 		end)
 		cosmeticConnection = CosmeticServiceServer.changed:Connect(swapIfChanged)
@@ -453,8 +312,8 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 					spawnWatches[player] = nil
 				end
 				expressions.forget(player.UserId)
-				skinOf[player.UserId] = nil
-				worn[player.UserId] = nil
+				tally.skinOf[player.UserId] = nil
+				tally.worn[player.UserId] = nil
 				warmed[player.UserId] = nil
 				statOverrides:forget(player.UserId)
 			end)
@@ -489,10 +348,10 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			respawned = respawned,
 			swapped = swapped,
 			warmSwaps = warmSwaps,
-			worn = worn,
-			skinned = skinned,
-			uniformed = uniformed,
-			skins = skinOf,
+			worn = tally.worn,
+			skinned = tally.skinned,
+			uniformed = tally.uniformed,
+			skins = tally.skinOf,
 			statOverrides = statOverrides:count(),
 			expressions = expressions.getState(),
 		}
@@ -525,7 +384,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			return false, "no employee art in this place"
 		end
 		model:SetAttribute(EmployeeConstants.SWAP_ATTRIBUTE, true)
-		markVacuum(player.UserId, model)
+		EmployeeDressSystem.markVacuum(player.UserId, model)
 		EmployeeCharacterSystem.assign(player, model, character:GetPivot(), true)
 		return true, nil
 	end,
