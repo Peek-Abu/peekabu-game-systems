@@ -305,12 +305,12 @@ local function bundleCard(
 		-- Bigger words than the Featured row's short cards (checked in Play 11-16: 40 read small at 75%), and nothing
 		-- under the phone floor (12 pt).
 		local bigSize = if phone then 24 else 56
-		local top = if phone then 8 else 18
+		-- The amount sits just under the round bonus badge on the top-right corner (owner 11-16: "I did like the
+		-- banner / circular bonus and percentage"), so the badge never covers it; every card lines up the same.
+		local top = if phone then 24 else 56
 		local amountH = bigSize + 4
 		local wordSize = if phone then 12 else 22
-		local chipH = if phone then 22 else 36
-		local chipTop = top + amountH + wordSize + (if phone then 4 else 8)
-		local artTop = chipTop + chipH + (if phone then 4 else 10)
+		local artTop = top + amountH + wordSize + (if phone then 6 else 14)
 		local artBottom = DEPTH.lip + pillHeight + (if phone then 10 else 20)
 		local room = math.max(size.Y - DEPTH.drop - artTop - artBottom, 0)
 		local artSize = math.floor(math.min(room, (size.X - 16) * bundle.iconScale))
@@ -333,17 +333,6 @@ local function bundleCard(
 				size = UDim2.new(1, -16, 0, wordSize + 2),
 				align = "center",
 			}),
-			bonus = if bundle.bonus ~= nil
-				then e(ToonPill, {
-					text = `{bundle.bonus} BONUS`,
-					hue = "mint",
-					small = true,
-					textSize = if phone then 12 else 22,
-					anchor = Vector2.new(0.5, 0),
-					position = UDim2.new(0.5, 0, 0, chipTop),
-					size = UDim2.fromOffset(math.floor(size.X * 0.62), chipH),
-				})
-				else nil,
 			icon = e(ToonIcon, {
 				image = bundle.image,
 				anchor = Vector2.new(0.5, 0.5),
@@ -391,7 +380,7 @@ local function bundleCard(
 			zIndex = 6,
 		})
 	end
-	if bundle.bonus ~= nil and wide then
+	if bundle.bonus ~= nil then
 		nodes.bonus = e(ToonBurst, {
 			text = bundle.bonus,
 			sub = "BONUS",
