@@ -29,16 +29,14 @@ local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Dat
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 local DepotNextShiftCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotNextShiftCard)
+local DepotProfileCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotProfileCard)
 local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
-local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
-local ToonBar = require(Toon.ToonBar)
 local ToonButton = require(Toon.ToonButton)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
 local ToonSparkle = require(Toon.ToonSparkle)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
-local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonWallet = require(Toon.ToonWallet)
 local UIToonConstants = require(Toon.UIToonConstants)
@@ -83,107 +81,6 @@ type Tile = {
 	variant: ToonStyleViewModel.Variant,
 	activate: () -> (),
 }
-
-local function profileCard(props: DepotHubPanelProps): React.ReactNode
-	local phone = props.phone
-	local profile = props.profile
-	local portrait = if phone then 78 else 168
-	local cardX = if phone then 168 else 150
-	local cardY = if phone then 6 else 80
-	local card = if phone then Vector2.new(232, 52) else Vector2.new(356, 134)
-	local textLeft = if phone then 36 else 46
-	local face: { [string]: React.ReactNode } = {
-		name = e(ToonText, {
-			text = profile.name,
-			-- On phone the name sits right above the XP bar: a size whose caps (optically centred) and drop clear it.
-			textSize = if phone then 23 else 44,
-			position = UDim2.fromOffset(textLeft, if phone then 0 else 10),
-			size = UDim2.fromOffset(card.X - textLeft - (if phone then 52 else 80), if phone then 28 else 48),
-			fit = true,
-			automaticWidth = false,
-		}),
-		level = e("Frame", {
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, if phone then -8 else -18, 0, if phone then -6 else 4),
-			Size = UDim2.fromOffset(if phone then 40 else 62, if phone then 40 else 62),
-			BackgroundTransparency = 1,
-			ZIndex = 4,
-		}, {
-			star = e(ToonIcon, { icon = "xp", size = UDim2.fromScale(1, 1), drop = 3 }),
-			-- Centred on the star's body (its optical centre sits 3% below its box's centre), not on its box.
-			number = e(ToonText, {
-				text = profile.level,
-				textSize = if phone then 18 else 28,
-				position = UDim2.fromScale(0, 0.03),
-				size = UDim2.fromScale(1, 1),
-				align = "center",
-				zIndex = 3,
-			}),
-		}),
-		bar = e(ToonBar, {
-			kind = "xp",
-			fill = profile.fill,
-			label = if phone then nil else profile.xpText,
-			labelSize = 20,
-			position = UDim2.fromOffset(textLeft - 4, if phone then 32 else 86),
-			size = UDim2.fromOffset(card.X - textLeft - 14, if phone then 12 else 32),
-		}),
-	}
-	if not phone then
-		face.rank = e(ToonText, {
-			text = profile.rank,
-			font = "body",
-			textSize = 22,
-			position = UDim2.fromOffset(textLeft, 56),
-			size = UDim2.fromOffset(card.X - textLeft - 14, 26),
-			fit = true,
-		})
-	end
-	return e("Frame", {
-		Position = UDim2.fromOffset(if phone then 128 else 22, if phone then 0 else 56),
-		Size = UDim2.fromOffset(cardX - (if phone then 128 else 22) + card.X, portrait),
-		BackgroundTransparency = 1,
-	}, {
-		card = e(ToonSurface, {
-			hue = "cream",
-			radius = if phone then 18 else 26,
-			pattern = "rings",
-			small = phone,
-			position = UDim2.fromOffset(cardX - (if phone then 128 else 22), cardY - (if phone then 0 else 56)),
-			size = UDim2.fromOffset(card.X, card.Y),
-			children = face,
-		}),
-		-- The player's own character (CharacterPortrait, posed for their rank) in a ring, breaking the card's left
-		-- edge.
-		portrait = e("Frame", {
-			Size = UDim2.fromOffset(portrait, portrait),
-			BackgroundColor3 = UIToonConstants.shade("lilac").hi,
-			ZIndex = 3,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = if phone then 4 else 6 }),
-			ring = e("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.new(1, -10, 1, -10),
-				BackgroundTransparency = 1,
-			}, {
-				corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-				stroke = e("UIStroke", { Color = COLOR.white, Thickness = if phone then 2 else 4 }),
-			}),
-			photo = e(CharacterPortrait, {
-				userId = props.userId,
-				context = "profile",
-				framing = "bust",
-				anchor = Vector2.new(0.5, 0.5),
-				position = UDim2.fromScale(0.5, 0.5),
-				size = UDim2.new(1, -12, 1, -12),
-				round = true,
-				zIndex = 3,
-			}),
-		}),
-	})
-end
 
 local function tiles(props: DepotHubPanelProps): React.ReactNode
 	local phone = props.phone
@@ -440,7 +337,7 @@ end
 
 local function DepotHubPanel(props: DepotHubPanelProps): React.ReactNode
 	local nodes: { [string]: React.ReactNode } = {
-		profile = profileCard(props),
+		profile = e(DepotProfileCard, { phone = props.phone, userId = props.userId, profile = props.profile }),
 		tiles = tiles(props),
 		topRight = topRight(props),
 	}
