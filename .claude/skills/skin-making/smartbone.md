@@ -1,7 +1,7 @@
 # SmartBone cloth (skirts, coat tails, lapel fringe)
 
 Tested on Showstopper Prickles, rounds 1-3 (2026-11-17). Round 3 shipped as `PricklesShowstopperV3` (owner: "good
-enough especially for kids"). Round 4 (bones on the cloth surface) was tested and not shipped: see its section.
+enough especially for kids"). Round 4 (bones on the cloth surface) + per-bone ceilings (`TailBoneLift`) is the recipe for new skins: see the last two sections.
 `$SSR` = `characters/skins/release/gloom_carnival/showstopper_remake` (main checkout, untracked).
 
 ## What it is
@@ -74,7 +74,7 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
 - Showstopper round 3: skirt swing walk 0.87 / run 0.98 / stop 0.14 / jumps 1.14; lapel tips 0.54 / 0.70 / 0.10 /
   0.72; hem level with the hips on jumps; deepest clip walk 0.28 → 0.10 with the outfit colliders (run 0.20 both).
 
-## Bones on the cloth surface (round 4, tested 11-17, not shipped)
+## Bones on the cloth surface (round 4, tested 11-17)
 
 - The skirt bones from the robe rig sit **inside** the draped cloth, so colliders (which act on bones) must stay below
   the visible size. Round 4 moved every non-root joint out onto the cloth (`ride_chains.py ... SURFACE=1`: each joint
@@ -88,8 +88,31 @@ Middle links rest just below the hips, so the ceiling cannot go lower without be
 - **But the hem lifts above the hips** (walk 0.14, run 0.16, jumps 0.25 vs round 3 level): the joints are further out,
   so the panels swing on longer levers. A lower shared Y ceiling (-0.06) cut it (jump 0.16) but bent the rest shape
   (some middle joints rest at the ceiling; standing sway rose to 0.26). Not clearly better, so round 3 stayed live.
-- Next step for round 4: **per-chain ceilings** (back panels lower than front flaps), set on each chain's bones from
-  their rest height, then re-gate. Test asset 139625595849758, `place_sb4.luau`.
+- Fixed by **per-bone ceilings** (next section): round 4 + `TailBoneLift` 0.15 keeps the hem at or below the hips.
+
+## The hem ceiling rule (every skin): `TailBoneLift`
+
+- One shared ceiling (`TailBoneYAxisLimits`) cannot work for a whole skirt: the hem tips rest ~0.8 below the hips and
+  the upper joints right at them, so a ceiling low enough to stop the hem flipping up squeezes the upper joints (rest
+  shape bends, standing sway 0.12 → 0.26), and one that leaves the joints alone lets the hem fold up (jump +0.32).
+- **Set `TailBoneLift` on the outfit** (studs, scaled with the character like the other `TailBone*` lengths).
+  `EmployeeTailSmartBoneUtils.prepare` gives each simulated bone its own `YAxisLimits`: up to where it RESTS in its
+  root part's space plus the lift, capped by `TailBoneYAxisLimits`' top; the bottom stays the shared one. Nothing to
+  measure per skin: it reads the rest heights from the fitted bones.
+- **Default: lift 0.15, shared cap 0.05.** Tested on Showstopper round 4, 2026-11-17 (skirt swing / lapel swing / highest
+  hem vs hips / chain points inside the body / deepest):
+
+| Ceiling | walk | run | jump | idle sway |
+|---|---|---|---|---|
+| shared 0.05 only | 0.96/0.85/**+0.13**/12/0.08 | 0.77/0.71/-0.02/12/0.10 | 1.15/0.63/**+0.32**/13/0.08 | 0.12 |
+| shared -0.06 only | | | 0.16 hem | 0.26 (rest bent) |
+| lift 0.10 | 0.86/0.79/-0.07/14/0.08 | 0.87/0.65/-0.16/9/0.10 | 1.14/0.59/-0.10/12/0.08 | 0.12 |
+| **lift 0.15** (2 runs) | 1.00/0.83/0.00/14/0.09, 0.97/0.80/-0.01 | 0.81/0.74/-0.06/12/0.10, 0.69/0.71/-0.17 | 0.94/0.44/-0.15/13/0.08, 1.27/0.60/-0.04 | 0.12 |
+| lift 0.25 | 0.95/0.84/+0.05/12/0.08 | 0.74/0.73/-0.11/13/0.10 | 1.19/0.51/+0.06/12/0.08 | 0.09 |
+
+- Lower the lift (0.10) for a skin whose hem must stay further down; raise it only if the swing reads stiff and the
+  hem-vs-hips gate still passes. The lapel chains get the same rule (their tips still swing 0.4-0.8).
+- Standing twitch stayed 0.004-0.005 at every lift. Test outfit: `PricklesShowstopperSB` (asset 139625595849758).
 
 ## Failed / rejected
 

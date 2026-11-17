@@ -161,10 +161,12 @@ Full recipe, settings, gates and failures: [smartbone.md](smartbone.md). Shipped
   ~45 %, sides/back ~35 %, toward the hem) onto the chains; never the waistband; the thigh-follow keeps crouch clean.
 - A back vent: below its top each edge rides only its own side's chains, or the split looks rigid.
 - Fringe and lapels are part of the robe: give them a short chain under UpperTorso (their own SmartBone root).
-- Colliders the size of what you SEE (bloomer puff, boots, chest) in the outfit's SmartColliders folder, shrunk only
-  where a chain bone rests; bone radius small (0.04). Bare legs as colliders let the cloth sink into the bloomers.
-- A Y ceiling at the hips (TailBoneYAxisLimits max ~0.05) stops the jump flip. Soft settings: stiffness 0.35,
-  elasticity 4, damping 0.18, bend 35.
+- Put the chain joints ON the cloth surface (`ride_chains.py ... SURFACE=1`), then colliders can be the full size of
+  what you SEE (bloomer puff, boots, chest) in the outfit's SmartColliders folder; bone radius small (0.04). Size them
+  against the bone heads only (roots are pinned). Bare legs as colliders let the cloth sink into the bloomers.
+- Hem ceiling: `TailBoneLift = 0.15` on the outfit (each bone may rise only 0.15 above where it rests) plus the shared
+  cap `TailBoneYAxisLimits` -4 .. 0.05. Never a single low shared ceiling: it bends the rest shape. Soft settings:
+  stiffness 0.35, elasticity 4, damping 0.18, bend 35.
 - Gate in-engine per move: swing, flip height, standing jitter, clip depth into the visible volumes. Test outfit first.
 
 ## Red flags - stop and re-read
