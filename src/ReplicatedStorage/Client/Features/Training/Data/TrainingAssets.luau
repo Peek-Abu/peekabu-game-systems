@@ -3,10 +3,9 @@
 	TrainingAssets: the sounds of Mr. Harlow's scripted pass at the training's escape stop (TrainingHallSystem). Client-only.
 	Registers them at load (guarded).
 
-	INTERIM Creator Store picks (2026-11-10, free library audio, not yet heard by the owner): to be replaced by in-house
-	sounds (game-sound-design) once he has listened. The STAFF door's creak as it swings open and his exit door's slam
-	(3D, at the door), and the relief sting when he has gone (2D). Also the finish fanfare and the guide's coach card
-	(owner-picked; the guide is Prickles, TrainingConstants.GUIDE_EMPLOYEE).
+	The STAFF door's creak as it swings open and his exit door's slam (3D, at the door; in-house, Icey Labs), and the
+	relief sting when he has gone (2D). Also the finish fanfare and the guide's coach card (owner-picked; the guide is
+	Prickles, TrainingConstants.GUIDE_EMPLOYEE).
 
 	Static data + registration (spec-exempt).
 
@@ -19,17 +18,21 @@ local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.Sound
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
-	-- "Door creak" (Creator Store 96876231304223).
+	-- An old wooden door creaking open: latch click, rusty hinge squeal over a low wood groan (2.0 s, -18 LUFS). In-house
+	-- (ElevenLabs Starter stems hand-layered, Icey Labs), replacing the other-player upload "Door creak" (owner asset
+	-- check fix 2, 11-18: a player's own upload can go private). Volume awaits the owner's hear-check.
 	trainingDoorCreak = {
-		assetId = "rbxassetid://96876231304223",
+		assetId = "rbxassetid://101893971281061",
 		group = "SFX",
 		bus = "Action",
-		volume = 2.2,
+		volume = 1,
 		rollOffMaxDistance = 80,
 	},
-	-- "Door Slam" (Creator Store 121982576409852).
+	-- The door slammed shut: the bang, the latch snapping, a low boom and the door's glass rattling after (1.0 s, -16 LUFS).
+	-- In-house (Icey Labs), replacing the other-player upload "Door Slam" (asset check fix 2, 11-18). Volume awaits the
+	-- hear-check.
 	trainingDoorSlam = {
-		assetId = "rbxassetid://121982576409852",
+		assetId = "rbxassetid://99736789284027",
 		group = "SFX",
 		bus = "Stings",
 		volume = 0.9,
