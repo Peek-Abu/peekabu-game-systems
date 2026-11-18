@@ -32,6 +32,10 @@ export type Platform = "pc" | "phone" | "tablet" | "console" | "unknown"
 
 export type Vote = "another" | "depot"
 
+-- How a crew's trip runs (ShiftNightConstants.MODE_KEY on the depart payload): "night" is the Night Shift run (nights
+-- in a row, a weekly quota every WEEK_NIGHTS nights, no end); "quick" is one shift, as before.
+export type RunMode = "night" | "quick"
+
 -- The map a shift is played on (the truck's host picks it on the START panel; DepotMapRules.parse reads it off the
 -- untrusted depart payload, anything else is "office"). Both are generated each shift in the Shift place.
 export type MapId = "office" | "school"
@@ -68,6 +72,14 @@ export type ShiftState = {
 	-- are still in the shift (in the server and not caught; nil until first counted). ShiftClockOutRules.
 	punched: { number }?,
 	crewIn: number?,
+	-- The run's mode (nil reads "quick"). Night Shift only (nil otherwise): this night's number (from 1), its week, the
+	-- week's quota (ShiftNightFormulas.weekQuota) and the Gloom the crew has cleared toward it this week (this night's
+	-- clearance included once the night ends). `quota` stays this night's goal.
+	runMode: RunMode?,
+	night: number?,
+	week: number?,
+	weekQuota: number?,
+	weekCleared: number?,
 }
 
 -- The performance review's overall stamp (Figma 35:1096): quota missed, met, or met with the salvage threshold.
