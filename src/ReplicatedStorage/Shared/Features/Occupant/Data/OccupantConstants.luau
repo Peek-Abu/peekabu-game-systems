@@ -360,6 +360,14 @@ return table.freeze({
 	BREATHER_PER_TIER = 5,
 	BREATHER_OVERTIME = range(15, 25),
 	BREATHER_HEARING = 20,
+	-- Night Shift's weekly ramp (owner 11-18: more threat each week, never constant threat). From week 2 he steers
+	-- toward the crew STEER_PER_WEEK seconds sooner a week and his breathers are BREATHER_PER_WEEK seconds shorter a
+	-- week; the weeks never push either below its floor (one already under it stays as it was). Week 1 and Quick shift
+	-- play as before (OccupantMenaceFormulas.week).
+	STEER_PER_WEEK = 3,
+	STEER_WEEK_FLOOR = 14,
+	BREATHER_PER_WEEK = 4,
+	BREATHER_WEEK_FLOOR = 15,
 	MENACE_MAX = 100,
 	MENACE_CHASE = 10,
 	MENACE_STARE = 6,

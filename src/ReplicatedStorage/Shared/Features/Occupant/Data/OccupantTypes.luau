@@ -120,11 +120,13 @@ export type PerchView = {
 	seen: boolean,
 }
 
--- How the director paces him (from the shift and the crew).
+-- How the director paces him (from the shift and the crew). `week`: the Night Shift week (OccupantMenaceFormulas.week;
+-- nil and 1 both mean no weekly ramp, as in Quick shift).
 export type Pacing = {
 	tier: number,
 	solo: boolean,
 	overtime: boolean,
+	week: number?,
 }
 
 -- An axis-aligned box in the world (the truck's box, a safe place; or the loading bay around it). `more` adds boxes

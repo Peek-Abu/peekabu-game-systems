@@ -52,6 +52,15 @@ function SkillCheckAngleFormulas.gapWidth(progress: number, start: number, finis
 end
 
 --[=[
+	How much of its width an opening keeps in Night Shift week `week`: 1 in week 1 (and for nil, NaN or under 1: Quick
+	shift), `step` less for each week after the first (whole weeks), never below `floor`.
+]=]
+function SkillCheckAngleFormulas.weekScale(week: number?, step: number, floor: number): number
+	local whole = if week ~= nil and week == week then math.max(1, math.floor(week)) else 1
+	return math.max(1 - (whole - 1) * step, math.min(floor, 1))
+end
+
+--[=[
 	The next opening's centre from a roll in [0, 1): anywhere for a player's first ring; otherwise at least `minShift`
 	degrees round from the `previous` one, either way.
 ]=]

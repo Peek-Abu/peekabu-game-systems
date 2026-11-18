@@ -4,8 +4,8 @@
 	pile on a running shift (never training, never the hub, never a grimy valuable: VacuumServiceServer.vacuumingTarget, a
 	VacuumConstants.PILE_TAG part),
 	rings come one after another (SkillCheckRingTracker, every SkillCheckConstants.STEP_INTERVAL): the server picks each
-	ring's opening, its width (narrower as the pile's progress rises) and its arrival on the server clock, and sends it
-	to that player alone (SkillCheckEvents.Ring). Their client draws it and, at the arrival, reports the icon's angle
+	ring's opening, its width (narrower as the pile's progress rises, and a step narrower each Night Shift week from week
+	2, SkillCheckConstants.WIDTH_WEEK_STEP) and its arrival on the server clock, and sends it to that player alone (SkillCheckEvents.Ring). Their client draws it and, at the arrival, reports the icon's angle
 	(SkillCheckEvents.Report, rate-limited and checked by SkillCheckReportRules behind RequestHandler). The server judges
 	it against the opening; a report for another ring is ignored, and none in the window is a miss. Each verdict goes
 	back to the player (SkillCheckEvents.Result, their client's clunk or tick); a miss is a loud noise at the player
@@ -54,6 +54,8 @@ local tracker = SkillCheckRingTracker.new({
 	between = SkillCheckConstants.BETWEEN,
 	widthStart = SkillCheckConstants.WIDTH_START,
 	widthEnd = SkillCheckConstants.WIDTH_END,
+	widthWeekStep = SkillCheckConstants.WIDTH_WEEK_STEP,
+	widthWeekFloor = SkillCheckConstants.WIDTH_WEEK_FLOOR,
 	minShift = SkillCheckConstants.MIN_SHIFT,
 	tolerance = SkillCheckConstants.TOLERANCE,
 	early = SkillCheckConstants.REPORT_EARLY,
@@ -62,11 +64,9 @@ local tracker = SkillCheckRingTracker.new({
 	return random:NextNumber()
 end)
 
--- Whether rings may run at all on this server right now: switched on, a shift running, not training.
-local function live(): boolean
-	return SkillCheckConstants.ENABLED
-		and ShiftServiceServer:getShift().phase == "running"
-		and not ShiftServiceServer:isTraining()
+-- Whether rings may run at all on this server right now (`shift`): switched on, a shift running, not training.
+local function live(shift: ShiftTypes.ShiftState): boolean
+	return SkillCheckConstants.ENABLED and shift.phase == "running" and not ShiftServiceServer:isTraining()
 end
 
 -- The pile (never a grimy valuable) `player` is vacuuming and its progress (0 to 1), or nil.
@@ -114,10 +114,13 @@ end
 -- One beat: rings start for players on a pile, closed windows become misses.
 local function step()
 	local now = Workspace:GetServerTimeNow()
-	local running = live()
+	local shift = ShiftServiceServer:getShift()
+	local running = live(shift)
+	-- The Night Shift week narrows the openings; Quick shift (any other mode) passes none.
+	local week = if shift.runMode == "night" then shift.week else nil
 	for _, player in Players:GetPlayers() do
 		local pile, progress = pileOf(player)
-		local ring = tracker:step(player.UserId, running and pile ~= nil, progress, now)
+		local ring = tracker:step(player.UserId, running and pile ~= nil, progress, now, week)
 		if ring ~= nil then
 			counters.rings += 1
 			SkillCheckEvents.packets.Ring.sendTo(ring, player)
@@ -204,7 +207,11 @@ local SkillCheckServiceServer: SkillCheckServiceServer = {
 	end,
 
 	getState = function(_self)
-		return { enabled = SkillCheckConstants.ENABLED, live = live(), counters = table.clone(counters) }
+		return {
+			enabled = SkillCheckConstants.ENABLED,
+			live = live(ShiftServiceServer:getShift()),
+			counters = table.clone(counters),
+		}
 	end,
 }
 

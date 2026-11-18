@@ -1,10 +1,10 @@
 --!strict
 --[=[
 	SkillCheckRingTracker: each player's closing rings (the k1 skill check). `step` is told, every beat, whether a player
-	is vacuuming a pile and how far along it is; once they have been on a pile `firstDelay` seconds it starts a ring:
+	is vacuuming a pile, how far along it is and the Night Shift week (nil in Quick shift); once they have been on a pile `firstDelay` seconds it starts a ring:
 	a fresh id, an opening `minShift` or more round from their last one (SkillCheckAngleFormulas.nextGap, from the
-	injected `random`), as wide as the pile's progress allows (gapWidth: narrower toward the end) and arriving `travel`
-	seconds later. One ring at a time per player; a ring in flight is judged even if they leave the pile (letting go
+	injected `random`), as wide as the pile's progress allows (gapWidth: narrower toward the end; both ends narrowed by the week,
+	weekScale, when the config has a weekly step) and arriving `travel` seconds later. One ring at a time per player; a ring in flight is judged even if they leave the pile (letting go
 	never dodges it). `report` judges a ring by the icon's reported angle (SkillCheckAngleFormulas.inGap with
 	`tolerance`), only for that player's ring id and only in its window (SkillCheckReportRules.window: an early report is
 	ignored, a late one is a miss); `expire` misses every ring whose window closed with no report. After any verdict the
@@ -27,6 +27,9 @@ export type Config = {
 	between: number,
 	widthStart: number,
 	widthEnd: number,
+	-- Night Shift's weekly narrowing (SkillCheckAngleFormulas.weekScale); nil: the week never narrows the opening.
+	widthWeekStep: number?,
+	widthWeekFloor: number?,
 	minShift: number,
 	tolerance: number,
 	early: number,
@@ -39,7 +42,8 @@ export type SkillCheckRingTracker = {
 		userId: number,
 		onPile: boolean,
 		progress: number,
-		now: number
+		now: number,
+		week: number?
 	) -> SkillCheckTypes.Ring?,
 	report: (
 		self: SkillCheckRingTracker,
@@ -94,7 +98,7 @@ function SkillCheckRingTracker.new(config: Config, random: () -> number): SkillC
 	end
 
 	local tracker: SkillCheckRingTracker = {
-		step = function(_self, userId, onPile, progress, now)
+		step = function(_self, userId, onPile, progress, now, week)
 			local state = playerOf(userId)
 			if not onPile then
 				state.armed = false
@@ -109,10 +113,14 @@ function SkillCheckRingTracker.new(config: Config, random: () -> number): SkillC
 			end
 			lastId += 1
 			local gap = SkillCheckAngleFormulas.nextGap(state.lastGap, random(), config.minShift)
+			local stepPerWeek, floor = config.widthWeekStep, config.widthWeekFloor
+			local scale = if stepPerWeek ~= nil and floor ~= nil
+				then SkillCheckAngleFormulas.weekScale(week, stepPerWeek, floor)
+				else 1
 			local ring: SkillCheckTypes.Ring = {
 				id = lastId,
 				gap = gap,
-				width = SkillCheckAngleFormulas.gapWidth(progress, config.widthStart, config.widthEnd),
+				width = SkillCheckAngleFormulas.gapWidth(progress, config.widthStart * scale, config.widthEnd * scale),
 				arriveAt = now + config.travel,
 				travel = config.travel,
 			}

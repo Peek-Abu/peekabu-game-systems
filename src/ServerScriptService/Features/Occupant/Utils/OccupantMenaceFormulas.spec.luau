@@ -86,6 +86,95 @@ return function()
 		end)
 	end)
 
+	describe("week", function()
+		it("reads quick mode and no mode as week 1", function()
+			expect(OccupantMenaceFormulas.week(nil, nil)).to.equal(1)
+			expect(OccupantMenaceFormulas.week("quick", 4)).to.equal(1)
+			expect(OccupantMenaceFormulas.week(nil, 3)).to.equal(1)
+		end)
+		it("reads the Night Shift week, at least 1, whole", function()
+			expect(OccupantMenaceFormulas.week("night", 3)).to.equal(3)
+			expect(OccupantMenaceFormulas.week("night", nil)).to.equal(1)
+			expect(OccupantMenaceFormulas.week("night", 0)).to.equal(1)
+			expect(OccupantMenaceFormulas.week("night", 2.7)).to.equal(2)
+			expect(OccupantMenaceFormulas.week("night", 0 / 0)).to.equal(1)
+		end)
+	end)
+
+	describe("weekly ramp", function()
+		local function at(pacing, week)
+			local copy = table.clone(pacing)
+			copy.week = week
+			return copy
+		end
+
+		it("leaves week 1 and a missing week exactly as before", function()
+			for _, pacing in { CREW, SOLO, { tier = 2, solo = false, overtime = false } } do
+				expect(OccupantMenaceFormulas.steerInterval(at(pacing, 1))).to.equal(
+					OccupantMenaceFormulas.steerInterval(pacing)
+				)
+				expect(OccupantMenaceFormulas.breather(at(pacing, 1), 0.3)).to.equal(
+					OccupantMenaceFormulas.breather(pacing, 0.3)
+				)
+			end
+			expect(OccupantMenaceFormulas.steerInterval(at(CREW, 1))).to.equal(OccupantConstants.STEER_CREW)
+		end)
+
+		it("steers STEER_PER_WEEK sooner each week from week 2", function()
+			expect(OccupantMenaceFormulas.steerInterval(at(SOLO, 2))).to.equal(
+				OccupantConstants.STEER_SOLO - OccupantConstants.STEER_PER_WEEK
+			)
+			expect(OccupantMenaceFormulas.steerInterval(at(SOLO, 3))).to.equal(
+				OccupantConstants.STEER_SOLO - 2 * OccupantConstants.STEER_PER_WEEK
+			)
+		end)
+
+		it("never steers sooner than STEER_WEEK_FLOOR because of the weeks", function()
+			expect(OccupantMenaceFormulas.steerInterval(at(CREW, 50))).to.equal(OccupantConstants.STEER_WEEK_FLOOR)
+			expect(OccupantMenaceFormulas.steerInterval(at({ tier = 2, solo = true, overtime = false }, 50))).to.equal(
+				OccupantConstants.STEER_WEEK_FLOOR
+			)
+		end)
+
+		it("ramps overtime's interval too, down to the floor", function()
+			local overtime = { tier = 2, solo = false, overtime = true }
+			expect(OccupantMenaceFormulas.steerInterval(at(overtime, 2))).to.equal(
+				math.max(
+					OccupantConstants.STEER_OVERTIME_CREW - OccupantConstants.STEER_PER_WEEK,
+					OccupantConstants.STEER_WEEK_FLOOR
+				)
+			)
+		end)
+
+		it("shortens breathers BREATHER_PER_WEEK each week from week 2", function()
+			expect(OccupantMenaceFormulas.breather(at(CREW, 2), 1)).to.equal(
+				OccupantConstants.BREATHER_CREW.max - OccupantConstants.BREATHER_PER_WEEK
+			)
+			expect(OccupantMenaceFormulas.breather(at(SOLO, 3), 0)).to.equal(
+				OccupantConstants.BREATHER_SOLO.min - 2 * OccupantConstants.BREATHER_PER_WEEK
+			)
+		end)
+
+		it("never shortens a breather below BREATHER_WEEK_FLOOR because of the weeks", function()
+			expect(OccupantMenaceFormulas.breather(at(CREW, 50), 0)).to.equal(OccupantConstants.BREATHER_WEEK_FLOOR)
+			expect(OccupantMenaceFormulas.breather(at(CREW, 50), 1)).to.equal(OccupantConstants.BREATHER_WEEK_FLOOR)
+			-- Overtime's short end is already at the floor: the weeks leave it there.
+			expect(OccupantMenaceFormulas.breather(at({ tier = 2, solo = false, overtime = true }, 9), 0)).to.equal(
+				math.min(OccupantConstants.BREATHER_OVERTIME.min, OccupantConstants.BREATHER_WEEK_FLOOR)
+			)
+		end)
+
+		it("gets no shorter week on week once at the floor (more threat, never constant)", function()
+			local previous = math.huge
+			for week = 1, 20 do
+				local interval = OccupantMenaceFormulas.steerInterval(at(CREW, week))
+				expect(interval <= previous).to.equal(true)
+				expect(interval >= OccupantConstants.STEER_WEEK_FLOOR).to.equal(true)
+				previous = interval
+			end
+		end)
+	end)
+
 	describe("within", function()
 		it("maps a roll into a range", function()
 			expect(OccupantMenaceFormulas.within({ min = 10, max = 20 }, 0.5)).to.equal(15)

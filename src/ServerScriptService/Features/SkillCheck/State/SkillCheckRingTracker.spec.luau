@@ -242,6 +242,56 @@ return function()
 		end)
 	end)
 
+	describe("weekly narrowing", function()
+		local WEEKLY = table.clone(CONFIG)
+		WEEKLY.widthWeekStep = 0.1
+		WEEKLY.widthWeekFloor = 0.6
+
+		local function weekRing(tracker, userId, now, progress, week)
+			tracker:step(userId, true, progress, now, week)
+			return tracker:step(userId, true, progress, now + CONFIG.firstDelay, week)
+		end
+
+		local function near(a, b)
+			return math.abs(a - b) < 1e-9
+		end
+
+		it("keeps week 1 and no week exactly as before", function()
+			local tracker = SkillCheckRingTracker.new(WEEKLY, rolls({ 0 }))
+			expect(weekRing(tracker, 1, 10, 0, 1).width).to.equal(120)
+			expect(weekRing(tracker, 2, 10, 1, nil).width).to.equal(60)
+		end)
+
+		it("narrows both ends a step a week from week 2", function()
+			local tracker = SkillCheckRingTracker.new(WEEKLY, rolls({ 0 }))
+			expect(near(weekRing(tracker, 1, 10, 0, 2).width, 108)).to.equal(true)
+			expect(near(weekRing(tracker, 2, 10, 1, 2).width, 54)).to.equal(true)
+			expect(near(weekRing(tracker, 3, 10, 0, 3).width, 96)).to.equal(true)
+		end)
+
+		it("stops at the floor", function()
+			local tracker = SkillCheckRingTracker.new(WEEKLY, rolls({ 0 }))
+			expect(near(weekRing(tracker, 1, 10, 0, 30).width, 72)).to.equal(true)
+			expect(near(weekRing(tracker, 2, 10, 1, 30).width, 36)).to.equal(true)
+		end)
+
+		it("ignores the week when the config has no weekly step", function()
+			local tracker = SkillCheckRingTracker.new(CONFIG, rolls({ 0 }))
+			expect(weekRing(tracker, 1, 10, 0, 6).width).to.equal(120)
+		end)
+
+		it("judges a narrowed ring by its own width", function()
+			local tracker = SkillCheckRingTracker.new(WEEKLY, rolls({ 0.25 }))
+			-- First gap at 90; week 5 at progress 0: 72 wide, so 54..126 plus 8 = 46..134.
+			local ring = weekRing(tracker, 1, 10, 0, 5)
+			expect(ring.gap).to.equal(90)
+			local verdict = tracker:report(1, ring.id, 40, ring.arriveAt)
+			expect(verdict.hit).to.equal(false)
+			local second = weekRing(tracker, 2, 10, 0, 5)
+			expect(tracker:report(2, second.id, 130, second.arriveAt).hit).to.equal(true)
+		end)
+	end)
+
 	describe("forget and clear", function()
 		it("forgets one player's ring and schedule", function()
 			local tracker = SkillCheckRingTracker.new(CONFIG, rolls({ 0 }))

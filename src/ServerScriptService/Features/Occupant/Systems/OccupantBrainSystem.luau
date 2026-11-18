@@ -42,6 +42,7 @@ local OccupantStageRules = require(OccupantServer.Rules.OccupantStageRules)
 local OccupantRunTracker = require(OccupantServer.State.OccupantRunTracker)
 local OccupantStageSystem = require(OccupantServer.Systems.OccupantStageSystem)
 local Sense = require(OccupantServer.Systems.OccupantSenseSystem)
+local OccupantMenaceFormulas = require(OccupantServer.Utils.OccupantMenaceFormulas)
 local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormulas)
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
 local OccupantCatchSystem = require(OccupantServer.Systems.OccupantCatchSystem)
@@ -231,7 +232,12 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		world = world(),
 		heard = run.pendingNoise,
 		rolls = rolls,
-		pacing = { tier = state.tier, solo = #participants <= 1, overtime = state.stage == "overtime" },
+		pacing = {
+			tier = state.tier,
+			solo = #participants <= 1,
+			overtime = state.stage == "overtime",
+			week = OccupantMenaceFormulas.week(state.runMode, state.week),
+		},
 	})
 	run.pendingNoise = nil
 	-- The kind's behaviour blocks (Bramble: no desks; Harlow: every block).

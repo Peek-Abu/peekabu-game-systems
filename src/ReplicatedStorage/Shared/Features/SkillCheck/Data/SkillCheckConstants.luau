@@ -26,6 +26,11 @@ return table.freeze({
 	-- pile's progress rises, so the last ring of a pile is the hardest.
 	WIDTH_START = 120,
 	WIDTH_END = 55,
+	-- Night Shift's weekly ramp: from week 2 both widths keep WIDTH_WEEK_STEP less of themselves a week (week 2 = 90%,
+	-- week 3 = 80%), never under WIDTH_WEEK_FLOOR of them (72 / 33 degrees from week 5 on). Week 1 and Quick shift are
+	-- untouched (SkillCheckAngleFormulas.weekScale).
+	WIDTH_WEEK_STEP = 0.1,
+	WIDTH_WEEK_FLOOR = 0.6,
 	-- Each new opening sits at least this far round from the last one (degrees), so it is never already lined up.
 	MIN_SHIFT = 90,
 	-- Extra degrees either side of the opening the server still counts as a hit (the icon's own size, and the frame
