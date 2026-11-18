@@ -295,6 +295,12 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Event.Data.EventConstants"] = "static names and tuning (no logic)",
 	["ReplicatedStorage.Shared.Features.Event.Net.EventEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Client.Features.Event.EventServiceClient"] = "ByteNet listener and clock shell (EventUtils and EventStore are specced)",
+	-- Cleanup Crew: the closing-ring skill check (k1)
+	["ReplicatedStorage.Shared.Features.SkillCheck.Data.SkillCheckConstants"] = "static tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.SkillCheck.Data.SkillCheckTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.SkillCheck.Net.SkillCheckEvents"] = "ByteNet packet definitions (reports are checked by the specced SkillCheckReportRules)",
+	["ReplicatedStorage.Client.Features.SkillCheck.SkillCheckServiceClient"] = "HUD registry, RunService, ByteNet and Sound shell (SkillCheckStore and SkillCheckRingViewModel are specced)",
+	["ReplicatedStorage.Client.Features.SkillCheck.Systems.SkillCheckInputSystem"] = "UserInputService shell (the input-to-angle maths is the specced SkillCheckInputFormulas)",
 }
 
 return table.freeze(EXEMPT_MODULES)

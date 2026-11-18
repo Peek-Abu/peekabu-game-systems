@@ -3,7 +3,8 @@
 	VacuumChannelTracker: who is vacuuming which pile right now (Cleanup Crew M3 UI: the crew roster's "vacuuming" and
 	the makers of each vacuum noise pulse, for the review's QUIETEST FEET / LOUDEST VACUUM). The Interaction channel asks
 	Vacuum's `canChannel` at the start and every tick while a player holds the button; each allowed ask is `note`d. A
-	player counts as vacuuming their last pile until `window` seconds pass with no ask (released, or the channel ended).
+	player counts as vacuuming their last pile until `window` seconds pass with no ask (released, or the channel ended);
+	`targetOf` names that pile (SkillCheck's rings).
 	`note` reports a start when the pile differs from their last one, exactly like the map it replaces. Plain
 	bookkeeping (pure: it never touches the Instances it keys by).
 
@@ -14,6 +15,7 @@ export type VacuumChannelTracker = {
 	note: (self: VacuumChannelTracker, userId: number, pile: Instance, now: number) -> boolean,
 	makersOn: (self: VacuumChannelTracker, pile: Instance, now: number) -> { number },
 	isActive: (self: VacuumChannelTracker, userId: number, now: number) -> boolean,
+	targetOf: (self: VacuumChannelTracker, userId: number, now: number) -> Instance?,
 	forget: (self: VacuumChannelTracker, userId: number) -> (),
 	clear: (self: VacuumChannelTracker) -> (),
 }
@@ -47,6 +49,11 @@ function VacuumChannelTracker.new(window: number): VacuumChannelTracker
 		isActive = function(_self, userId, now)
 			local channel = channels[userId]
 			return channel ~= nil and now - channel.at <= window
+		end,
+
+		targetOf = function(_self, userId, now)
+			local channel = channels[userId]
+			return if channel ~= nil and now - channel.at <= window then channel.pile else nil
 		end,
 
 		forget = function(_self, userId)

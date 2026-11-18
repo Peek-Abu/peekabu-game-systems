@@ -222,6 +222,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredPanel"] = "presentational React component (story in CatchRehiredPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Catch.useSpectateTarget"] = "React hook polling DeathServiceClient:spectating() (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopEventPanel"] = "presentational React component (event tab specced in ShopEventViewModel; story in ShopEventPanel.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.SkillCheck.SkillCheckRing"] = "presentational React component (layout and motion specced in SkillCheckRingViewModel; story in SkillCheckRing.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.SkillCheck.SkillCheckHud"] = "React HUD widget (layout and motion specced in SkillCheckRingViewModel, input maths in SkillCheckInputFormulas)",
 }
 
 return table.freeze(EXEMPT_MODULES)

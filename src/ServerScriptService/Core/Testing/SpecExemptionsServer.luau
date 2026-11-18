@@ -148,6 +148,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Depot.Data.DepotLayoutConstants"] = "authored layout data; validated by DepotLayoutRules.spec",
 	["ServerScriptService.Features.Depot.Systems.DepotBuildSystem"] = "Instance builder (the layout is validated by the specced DepotLayoutRules)",
 	["ServerScriptService.Features.Depot.DepotServiceServer"] = "Players/RunService/ByteNet/Queue-signal shell (layout rules, contract utils and the result card are specced)",
+	["ServerScriptService.Features.SkillCheck.SkillCheckServiceServer"] = "Players/RunService/ByteNet/Noise shell (scheduling and judging are the specced SkillCheckRingTracker, SkillCheckReportRules and SkillCheckAngleFormulas)",
 }
 
 return table.freeze(EXEMPT_MODULES)

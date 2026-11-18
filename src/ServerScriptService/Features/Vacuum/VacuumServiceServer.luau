@@ -14,7 +14,8 @@
 	- marks each holder's character with whether its vacuum is sucking (VacuumMotionConstants.ACTIVE_ATTRIBUTE) and
 	  where its camera looks (VacuumAimSystem: AIM_ATTRIBUTE and AIM_YAW_ATTRIBUTE, checked and rate limited), for every client's
 	  visual motion layers (VacuumMotionSystem); suction targeting never reads either;
-	- fires `vacuumStarted(player, pile)` when a player starts vacuuming a pile (Shift's analytics: first_cleanup_started);
+	- fires `vacuumStarted(player, pile)` when a player starts vacuuming a pile (Shift's analytics: first_cleanup_started),
+	  and names what a player is vacuuming now (`vacuumingTarget`, SkillCheck's rings);
 	- answers `canVacuum` for Cargo's grime channels (the loot loop, docs/superpowers/specs/
 	  2026-10-15-cleanup-crew-loot-loop-design.md §3.2: a grimy valuable, tagged GRIME_TAG, is vacuumed exactly like a
 	  pile; Cargo's CargoGrimeSystem owns the channel and the cleanliness), and pulses the same noise for it;
@@ -244,6 +245,7 @@ export type VacuumServiceServer = {
 	getState: (self: VacuumServiceServer) -> { [string]: any },
 	spawnPile: (self: VacuumServiceServer, kind: string, floor: CFrame, parent: Instance) -> BasePart,
 	isVacuuming: (self: VacuumServiceServer, player: Player) -> boolean,
+	vacuumingTarget: (self: VacuumServiceServer, player: Player) -> Instance?,
 	reset: (self: VacuumServiceServer) -> (),
 	setCrew: (self: VacuumServiceServer, crew: { Player }) -> (),
 	setEquipped: (self: VacuumServiceServer, player: Player, on: boolean, resume: boolean?) -> boolean,
@@ -426,6 +428,13 @@ local VacuumServiceServer: VacuumServiceServer = {
 	]=]
 	isVacuuming = function(_self, player)
 		return channels:isActive(player.UserId, os.clock())
+	end,
+
+	--[=[
+		What `player` is vacuuming right now (a pile or a grimy valuable), if anything (SkillCheck's rings).
+	]=]
+	vacuumingTarget = function(_self, player)
+		return channels:targetOf(player.UserId, os.clock())
 	end,
 
 	--[=[
