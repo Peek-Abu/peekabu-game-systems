@@ -88,6 +88,11 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   <section>
     <h2>Your answers, round 2 (17 Nov, late)</h2>
     <p><b>Building now:</b> the landing card. When you touch down, it shows Temp, Time, Weather and Danger (Office 1 drop, School 2) for a few seconds. It is always night. The temp and time are random, the weather is Clear, Cloudy or Windy, and the whole crew sees the same card. <b>On hold:</b> the second monster, until you pick which one. <b>Later:</b> the slower game.</p>
+    <figure style="margin:0;display:grid;gap:6px">
+      <img src="threat-maps/landing-card-office.jpg" alt="The landing card on the left of the HUD in the Office: TONIGHT, 4th floor offices, Temp 37°F, Time 2:52 AM, Weather Cloudy, Danger 1 Gloom drop. The big ARRIVAL contract card is open in the middle at the same time." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">
+      <figcaption class="status">The landing card in real play (Office, muted Studio Play, 17 Nov). The card is on the left. Every shift gets different numbers. The specs all pass (7412 of 7412).</figcaption>
+    </figure>
+    <div id="landing"></div>
     <div class="note">
       <p><b>"Are we using Kruskal's?"</b> Close. We grow the halls like randomized Prim's: each step adds a random hall anywhere on the edge of what is built. Kruskal's looks the same. Both make lots of short, bushy branches, and that is why nothing feels deep. A DFS (the "recursive backtracker") keeps growing from the newest end. It makes long, winding paths with real dead ends, naturally and without forcing it. The catch: our grid has only 12 crossings (4 × 3), so even DFS can only make 1–2 deep branches. For real depth it also needs a bigger grid with shorter steps (for example 6 × 4). Work: about 2–3 days, then I measure 40 builds again and you do a feel check. Pick below.</p>
     </div>
@@ -125,6 +130,9 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
+  { id: "c1-card-after-arrival", group: "landing", title: "Show the card after the big ARRIVAL card closes?",
+    text: "Right now the landing card pops up at the same time as the big ARRIVAL card in the middle, so you have two cards to read at once. Yes = it waits until the ARRIVAL card closes, then slides in. No = put Temp, Time, Weather and Danger inside the ARRIVAL card instead (say so in the note).",
+    effort: "An hour", rec: "<b>Yes.</b> One card at a time is easier to read." },
   { id: "k1-ring-gap", group: "round2", title: "Ring with a gap (your idea)",
     text: "A ring shrinks toward the middle. It has one opening. Move your mouse around the circle to turn the opening so it lines up with a mark before the ring reaches the middle. Each ring is smaller and faster, until the pile is clean.",
     effort: "1–2 days", rec: "<b>Yes, my favourite.</b> It's simple to read, it feels new, and it works with a stick." },
@@ -247,7 +255,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["landing", "round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
