@@ -86,6 +86,17 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   </section>
 
   <section>
+    <h2>Built from your picks (18 Nov, real play)</h2>
+    <p><b>Landing readout (look C):</b> it waits until the ARRIVAL card closes. Then it shows 3 screens, one at a time, each fading in and out. Icons for the temperature and weather are still to come, so those lines have an empty space on the left for now. All 7557 tests pass.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-1.jpg" alt="Screen 1, top left of the HUD: 38°F and WINDY in big outlined letters, no box behind them." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Screen 1: temperature and weather.</figcaption></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-2.jpg" alt="Screen 2: the time-clock icon and 12:57 AM." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Screen 2: the time.</figcaption></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-3.jpg" alt="Screen 3, fading in: ANOMALY LEVEL with one purple Gloom drop under it." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Screen 3: ANOMALY LEVEL, with 1 drop for the Office (2 for the School). Caught while fading in. I think the drop should be bigger.</figcaption></figure>
+    <p><b>Ring:</b> now 2–3 quicker rings per pile. In a test, one pile gave 3 rings. On a computer, the ring sits higher, but it still covers your head and ears.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/ring-higher.jpg" alt="The ring now sits higher, around the bunny's head and ears, with Line it up! to its right." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">The ring, higher.</figcaption></figure>
+    <div id="built"></div>
+  </section>
+
+  <section>
     <h2>Skill check: first real play (18 Nov)</h2>
     <p>Your ring idea is in the game, with an off switch. Hold the vacuum on a pile and a purple ring with a gap closes in. Move your mouse to slide the vacuum icon around the inner circle, into the gap (the green beads), before the ring lands. A miss makes a noise the manager can hear. The gap gets smaller as the pile gets cleaner. In a test run: 4 rings, 1 hit, 3 misses, and every miss made a noise. All 7545 tests pass.</p>
     <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/ring-in-flight.jpg" alt="The ring skill check in the Office: a purple bead ring with a gap closes in on a small inner ring around the vacuuming bunny; the vacuum icon sits on the inner ring and green beads mark the gap; the words LINE IT UP! sit under it." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">The ring closing in. "Line it up!" shows for your first 2 rings.</figcaption></figure>
@@ -149,6 +160,12 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
+  { id: "b1-ring-side", group: "built", title: "Move the ring to the side of your character?",
+    text: "Even higher up, it still covers your head. Yes = it sits a little to the right of your character, so you can see yourself and the pile. No = keep it where it is now.",
+    effort: "An hour", rec: "<b>Yes.</b> You can see the pile and your bunny clearly." },
+  { id: "b2-bigger-drops", group: "built", title: "Bigger Gloom drops on ANOMALY LEVEL?",
+    text: "Yes = the drops get about as tall as the words, so 1 or 2 drops is easy to see at a glance.",
+    effort: "An hour", rec: "<b>Yes.</b>" },
   { id: "k1-ring-feel", group: "ring", title: "Ring: more rings per pile?",
     text: "Yes = 2–3 quicker rings per pile, each with a smaller gap, until the pile is clean. Piles still take the same time. No = keep 1 ring per pile. Also tell me where the ring should sit: on your character (now), a bit higher, or off to the side.",
     effort: "An hour", rec: "<b>Yes,</b> it matches your idea. The ring moves a bit higher, off your character." },
@@ -286,7 +303,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["ring", "readout", "landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["built", "ring", "readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
