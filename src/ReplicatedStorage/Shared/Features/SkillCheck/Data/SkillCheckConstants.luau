@@ -14,12 +14,14 @@
 return table.freeze({
 	-- THE launch switch: false starts no rings at all (vacuuming plays exactly as before).
 	ENABLED = true,
-	-- Seconds the outer ring takes to close in from its start onto the inner circle.
-	TRAVEL = 1.2,
+	-- Seconds the outer ring takes to close in from its start onto the inner circle. With FIRST_DELAY and BETWEEN: 2-3
+	-- rings per pile at the solo clean time (VacuumConstants.DURATION 2.5 s), arriving about 0.9, 1.75 and 2.6 s in
+	-- (owner 11-18, k1-ring-feel yes: "2-3 quicker rings per pile"; 1.2 / 0.35 / 0.4 gave about 1).
+	TRAVEL = 0.7,
 	-- Seconds from starting on a pile to its first ring.
-	FIRST_DELAY = 0.35,
+	FIRST_DELAY = 0.2,
 	-- Seconds between one ring being judged and the next one starting (while still on a pile).
-	BETWEEN = 0.4,
+	BETWEEN = 0.15,
 	-- The opening's width (degrees) at a pile's start and at its end: it narrows straight from one to the other as the
 	-- pile's progress rises, so the last ring of a pile is the hardest.
 	WIDTH_START = 120,
@@ -33,8 +35,8 @@ return table.freeze({
 	-- REPORT_LATE seconds after (the trip up from the client); none in that window is a miss.
 	REPORT_EARLY = 0.25,
 	REPORT_LATE = 0.6,
-	-- The rate limit on reports (a ring every ~1.6 s at most; room for a burst).
-	REPORT_LIMIT = table.freeze({ maxRequests = 6, windowSeconds = 5 }),
+	-- The rate limit on reports (a ring every ~0.85 s at most; room for a burst).
+	REPORT_LIMIT = table.freeze({ maxRequests = 10, windowSeconds = 5 }),
 	-- A miss: a noise at the player this loud (studs before Harlow's hearing scale; the vacuum's own pulse is
 	-- VacuumConstants.NOISE_RADIUS, 40), from this source (not a Quiet source: the stat does not soften it).
 	MISS_NOISE_RADIUS = 70,

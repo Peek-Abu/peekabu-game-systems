@@ -26,7 +26,7 @@ export type Metrics = {
 	-- The icon's size and the hint's text size.
 	knob: number,
 	hint: number,
-	-- How far below the screen's middle the ring's centre sits (clear of the pile in front of the player).
+	-- How far below the screen's middle the ring's centre sits (negative: above it). Kept under TOP_RESERVE.
 	below: number,
 }
 
@@ -40,7 +40,9 @@ local METRICS: { [Layout]: Metrics } = table.freeze({
 		bead = 16,
 		knob = 48,
 		hint = 30,
-		below = 110,
+		-- Above the middle, over the character's head rather than its body (owner 11-18, "a bit higher, off your
+		-- character"; it sat on the body at +110); TOP_RESERVE stops it at the Gloom meter.
+		below = -180,
 	}),
 	phone = table.freeze({
 		inner = 46,
@@ -68,6 +70,10 @@ local HINT_SIZE: { [Layout]: Vector2 } = table.freeze({
 
 local SkillCheckRingViewModel = {
 	METRICS = METRICS,
+	-- Design px at the top the outer ring's start never reaches into: desktop, the Gloom meter's band (its top 40 + 96
+	-- tall, ShiftHudViewModel.METER) and a margin. Phone: the screen is too short to clear the meter and its hearts
+	-- (98 + about 20) with the ring still above the hotbar, so the phone ring only keeps a little under the meter.
+	TOP_RESERVE = table.freeze({ desktop = 160, phone = 105 }),
 	-- Design px kept free at the bottom of the screen for the HUD's bottom-centre stack (hotbar, stamina bar, the
 	-- prompt chip over them), and at each side (Roblox's buttons, the phone's thumbstick and action arc): the hint never
 	-- goes there (2026-11-18: under the ring it sat on the hotbar).
@@ -131,16 +137,13 @@ function SkillCheckRingViewModel.place(angle: number, radius: number): Vector2
 end
 
 --[=[
-	The ring's centre in the HUD's area (`viewport`, design px): the middle line, a little below the middle, kept on
-	screen for the outer ring's start.
+	The ring's centre in the HUD's area (`viewport`, design px): the middle line, `below` the middle (above it on
+	desktop), with the outer ring's start kept under TOP_RESERVE and on screen.
 ]=]
 function SkillCheckRingViewModel.centre(layout: Layout, viewport: Vector2): Vector2
 	local metrics = METRICS[layout]
-	local y = math.clamp(
-		viewport.Y / 2 + metrics.below,
-		metrics.outerStart,
-		math.max(metrics.outerStart, viewport.Y - metrics.outerStart)
-	)
+	local top = SkillCheckRingViewModel.TOP_RESERVE[layout] + metrics.outerStart
+	local y = math.clamp(viewport.Y / 2 + metrics.below, top, math.max(top, viewport.Y - metrics.outerStart))
 	return Vector2.new(viewport.X / 2, y)
 end
 

@@ -95,15 +95,31 @@ return function()
 	end)
 
 	describe("centre", function()
-		it("sits on the screen's middle line, a little below centre, inside the screen", function()
-			for _, case in { { "desktop", Vector2.new(1920, 1080) }, { "phone", Vector2.new(844, 390) } } do
+		local screens = {
+			{ "desktop", Vector2.new(1920, 1080) },
+			{ "desktop", Vector2.new(1871, 1052) },
+			{ "desktop", Vector2.new(2135, 869) },
+			{ "phone", Vector2.new(844, 390) },
+			{ "phone", Vector2.new(667, 375) },
+		}
+
+		it("sits on the screen's middle line, inside the screen, its outer ring under the top HUD", function()
+			for _, case in screens do
 				local layout, viewport = case[1], case[2]
 				local centre = SkillCheckRingViewModel.centre(layout, viewport)
 				local outer = SkillCheckRingViewModel.METRICS[layout].outerStart
 				expect(centre.X).to.equal(viewport.X / 2)
-				expect(centre.Y >= viewport.Y / 2).to.equal(true)
 				expect(centre.Y + outer <= viewport.Y).to.equal(true)
-				expect(centre.Y - outer >= 0).to.equal(true)
+				expect(centre.Y - outer >= SkillCheckRingViewModel.TOP_RESERVE[layout]).to.equal(true)
+			end
+		end)
+
+		it("sits above the middle on desktop, over the character's head rather than its body (owner 11-18)", function()
+			for _, case in screens do
+				local layout, viewport = case[1], case[2]
+				if layout == "desktop" then
+					expect(SkillCheckRingViewModel.centre(layout, viewport).Y < viewport.Y / 2).to.equal(true)
+				end
 			end
 		end)
 	end)
