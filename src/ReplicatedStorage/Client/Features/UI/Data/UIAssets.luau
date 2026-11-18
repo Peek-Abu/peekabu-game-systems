@@ -330,7 +330,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- a scene / menu opening (Roblox GUI - Swipe, the "panel open" pick) and a shop buy that went through (Roblox GUI -
 	-- Purchase, the "shop buy" pick). Volumes put them at about -24 and -19 dB (the UI band; the buy's peak under -1).
 	uiOpen = { assetId = "rbxassetid://17208405682", group = "UI", volume = 2.7, maxConcurrent = 1 },
-	uiPurchase = { assetId = "rbxassetid://17208380755", group = "UI", volume = 2, maxConcurrent = 1 },
+	-- The shop buy, replaced by the owner's tryout round-2 pick A (2026-11-17): an old cash register drawer, one bell
+	-- ding and two coins (ElevenLabs SFX, Starter plan, Icey Labs; mastered to -20 LUFS short-term, peak -1 dBFS).
+	-- Volume 1 is a starting level until the owner's hear-check. Was Roblox GUI - Purchase (17208380755) at volume 2.
+	uiPurchase = { assetId = "rbxassetid://96002741326326", group = "UI", volume = 1, maxConcurrent = 1 },
 	-- Switching tabs (menu bar, board tabs, shop filter chips): Roblox_UI_Paper_Swipe (15675037413), the owner's
 	-- library-round pick B (2026-11-14), lighter than a click (about -23 dB).
 	uiTab = { assetId = "rbxassetid://15675037413", group = "UI", volume = 1.5, maxConcurrent = 2 },

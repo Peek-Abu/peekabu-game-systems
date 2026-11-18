@@ -20,6 +20,10 @@
 	Owner 11-16 (heard in play): the key / lock sound is "alright"; the door-burst sound (Steel Door 3) and the Uncommon
 	chime (Notification Low) were hated and are gone: the door opens silent and Uncommon has no chime.
 
+	APPROVED (owner sound tryout round 2, 2026-11-17): lockerDoor, the door swinging open as the burst starts. ElevenLabs
+	SFX made on the Starter plan, owner pick C, Icey Labs 122487039015014 (a metal locker latch clicks, the thin door
+	swings open and bangs gently on the next locker). Not a library pick, so not in the list above.
+
 	Static data + registration (spec-exempt).
 
 	@class LockerAssets
@@ -33,6 +37,7 @@ local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTyp
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	lockerKey = { assetId = "rbxassetid://9120409020", group = "SFX", volume = 0.8, maxConcurrent = 1 },
 	lockerRattle = { assetId = "rbxassetid://9118901593", group = "SFX", volume = 0.7, maxConcurrent = 1 },
+	lockerDoor = { assetId = "rbxassetid://122487039015014", group = "SFX", volume = 0.8, maxConcurrent = 1 },
 	lockerChimeHigh = {
 		assetId = "rbxassetid://17208361335",
 		group = "SFX",

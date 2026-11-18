@@ -18,9 +18,11 @@ local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTyp
 local PENDING = ""
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
-	-- A vacuum motor's whine (looped at the pile; its pitch rises with the pile's progress).
+	-- A vacuum motor's whine (looped at the pile; its pitch rises with the pile's progress). Owner tryout round-2 pick
+	-- B (2026-11-17): a small cartoon canister vacuum, whirring motor with airy suction, a 4 s seamless loop (ElevenLabs
+	-- SFX, Starter plan, Icey Labs; OGG, -18 LUFS). Was 107917509032443.
 	vacuumWhine = {
-		assetId = "rbxassetid://107917509032443",
+		assetId = "rbxassetid://134982892215570",
 		group = "SFX",
 		bus = "Action",
 		volume = 0.45,
@@ -35,9 +37,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		volume = 0.45,
 		rollOffMaxDistance = 60,
 	},
-	-- The pile's last bit going up the hose: a soft pop.
+	-- The pile's last bit going up the hose: a goo slurp ending in a wet cartoon pop. Owner tryout round-2 pick A
+	-- (2026-11-17; ElevenLabs SFX, Starter plan, Icey Labs; -16 LUFS short-term). Was 91652457132086.
 	vacuumPop = {
-		assetId = "rbxassetid://91652457132086",
+		assetId = "rbxassetid://113118023946403",
 		group = "SFX",
 		bus = "Action",
 		volume = 0.8,
