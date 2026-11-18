@@ -104,8 +104,9 @@ return function()
 		end)
 	end)
 
-	-- Owner pick 2026-11-17 ("For legendary purchase - orchestra hit style!"): a buy whose top rarity is Legendary plays
-	-- an extra sting on top of the purchase; the other rarities have no extra yet (a data change in UIAssets.buySounds).
+	-- Owner picks 2026-11-17: a buy that went through plays its top rarity's sting on top of the purchase (Legendary:
+	-- "For legendary purchase - orchestra hit style!"; the rarity ladder: "cash register + a tiny note" for Common and
+	-- Uncommon, a small flourish for Rare, a fast run into a strong chord for Epic). A data map in UIAssets.buySounds.
 	describe("buy extras", function()
 		it("plays the Legendary sting for a Legendary buy that went through", function()
 			expect(UISoundFormulas.buyExtra("", "legendary", UIAssets.buySounds)).to.equal("shopBuyLegendary")
@@ -113,15 +114,37 @@ return function()
 			expect(UIAssets.sounds.shopBuyLegendary.bus).to.equal("Reward")
 		end)
 
+		it("plays each rarity's own extra on the rarity ladder", function()
+			local expected = {
+				default = "shopBuySmall",
+				uncommon = "shopBuySmall",
+				rare = "shopBuyRare",
+				epic = "shopBuyEpic",
+				legendary = "shopBuyLegendary",
+			}
+			for rarity, id in expected do
+				expect(UISoundFormulas.buyExtra("", rarity, UIAssets.buySounds)).to.equal(id)
+			end
+		end)
+
+		it("registers every mapped extra on the Reward bus", function()
+			for _, id in UIAssets.buySounds do
+				expect(UIAssets.sounds[id]).to.be.ok()
+				expect(UIAssets.sounds[id].bus).to.equal("Reward")
+			end
+		end)
+
+		it("keeps the Common and Uncommon note quiet under the register", function()
+			expect(UIAssets.sounds.shopBuySmall.volume < UIAssets.sounds.shopBuyRare.volume).to.equal(true)
+		end)
+
 		it("plays no extra for a refused buy", function()
 			expect(UISoundFormulas.buyExtra("short", "legendary", UIAssets.buySounds)).to.equal(nil)
 			expect(UISoundFormulas.buyExtra("owned", "legendary", UIAssets.buySounds)).to.equal(nil)
 		end)
 
-		it("plays no extra for the other rarities yet, or an unknown one", function()
-			for _, rarity in { "default", "uncommon", "rare", "epic", "odd" } do
-				expect(UISoundFormulas.buyExtra("", rarity, UIAssets.buySounds)).to.equal(nil)
-			end
+		it("plays no extra for Odd (no buy pick yet) or an unknown rarity", function()
+			expect(UISoundFormulas.buyExtra("", "odd", UIAssets.buySounds)).to.equal(nil)
 			expect(UISoundFormulas.buyExtra("", nil, UIAssets.buySounds)).to.equal(nil)
 		end)
 

@@ -370,6 +370,36 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		volume = 0.6,
 		maxConcurrent = 1,
 	},
+	-- The rarity ladder's shop-buy extras (UIAssets.buySounds), played by ShopServiceClient on top of the purchase like
+	-- shopBuyLegendary: owner rarity-ladder pick 2026-11-17, in-house (tuned orchestral stings, ElevenLabs Starter stems
+	-- hand-layered with mix_sting.py, one family in F major), Icey Labs. Each volume is a starting level that awaits the
+	-- owner's hear-check.
+	-- A Common or Uncommon buy: the register plus a tiny note (the owner's "cash register + a tiny note"): two rising
+	-- notes onto a soft chord with a long ring-out, 2.9 s (-18 LUFS; the same asset as the Locker's Uncommon chime).
+	-- Kept quiet under the register.
+	shopBuySmall = {
+		assetId = "rbxassetid://129210679520094",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.4,
+		maxConcurrent = 1,
+	},
+	-- A Rare buy: a small flourish into a warm chord, 1.73 s (-16 LUFS; the same asset as the Locker's Rare chime).
+	shopBuyRare = {
+		assetId = "rbxassetid://116606102485127",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.6,
+		maxConcurrent = 1,
+	},
+	-- An Epic buy: a fast run into a strong orchestra chord, 2.18 s (-14 LUFS).
+	shopBuyEpic = {
+		assetId = "rbxassetid://104331550984161",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.6,
+		maxConcurrent = 1,
+	},
 }
 for id, def in SOUNDS do
 	if not SoundRegistry.has(id) then
@@ -395,9 +425,13 @@ local TIERS: { [string]: string } = {
 }
 UIAssets.soundTiers = table.freeze(TIERS)
 
--- The extra sting a shop buy plays on top of the purchase, by the buy's top rarity (UISoundFormulas.buyExtra). Only
--- Legendary has one (owner pick 2026-11-17); the other rarities are being decided, each a line here when picked.
+-- The extra sting a shop buy plays on top of the purchase, by the buy's top rarity (UISoundFormulas.buyExtra): the
+-- owner's rarity ladder (picks 2026-11-17). Common ("default") and Uncommon share the small note; Odd has no buy pick.
 local BUY_SOUNDS: { [string]: string } = {
+	default = "shopBuySmall",
+	uncommon = "shopBuySmall",
+	rare = "shopBuyRare",
+	epic = "shopBuyEpic",
 	legendary = "shopBuyLegendary",
 }
 UIAssets.buySounds = table.freeze(BUY_SOUNDS)

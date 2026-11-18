@@ -104,7 +104,7 @@ end
 --[=[
 	The extra sound a shop buy plays on top of its purchase: the sound `extras` names for the buy's rarity (ShopRules.
 	topRarity: a bundle's highest-rarity item) when the buy went through (an empty reason); nil for a refusal, an
-	unknown rarity, or a rarity with no extra (today only Legendary has one, owner pick 2026-11-17).
+	unknown rarity, or a rarity with no extra (the owner's rarity ladder, picks 2026-11-17: Odd has none).
 ]=]
 function UISoundFormulas.buyExtra(reason: string, rarity: string?, extras: { [string]: string }): string?
 	if reason ~= "" or rarity == nil then

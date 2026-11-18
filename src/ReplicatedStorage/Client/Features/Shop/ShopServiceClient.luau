@@ -8,8 +8,8 @@
 	tab, into ShopStore.passInfo, and each Gleam bundle's developer product price and icon, into ShopStore.bundleInfo
 	(so the bundle cards show what the Roblox prompt and store page show). A Robux buy of Gleam, coffee or a pass that
 	the server has granted (ShopEvents.Purchased) goes into CosmeticRevealStore for the "You bought it!" screen, except
-	a coffee bought outside the hub (ShopPurchaseRules.shows). A buy that went through plays the purchase, and a
-	Legendary one (ShopRules.topRarity: a bundle's highest-rarity item) adds its sting on top (UISoundFormulas.buyExtra).
+	a coffee bought outside the hub (ShopPurchaseRules.shows). A buy that went through plays the purchase, and its
+	rarity (ShopRules.topRarity: a bundle's highest-rarity item) adds its sting on top (UISoundFormulas.buyExtra).
 
 	@class ShopServiceClient
 ]=]
@@ -116,8 +116,8 @@ local ShopServiceClient: ShopServiceClient = {
 				ShopStore.setResult({ offer = data.offer, reason = data.reason })
 				-- The buy's answer is heard: the purchase when it went through, the error when it was refused.
 				UISoundSystem.play(UISoundFormulas.buyTier(data.reason))
-				-- A rarity's sting on top (only Legendary today). BuyResult is the one answer to a Credits / Gleam buy
-				-- (a Robux buy answers through Purchased, never a cosmetic offer), so it plays once.
+				-- The rarity's sting on top (the owner's rarity ladder, UIAssets.buySounds). BuyResult is the one answer to
+				-- a Credits / Gleam buy (a Robux buy answers through Purchased, never a cosmetic offer), so it plays once.
 				local offer = ShopRegistry.get(data.offer)
 				local rarity = if offer ~= nil then ShopRules.topRarity(offer) else nil
 				local extra = UISoundFormulas.buyExtra(data.reason, rarity, UIAssets.buySounds)

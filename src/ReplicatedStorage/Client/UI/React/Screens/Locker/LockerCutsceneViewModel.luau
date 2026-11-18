@@ -56,8 +56,9 @@ export type CutscenePose = {
 	leakTint: number,
 }
 
--- Uncommon has no chime (owner 11-16 hated the Uncommon one); Rare a plain chime; the sparkly Aura layer only on Epic
--- and up (the sound rarity rule).
+-- Each rarity's prize chime is its own in-house sting (owner rarity-ladder pick 2026-11-17: one orchestral family in F
+-- major growing from Common up, Odd a ghostly B minor; LockerAssets). Legendary keeps its two library layers for now:
+-- a grander Legendary sting is pending the owner's OK.
 local RARITY_FX: { [Rarity]: RarityFx } = {
 	default = {
 		hold = 0.5,
@@ -67,7 +68,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0,
 		rays = 3,
 		flash = 0.55,
-		chime = {},
+		chime = { "lockerCommon" },
 	},
 	uncommon = {
 		hold = 0.5,
@@ -77,7 +78,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0,
 		rays = 3,
 		flash = 0.55,
-		chime = {},
+		chime = { "lockerUncommon" },
 	},
 	rare = {
 		hold = 0.8,
@@ -87,7 +88,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0.02,
 		rays = 5,
 		flash = 0.65,
-		chime = { "lockerChimeHigh" },
+		chime = { "lockerRare" },
 	},
 	epic = {
 		hold = 1.2,
@@ -97,7 +98,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0.06,
 		rays = 7,
 		flash = 0.8,
-		chime = { "lockerChimeHigh", "lockerChimeAura" },
+		chime = { "lockerEpic" },
 	},
 	legendary = {
 		hold = 1.7,
@@ -117,7 +118,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0.12,
 		rays = 10,
 		flash = 0.88,
-		chime = { "lockerChimeHigh", "lockerChimeAura" },
+		chime = { "lockerOdd" },
 	},
 }
 

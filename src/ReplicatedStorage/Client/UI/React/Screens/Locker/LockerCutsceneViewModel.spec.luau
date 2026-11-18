@@ -1,4 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local Cutscene = require(script.Parent.LockerCutsceneViewModel)
+local LockerAssets = require(ReplicatedStorage.Client.Features.Locker.Data.LockerAssets)
 
 return function()
 	describe("cutscenePose (stage 2 3D cutscene)", function()
@@ -141,6 +144,51 @@ return function()
 				return least
 			end
 			expect(brightest("legendary") < brightest("uncommon")).to.equal(true)
+		end)
+	end)
+
+	-- Owner rarity-ladder pick 2026-11-17: one in-house orchestral family in F major growing from Common to Legendary
+	-- (Odd a ghostly B minor), one sting per rarity at the burst. Legendary keeps its two library layers until its
+	-- grander sting is approved.
+	describe("prize chimes", function()
+		local EXPECTED = {
+			default = { "lockerCommon" },
+			uncommon = { "lockerUncommon" },
+			rare = { "lockerRare" },
+			epic = { "lockerEpic" },
+			legendary = { "lockerChimeHigh", "lockerChimeAura" },
+			odd = { "lockerOdd" },
+		}
+
+		it("plays each rarity's own sting at the burst", function()
+			for rarity, ids in EXPECTED do
+				local chime = Cutscene.RARITY_FX[rarity].chime
+				expect(#chime).to.equal(#ids)
+				for index, id in ids do
+					expect(chime[index]).to.equal(id)
+				end
+			end
+		end)
+
+		it("registers every chime on the Reward bus, one at a time", function()
+			for rarity in EXPECTED do
+				for _, id in Cutscene.RARITY_FX[rarity].chime do
+					local def = LockerAssets.sounds[id]
+					expect(def).to.be.ok()
+					expect(def.bus).to.equal("Reward")
+					expect(def.maxConcurrent).to.equal(1)
+				end
+			end
+		end)
+
+		it("starts Common, Uncommon and Rare louder up the ladder (the louder-mastered stings sit lower)", function()
+			local sounds = LockerAssets.sounds
+			expect(sounds.lockerUncommon.volume > sounds.lockerCommon.volume).to.equal(true)
+			expect(sounds.lockerRare.volume > sounds.lockerUncommon.volume).to.equal(true)
+		end)
+
+		it("gives the Epic sting its own id on the Shop's Legendary buy asset", function()
+			expect(LockerAssets.sounds.lockerEpic.assetId).to.equal("rbxassetid://125716350432533")
 		end)
 	end)
 end

@@ -12,8 +12,8 @@ are approved and are not listed here.
 |---|---|---|---|---|---|---|
 | lockerKey | Vice Grips 29 (SFX) | ProSoundEffects | 9120409020 | the key turns in the Locker's lock | `Client/Features/Locker/Data/LockerAssets` | 2026-11-16 |
 | lockerRattle | Security Gate 4 (SFX) | ProSoundEffects | 9118901593 | the shut Locker door rattles before it opens (louder the rarer the prize) | same | 2026-11-16 |
-| lockerChimeHigh | Roblox GUI - Notification High | Roblox | 17208361335 | the prize chime: Rare, Epic, Legendary (also the approved tutorial pop; this use is not approved) | same | 2026-11-16 |
-| lockerChimeAura | Roblox GUI - Aura | Roblox | 17208327798 | the sparkle layer of the prize chime: Epic and Legendary only | same | 2026-11-16 |
+| lockerChimeHigh | Roblox GUI - Notification High | Roblox | 17208361335 | the prize chime: Legendary only (also the approved tutorial pop; this use is not approved) | same | 2026-11-16 |
+| lockerChimeAura | Roblox GUI - Aura | Roblox | 17208327798 | the sparkle layer of the prize chime: Legendary only | same | 2026-11-16 |
 
 ## Removed after the owner heard them
 
@@ -21,6 +21,10 @@ are approved and are not listed here.
 |---|---|---|---|
 | lockerBurst | Steel Door 3 (SFX), ProSoundEffects, 9119631707 | hated ("I HATE the explosion sound"); the Locker door now opens silent | 2026-11-16 |
 | lockerChimeLow | Roblox GUI - Notification Low, Roblox, 17208372272 | hated (the Uncommon flash sound); Uncommon now has no chime | 2026-11-16 |
+
+Notification High and Aura left Rare, Epic and Odd on 2026-11-17: the owner's rarity-ladder pick gave every rarity
+but Legendary its own in-house chime (lockerCommon, lockerUncommon, lockerRare, lockerEpic, lockerOdd; Icey Labs, not
+library sounds, so not listed). Legendary keeps the two library layers until its grander in-house sting is approved.
 
 lockerKey (the lock opening) was called "alright" by the owner (2026-11-16); it stays listed above until it is approved
 or replaced.
