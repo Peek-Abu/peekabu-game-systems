@@ -1,0 +1,44 @@
+[
+ {
+  "name": "ic_temperature_r0",
+  "prompt": "a classic upright cartoon thermometer: a tall thin clear glass tube with a round clear glass bulb at the very bottom, red-orange liquid inside the bulb rising halfway up the tube, bold white scale tick marks along the side of the tube, a small rounded silver cap at the top, slim and tall, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 400
+ },
+ {
+  "name": "ic_temperature_r1",
+  "prompt": "a classic upright cartoon thermometer: a tall thin clear glass tube with a round clear glass bulb at the very bottom, red-orange liquid inside the bulb rising halfway up the tube, bold white scale tick marks along the side of the tube, a small rounded silver cap at the top, slim and tall, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 401
+ },
+ {
+  "name": "ic_temperature_r2",
+  "prompt": "a classic upright cartoon thermometer: a tall thin clear glass tube with a round clear glass bulb at the very bottom, red-orange liquid inside the bulb rising halfway up the tube, bold white scale tick marks along the side of the tube, a small rounded silver cap at the top, slim and tall, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 402
+ },
+ {
+  "name": "ic_weather_windy_r0",
+  "prompt": "three clean smooth sky blue wind gust lines streaming to the right, each a simple thick rounded stroke that ends in a small curl at its tip, stacked one above the other, simple and clean, like a classic weather app wind symbol, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 403
+ },
+ {
+  "name": "ic_weather_windy_r1",
+  "prompt": "three clean smooth sky blue wind gust lines streaming to the right, each a simple thick rounded stroke that ends in a small curl at its tip, stacked one above the other, simple and clean, like a classic weather app wind symbol, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 404
+ },
+ {
+  "name": "ic_weather_windy_r2",
+  "prompt": "three clean smooth sky blue wind gust lines streaming to the right, each a simple thick rounded stroke that ends in a small curl at its tip, stacked one above the other, simple and clean, like a classic weather app wind symbol, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 405
+ }
+]

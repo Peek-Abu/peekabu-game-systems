@@ -89,7 +89,17 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
     <h2>New icons for the landing readout (18 Nov)</h2>
     <p>Here are 2 tries for each new icon, made on our own computer with no paid tools: a thermometer (T1, T2), a clear night (C1, C2), cloudy (K1, K2) and windy (W1, W2). Each is shown on light and dark backgrounds. There are no stars or sparkles. <b>Nothing is uploaded yet.</b> I upload to Icey Labs only after you pick. Honest take: the moons and clouds work. The thermometers look a bit like baby bottles, and the wind swirls a bit like vines. Pick one per icon, or say "redo" in the note.</p>
     <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/icons/picks-sheet.jpg" alt="Eight icon tries in a row, each on cream and on dark purple: two white thermometers with blue liquid and purple caps (T1, T2), two yellow crescent moons (C1, C2), two lilac clouds with a moon behind (K1, K2), two teal wind swirls with an orange leaf (W1, W2)." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
+    <p><b>Second try</b> (T3–T5 thermometers with a clear glass bulb and scale marks; W3–W5 wind gust lines). The thermometers read right now, and T4 is my pick. The wind lines are better but look a bit like stacked bars. W3 is the best one, and the only one with a clear curl.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/icons/redo-sheet.jpg" alt="Second tries: three slim glass thermometers with red liquid and a round bulb at the bottom (T3, T4, T5), and three stacks of sky blue wind lines (W3 with a curl on the top line, W4, W5)." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
     <div id="icons"></div>
+  </section>
+
+  <section>
+    <h2>Polish, seen in real play (18 Nov)</h2>
+    <p>No more gap before the temperature and weather, and the Gloom drop is bigger. The ring now finds the top of your character (ears and hats too). It goes above your head, or beside you when there's no room, like here with the camera close. All 7590 tests pass.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-1-polish.jpg" alt="Readout screen 1: 42°F and CLOUDY, now lined up at the left edge." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-3-polish.jpg" alt="Readout screen 3: ANOMALY LEVEL with a bigger Gloom drop under it." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/ring-side.jpg" alt="The ring beside the bunny, to its right, with Line it up! further right; the bunny's head is clear." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">The ring beside you (camera close). With the camera further back it sits above your head. That case is checked by a test, but I haven't captured it yet.</figcaption></figure>
   </section>
 
   <section>
@@ -167,15 +177,15 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
-  { id: "i1-thermometer", group: "icons", title: "Thermometer: T1 or T2?",
-    text: "Yes = T2 (bulb at the bottom, reads more like a thermometer). No = T1. Want a new try? Write \"redo\" in the note.",
-    effort: "Minutes", rec: "<b>Redo</b>, I think. Both look a bit like bottles. If you like one, T2." },
+  { id: "i1-thermometer", group: "icons", title: "Thermometer: which one?",
+    text: "Yes = T4 (from the second try). No = write the one you want (T1–T5) in the note, or \"redo\".",
+    effort: "Minutes", rec: "<b>Yes (T4).</b>" },
   { id: "i2-clear", group: "icons", title: "Clear night: C1 or C2?",
     text: "Yes = C2 (the fatter moon). No = C1.", effort: "Minutes", rec: "<b>Yes (C2).</b>" },
   { id: "i3-cloudy", group: "icons", title: "Cloudy: K1 or K2?",
     text: "Yes = K2 (the bigger, smoother cloud). No = K1.", effort: "Minutes", rec: "<b>Yes (K2).</b>" },
-  { id: "i4-windy", group: "icons", title: "Windy: W1 or W2?",
-    text: "Yes = W2. No = W1. Want a new try? Write \"redo\" in the note.", effort: "Minutes", rec: "<b>W2,</b> or a redo if they read as vines to you." },
+  { id: "i4-windy", group: "icons", title: "Windy: which one?",
+    text: "Yes = W3 (from the second try). No = write the one you want (W1–W5) in the note, or \"redo\".", effort: "Minutes", rec: "<b>W3,</b> or a redo if none feel right." },
   { id: "b1-ring-side", group: "built", title: "Move the ring to the side of your character?",
     text: "Even higher up, it still covers your head. Yes = it sits a little to the right of your character, so you can see yourself and the pile. No = keep it where it is now.",
     effort: "An hour", rec: "<b>Yes.</b> You can see the pile and your bunny clearly." },
