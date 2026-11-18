@@ -7,6 +7,8 @@ local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.Shop
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftNightFormulas)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local LAST = {
 	cleared = 362,
@@ -203,7 +205,11 @@ return function()
 			local view = DepotBoardViewModel.board("harlow-finch-1", nil, false, 3)
 			expect(view.client).to.equal("HARLOW & FINCH LTD.")
 			expect(view.chips[1].label).to.equal("QUOTA")
-			expect(view.chips[1].value).to.equal(`{ShiftQuotaFormulas.quota(3)} Gloom`)
+			-- Night Shift is the default: the chips show night 1's goal and length.
+			expect(view.chips[1].value).to.equal(
+				`{ShiftNightFormulas.nightQuota(ShiftQuotaFormulas.quota(3), 1)} Gloom`
+			)
+			expect(view.chips[2].value).to.equal(`{ShiftHudViewModel.clock(ShiftNightFormulas.seconds(1))} · night 1`)
 			expect(view.chips[1].icon).to.equal("gloom")
 			expect(view.chips[2].label).to.equal("SHIFT")
 			expect(view.chips[2].icon).to.equal("stopwatch")
@@ -215,8 +221,8 @@ return function()
 
 		it("gives the quota chip the range by crew size when the reader is not in a truck", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, nil)
-			local low = ShiftQuotaFormulas.quota(1)
-			local high = ShiftQuotaFormulas.quota(HostConstants.SEATS)
+			local low = ShiftNightFormulas.nightQuota(ShiftQuotaFormulas.quota(1), 1)
+			local high = ShiftNightFormulas.nightQuota(ShiftQuotaFormulas.quota(HostConstants.SEATS), 1)
 			expect(view.chips[1].value).to.equal(`{low}–{high} Gloom`)
 		end)
 
@@ -291,7 +297,9 @@ return function()
 			expect(view.buildings[1].tag).to.equal("OPEN")
 			expect(view.client).to.equal("MAPLE HILL SCHOOL")
 			expect(view.monster).to.equal("bramble")
-			expect(view.chips[1].value).to.equal(`{ShiftQuotaFormulas.quota(3, "school")} Gloom`)
+			expect(view.chips[1].value).to.equal(
+				`{ShiftNightFormulas.nightQuota(ShiftQuotaFormulas.quota(3, "school"), 1)} Gloom`
+			)
 			expect(view.tip).to.equal(DepotConstants.SCHOOL_SITE.tip)
 		end)
 
@@ -376,6 +384,12 @@ return function()
 			end
 			return value
 		end
+
+		it("shows a whole shift's goal and clock on the chips when the truck picked Quick shift", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, 2, places({ role = "crew", mode = "quick" }))
+			expect(view.chips[1].value).to.equal(`{ShiftQuotaFormulas.quota(2)} Gloom`)
+			expect(view.chips[2].value).to.equal(ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS))
+		end)
 
 		it("offers Night Shift first, then Quick shift, in kid words", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, nil, places({}))

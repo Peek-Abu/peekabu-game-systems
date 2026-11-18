@@ -19,6 +19,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local DepotPlaceConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants)
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local DepotModeRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotModeRules)
+local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftNightFormulas)
 local DepotPlaceRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotPlaceRules)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
@@ -238,14 +239,25 @@ local SOON: { Soon } = {
 	{ name = "GLIMMER MALL", site = "After hours", photo = "mall" },
 }
 
--- The QUOTA chip: the crew's contract on `map`, or the range by crew size.
-local function quotaChip(crew: number?, map: MapId): string
-	if crew == nil then
-		local low = ShiftQuotaFormulas.quota(1, map)
-		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS, map)
-		return `{low}–{high} Gloom`
+-- The QUOTA chip: the crew's contract on `map`, or the range by crew size. On a Night Shift run, night 1's goal
+-- (ShiftNightFormulas.nightQuota), what the crew plays first.
+local function quotaChip(crew: number?, map: MapId, night: boolean): string
+	local function goal(size: number): number
+		local contract = ShiftQuotaFormulas.quota(size, map)
+		return if night then ShiftNightFormulas.nightQuota(contract, 1) else contract
 	end
-	return `{ShiftQuotaFormulas.quota(crew, map)} Gloom`
+	if crew == nil then
+		return `{goal(1)}–{goal(HostConstants.SEATS)} Gloom`
+	end
+	return `{goal(crew)} Gloom`
+end
+
+-- The SHIFT chip: a whole shift's clock, or night 1's on a Night Shift run.
+local function shiftChip(night: boolean): string
+	if night then
+		return `{ShiftHudViewModel.clock(ShiftNightFormulas.seconds(1))} · night 1`
+	end
+	return ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)
 end
 
 -- The places menu's tabs, left to right.
@@ -428,6 +440,7 @@ function DepotBoardViewModel.board(
 	local site = DepotMapRules.siteOf(focus)
 	local lastView = if last ~= nil then lastOf(last, phone) else nil
 	local modes, modeLine = modesOf(input)
+	local nightRun = DepotModeRules.parse(if input.role ~= "none" then input.mode else nil) == "night"
 	return {
 		header = DepotPlaceConstants.TEXT.title,
 		pickLine = pickLine(input.role),
@@ -437,8 +450,8 @@ function DepotBoardViewModel.board(
 		monster = site.monster,
 		client = client,
 		chips = {
-			{ label = "QUOTA", value = quotaChip(crew, focus), icon = "gloom" },
-			{ label = "SHIFT", value = shift, icon = "stopwatch" },
+			{ label = "QUOTA", value = quotaChip(crew, focus, nightRun), icon = "gloom" },
+			{ label = "SHIFT", value = shiftChip(nightRun), icon = "stopwatch" },
 			{ label = "PAY", value = "1 per Gloom", icon = "credits" },
 			{ label = "CREW", value = "1–4 employees", icon = "pippaHappy" },
 		},
