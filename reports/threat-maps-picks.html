@@ -86,6 +86,15 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   </section>
 
   <section>
+    <h2>Skill check: first real play (18 Nov)</h2>
+    <p>Your ring idea is in the game, with an off switch. Hold the vacuum on a pile and a purple ring with a gap closes in. Move your mouse to slide the vacuum icon around the inner circle, into the gap (the green beads), before the ring lands. A miss makes a noise the manager can hear. The gap gets smaller as the pile gets cleaner. In a test run: 4 rings, 1 hit, 3 misses, and every miss made a noise. All 7545 tests pass.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/ring-in-flight.jpg" alt="The ring skill check in the Office: a purple bead ring with a gap closes in on a small inner ring around the vacuuming bunny; the vacuum icon sits on the inner ring and green beads mark the gap; the words LINE IT UP! sit under it." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">The ring closing in. "Line it up!" shows for your first 2 rings.</figcaption></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/ring-arrives.jpg" alt="The ring just as it lands on the inner circle, next to the bunny, on a second pile." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">The ring as it lands.</figcaption></figure>
+    <div class="note"><p><b>Things I noticed:</b> the ring sits on top of your character, and "Line it up!" overlaps the hotbar. Also, a pile only takes 2.5 s to clean, so you get about 1 ring per pile, not a few that keep shrinking. To get more rings per pile, the rings must be faster or piles must take longer. Tell me in the note which you'd like, and where the ring should sit.</p></div>
+    <div id="ring"></div>
+  </section>
+
+  <section>
     <h2>Landing readout: pick a look (18 Nov)</h2>
     <p>You picked: wait until the ARRIVAL card closes, and no card or back frame, more like a diagnostics screen or a voice report. Here are 3 quick looks, drawn over a real game screenshot. In the game, the lines come in <b>one at a time</b> (typed or faded), stay a few seconds, then fade away. Grey circles mean an icon still to be made. Pick <b>Yes</b> on the one you want.</p>
     <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-looks/a.jpg" alt="Look A, Site scan: a mint SITE SCAN header with a line under it, then labels Temp, Time, Weather, Danger on the left and big values on the right, with no box behind them." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
@@ -139,6 +148,9 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
+  { id: "k1-ring-feel", group: "ring", title: "Ring: more rings per pile?",
+    text: "Yes = 2–3 quicker rings per pile, each with a smaller gap, until the pile is clean. Piles still take the same time. No = keep 1 ring per pile. Also tell me where the ring should sit: on your character (now), a bit higher, or off to the side.",
+    effort: "An hour", rec: "<b>Yes,</b> it matches your idea. The ring moves a bit higher, off your character." },
   { id: "r1-look-a-scan", group: "readout", title: "Look A: Site scan",
     text: "Like a diagnostics screen: a glowing SITE SCAN title, then each line types in with a blinking cursor.",
     effort: "Half a day", rec: "Clean and techy. A little cold for little kids." },
@@ -273,7 +285,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["readout", "landing", "round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["ring", "readout", "landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
