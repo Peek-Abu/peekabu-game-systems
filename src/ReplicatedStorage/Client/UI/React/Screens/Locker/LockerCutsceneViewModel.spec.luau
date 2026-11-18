@@ -148,15 +148,15 @@ return function()
 	end)
 
 	-- Owner rarity-ladder pick 2026-11-17: one in-house orchestral family in F major growing from Common to Legendary
-	-- (Odd a ghostly B minor), one sting per rarity at the burst. Legendary keeps its two library layers until its
-	-- grander sting is approved.
+	-- (Odd a ghostly B minor), one sting per rarity at the burst. Legendary: the owner's grander, longer take (11-17,
+	-- legendary page pick C), the orchestra hit moving down to Epic.
 	describe("prize chimes", function()
 		local EXPECTED = {
 			default = { "lockerCommon" },
 			uncommon = { "lockerUncommon" },
 			rare = { "lockerRare" },
 			epic = { "lockerEpic" },
-			legendary = { "lockerChimeHigh", "lockerChimeAura" },
+			legendary = { "lockerLegendary" },
 			odd = { "lockerOdd" },
 		}
 
@@ -187,8 +187,12 @@ return function()
 			expect(sounds.lockerRare.volume > sounds.lockerUncommon.volume).to.equal(true)
 		end)
 
-		it("gives the Epic sting its own id on the Shop's Legendary buy asset", function()
-			expect(LockerAssets.sounds.lockerEpic.assetId).to.equal("rbxassetid://125716350432533")
-		end)
+		it(
+			"gives Epic the orchestra hit and Legendary the grander sting, the same assets as the Shop's buys",
+			function()
+				expect(LockerAssets.sounds.lockerEpic.assetId).to.equal("rbxassetid://125716350432533")
+				expect(LockerAssets.sounds.lockerLegendary.assetId).to.equal("rbxassetid://103044158583335")
+			end
+		)
 	end)
 end

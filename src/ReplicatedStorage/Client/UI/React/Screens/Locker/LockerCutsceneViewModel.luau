@@ -57,8 +57,8 @@ export type CutscenePose = {
 }
 
 -- Each rarity's prize chime is its own in-house sting (owner rarity-ladder pick 2026-11-17: one orchestral family in F
--- major growing from Common up, Odd a ghostly B minor; LockerAssets). Legendary keeps its two library layers for now:
--- a grander Legendary sting is pending the owner's OK.
+-- major growing from Common up, Odd a ghostly B minor; LockerAssets). Legendary is the grander, longer sting (owner
+-- 11-17: "make the legendary more grandiose and a little longer in time from the epic"); Epic the orchestra hit.
 local RARITY_FX: { [Rarity]: RarityFx } = {
 	default = {
 		hold = 0.5,
@@ -108,7 +108,7 @@ local RARITY_FX: { [Rarity]: RarityFx } = {
 		shake = 0.12,
 		rays = 10,
 		flash = 0.88,
-		chime = { "lockerChimeHigh", "lockerChimeAura" },
+		chime = { "lockerLegendary" },
 	},
 	odd = {
 		hold = 1.7,

@@ -134,6 +134,11 @@ return function()
 			end
 		end)
 
+		it("follows the locker's swap: Epic buys play the orchestra hit, Legendary buys the grander sting", function()
+			expect(UIAssets.sounds.shopBuyEpic.assetId).to.equal("rbxassetid://125716350432533")
+			expect(UIAssets.sounds.shopBuyLegendary.assetId).to.equal("rbxassetid://103044158583335")
+		end)
+
 		it("keeps the Common and Uncommon note quiet under the register", function()
 			expect(UIAssets.sounds.shopBuySmall.volume < UIAssets.sounds.shopBuyRare.volume).to.equal(true)
 		end)

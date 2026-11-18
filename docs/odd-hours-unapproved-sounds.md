@@ -12,8 +12,6 @@ are approved and are not listed here.
 |---|---|---|---|---|---|---|
 | lockerKey | Vice Grips 29 (SFX) | ProSoundEffects | 9120409020 | the key turns in the Locker's lock | `Client/Features/Locker/Data/LockerAssets` | 2026-11-16 |
 | lockerRattle | Security Gate 4 (SFX) | ProSoundEffects | 9118901593 | the shut Locker door rattles before it opens (louder the rarer the prize) | same | 2026-11-16 |
-| lockerChimeHigh | Roblox GUI - Notification High | Roblox | 17208361335 | the prize chime: Legendary only (also the approved tutorial pop; this use is not approved) | same | 2026-11-16 |
-| lockerChimeAura | Roblox GUI - Aura | Roblox | 17208327798 | the sparkle layer of the prize chime: Legendary only | same | 2026-11-16 |
 
 ## Removed after the owner heard them
 
@@ -24,7 +22,9 @@ are approved and are not listed here.
 
 Notification High and Aura left Rare, Epic and Odd on 2026-11-17: the owner's rarity-ladder pick gave every rarity
 but Legendary its own in-house chime (lockerCommon, lockerUncommon, lockerRare, lockerEpic, lockerOdd; Icey Labs, not
-library sounds, so not listed). Legendary keeps the two library layers until its grander in-house sting is approved.
+library sounds, so not listed). Legendary kept the two library layers until 2026-11-17, when the owner picked its
+grander in-house sting (lockerLegendary, Icey Labs 103044158583335): lockerChimeHigh and lockerChimeAura are no longer
+used or registered by the Locker. (Notification High stays approved as the tutorial pop.)
 
 lockerKey (the lock opening) was called "alright" by the owner (2026-11-16); it stays listed above until it is approved
 or replaced.

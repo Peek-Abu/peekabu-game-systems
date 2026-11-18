@@ -358,13 +358,14 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- owner's hear-check.
 	uiWheelOpen = { assetId = "rbxassetid://124416513239859", group = "UI", volume = 1, maxConcurrent = 1 },
 	-- A Legendary shop buy (the offer's top rarity; a bundle's highest-rarity item), played by ShopServiceClient on top
-	-- of the purchase (uiPurchase stays for every buy; UISoundFormulas.buyExtra over UIAssets.buySounds). One F major
-	-- full-orchestra hit with a felt bass drum and a soft crash, hit at 0 s, 2.05 s (-13 LUFS integrated, true peak
-	-- -1 dBFS). Owner pick 2026-11-17 ("For legendary purchase - orchestra hit style!"), in-house (ElevenLabs Starter
-	-- stems hand-layered with mix_sting.py), Icey Labs. A reward sting, so the Reward bus. Mastered loud: volume 0.6
-	-- is a starting level that awaits the owner's hear-check.
+	-- of the purchase (uiPurchase stays for every buy; UISoundFormulas.buyExtra over UIAssets.buySounds). The grander,
+	-- longer Legendary sting: a swell into a doubled full-orchestra chord with drums, a crash and a longer ring, 3.6 s
+	-- (-12 LUFS, true peak -1 dBFS; the same asset as the Locker's Legendary chime). Owner legendary-page pick C
+	-- (2026-11-17), shop buys following the locker's swap ("Yes"); was the orchestra hit 125716350432533, now Epic.
+	-- In-house (ElevenLabs Starter stems hand-layered with mix_sting.py), Icey Labs, Reward bus. Mastered loud: volume
+	-- 0.6 is a starting level that awaits the owner's hear-check.
 	shopBuyLegendary = {
-		assetId = "rbxassetid://125716350432533",
+		assetId = "rbxassetid://103044158583335",
 		group = "SFX",
 		bus = "Reward",
 		volume = 0.6,
@@ -392,9 +393,11 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		volume = 0.6,
 		maxConcurrent = 1,
 	},
-	-- An Epic buy: a fast run into a strong orchestra chord, 2.18 s (-14 LUFS).
+	-- An Epic buy: the full-orchestra F major hit, 2.05 s (-13 LUFS; the same asset as the Locker's Epic chime). The
+	-- owner moved it from Legendary to Epic and had buys follow the locker (11-17); was the fast-run sting
+	-- 104331550984161.
 	shopBuyEpic = {
-		assetId = "rbxassetid://104331550984161",
+		assetId = "rbxassetid://125716350432533",
 		group = "SFX",
 		bus = "Reward",
 		volume = 0.6,

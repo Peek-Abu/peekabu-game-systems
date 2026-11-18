@@ -12,10 +12,9 @@
 	|---|---|---|
 	| lockerKey | Vice Grips 29 (SFX), ProSoundEffects, 9120409020 | the key turns in the lock |
 	| lockerRattle | Security Gate 4 (SFX), ProSoundEffects, 9118901593 | the shut door rattles (louder the rarer) |
-	| lockerChimeHigh | Roblox GUI - Notification High, Roblox, 17208361335 | the prize chime: Legendary only |
-	| lockerChimeAura | Roblox GUI - Aura, Roblox, 17208327798 | the sparkle layer: Legendary only |
 
-	(Notification High is also the approved tutorial pop; here it is a separate, unapproved use.)
+	(Notification High and Aura, the old prize chimes, are gone: every rarity has its own in-house chime since
+	2026-11-17.)
 
 	Owner 11-16 (heard in play): the key / lock sound is "alright"; the door-burst sound (Steel Door 3) and the Uncommon
 	chime (Notification Low) were hated and are gone (the door now opens with lockerDoor, and Uncommon has its own
@@ -26,11 +25,11 @@
 	swings open and bangs gently on the next locker). Not a library pick, so not in the list above.
 
 	APPROVED (owner rarity-ladder pick 2026-11-17): the prize chimes at the burst, one per rarity (LockerCutsceneViewModel
-	RARITY_FX[*].chime): lockerCommon, lockerUncommon, lockerRare, lockerEpic and lockerOdd. In-house tuned orchestral
-	stings (ElevenLabs Starter stems hand-layered with mix_sting.py; one family in F major growing from Common up, Odd a
-	ghostly B minor), Icey Labs. Not library picks, so not in the list above. Each volume is a starting level that awaits
-	the owner's hear-check (the louder-mastered files start lower so the ladder still rises). Legendary keeps the two
-	library layers above for now: its grander sting is pending the owner's OK.
+	RARITY_FX[*].chime): lockerCommon, lockerUncommon, lockerRare, lockerEpic, lockerLegendary and lockerOdd. In-house
+	tuned orchestral stings (ElevenLabs Starter stems hand-layered with mix_sting.py; one family in F major growing from
+	Common up, Odd a ghostly B minor), Icey Labs. Not library picks, so not in the list above. Each volume is a starting
+	level that awaits the owner's hear-check (the louder-mastered files start lower so the ladder still rises).
+	Legendary's grander, longer sting was picked on the owner's legendary page (2026-11-17).
 
 	Static data + registration (spec-exempt).
 
@@ -90,19 +89,15 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		volume = 0.7,
 		maxConcurrent = 1,
 	},
-	-- Library picks, NOT approved: Legendary's chime and sparkle layers until its grander sting is approved.
-	lockerChimeHigh = {
-		assetId = "rbxassetid://17208361335",
+	-- Legendary: the grander, longer sting, a swell into a doubled full-orchestra chord with drums, a crash and a longer
+	-- ring, 3.6 s (-12 LUFS; the same asset as UIAssets.shopBuyLegendary). Owner legendary-page pick C (2026-11-17:
+	-- "make the legendary more grandiose and a little longer in time from the epic"). Mastered loud, so it starts lower;
+	-- it replaced the library Notification High + Aura layers.
+	lockerLegendary = {
+		assetId = "rbxassetid://103044158583335",
 		group = "SFX",
 		bus = "Reward",
-		volume = 1.6,
-		maxConcurrent = 1,
-	},
-	lockerChimeAura = {
-		assetId = "rbxassetid://17208327798",
-		group = "SFX",
-		bus = "Reward",
-		volume = 1.4,
+		volume = 0.7,
 		maxConcurrent = 1,
 	},
 }
