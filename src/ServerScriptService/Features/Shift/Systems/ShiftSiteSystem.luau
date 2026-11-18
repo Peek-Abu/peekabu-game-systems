@@ -42,12 +42,17 @@ export type Choice = {
 	map: ShiftTypes.MapId,
 }
 
+-- The run's quota from the shift contract.
+export type Goal = (contract: number) -> number
+
 export type ShiftSiteSystem = {
 	clear: (self: ShiftSiteSystem) -> (),
 	-- Overtime began: Office spawns the shift's overtime batch (once; OfficeServiceServer:spawnOvertimeLoot).
 	startOvertime: (self: ShiftSiteSystem) -> (),
-	choose: (self: ShiftSiteSystem, shift: number, crewSize: number) -> Choice,
-	prepare: (self: ShiftSiteSystem, shift: number, crewSize: number, map: ShiftTypes.MapId) -> Choice,
+	-- `goal` turns the shift contract (ShiftQuotaFormulas.quota) into the run's quota (Night Shift's night goal,
+	-- ShiftNightSystem.goal); absent: the contract.
+	choose: (self: ShiftSiteSystem, shift: number, crewSize: number, goal: Goal?) -> Choice,
+	prepare: (self: ShiftSiteSystem, shift: number, crewSize: number, map: ShiftTypes.MapId, goal: Goal?) -> Choice,
 	build: (self: ShiftSiteSystem, choice: Choice, players: { Player }) -> (),
 	take: (self: ShiftSiteSystem) -> Choice?,
 	offered: (self: ShiftSiteSystem) -> number,
@@ -102,18 +107,22 @@ function ShiftSiteSystem.new(): ShiftSiteSystem
 			end)
 		end,
 
-		choose = function(_self, shift, crewSize)
+		choose = function(_self, shift, crewSize, goal)
 			-- Each run's A/B variant (spec §4; rewards never read it); the quota scales with the crew. A run started
 			-- this way (an admin's round start) plays the office.
 			local variant: ShiftTypes.Variant = ShiftAnalyticsSystem.pickVariant(shift)
-			return { variant = variant, quota = ShiftQuotaFormulas.quota(crewSize), map = "office" }
+			local contract = ShiftQuotaFormulas.quota(crewSize)
+			return { variant = variant, quota = if goal ~= nil then goal(contract) else contract, map = "office" }
 		end,
 
-		prepare = function(self, shift, crewSize, map)
-			local choice = self:choose(shift, crewSize)
+		prepare = function(_self, shift, crewSize, map, goal)
 			-- The map's own contract: the School asks more than the Office (ShiftQuotaFormulas).
-			choice.map = map
-			choice.quota = ShiftQuotaFormulas.quota(crewSize, map)
+			local contract = ShiftQuotaFormulas.quota(crewSize, map)
+			local choice: Choice = {
+				variant = ShiftAnalyticsSystem.pickVariant(shift),
+				quota = if goal ~= nil then goal(contract) else contract,
+				map = map,
+			}
 			local plan = rebuild(choice)
 			prepared = choice
 			local greed = plan.greed

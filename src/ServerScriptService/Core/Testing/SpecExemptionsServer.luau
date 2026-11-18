@@ -141,6 +141,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Shift.Systems.ShiftLeavingSystem"] = "Queue-signal/ByteNet/character shell (the card is specced in ShiftLeavingRules, the wire format in ShiftTransitUtils)",
 	["ServerScriptService.Features.Shift.Systems.ShiftTransitSystem"] = "Players/character/streaming/ByteNet/timer shell (holds, readiness and deadlines specced in ShiftTransitTracker, the entry in ShiftTransitUtils)",
 	["ServerScriptService.Features.Shift.Systems.ShiftRunSystem"] = "Round/Vacuum/Office orchestration shell for the shift's run (phase, quota, review and vote decisions are specced in ShiftPhaseRules, ShiftReviewSystem.results and ShiftVoteRules)",
+	["ServerScriptService.Features.Shift.Systems.ShiftNightSystem"] = "Round/Currency shell for the Night Shift run (mode, week quota, settlement, carried coats and the start tier are specced in ShiftNightRules, ShiftNightTracker, ShiftLivesRules and ShiftNightFormulas; the bonus payment in ShiftPaySystem.payAll)",
 	["ServerScriptService.Features.Shift.Systems.ShiftWiringSystem"] = "service start-up wiring shell (RunService, Round, Cargo, Office and Death connections; every decision is in the specced subsystems)",
 	["ServerScriptService.Features.Depot.Systems.DepotMapSystem"] = "ByteNet/Queue/Host/world-store shell (the decisions are specced in DepotMapRules and DepotMapTracker)",
 	["ServerScriptService.Features.Depot.Systems.DepotPlaceSystem"] = "ByteNet/PlayerData/Shop shell (the decisions are specced in DepotPlaceRules and ShopServiceServer.payOps)",

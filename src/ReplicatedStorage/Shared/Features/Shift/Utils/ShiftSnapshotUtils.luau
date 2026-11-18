@@ -5,7 +5,8 @@
 	`decode` is the client's trust boundary for it (the RoundSnapshotUtils pattern): a wrong type anywhere
 	rejects the whole value; absent vote counts read 0. It also carries the crew's userIds and the truck's layout
 	index, who has clocked out and how many crew members are still in (absent: nobody, 0), and a review's salvage offered and rating stamp (absent on a snapshot from before M3 UI: offered reads 0
-	and the rating is derived from the quota alone).
+	and the rating is derived from the quota alone). The Night Shift fields (runMode, night, week, weekQuota,
+	weekCleared, runOver, nightReached) ride along as they are in the state; absent is fine, a wrong type is not.
 
 	@class ShiftSnapshotUtils
 ]=]
@@ -62,6 +63,32 @@ local function variantOf(value: WorldValue?): ShiftTypes.Variant?
 		return "B"
 	end
 	return nil
+end
+
+-- An optional run mode: (value, ok). Absent is fine; anything unknown is not.
+local function runModeOf(value: WorldValue?): (ShiftTypes.RunMode?, boolean)
+	if value == nil then
+		return nil, true
+	elseif value == "night" then
+		return "night", true
+	elseif value == "quick" then
+		return "quick", true
+	end
+	return nil, false
+end
+
+-- An optional run-over reason: (value, ok). Absent is fine; anything unknown is not.
+local function runOverOf(value: WorldValue?): (ShiftTypes.RunOver?, boolean)
+	if value == nil then
+		return nil, true
+	elseif value == "fired" then
+		return "fired", true
+	elseif value == "wiped" then
+		return "wiped", true
+	elseif value == "clockout" then
+		return "clockout", true
+	end
+	return nil, false
 end
 
 -- An optional number: (value, ok). Absent is fine; any other type is not.
@@ -310,6 +337,13 @@ function ShiftSnapshotUtils.build(
 		truck = truck,
 		punched = if state.punched ~= nil then table.clone(state.punched) else {},
 		crewIn = state.crewIn or 0,
+		runMode = state.runMode,
+		night = state.night,
+		week = state.week,
+		weekQuota = state.weekQuota,
+		weekCleared = state.weekCleared,
+		runOver = state.runOver,
+		nightReached = state.nightReached,
 	}
 end
 
@@ -364,6 +398,16 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 	if punched == nil or not crewInOk then
 		return nil
 	end
+	local runMode: ShiftTypes.RunMode?, runModeOk = runModeOf(value.runMode)
+	local runOver: ShiftTypes.RunOver?, runOverOk = runOverOf(value.runOver)
+	local night, nightOk = optionalNumber(value.night)
+	local week, weekOk = optionalNumber(value.week)
+	local weekQuota, weekQuotaOk = optionalNumber(value.weekQuota)
+	local weekCleared, weekClearedOk = optionalNumber(value.weekCleared)
+	local nightReached, reachedOk = optionalNumber(value.nightReached)
+	if not (runModeOk and runOverOk and nightOk and weekOk and weekQuotaOk and weekClearedOk and reachedOk) then
+		return nil
+	end
 	local snapshot: ShiftSnapshot = {
 		phase = phase,
 		sub = sub,
@@ -386,6 +430,13 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 		truck = truck,
 		punched = punched,
 		crewIn = crewIn,
+		runMode = runMode,
+		night = night,
+		week = week,
+		weekQuota = weekQuota,
+		weekCleared = weekCleared,
+		runOver = runOver,
+		nightReached = nightReached,
 	}
 	return snapshot
 end

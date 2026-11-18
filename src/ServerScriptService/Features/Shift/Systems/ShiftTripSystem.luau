@@ -7,7 +7,9 @@
 	  here, replacing one that has gone), and the payload's contract id (untrusted: it rode the teleport) is
 	  resolved by DepotContractUtils among its map's jobs (DepotMapRules.contractsOf) for the result card; its map (the truck host's pick) is read by
 	  DepotMapRules.parse (anything but a map id is the office; a training trip is the office) and kept for every
-	  shift of the run (`map`; Another shift keeps it) until the next party arrives;
+	  shift of the run (`map`; Another shift keeps it) until the next party arrives; its run mode (ShiftNightConstants.MODE_KEY,
+  the truck's Night Shift / Quick shift pick) is read by ShiftNightRules.parseMode (missing or unknown is the default
+  mode; a training trip is always quick) and kept the same way (`mode`);
 	- Queue `joinedLate(player)`: an expected member who came after the start joins the crew and is handed to
 	  `admit` (Shift's transit holds them behind the load screen and places them in the truck); every member of an
 	  arriving party is handed to `admit` too;
@@ -41,6 +43,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftNightConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftNightConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local DepotContractUtils = require(ServerScriptService.Features.Depot.Utils.DepotContractUtils)
@@ -49,6 +52,7 @@ local DepotServiceServer = require(ServerScriptService.Features.Depot.DepotServi
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local QueuePlaceRules = require(ServerScriptService.Features.Queue.Rules.QueuePlaceRules)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+local ShiftNightRules = require(ServerScriptService.Features.Shift.Rules.ShiftNightRules)
 local ShiftPlaceRules = require(ServerScriptService.Features.Shift.Rules.ShiftPlaceRules)
 local ShiftCrewTracker = require(ServerScriptService.Features.Shift.State.ShiftCrewTracker)
 local ShiftCardUtils = require(ServerScriptService.Features.Shift.Utils.ShiftCardUtils)
@@ -78,6 +82,9 @@ export type ShiftTripSystem = {
 	truck: (self: ShiftTripSystem) -> number?,
 	-- The map the crew's host picked (from the untrusted depart payload; the office when unknown or training).
 	map: (self: ShiftTripSystem) -> ShiftTypes.MapId,
+	-- The run mode the crew's host picked (from the untrusted depart payload; the default mode when unknown, quick for
+	-- training).
+	mode: (self: ShiftTripSystem) -> ShiftTypes.RunMode,
 	-- The contract's client the crew is working for (the transit slip's destination).
 	client: (self: ShiftTripSystem) -> string,
 	startable: (self: ShiftTripSystem, now: number) -> number,
@@ -133,6 +140,7 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 	local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.CONTRACTS, os.time())
 	local truck: number? = nil
 	local map: ShiftTypes.MapId = "office"
+	local mode: ShiftTypes.RunMode = ShiftNightRules.parseMode(nil)
 	local changed: () -> () = function() end
 	local stoppers: { () -> () } = {}
 
@@ -172,12 +180,13 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 				-- A training trip goes to the training room, not the night's client (its route slip says so).
 				local training = payload[TrainingConstants.MODE_KEY] == TrainingConstants.MODE
 				map = if training then "office" else DepotMapRules.parse(payload.map)
+				mode = if training then "quick" else ShiftNightRules.parseMode(payload[ShiftNightConstants.MODE_KEY])
 				-- The contract is resolved among the map's own jobs (an id from another map reads as its first).
 				contract = if training
 					then TrainingConstants.CONTRACT
 					else DepotContractUtils.resolve(DepotMapRules.contractsOf(map), payload.contract)
 				truck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
-				log:info(`a crew of {#party} arrived for {contract.id} on the {map} map`)
+				log:info(`a crew of {#party} arrived for {contract.id} on the {map} map ({mode})`)
 				changed()
 				for _, player in party do
 					options.admit(player)
@@ -235,6 +244,7 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 			members:clear()
 			truck = nil
 			map = "office"
+			mode = ShiftNightRules.parseMode(nil)
 		end,
 
 		crew = function(_self)
@@ -251,6 +261,10 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 
 		map = function(_self)
 			return map
+		end,
+
+		mode = function(_self)
+			return mode
 		end,
 
 		client = function(_self)

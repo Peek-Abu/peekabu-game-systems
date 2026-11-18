@@ -36,6 +36,10 @@ export type Vote = "another" | "depot"
 -- in a row, a weekly quota every WEEK_NIGHTS nights, no end); "quick" is one shift, as before.
 export type RunMode = "night" | "quick"
 
+-- Why a Night Shift run ended: the weekly quota was missed ("fired"), the whole crew ran out of coats ("wiped"), or the
+-- crew voted Clock out and went home with their pay ("clockout").
+export type RunOver = "fired" | "wiped" | "clockout"
+
 -- The map a shift is played on (the truck's host picks it on the START panel; DepotMapRules.parse reads it off the
 -- untrusted depart payload, anything else is "office"). Both are generated each shift in the Shift place.
 export type MapId = "office" | "school"
@@ -80,6 +84,10 @@ export type ShiftState = {
 	week: number?,
 	weekQuota: number?,
 	weekCleared: number?,
+	-- Night Shift only: set once the run is over (nil while it goes on), and the night it ended on. A fired or wiped
+	-- crew skips the vote and is sent home after the results.
+	runOver: RunOver?,
+	nightReached: number?,
 }
 
 -- The performance review's overall stamp (Figma 35:1096): quota missed, met, or met with the salvage threshold.
@@ -190,6 +198,15 @@ export type ShiftSnapshot = {
 	-- and 0 outside a run.
 	punched: { number },
 	crewIn: number,
+	-- The Night Shift fields (ShiftState): absent in a quick shift (runMode reads "quick" there) and on an older
+	-- snapshot.
+	runMode: RunMode?,
+	night: number?,
+	week: number?,
+	weekQuota: number?,
+	weekCleared: number?,
+	runOver: RunOver?,
+	nightReached: number?,
 }
 
 -- One player held by a transit (the load screen while the office is built and they are placed in its truck). `id` is

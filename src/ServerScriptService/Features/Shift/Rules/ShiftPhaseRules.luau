@@ -201,9 +201,10 @@ end
 --[=[
 	Moves the pacing on to `now`: the break ends at its deadline (back to normal, never into overtime), the
 	warning becomes overtime at its deadline, and the tier. A `training` run keeps tier 0, so the clock never speeds
-	the Manager up. Nil when nothing changed or the shift is not running.
+	the Manager up. `minTier` (Night Shift's start tier for the night, ShiftNightRules.minTier) is the lowest tier the
+	clock may leave, at most the top tier. Nil when nothing changed or the shift is not running.
 ]=]
-function ShiftPhaseRules.advance(state: ShiftState, now: number, training: boolean?): ShiftState?
+function ShiftPhaseRules.advance(state: ShiftState, now: number, training: boolean?, minTier: number?): ShiftState?
 	if state.phase ~= "running" then
 		return nil
 	end
@@ -217,7 +218,8 @@ function ShiftPhaseRules.advance(state: ShiftState, now: number, training: boole
 		stage = "overtime"
 		stageEndsAt = nil
 	end
-	local tier = if training then 0 else tierFor(stage, state.startedAt, now)
+	local floor = math.min(minTier or 0, ShiftConstants.TOP_TIER)
+	local tier = if training then 0 else math.max(tierFor(stage, state.startedAt, now), floor)
 	local sameStage = stage == state.stage
 	if sameStage and stageEndsAt == state.stageEndsAt and tier == state.tier then
 		return nil

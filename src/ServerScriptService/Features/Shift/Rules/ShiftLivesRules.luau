@@ -28,4 +28,19 @@ function ShiftLivesRules.spend(remaining: number, floor: number?): (number, bool
 	return left, left == 0
 end
 
+--[=[
+	Night Shift's coats carried into the next night: a crew member new to the run (`carried` nil) gets `starting`; one
+	who ended the last night knocked out (0 or less) comes back with `returnLives`; anyone else keeps what they had,
+	floored.
+]=]
+function ShiftLivesRules.carried(carried: number?, starting: number, returnLives: number): number
+	if carried == nil then
+		return starting
+	end
+	if carried <= 0 then
+		return returnLives
+	end
+	return math.floor(carried)
+end
+
 return ShiftLivesRules

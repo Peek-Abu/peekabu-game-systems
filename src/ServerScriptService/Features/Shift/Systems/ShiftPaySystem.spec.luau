@@ -250,4 +250,50 @@ return function()
 			expect(#calls).to.equal(0)
 		end)
 	end)
+
+	describe("payAll (the Night Shift week bonus)", function()
+		it("pays each listed crew member once, de-duplicated", function()
+			local paid = {}
+			ShiftPaySystem.payAll("week 1", { 1, 2, 1 }, { credits = 100 }, function(userId, amounts)
+				table.insert(paid, `{userId}:{amounts.credits}`)
+				return true
+			end, function()
+				return true
+			end, function() end)
+			expect(#paid).to.equal(2)
+			expect(paid[1]).to.equal("1:100")
+			expect(paid[2]).to.equal("2:100")
+		end)
+
+		it("retries a refused payment while the player is present, and stops once they leave", function()
+			local queue = {}
+			local attempts = 0
+			local here = true
+			ShiftPaySystem.payAll("week 1", { 7 }, { credits = 50 }, function()
+				attempts += 1
+				return false
+			end, function()
+				return here
+			end, function(_seconds, fn)
+				table.insert(queue, fn)
+			end)
+			expect(attempts).to.equal(1)
+			table.remove(queue, 1)()
+			expect(attempts).to.equal(2)
+			here = false
+			table.remove(queue, 1)()
+			expect(attempts).to.equal(2)
+		end)
+
+		it("pays nothing for a zero amount", function()
+			local attempts = 0
+			ShiftPaySystem.payAll("week 1", { 1 }, { credits = 0 }, function()
+				attempts += 1
+				return true
+			end, function()
+				return true
+			end, function() end)
+			expect(attempts).to.equal(0)
+		end)
+	end)
 end

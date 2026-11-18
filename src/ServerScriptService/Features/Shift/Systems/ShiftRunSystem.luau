@@ -5,8 +5,10 @@
 	building the review (`safeResults`), following Round's phases (`onRoundPhase`) and the clock's tick (`step`). The
 	service's state, its one way to change it, the run's record (ShiftRunTracker) and the systems it drives are handed in
 	as Deps; the transit and the vote are handed in as functions, because they are built after this system (they call
-	its `prepareShift`, `finishReset` and `startTransit`). The decisions are the specced ShiftPhaseRules and
-	ShiftReviewSystem.results; spec-exempt shell.
+	its `prepareShift`, `finishReset` and `startTransit`). The Night Shift run (ShiftNightSystem) lives outside the
+	clearing: each preparation sets the night's goal and length, each run start carries the coats, each review is scaled
+	by the night's pay and settles the night, and the clock keeps the manager at the night's start tier. The decisions
+	are the specced ShiftPhaseRules, ShiftNightRules and ShiftReviewSystem.results; spec-exempt shell.
 
 	@class ShiftRunSystem
 ]=]
@@ -24,6 +26,7 @@ local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
 local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local ShiftRunTracker = require(ShiftServer.State.ShiftRunTracker)
 local ShiftLivesSystem = require(ShiftServer.Systems.ShiftLivesSystem)
+local ShiftNightSystem = require(ShiftServer.Systems.ShiftNightSystem)
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local ShiftSiteSystem = require(ShiftServer.Systems.ShiftSiteSystem)
 local ShiftTransitSystem = require(ShiftServer.Systems.ShiftTransitSystem)
@@ -45,6 +48,8 @@ export type Deps = {
 	lives: ShiftLivesSystem.ShiftLivesSystem,
 	roster: ShiftRosterTracker.ShiftRosterTracker,
 	trip: ShiftTripSystem.ShiftTripSystem,
+	-- The Night Shift run (kept across the clearing).
+	nights: ShiftNightSystem.ShiftNightSystem,
 	-- Built after this system.
 	voting: () -> ShiftVoteSystem.ShiftVoteSystem,
 	transit: () -> ShiftTransitSystem.ShiftTransitSystem,
@@ -76,6 +81,7 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 	local lives = deps.lives
 	local roster = deps.roster
 	local trip = deps.trip
+	local nights = deps.nights
 	local voting = deps.voting
 	local transit = deps.transit
 
@@ -97,6 +103,11 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 		run.resetPending = false
 	end
 
+	-- The run's quota from the shift contract (Night Shift's night goal; a quick shift's contract).
+	local function goal(contract: number): number
+		return nights:goal(contract)
+	end
+
 	local function finishReset()
 		transit():cancel()
 		clearShift()
@@ -105,7 +116,9 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 
 	local function prepareShift()
 		clearShift()
-		local choice = site:prepare(RoundServiceServer:getPhase().round + 1, #trip:crewIds(), trip:map())
+		-- Starts a run when none is going and sets Round's duration for the night, before startNow.
+		nights:prepare(true)
+		local choice = site:prepare(RoundServiceServer:getPhase().round + 1, #trip:crewIds(), trip:map(), goal)
 		local nextState = table.clone(getState())
 		nextState.variant = choice.variant
 		nextState.quota = choice.quota
@@ -132,7 +145,8 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 	-- (an admin's round start) builds it here and moves the crew into the truck.
 	local function beginRun(wasPrepared: boolean)
 		clearRun()
-		lives:begin(RoundServiceServer:participants())
+		-- Night Shift's later nights carry each crew member's coats (nil: everyone gets the starting lives).
+		lives:begin(RoundServiceServer:participants(), nights:carried())
 		if not wasPrepared then
 			-- An admin's round start plays the office.
 			local state = getState()
@@ -161,7 +175,8 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 		})
 		-- Coffee for the crew (CoffeeServiceServer:addCoffee): the buyer, and 2x pay for the part of the shift it ran.
 		built.coffee = run.coffeeBy
-		built.payScale = CoffeeRules.payScale(run.coffeeSeconds, built.ranFor or 0)
+		-- Night Shift pays more each night (ShiftNightFormulas.payScale; 1 in a quick shift), on top of the coffee.
+		built.payScale = CoffeeRules.payScale(run.coffeeSeconds, built.ranFor or 0) * nights:payScale()
 		return built
 	end
 
@@ -180,11 +195,18 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 		if nextState.phase == "results" and run.results == nil then
 			run.results = safeResults(roundState.outcome or "timeout")
 		end
+		-- The night's end (once per shift): the week's clearance, the week bonus, fired or wiped, the coats carried.
+		if nextState.phase == "results" then
+			nights:settle(nextState, run.results, lives:carry())
+		end
 		local starting = nextState.phase == "running" and before ~= "running"
 		local ready = if starting then site:take() else nil
 		if starting then
 			-- Chosen by the transit (prepareShift), which built the office for them; else chosen now, before anyone hears.
-			local choice = ready or site:choose(nextState.shift, #RoundServiceServer:participants())
+			if ready == nil then
+				nights:prepare(false)
+			end
+			local choice = ready or site:choose(nextState.shift, #RoundServiceServer:participants(), goal)
 			nextState.variant = choice.variant
 			nextState.quota = choice.quota
 			-- A run started while the transit still holds the crew (an admin's start) releases them.
@@ -200,7 +222,7 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 	end
 
 	local function step()
-		local advanced = ShiftPhaseRules.advance(getState(), now(), run.training)
+		local advanced = ShiftPhaseRules.advance(getState(), now(), run.training, nights:minTier())
 		if advanced ~= nil then
 			setState(advanced)
 		end

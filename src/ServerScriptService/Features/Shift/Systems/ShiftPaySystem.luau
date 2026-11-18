@@ -55,40 +55,79 @@ function ShiftPaySystem.amounts(results: ShiftTypes.ShiftResults): CurrencyConst
 	}
 end
 
+-- One payment attempt; a refusal (profile locked by a transaction, or still loading) or a throw retries while the player
+-- is still in the game (`stillPaying`). A success ends the retries.
+local function payWithRetry(
+	label: string,
+	userId: number,
+	amounts: CurrencyConstants.Amounts,
+	attempt: number,
+	pay: Pay,
+	stillPaying: (userId: number) -> boolean,
+	schedule: Wait
+)
+	local ok, granted = xpcall(pay, function(err: unknown): unknown
+		log:error(`pay for {userId} in {label} failed (attempt {attempt}): {err}`)
+		return err
+	end, userId, table.clone(amounts))
+	if ok and granted then
+		return
+	end
+	if attempt >= MAX_ATTEMPTS then
+		log:warn(`pay for {userId} in {label} was never credited after {attempt} attempts (profile busy or not loaded)`)
+		return
+	end
+	schedule(RETRY_SECONDS, function()
+		if not stillPaying(userId) then
+			return
+		end
+		payWithRetry(label, userId, amounts, attempt + 1, pay, stillPaying, schedule)
+	end)
+end
+
+local function totalOf(amounts: CurrencyConstants.Amounts): number
+	local total = 0
+	for _, amount in amounts do
+		total += amount
+	end
+	return total
+end
+
+--[=[
+	Pays `amounts` once to each of `userIds` (de-duplicated) through `pay`, with the same retries as a shift's pay while
+	`stillPaying(userId)` holds (the Night Shift week bonus). `label` names the payment in the logs. Nothing for a zero
+	amount.
+]=]
+function ShiftPaySystem.payAll(
+	label: string,
+	userIds: { number },
+	amounts: CurrencyConstants.Amounts,
+	pay: Pay,
+	stillPaying: (userId: number) -> boolean,
+	wait: Wait?
+)
+	if totalOf(amounts) <= 0 then
+		return
+	end
+	local schedule: Wait = wait or task.delay
+	local seen: { [number]: true } = {}
+	for _, userId in userIds do
+		if not seen[userId] then
+			seen[userId] = true
+			payWithRetry(label, userId, table.clone(amounts), 1, pay, stillPaying, schedule)
+		end
+	end
+end
+
 --[=[
 	Starts paying reviews from `source` through `pay`. Returns the function that stops it.
 ]=]
 function ShiftPaySystem.start(source: Source, pay: Pay, wait: Wait?): () -> ()
 	local paid: { [number]: true } = {}
 	local stopped = false
-	local schedule: Wait = wait or task.delay
 
-	local function isPresent(userId: number): boolean
-		return table.find(source.present(), userId) ~= nil
-	end
-
-	-- One payment attempt; a refusal (profile locked by a transaction, or still loading) or a throw retries while the
-	-- player is still in the game. `shift` is paid once per player: a success ends the retries.
-	local function payWithRetry(shift: number, userId: number, amounts: CurrencyConstants.Amounts, attempt: number)
-		local ok, granted = xpcall(pay, function(err: unknown): unknown
-			log:error(`pay for {userId} in shift {shift} failed (attempt {attempt}): {err}`)
-			return err
-		end, userId, table.clone(amounts))
-		if ok and granted then
-			return
-		end
-		if attempt >= MAX_ATTEMPTS then
-			log:warn(
-				`pay for {userId} in shift {shift} was never credited after {attempt} attempts (profile busy or not loaded)`
-			)
-			return
-		end
-		schedule(RETRY_SECONDS, function()
-			if stopped or not isPresent(userId) then
-				return
-			end
-			payWithRetry(shift, userId, amounts, attempt + 1)
-		end)
+	local function stillPaying(userId: number): boolean
+		return not stopped and table.find(source.present(), userId) ~= nil
 	end
 
 	local connection = source.changed:Connect(function(state: ShiftTypes.ShiftState)
@@ -100,21 +139,14 @@ function ShiftPaySystem.start(source: Source, pay: Pay, wait: Wait?): () -> ()
 			return
 		end
 		paid[state.shift] = true
-		local amounts = ShiftPaySystem.amounts(results)
-		local total = 0
-		for _, amount in amounts do
-			total += amount
-		end
-		if total <= 0 then
-			return
-		end
-		local seen: { [number]: true } = {}
-		for _, userId in source.present() do
-			if not seen[userId] then
-				seen[userId] = true
-				payWithRetry(state.shift, userId, table.clone(amounts), 1)
-			end
-		end
+		ShiftPaySystem.payAll(
+			`shift {state.shift}`,
+			source.present(),
+			ShiftPaySystem.amounts(results),
+			pay,
+			stillPaying,
+			wait
+		)
 	end)
 	return function()
 		stopped = true

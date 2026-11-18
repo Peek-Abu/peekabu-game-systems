@@ -300,4 +300,62 @@ return function()
 			expect(ShiftSnapshotUtils.decode(snapshot)).to.equal(nil)
 		end)
 	end)
+
+	describe("Night Shift fields", function()
+		it("round-trips the run's mode, night, week, weekly quota and clearance", function()
+			local snapshot = ShiftSnapshotUtils.decode(
+				ShiftSnapshotUtils.build(
+					state({ runMode = "night", night = 4, week = 2, weekQuota = 600, weekCleared = 120 }),
+					0,
+					0,
+					0,
+					0,
+					nil
+				)
+			)
+			expect(snapshot.runMode).to.equal("night")
+			expect(snapshot.night).to.equal(4)
+			expect(snapshot.week).to.equal(2)
+			expect(snapshot.weekQuota).to.equal(600)
+			expect(snapshot.weekCleared).to.equal(120)
+			expect(snapshot.runOver).to.equal(nil)
+		end)
+
+		it("round-trips how the run ended and the night reached", function()
+			for _, reason in { "fired", "wiped", "clockout" } do
+				local snapshot = ShiftSnapshotUtils.decode(
+					ShiftSnapshotUtils.build(
+						state({ phase = "results", runMode = "night", night = 3, runOver = reason, nightReached = 3 }),
+						0,
+						0,
+						0,
+						0,
+						nil
+					)
+				)
+				expect(snapshot.runOver).to.equal(reason)
+				expect(snapshot.nightReached).to.equal(3)
+			end
+		end)
+
+		it("reads them absent on a quick or older snapshot", function()
+			local snapshot = ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil))
+			expect(snapshot.runMode).to.equal(nil)
+			expect(snapshot.night).to.equal(nil)
+			expect(snapshot.runOver).to.equal(nil)
+		end)
+
+		it("rejects an unknown mode or run-over reason and a text night", function()
+			local built = ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil)
+			local badMode = table.clone(built)
+			badMode.runMode = "floors"
+			expect(ShiftSnapshotUtils.decode(badMode)).to.equal(nil)
+			local badOver = table.clone(built)
+			badOver.runOver = "quit"
+			expect(ShiftSnapshotUtils.decode(badOver)).to.equal(nil)
+			local badNight = table.clone(built)
+			badNight.night = "4"
+			expect(ShiftSnapshotUtils.decode(badNight)).to.equal(nil)
+		end)
+	end)
 end

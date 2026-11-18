@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	ShiftLivesTracker: every player's lives in the current shift, kept by UserId. Each catch spends one; the last
-	knocks the player out for the shift. A life is never regained; the shift's next start replaces everything.
+	knocks the player out for the shift. A life is never regained; the shift's next start replaces everything (Night
+	Shift hands the next night's start the coats carried over, ShiftLivesRules.carried).
 
 	@class ShiftLivesTracker
 ]=]
@@ -9,10 +10,13 @@
 local ShiftLivesRules = require(script.Parent.Parent.Rules.ShiftLivesRules)
 
 export type ShiftLivesTracker = {
-	-- Replaces everything: userId -> starting lives.
-	reset: (self: ShiftLivesTracker, entries: { [number]: number }) -> (),
-	-- A late joiner gets `lives`; a player already listed keeps what they have.
-	admit: (self: ShiftLivesTracker, userId: number, lives: number) -> (),
+	-- Replaces everything: userId -> starting lives, and optionally userId -> the start count shown as the max (absent:
+	-- the lives; Night Shift's carried coats keep the starting lives as the max).
+	reset: (self: ShiftLivesTracker, entries: { [number]: number }, maxes: { [number]: number }?) -> (),
+	-- A late joiner gets `lives` (and `max`, absent: the lives); a player already listed keeps what they have.
+	admit: (self: ShiftLivesTracker, userId: number, lives: number, max: number?) -> (),
+	-- Everyone's lives (0 for out), as a new table.
+	all: (self: ShiftLivesTracker) -> { [number]: number },
 	-- One catch: the lives left and whether the player is now out; (nil, nil) for an unknown player or one already out.
 	spend: (self: ShiftLivesTracker, userId: number) -> (number?, boolean?),
 	get: (self: ShiftLivesTracker, userId: number) -> number?,
@@ -34,21 +38,25 @@ function ShiftLivesTracker.new(): ShiftLivesTracker
 	local floor = 0
 
 	local tracker: ShiftLivesTracker = {
-		reset = function(_self, entries)
+		reset = function(_self, entries, startMaxes)
 			table.clear(lives)
 			table.clear(maxes)
 			for userId, count in entries do
 				lives[userId] = count
-				maxes[userId] = count
+				maxes[userId] = if startMaxes ~= nil then startMaxes[userId] or count else count
 			end
 		end,
 
-		admit = function(_self, userId, count)
+		admit = function(_self, userId, count, max)
 			if lives[userId] ~= nil then
 				return
 			end
 			lives[userId] = count
-			maxes[userId] = count
+			maxes[userId] = max or count
+		end,
+
+		all = function(_self)
+			return table.clone(lives)
 		end,
 
 		spend = function(_self, userId)

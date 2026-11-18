@@ -233,6 +233,22 @@ return function()
 	end)
 
 	describe("advance", function()
+		it("never lets the tier drop below a night's start tier, and keeps it steady there", function()
+			local state = running()
+			state.tier = 1
+			expect(ShiftPhaseRules.advance(state, 100 + 10, false, 1)).to.equal(nil)
+			local tier2 = ShiftPhaseRules.advance(state, 100 + 240, false, 1)
+			expect(tier2.tier).to.equal(2)
+			local raised = ShiftPhaseRules.advance(running(), 100 + 10, false, 1)
+			expect(raised.tier).to.equal(1)
+			expect(ShiftPhaseRules.advance(running(), 100 + 10, false, 99).tier).to.equal(ShiftConstants.TOP_TIER)
+		end)
+
+		it("keeps a training run at tier 0 even with a start tier", function()
+			local training = ShiftPhaseRules.advance(running(), 100 + 10, true, 2)
+			expect(training).to.equal(nil)
+		end)
+
 		it("keeps a training run at tier 0 past every tier time", function()
 			expect(ShiftPhaseRules.advance(running(), 100 + 300).tier > 0).to.equal(true)
 			local training = ShiftPhaseRules.advance(running(), 100 + 300, true)

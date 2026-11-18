@@ -2,11 +2,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShiftLivesSystem = require(script.Parent.ShiftLivesSystem)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftNightConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftNightConstants)
 
 local LIVES = ShiftConstants.PUBLIC_LIVES
 local MAX = ShiftConstants.PUBLIC_LIVES_MAX
 local OUT = ShiftConstants.PUBLIC_KNOCKED_OUT
 local START = ShiftConstants.STARTING_LIVES
+local RETURN = ShiftNightConstants.RETURN_LIVES
 
 local function member(userId)
 	return { UserId = userId, DisplayName = `Crew {userId}` }
@@ -235,6 +237,59 @@ return function()
 			log.system:clear()
 			expect(#log.calls).to.equal(before)
 			expect(log.fields[1][OUT]).to.equal(nil)
+		end)
+	end)
+
+	describe("begin with carried coats (Night Shift)", function()
+		it("keeps each crew member's coats, under the starting lives as the max", function()
+			local log = harness({})
+			log.system:begin({ member(1), member(2) }, { [1] = 2, [2] = START })
+			expect(log.fields[1][LIVES]).to.equal(2)
+			expect(log.fields[1][MAX]).to.equal(START)
+			expect(log.fields[2][LIVES]).to.equal(START)
+		end)
+
+		it("brings a crew member knocked out last night back with the return lives", function()
+			local log = harness({})
+			log.system:begin({ member(1) }, { [1] = 0 })
+			expect(log.system:livesLeft(member(1))).to.equal(RETURN)
+			expect(log.system:isKnockedOut(member(1))).to.equal(false)
+		end)
+
+		it("gives a crew member new to the run the starting lives", function()
+			local log = harness({})
+			log.system:begin({ member(1), member(3) }, { [1] = 1 })
+			expect(log.system:livesLeft(member(3))).to.equal(START)
+		end)
+
+		it("gives a mid-night joiner their carried coats, or the starting lives when new", function()
+			local log = harness({})
+			log.system:begin({ member(1) }, { [1] = 1, [2] = 2, [4] = 0 })
+			log.system:admit(member(2))
+			log.system:admit(member(3))
+			log.system:admit(member(4))
+			expect(log.system:livesLeft(member(2))).to.equal(2)
+			expect(log.system:livesLeft(member(3))).to.equal(START)
+			expect(log.system:livesLeft(member(4))).to.equal(RETURN)
+		end)
+
+		it("forgets the carried coats on a plain begin", function()
+			local log = harness({})
+			log.system:begin({ member(1) }, { [2] = 1 })
+			log.system:begin({ member(1) })
+			log.system:admit(member(2))
+			expect(log.system:livesLeft(member(2))).to.equal(START)
+		end)
+	end)
+
+	describe("carry", function()
+		it("lists everyone's coats at the night's end, 0 for those knocked out", function()
+			local log = harness({ member(1), member(2) })
+			log.system:spend(member(2))
+			spendAll(log, member(1))
+			local kept = log.system:carry()
+			expect(kept[1]).to.equal(0)
+			expect(kept[2]).to.equal(START - 1)
 		end)
 	end)
 end

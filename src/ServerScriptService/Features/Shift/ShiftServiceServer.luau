@@ -27,6 +27,9 @@
 	  and the run ends when it runs out or once everyone still in has punched (a solo punch ends it at once);
 	- analytics and the A/B variant (M5): each run's variant comes from ShiftAnalyticsSystem.pickVariant;
 	  ShiftAnalyticsWatchSystem turns the shift's and the other features' signals into the spec §6.6 events;
+	- Night Shift (ShiftNightSystem): the run's mode, night, week and carried coats outlive each shift's clearing; every
+	  state change is stamped with the run's fields (runMode, night, week, weekQuota, weekCleared, runOver,
+	  nightReached); Next night / Clock out is the vote, and a fired or wiped crew skips it and goes home;
 	- results: ShiftResultsUtils builds the review; ShiftPaySystem pays the crew still present when it opens; the crew votes Another shift / Back to depot (ShiftVoteSystem;
 	  Back to depot sends the crew home through ShiftTripSystem with the review as its result card);
 	- the crew (M4): a shift starts only for the party that arrived through the Queue (ShiftTripSystem); only
@@ -73,6 +76,7 @@ local ShiftOvertimeSystem = require(ShiftServer.Systems.ShiftOvertimeSystem)
 local ShiftTimeClockSystem = require(ShiftServer.Systems.ShiftTimeClockSystem)
 local ShiftClockOutSystem = require(ShiftServer.Systems.ShiftClockOutSystem)
 local ShiftLivesSystem = require(ShiftServer.Systems.ShiftLivesSystem)
+local ShiftNightSystem = require(ShiftServer.Systems.ShiftNightSystem)
 local ShiftRunSystem = require(ShiftServer.Systems.ShiftRunSystem)
 local ShiftWiringSystem = require(ShiftServer.Systems.ShiftWiringSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -131,6 +135,19 @@ local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
 -- the catch, for analytics.
 local caught: SignalTyped.Signal<Player, number, number> = SignalTyped.new()
 
+-- The Night Shift run: its mode from the crew's trip, its night, week and carried coats (outside the run's clearing).
+local nights = ShiftNightSystem.new({
+	mode = function()
+		return trip:mode()
+	end,
+	crewIds = function()
+		return trip:crewIds()
+	end,
+	training = function()
+		return run.training
+	end,
+})
+
 local function now(): number
 	return Workspace:GetServerTimeNow()
 end
@@ -174,6 +191,8 @@ end
 -- The one way the state changes: tells the crew what the pacing did, tells listeners, republishes.
 local function setState(nextState: ShiftTypes.ShiftState)
 	local before = state
+	-- The Night Shift run's fields, and a running night's start tier.
+	nextState = nights:stamp(nextState)
 	state = nextState
 	changed:Fire(table.clone(nextState))
 	publish()
@@ -204,6 +223,7 @@ runs = ShiftRunSystem.new({
 	lives = lives,
 	roster = roster,
 	trip = trip,
+	nights = nights,
 	voting = function()
 		return voting
 	end,
@@ -258,16 +278,18 @@ local overtime = ShiftOvertimeSystem.new({
 })
 
 voting = ShiftVoteSystem.new({
+	-- A Night Shift run that is over (fired or wiped) has no vote: the crew goes home when its time runs out.
 	isOpen = function(): boolean
-		return state.phase == "results"
+		return state.phase == "results" and state.runOver == nil
 	end,
 	eligible = trip.eligible,
 	presentIds = presentIds,
 	publish = publish,
-	-- Back to depot: the crew rides home with the review. Another shift (or a refused trip home): the transit covers
-	-- the crew's screens before the last shift is cleared and the next one built.
+	-- Back to depot (Night Shift: Clock out, or a run that is over): the crew rides home with the review. Another shift
+	-- (Night Shift: Next night; or a refused trip home): the transit covers the crew's screens before the last shift is
+	-- cleared and the next one built.
 	decided = function(depot: boolean)
-		if depot and trip:sendHome(run.results, state.shift, now()) then
+		if nights:decide(depot) == "home" and trip:sendHome(run.results, state.shift, now()) then
 			runs.finishReset()
 			return
 		end
@@ -541,6 +563,11 @@ local ShiftServiceServer: ShiftServiceServer = {
 			crew = #trip:crewIds(),
 			leaving = trip:isLeaving(now()),
 			transit = transit:active(),
+			runMode = state.runMode,
+			night = state.night,
+			weekCleared = state.weekCleared,
+			weekQuota = state.weekQuota,
+			runOver = state.runOver,
 		}
 	end,
 }

@@ -70,4 +70,24 @@ return function()
 			expect(out).to.equal(true)
 		end)
 	end)
+
+	describe("carried", function()
+		it("gives a crew member new to the run the starting lives", function()
+			expect(ShiftLivesRules.carried(nil, 3, 1)).to.equal(3)
+		end)
+
+		it("keeps the coats a crew member ended the last night with", function()
+			expect(ShiftLivesRules.carried(2, 3, 1)).to.equal(2)
+			expect(ShiftLivesRules.carried(1, 3, 1)).to.equal(1)
+		end)
+
+		it("brings a knocked-out crew member back with the return lives", function()
+			expect(ShiftLivesRules.carried(0, 3, 1)).to.equal(1)
+			expect(ShiftLivesRules.carried(-1, 3, 2)).to.equal(2)
+		end)
+
+		it("floors a fraction", function()
+			expect(ShiftLivesRules.carried(2.6, 3, 1)).to.equal(2)
+		end)
+	end)
 end

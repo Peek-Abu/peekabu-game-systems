@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftNightConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftNightConstants)
 local ShiftLivesRules = require(ServerScriptService.Features.Shift.Rules.ShiftLivesRules)
 local ShiftLivesTracker = require(ServerScriptService.Features.Shift.State.ShiftLivesTracker)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -46,9 +47,12 @@ export type Deps = {
 }
 
 export type ShiftLivesSystem = {
-	-- A new run: everyone in `players` starts with the starting lives (replacing whatever was kept).
-	begin: (self: ShiftLivesSystem, players: { Player }) -> (),
-	-- A late joiner gets the starting lives; a player already listed keeps what they have (one who is out, rejoining, is
+	-- A new run: everyone in `players` starts with the starting lives (replacing whatever was kept). With `carried`
+	-- (Night Shift's next night: userId -> coats left at the last night's end), each keeps their coats, one knocked
+	-- out comes back with RETURN_LIVES and one new to the run gets the starting lives (ShiftLivesRules.carried); the
+	-- max shown stays the starting lives. Joiners admitted during this run read the same carried coats.
+	begin: (self: ShiftLivesSystem, players: { Player }, carried: { [number]: number }?) -> (),
+	-- A late joiner gets the starting lives (or their carried coats, `begin`); a player already listed keeps what they have (one who is out, rejoining, is
 	-- put straight back out: held, eliminated, their character dropped, and any character that arrives later in the
 	-- run dropped too, as the join load usually lands after this). Nothing outside a run.
 	admit: (self: ShiftLivesSystem, player: Player) -> (),
@@ -58,6 +62,8 @@ export type ShiftLivesSystem = {
 	isKnockedOut: (self: ShiftLivesSystem, player: Player) -> boolean,
 	-- The lives the player has left (0 once out); nil for a player not in the run.
 	livesLeft: (self: ShiftLivesSystem, player: Player) -> number?,
+	-- Everyone's lives now (userId -> lives, 0 for out): the coats Night Shift carries into the next night.
+	carry: (self: ShiftLivesSystem) -> { [number]: number },
 	-- The shift's end: releases everyone knocked out, clears every public field, forgets the lives.
 	clear: (self: ShiftLivesSystem) -> (),
 	-- Shapes the starting lives (ShiftLivesRules.starting); returns the function that removes it.
@@ -124,6 +130,8 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 
 	local tracker = ShiftLivesTracker.new()
 	local modifiers: { (number) -> number } = {}
+	-- Night Shift's carried coats for this run (`begin`), read by joiners too; empty in a quick shift.
+	local carriedLives: { [number]: number } = {}
 	-- Every userId whose lives fields were published, so the shift's end clears leavers' too.
 	local published: { [number]: boolean } = {}
 	-- Stops for the watches on rejoined knocked-out players' characters, until the shift's end.
@@ -141,6 +149,12 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 		return ShiftLivesRules.starting(ShiftConstants.STARTING_LIVES, modifiers)
 	end
 
+	-- What `userId` starts this run with, and the max shown.
+	local function livesFor(userId: number, starting: number): (number, number)
+		local lives = ShiftLivesRules.carried(carriedLives[userId], starting, ShiftNightConstants.RETURN_LIVES)
+		return lives, math.max(starting, lives)
+	end
+
 	local function publishLives(userId: number)
 		local lives = tracker:get(userId)
 		local livesMax = tracker:max(userId)
@@ -156,13 +170,15 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 	end
 
 	local system: ShiftLivesSystem = {
-		begin = function(_self, players)
+		begin = function(_self, players, carried)
+			carriedLives = if carried ~= nil then table.clone(carried) else {}
 			local entries: { [number]: number } = {}
-			local lives = startingLives()
+			local maxes: { [number]: number } = {}
+			local starting = startingLives()
 			for _, player in players do
-				entries[player.UserId] = lives
+				entries[player.UserId], maxes[player.UserId] = livesFor(player.UserId, starting)
 			end
-			tracker:reset(entries)
+			tracker:reset(entries, maxes)
 			for userId in entries do
 				publishLives(userId)
 			end
@@ -172,7 +188,8 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 			if not deps.isRunning() then
 				return
 			end
-			tracker:admit(player.UserId, startingLives())
+			local lives, max = livesFor(player.UserId, startingLives())
+			tracker:admit(player.UserId, lives, max)
 			if tracker:isOut(player.UserId) then
 				-- Left and came back while out: a new Player object has no hold, and a fresh character is alive.
 				local fields: Fields = {
@@ -228,6 +245,10 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 			return tracker:get(player.UserId)
 		end,
 
+		carry = function(_self)
+			return tracker:all()
+		end,
+
 		clear = function(_self)
 			for userId in watches do
 				stopWatching(userId)
@@ -244,6 +265,7 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 				clearField(userId, ShiftConstants.PUBLIC_LIVES_MAX)
 			end
 			table.clear(published)
+			table.clear(carriedLives)
 			tracker:clear()
 		end,
 
