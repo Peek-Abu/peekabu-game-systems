@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShiftCueUtils = require(script.Parent.ShiftCueUtils)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
 
 local function snapshot(overrides)
 	local base = {
@@ -89,6 +90,32 @@ return function()
 			expect(#list).to.equal(2)
 			expect(list[1]).to.equal("punch")
 			expect(list[2]).to.equal("clockOut")
+		end)
+
+		-- Owner Night Shift pick 2026-11-18 (vote B): a small stamp each time someone in the crew votes.
+		it("stamps each new vote on the review, once per vote", function()
+			local before = snapshot({ phase = "results" })
+			local list = ShiftCueUtils.cues(before, snapshot({ phase = "results", votesAnother = 1 }))
+			expect(#list).to.equal(1)
+			expect(list[1]).to.equal("vote")
+			local one = snapshot({ phase = "results", votesAnother = 1 })
+			expect(#ShiftCueUtils.cues(one, one)).to.equal(0)
+			expect(ShiftCueUtils.cues(one, snapshot({ phase = "results", votesAnother = 1, votesDepot = 1 }))[1]).to.equal(
+				"vote"
+			)
+		end)
+
+		it("stays quiet when the votes clear or outside the review", function()
+			local voted = snapshot({ phase = "results", votesAnother = 2 })
+			expect(#ShiftCueUtils.cues(voted, snapshot({ phase = "results" }))).to.equal(0)
+			expect(#ShiftCueUtils.cues(snapshot({ phase = "lobby" }), snapshot({ phase = "lobby", votesDepot = 1 }))).to.equal(
+				0
+			)
+		end)
+
+		it("maps the vote to the picked stamp", function()
+			expect(ShiftAssets.CUE_SOUNDS.vote).to.equal("shiftVoteCast")
+			expect(ShiftAssets.SOUNDS.shiftVoteCast.assetId).to.equal("rbxassetid://109681425017833")
 		end)
 
 		it("says nothing between two lobby snapshots", function()
@@ -198,6 +225,42 @@ return function()
 			expect(ShiftCueUtils.jingle(nil, shown)).to.equal(nil)
 			expect(ShiftCueUtils.jingle(snapshot(), snapshot({ phase = "results" }))).to.equal(nil)
 			expect(ShiftCueUtils.jingle(snapshot(), snapshot())).to.equal(nil)
+		end)
+
+		-- Owner Night Shift pick 2026-11-18 (week report B): a survived week's last night plays the week stinger in
+		-- place of the met jingle (the review shows WEEK N DONE!).
+		it("plays the week stinger on a survived week's report", function()
+			local running = snapshot({ runMode = "night", night = 5, week = 1 })
+			local report = snapshot({
+				phase = "results",
+				results = review(true, 0),
+				runMode = "night",
+				night = 5,
+				week = 1,
+				weekBonus = 100,
+			})
+			expect(ShiftCueUtils.jingle(running, report)).to.equal("week")
+			expect(ShiftAssets.JINGLE_SOUNDS.week).to.equal("shiftWeekDone")
+			expect(ShiftAssets.SOUNDS.shiftWeekDone.assetId).to.equal("rbxassetid://107812332958746")
+		end)
+
+		it("keeps the usual jingle on other nights and once the run is over", function()
+			local running = snapshot({ runMode = "night", night = 3 })
+			expect(
+				ShiftCueUtils.jingle(
+					running,
+					snapshot({ phase = "results", results = review(true, 0), runMode = "night", night = 3 })
+				)
+			).to.equal("met")
+			local over = snapshot({
+				phase = "results",
+				results = review(false, 0),
+				runMode = "night",
+				night = 5,
+				weekBonus = 100,
+				runOver = "fired",
+			})
+			expect(ShiftCueUtils.jingle(running, over)).to.equal("missed")
 		end)
 	end)
 end

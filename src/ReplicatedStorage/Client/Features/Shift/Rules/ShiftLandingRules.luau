@@ -17,7 +17,10 @@
 
 	`screenAt`: which of the SCREENS (or of `count` screens: a Night Shift plays four, its NIGHT n / WEEK w first) shows `elapsed` seconds after the start and how far it is in (0..1): each screen
 	tweens in over TIMING.fadeIn, holds TIMING.hold, tweens out over TIMING.fadeOut, then TIMING.gap of nothing before
-	the next; one screen at a time. `over` once the last has gone. Pure.
+	the next; one screen at a time. `over` once the last has gone.
+
+	`nightSting`: whether the night start sting plays now (owner Night Shift pick 2026-11-18): as a Night Shift's
+	first screen (NIGHT n / WEEK w) comes up, once. Pure.
 
 	@class ShiftLandingRules
 ]=]
@@ -138,6 +141,11 @@ function ShiftLandingRules.screenAt(elapsed: number, count: number?): (number, n
 		return index, 1
 	end
 	return index, math.clamp(1 - (t - timing.hold) / timing.fadeOut, 0, 1)
+end
+
+-- Whether the night sting plays: the screen went from `shown` to `index`, and it is a Night Shift's first screen.
+function ShiftLandingRules.nightSting(shown: number, index: number, night: boolean): boolean
+	return night and index == 1 and shown ~= 1
 end
 
 return ShiftLandingRules

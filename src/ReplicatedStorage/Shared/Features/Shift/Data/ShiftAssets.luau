@@ -72,6 +72,24 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- Roblox_UI_Tonal_Stinger (Creator Store 15675043410), the owner's library-round pick C (2026-11-14), played in place
 	-- at about -24 dB. "Can't do that" refusals stay silent (the owner said none to their options).
 	shiftNoticeToast = { assetId = "rbxassetid://15675043410", group = "UI", volume = 0.46 },
+	-- Night Shift (owner picks on the Night Shift sound page, 2026-11-18). In-house, ElevenLabs Starter stems
+	-- hand-layered (mix_sting), Icey Labs. Each volume is a starting level that awaits the owner's hear-check.
+	-- Night start (pick A): a punch clock, then a music box plays the night tune over low strings, B minor, 3.3 s
+	-- (-16 LUFS). Plays as the landing readout's NIGHT n / WEEK w screen comes up (ShiftLandingHud,
+	-- ShiftLandingRules.nightSting).
+	shiftNightStart = {
+		assetId = "rbxassetid://117436012823674",
+		group = "SFX",
+		bus = "Stings",
+		volume = 0.8,
+		maxConcurrent = 1,
+	},
+	-- Week done (pick B): a stamp, then a proud F major report-card tune, 3.2 s (-15 LUFS). The review's jingle on a
+	-- survived week's last night (WEEK N DONE!), in place of the met jingle (ShiftCueUtils.jingle "week").
+	shiftWeekDone = { assetId = "rbxassetid://107812332958746", group = "SFX", bus = "Reward", volume = 0.9 },
+	-- Vote cast (pick B): a small stamp and a tiny bell in F, 0.6 s (-22 LUFS). Each time someone in the crew votes
+	-- Next night or Clock out (ShiftCueUtils cue "vote").
+	shiftVoteCast = { assetId = "rbxassetid://109681425017833", group = "UI", volume = 0.8, maxConcurrent = 2 },
 }
 
 local CUE_SOUNDS: { [string]: string } = {
@@ -83,6 +101,7 @@ local CUE_SOUNDS: { [string]: string } = {
 	-- A crew member punched their card (the same punch clock as the shift's start), then the truck honks its countdown.
 	punch = "shiftPunchIn",
 	clockOut = "shiftClockOutHorn",
+	vote = "shiftVoteCast",
 	-- shiftEnd has no sound: the results jingle opens at the same moment (the truck horn there was dropped 2026-10-17).
 }
 
@@ -91,6 +110,7 @@ local JINGLE_SOUNDS: { [string]: string } = {
 	met = "shiftResultsMet",
 	overtime = "shiftResultsOvertime",
 	missed = "shiftResultsMissed",
+	week = "shiftWeekDone",
 }
 
 for id, def in SOUNDS do
@@ -110,6 +130,8 @@ return table.freeze({
 	TRUCK_START = "shiftTruckStart",
 	-- The route slip's ARRIVED stamp (ShiftTransitSystem).
 	ARRIVED = "shiftArrived",
+	-- A Night Shift's NIGHT n / WEEK w landing screen (ShiftLandingHud).
+	NIGHT_START = "shiftNightStart",
 	-- The engine starts this long after the door latches.
 	TRUCK_START_DELAY = 0.9,
 	-- Everyone within this many studs of the truck hears it leave.

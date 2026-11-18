@@ -15,10 +15,20 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 
 type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
-export type Cue = "shiftStart" | "quotaMet" | "tierUp" | "warning" | "overtime" | "punch" | "clockOut" | "shiftEnd"
+export type Cue =
+	"shiftStart"
+	| "quotaMet"
+	| "tierUp"
+	| "warning"
+	| "overtime"
+	| "punch"
+	| "clockOut"
+	| "shiftEnd"
+	| "vote"
 
 -- The performance review's jingle (ShiftAssets.JINGLE_SOUNDS).
-export type Jingle = "met" | "overtime" | "missed"
+-- "week": a survived Night Shift week's last night (the review's WEEK N DONE! report), in place of "met".
+export type Jingle = "met" | "overtime" | "missed" | "week"
 
 local ShiftCueUtils = {}
 
@@ -40,7 +50,15 @@ function ShiftCueUtils.cues(before: ShiftSnapshot?, after: ShiftSnapshot?): { Cu
 		table.insert(list, "shiftEnd")
 		return list
 	end
+	-- A crew member voted Next night or Clock out on the review (owner Night Shift pick 2026-11-18): once per new vote.
 	if not isRunning then
+		if
+			before.phase == "results"
+			and after.phase == "results"
+			and after.votesAnother + after.votesDepot > before.votesAnother + before.votesDepot
+		then
+			table.insert(list, "vote")
+		end
 		return list
 	end
 	if after.quotaMet and not before.quotaMet then
@@ -91,7 +109,7 @@ end
 --[=[
 	The results jingle to play as the performance review arrives (`after` shows it, `before` did not): "overtime" when
 	the contract was met and the crew banked salvage in overtime (the overtime pay), "met" when it was met, "missed"
-	otherwise. Nil on the first snapshot a client sees and while the review stays up.
+	otherwise; "week" on a Night Shift's survived week report (it carries the week bonus and the run goes on). Nil on the first snapshot a client sees and while the review stays up.
 ]=]
 function ShiftCueUtils.jingle(before: ShiftSnapshot?, after: ShiftSnapshot?): Jingle?
 	if before == nil or after == nil or after.phase ~= "results" then
@@ -103,6 +121,9 @@ function ShiftCueUtils.jingle(before: ShiftSnapshot?, after: ShiftSnapshot?): Ji
 	end
 	if not results.quotaMet then
 		return "missed"
+	end
+	if after.runMode == "night" and after.weekBonus ~= nil and after.runOver == nil then
+		return "week"
 	end
 	for _, line in results.crew do
 		if (line.overtimeSalvage or 0) > 0 then

@@ -5,7 +5,7 @@
 	hub or training), it waits for the big ARRIVAL contract card in the centre to close: each frame it looks at
 	DepotStore.card (kind "arrival") through ShiftLandingRules.watch, and starts at ShiftLandingRules.startAt (a beat
 	after the card closed; the reveal's fallback when no card showed). From the start it plays the three screens one
-	at a time (ShiftLandingRules.screenAt: temperature and weather, the time, the anomaly level; ShiftLandingViewModel
+	at a time (a Night Shift's NIGHT n / WEEK w with the night sting, ShiftLandingRules.nightSting; ShiftLandingRules.screenAt: temperature and weather, the time, the anomaly level; ShiftLandingViewModel
 	.screens; a Night Shift plays four, NIGHT n / WEEK w first, read off the shift snapshot by ShiftNightViewModel), driving the screen's `alpha` binding on a Heartbeat and re-rendering only when the screen changes. Drawn
 	at the game's one UI scale (PaperHudFrame, usePaperHudScale) where ShiftLandingViewModel.frame puts it (under the
 	crew list, which grows with the crew). Once ShiftLandingRules.over it stops and draws nothing until the next
@@ -19,6 +19,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local React = require(ReplicatedStorage.Packages.React)
+local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
+local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local ShiftLandingRules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftLandingRules)
@@ -90,6 +93,11 @@ local function ShiftLandingHud(): React.ReactNode
 			local index, value = ShiftLandingRules.screenAt(elapsed, screens)
 			setAlpha(value)
 			if index ~= shown then
+				-- A Night Shift's NIGHT n / WEEK w screen comes up with the night sting (more screens = a Night Shift).
+				local night = screens > ShiftLandingRules.SCREENS
+				if ShiftLandingRules.nightSting(shown, index, night) and SoundRegistry.has(ShiftAssets.NIGHT_START) then
+					SoundServiceClient:playOneShot(ShiftAssets.NIGHT_START)
+				end
 				shown = index
 				setScreen(index)
 			end

@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShiftLandingRules = require(script.Parent.ShiftLandingRules)
+local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 
@@ -131,6 +132,25 @@ return function()
 			expect((ShiftLandingRules.screenAt(mid))).to.equal(0)
 			expect(ShiftLandingRules.over(mid, 4)).to.equal(false)
 			expect(ShiftLandingRules.over(mid)).to.equal(true)
+		end)
+	end)
+
+	-- Owner Night Shift pick 2026-11-18 (night start A): the night sting plays as NIGHT n / WEEK w comes up.
+	describe("nightSting", function()
+		it("plays once, as a Night Shift's first screen (NIGHT n / WEEK w) comes up", function()
+			expect(ShiftLandingRules.nightSting(0, 1, true)).to.equal(true)
+			expect(ShiftLandingRules.nightSting(1, 1, true)).to.equal(false)
+			expect(ShiftLandingRules.nightSting(1, 0, true)).to.equal(false)
+			expect(ShiftLandingRules.nightSting(1, 2, true)).to.equal(false)
+		end)
+
+		it("stays quiet on a quick shift (its first screen is the weather)", function()
+			expect(ShiftLandingRules.nightSting(0, 1, false)).to.equal(false)
+		end)
+
+		it("plays the picked night sting", function()
+			expect(ShiftAssets.NIGHT_START).to.equal("shiftNightStart")
+			expect(ShiftAssets.SOUNDS.shiftNightStart.assetId).to.equal("rbxassetid://117436012823674")
 		end)
 	end)
 end
