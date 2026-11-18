@@ -85,6 +85,73 @@ return function()
 		end)
 	end)
 
+	describe("textLeft", function()
+		it("starts a line with no icon where the icon would have started", function()
+			for _, layout in { "desktop", "phone" } do
+				expect(ShiftLandingViewModel.textLeft(layout, { text = "ANOMALY LEVEL" })).to.equal(0)
+				local empty = nil
+				for name, id in UIAssets.toonIcons do
+					if id == "" then
+						empty = name
+					end
+				end
+				if empty ~= nil then
+					expect(ShiftLandingViewModel.textLeft(layout, { text = "38°F", icon = empty })).to.equal(0)
+				end
+			end
+		end)
+
+		it("keeps a line with an icon past the icon column", function()
+			for _, layout in { "desktop", "phone" } do
+				local metrics = ShiftLandingViewModel.METRICS[layout]
+				expect(ShiftLandingViewModel.textLeft(layout, { text = "2:52 AM", icon = "clock" })).to.equal(
+					metrics.icon + metrics.gap
+				)
+			end
+		end)
+
+		it("lines up the weather screen's lines with each other however their slots stand", function()
+			local screen = ShiftLandingViewModel.screens(42, "office")[1]
+			local temperature = ShiftLandingViewModel.textLeft("desktop", screen.lines[1])
+			local weather = ShiftLandingViewModel.textLeft("desktop", screen.lines[2])
+			if
+				ShiftLandingViewModel.image(screen.lines[1].icon) == nil
+				and ShiftLandingViewModel.image(screen.lines[2].icon) == nil
+			then
+				expect(temperature).to.equal(0)
+				expect(weather).to.equal(0)
+			end
+		end)
+	end)
+
+	describe("drops", function()
+		it("draws each drop at least as tall as the words' caps, a touch taller", function()
+			for _, layout in { "desktop", "phone" } do
+				local metrics = ShiftLandingViewModel.METRICS[layout]
+				-- The Gloom render has room around its goo: drawn ~1.5x the text size, its goo matches the caps.
+				expect(metrics.drop >= metrics.text * 1.5).to.equal(true)
+				expect(metrics.drop <= metrics.text * 1.8).to.equal(true)
+			end
+		end)
+
+		it("puts two drops side by side inside the readout, starting under the words", function()
+			for _, layout in { "desktop", "phone" } do
+				local metrics = ShiftLandingViewModel.METRICS[layout]
+				expect(ShiftLandingViewModel.dropLeft(layout, 1)).to.equal(0)
+				local second = ShiftLandingViewModel.dropLeft(layout, 2)
+				expect(second >= metrics.drop).to.equal(true)
+				expect(second + metrics.drop <= metrics.room).to.equal(true)
+			end
+		end)
+
+		it("makes room under ANOMALY LEVEL for the drops", function()
+			for _, layout in { "desktop", "phone" } do
+				local metrics = ShiftLandingViewModel.METRICS[layout]
+				expect(ShiftLandingViewModel.blockHeight(layout) >= metrics.line + metrics.drop).to.equal(true)
+			end
+		end)
+	end)
+
 	describe("frame", function()
 		local function laptop()
 			-- The 73% laptop: a 1280x720 window at the HUD's own scale, in HUD design px.

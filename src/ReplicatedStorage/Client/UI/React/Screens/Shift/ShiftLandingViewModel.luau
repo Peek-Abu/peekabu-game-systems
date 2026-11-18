@@ -6,8 +6,8 @@
 	map sites: the Office one, the School two). The night is drawn from the shift's seed (ShiftLandingFormulas), the same
 	for the whole crew. Words at a kid's reading level, in caps (Luckiest Guy has caps only).
 
-	`image` is a line's icon id, nil while its UIAssets slot is "" (the line then draws its value with no icon, in the
-	same column). `frame` places the readout on the HUD's left side in HUD design px: on desktop under the crew list
+	`image` is a line's icon id, nil while its UIAssets slot is "" (the line then draws no icon and its value starts
+	where the icon would have, `textLeft`); `dropLeft` lays the anomaly level's drops side by side under its words. `frame` places the readout on the HUD's left side in HUD design px: on desktop under the crew list
 	(its height follows the crew) and above the hotbar; on a phone under the Gloom meter and above the thumbstick.
 	`rise` is how far below its place a screen is drawn while it tweens. Pure.
 
@@ -42,16 +42,19 @@ export type Metrics = {
 	gap: number,
 	text: number,
 	line: number,
-	-- A Gloom drop's size and the room between drops.
+	-- A Gloom drop's size (the render has room around its goo, so it is drawn taller than the text to match its caps)
+	-- and the room between drops.
 	drop: number,
 	dropGap: number,
+	-- The widest a line or the row of drops may run, from the readout's left edge.
+	room: number,
 }
 
 local ShiftLandingViewModel = {}
 
 ShiftLandingViewModel.METRICS = table.freeze({
-	desktop = table.freeze({ icon = 64, gap = 14, text = 48, line = 70, drop = 60, dropGap = 6 }),
-	phone = table.freeze({ icon = 38, gap = 8, text = 28, line = 42, drop = 36, dropGap = 4 }),
+	desktop = table.freeze({ icon = 64, gap = 14, text = 48, line = 70, drop = 76, dropGap = 4, room = 560 }),
+	phone = table.freeze({ icon = 38, gap = 8, text = 28, line = 42, drop = 46, dropGap = 2, room = 320 }),
 })
 
 local WEATHER_ICON: { [ShiftLandingFormulas.Weather]: UIAssets.ToonIcon } = {
@@ -107,6 +110,23 @@ function ShiftLandingViewModel.image(icon: UIAssets.ToonIcon?): string?
 	end
 	local id = UIAssets.toonIcons[icon]
 	return if id ~= nil and id ~= "" then id else nil
+end
+
+-- Where a line's text starts, from the readout's left edge: past the icon column when the line draws an icon (`image`),
+-- else where the icon would have started, so a line with no icon is never indented by an empty column.
+function ShiftLandingViewModel.textLeft(layout: UIPaperConstants.Layout, line: Line): number
+	if ShiftLandingViewModel.image(line.icon) == nil then
+		return 0
+	end
+	local metrics: Metrics = ShiftLandingViewModel.METRICS[layout]
+	return metrics.icon + metrics.gap
+end
+
+-- The left edge of drop `index` (1..), from the readout's left edge: the drops start where the text over them does
+-- (ANOMALY LEVEL has no icon) and sit side by side.
+function ShiftLandingViewModel.dropLeft(layout: UIPaperConstants.Layout, index: number): number
+	local metrics: Metrics = ShiftLandingViewModel.METRICS[layout]
+	return (index - 1) * (metrics.drop + metrics.dropGap)
 end
 
 -- The tallest screen's height (two lines, or a line and a row of drops).
