@@ -93,9 +93,9 @@ return function()
 			local view = ShiftTransitViewModel.slip(
 				{ holds = {}, client = "Harlow & Finch Ltd.", truck = 1, map = "office" },
 				false,
-				4
+				6
 			)
-			expect(view.night).to.equal("NIGHT 4")
+			expect(view.night).to.equal("NIGHT 6")
 			expect(view.site).to.equal("4th floor offices · 5:00 night")
 			local first = ShiftTransitViewModel.slip({ holds = {}, client = "Harlow & Finch Ltd." }, false, 1)
 			expect(first.site).to.equal("4th floor offices · 3:00 night")
