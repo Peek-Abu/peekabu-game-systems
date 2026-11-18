@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	ShiftLandingFormulas: the night a crew lands in (the landing status card, ShiftLandingViewModel). Always night: the
+	ShiftLandingFormulas: the night a crew lands in (the landing readout, ShiftLandingViewModel). Always night: the
 	clock time is between 11:00 PM and 3:59 AM, the temperature a whole number from 30 to 48 °F, and the weather one of
 	WEATHER, which has no gameplay effect and nothing the scene would contradict (no rain, snow or fog). Every value is
 	drawn from Random.new(seed) in a fixed order, so the same shift seed (ShiftLandingRules.seedOf, which every member of

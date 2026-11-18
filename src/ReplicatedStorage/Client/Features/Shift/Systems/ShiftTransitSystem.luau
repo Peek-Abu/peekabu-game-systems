@@ -15,7 +15,7 @@
 	  When ready, or out of
 	  time (logged with what it still waited for), it reports ready for that hold (ShiftEvents.TransitReady), stamps
 	  ARRIVED for TRANSIT_ARRIVED_SECONDS, then clears. At that reveal an arrival at a shift (ShiftLandingRules.shows:
-	  not the hub, not training) is written to ShiftTransitStore.landing for the landing status card (ShiftLandingHud).
+	  not the hub, not training) is written to ShiftTransitStore.landing for the landing readout (ShiftLandingHud).
 	- a first join to the hub (the lobby place): the welcome card (ShiftTransitRules.welcoming) while the art preload
 	  runs (UIPreloadStore: its progress is the bar's) and until the first sync, at most TRANSIT_WELCOME_SECONDS, then
 	  ALL SET! for TRANSIT_ARRIVED_SECONDS. Once per client.
@@ -93,7 +93,7 @@ local welcomed = false
 local welcomeArrivedUntil: number? = nil
 -- The hub (the lobby): an unpublished place (PlaceId 0) plays both roles, as the server does.
 local hub = game.PlaceId == DepotConstants.HUB_PLACE_ID or game.PlaceId == 0
--- The landing card's hub: only the published hub (an unpublished place plays the shift too, where the card shows).
+-- The landing readout's hub: only the published hub (an unpublished place plays the shift too, where the card shows).
 local landingHub = game.PlaceId == DepotConstants.HUB_PLACE_ID
 local synced = false
 local waitingFor = ""
@@ -212,7 +212,7 @@ local function step()
 			ShiftEvents.packets.TransitReady.send(hold.id)
 			arrivedUntil = now + ShiftConstants.TRANSIT_ARRIVED_SECONDS
 			pending = false
-			-- The landing status card, once per arrival (a hold's id is new for every transit; a respawn has none).
+			-- The landing readout, once per arrival (a hold's id is new for every transit; a respawn has none).
 			local client = if transitSnapshot ~= nil then transitSnapshot.client else nil
 			if ShiftLandingRules.shows({ hub = landingHub, client = client }) then
 				ShiftTransitStore.landing({ id = hold.id, seed = ShiftLandingRules.seedOf(hold), at = now })

@@ -5,6 +5,8 @@ local ShiftCrewViewModel = require(script.Parent.ShiftCrewViewModel)
 local ShiftHudViewModel = require(script.Parent.ShiftHudViewModel)
 local ShiftLandingFormulas = require(ReplicatedStorage.Client.Features.Shift.Utils.ShiftLandingFormulas)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 
 return function()
 	describe("clock", function()
@@ -19,87 +21,112 @@ return function()
 		end)
 	end)
 
-	describe("card", function()
-		it("lists temperature, time, weather, then danger, in that order", function()
-			local view = ShiftLandingViewModel.card(42, "office")
-			expect(view.heading).to.equal("TONIGHT")
-			expect(#view.rows).to.equal(3)
-			expect(view.rows[1].label).to.equal("Temp")
-			expect(view.rows[2].label).to.equal("Time")
-			expect(view.rows[3].label).to.equal("Weather")
-			expect(view.danger).to.equal("Danger")
-		end)
-
-		it("draws the seed's night", function()
+	describe("screens", function()
+		it("is three screens: temperature and weather, then the time, then the anomaly level", function()
 			local night = ShiftLandingFormulas.night(42)
-			local view = ShiftLandingViewModel.card(42, "office")
-			expect(view.rows[1].value).to.equal(`{night.temperature}°F`)
-			expect(view.rows[2].value).to.equal(ShiftLandingViewModel.clock(night.minutes))
-			expect(view.rows[3].value).to.equal(night.weather)
+			local screens = ShiftLandingViewModel.screens(42, "office")
+			expect(#screens).to.equal(3)
+			expect(#screens[1].lines).to.equal(2)
+			expect(screens[1].lines[1].text).to.equal(`{night.temperature}°F`)
+			expect(screens[1].lines[1].icon).to.equal("temperature")
+			expect(screens[1].lines[2].text).to.equal(string.upper(night.weather))
+			expect(screens[1].lines[2].icon).to.equal(ShiftLandingViewModel.WEATHER_ICON[night.weather])
+			expect(screens[1].drops).to.equal(0)
+			expect(#screens[2].lines).to.equal(1)
+			expect(screens[2].lines[1].text).to.equal(ShiftLandingViewModel.clock(night.minutes))
+			expect(screens[2].lines[1].icon).to.equal("clock")
+			expect(#screens[3].lines).to.equal(1)
+			expect(screens[3].lines[1].text).to.equal("ANOMALY LEVEL")
+			expect(screens[3].lines[1].icon).to.equal(nil)
 		end)
 
-		it("is the same card for the same seed and map", function()
-			local a = ShiftLandingViewModel.card(31337, "school")
-			local b = ShiftLandingViewModel.card(31337, "school")
-			for index, row in a.rows do
-				expect(row.value).to.equal(b.rows[index].value)
+		it("gives every weather its own icon key", function()
+			for _, weather in ShiftLandingFormulas.WEATHER do
+				local key = ShiftLandingViewModel.WEATHER_ICON[weather]
+				expect(key).to.be.ok()
+				expect(UIAssets.toonIcons[key]).to.be.ok()
 			end
-			expect(a.drops).to.equal(b.drops)
+			expect(UIAssets.toonIcons.temperature).to.be.ok()
 		end)
 
-		it("shows the map's danger: Office one Gloom drop, School two", function()
+		it("is the same for the same seed and map", function()
+			local a = ShiftLandingViewModel.screens(31337, "school")
+			local b = ShiftLandingViewModel.screens(31337, "school")
+			for index, screen in a do
+				for line, value in screen.lines do
+					expect(value.text).to.equal(b[index].lines[line].text)
+				end
+				expect(screen.drops).to.equal(b[index].drops)
+			end
+		end)
+
+		it("shows the map's Gloom drops last: Office one, School two", function()
 			expect(DepotConstants.OFFICE_SITE.danger).to.equal(1)
 			expect(DepotConstants.SCHOOL_SITE.danger).to.equal(2)
-			expect(ShiftLandingViewModel.card(1, "office").drops).to.equal(1)
-			expect(ShiftLandingViewModel.card(1, "school").drops).to.equal(2)
+			expect(ShiftLandingViewModel.screens(1, "office")[3].drops).to.equal(1)
+			expect(ShiftLandingViewModel.screens(1, "school")[3].drops).to.equal(2)
+			expect(ShiftLandingViewModel.screens(1, nil)[3].drops).to.equal(1)
 		end)
+	end)
 
-		it("reads an unknown map as the office", function()
-			local view = ShiftLandingViewModel.card(1, nil)
-			expect(view.drops).to.equal(1)
-			expect(view.place).to.equal(DepotConstants.OFFICE_SITE.site)
-		end)
-
-		it("names the map's site under the heading", function()
-			expect(ShiftLandingViewModel.card(1, "school").place).to.equal(DepotConstants.SCHOOL_SITE.site)
+	describe("image", function()
+		it("draws an icon only when its asset id is set", function()
+			expect(ShiftLandingViewModel.image(nil)).to.equal(nil)
+			expect(ShiftLandingViewModel.image("clock")).to.equal(UIAssets.toonIcons.clock)
+			local empty = nil
+			for name, id in UIAssets.toonIcons do
+				if id == "" then
+					empty = name
+				end
+			end
+			if empty ~= nil then
+				expect(ShiftLandingViewModel.image(empty)).to.equal(nil)
+			end
 		end)
 	end)
 
 	describe("frame", function()
+		local function laptop()
+			-- The 73% laptop: a 1280x720 window at the HUD's own scale, in HUD design px.
+			local window = Vector2.new(1280, 720)
+			local scale = PaperHudScaleViewModel.scale(window, "desktop")
+			local drawn = window - Vector2.new(0, PaperHudScaleViewModel.topShift(scale))
+			return PaperHudScaleViewModel.virtual(drawn, scale)
+		end
+
 		it("sits on the desktop's left side under the crew list, above the hotbar", function()
-			local viewport = Vector2.new(1920, 1080)
-			local frame = ShiftLandingViewModel.frame("desktop", viewport)
-			local size = ShiftLandingViewModel.SIZE.desktop
-			expect(frame.X).to.equal(24)
-			-- The crew list (66 px down) with six members ends near 342 px.
-			local list = ShiftCrewViewModel.listSize(false, 6)
-			expect(frame.Y >= 66 + list.Y).to.equal(true)
-			expect(frame.Y + size.Y <= viewport.Y * 0.8).to.equal(true)
+			for _, viewport in { Vector2.new(1920, 1080), laptop() } do
+				for crew = 1, 4 do
+					local frame = ShiftLandingViewModel.frame("desktop", viewport, crew)
+					local list = ShiftCrewViewModel.listSize(false, crew)
+					expect(frame.X).to.equal(24)
+					expect(frame.Y >= 66 + list.Y + 12).to.equal(true)
+					expect(frame.Y + ShiftLandingViewModel.blockHeight("desktop") <= viewport.Y * 0.8).to.equal(true)
+				end
+			end
 		end)
 
-		it("sits on the phone's left side, left of the centred meter and above the thumbstick", function()
-			for _, viewport in { Vector2.new(844, 390), Vector2.new(667, 320), Vector2.new(740, 360) } do
-				local frame = ShiftLandingViewModel.frame("phone", viewport)
-				local size = ShiftLandingViewModel.SIZE.phone
-				expect(frame.X).to.equal(12)
-				expect(frame.Y >= 40).to.equal(true)
-				-- The centred meter's left edge, less its Gloom render breaking that edge.
+		it("sits on the phone's left side under the Gloom meter, above the thumbstick", function()
+			for _, viewport in { Vector2.new(844, 390), Vector2.new(740, 360), Vector2.new(667, 375) } do
+				local frame = ShiftLandingViewModel.frame("phone", viewport, 4)
 				local meter = ShiftHudViewModel.METER.phone
-				local meterLeft = viewport.X / 2 - ShiftCrewViewModel.phoneFit(viewport.X).meter / 2
-				local meterEdge = meterLeft - meter.icon * ShiftHudViewModel.METER_ICON_OVERHANG
-				expect(frame.X + size.X <= meterEdge).to.equal(true)
-				expect(frame.Y + size.Y <= viewport.Y - ShiftCrewViewModel.PHONE_BAND.thumbTop).to.equal(true)
+				expect(frame.X).to.equal(12)
+				expect(frame.Y >= meter.top + meter.size.Y).to.equal(true)
+				expect(
+					frame.Y + ShiftLandingViewModel.blockHeight("phone")
+						<= viewport.Y - ShiftCrewViewModel.PHONE_BAND.thumbTop
+				).to.equal(true)
 			end
 		end)
 	end)
 
-	describe("slide", function()
-		it("slides in from off the left edge and rests at the frame", function()
-			local width = ShiftLandingViewModel.SIZE.desktop.X
-			expect(ShiftLandingViewModel.slide(0, 24, width) <= -width).to.equal(true)
-			expect(ShiftLandingViewModel.slide(1, 24, width)).to.equal(24)
-			local mid = ShiftLandingViewModel.slide(0.5, 24, width)
-			expect(mid > -width and mid < 24).to.equal(true)
+	describe("rise", function()
+		it("rises a little into place as it fades in", function()
+			expect(ShiftLandingViewModel.rise(1)).to.equal(0)
+			expect(ShiftLandingViewModel.rise(0) > 0).to.equal(true)
+			expect(ShiftLandingViewModel.rise(0) <= 24).to.equal(true)
+			local mid = ShiftLandingViewModel.rise(0.5)
+			expect(mid > 0 and mid < ShiftLandingViewModel.rise(0)).to.equal(true)
 		end)
 	end)
 end

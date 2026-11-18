@@ -82,10 +82,14 @@ export type ToonIcon =
 	| "statSuction"
 	| "stapler"
 	| "stopwatch"
+	| "temperature"
 	| "trophy"
 	| "truck"
 	| "vacuum"
 	| "vacuumBrass"
+	| "weatherClear"
+	| "weatherCloudy"
+	| "weatherWindy"
 	| "xp"
 
 -- A tileable texture: its asset id (PENDING "" until the developer uploads it) and its size in px, the TileSize it
@@ -196,6 +200,13 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	vacuum = "rbxassetid://95204983643911",
 	vacuumBrass = "rbxassetid://70576303094914",
 	xp = "rbxassetid://77433204551858",
+	-- The landing readout's renders (ShiftLandingReadout), PENDING "" until uploaded: a thermometer and the night's
+	-- weather (clear night sky, clouds, wind). 256 px, ink outline baked, no drop baked, no face, no 4-point sparkle;
+	-- the readout draws a line with no icon while its slot is "".
+	temperature = "",
+	weatherClear = "",
+	weatherCloudy = "",
+	weatherWindy = "",
 }
 UIAssets.toonIcons = table.freeze(TOON_ICONS)
 

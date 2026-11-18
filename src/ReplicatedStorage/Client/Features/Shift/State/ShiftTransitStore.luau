@@ -7,7 +7,7 @@
 	(the loading bar); `leaving` is the teleport this client is leaving on (ShiftEvents.Leaving; nil: none), which puts the
 	arrival's own card up in the place being left; `fadeSeconds` overrides how long the cover's next fade takes (nil: TRANSIT_FADE_IN / OUT; an
 	office entrance's quick black cover sets it); `landing` is this client's last arrival at a shift that gets the landing
-	status card (ShiftLandingRules.shows: the hold's id, the seed its night is drawn from and the reveal's os.clock() time;
+	readout (ShiftLandingRules.shows: the hold's id, the seed its night is drawn from and the reveal's os.clock() time;
 	nil: none), which ShiftLandingHud draws. ShiftTransitSystem writes them; the screen (ShiftTransitScreen), the atmosphere (instant changes while covered) and the
 	depot's travel cards read them. The client never writes the transit itself.
 
@@ -40,7 +40,7 @@ local fadeSeconds = Charm.atom(initialFadeSeconds)
 local initialLeaving: ShiftTypes.TransitLeaving? = nil
 local leaving = Charm.atom(initialLeaving)
 
--- An arrival that gets the landing status card (ShiftTransitSystem, at the reveal).
+-- An arrival that gets the landing readout (ShiftTransitSystem, at the reveal).
 export type Landing = {
 	id: number,
 	seed: number,

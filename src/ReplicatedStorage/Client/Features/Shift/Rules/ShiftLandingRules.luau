@@ -1,16 +1,23 @@
 --!strict
 --[=[
-	ShiftLandingRules: the landing status card (the night's temperature, time, weather and danger, ShiftLandingHud) that
-	shows once when a crew arrives at a shift.
+	ShiftLandingRules: the landing readout (the night's temperature and weather, the time, then the anomaly level,
+	ShiftLandingHud) that plays once when a crew arrives at a shift.
 
-	`shows`: whether an arrival gets the card: never in the hub (the depot) and never on a training trip.
+	`shows`: whether an arrival gets the readout: never in the hub (the depot) and never on a training trip.
 
 	`seedOf`: the shared value the night is drawn from (ShiftLandingFormulas): the built office's layout seed, or, for
 	the office built at boot (no seed), the transit hold's id, which the server gives the whole crew held together.
 
-	`alpha`: how far the card is in (0..1) `elapsed` seconds after this client's reveal (ShiftTransitSystem): nothing
-	until the route slip's ARRIVED beat and fade are over (TIMING.delay), then in over TIMING.fadeIn, up for
-	TIMING.hold, out over TIMING.fadeOut. `over` once it has gone. Pure.
+	`watch` / `startAt`: the readout waits for the big ARRIVAL contract card in the centre (DepotStore.card of kind
+	"arrival") to close. `watch` notes when that card was first seen and when it closed (the store moved off it);
+	`startAt` starts TIMING.beat after it closed. While it is still up nothing starts, unless it is still up
+	TIMING.wait after the reveal (it never closes: start now). With no arrival card by TIMING.fallback after the reveal
+	(a late joiner's card can miss), the readout starts then, the old trigger: after the route slip's ARRIVED beat
+	and fade.
+
+	`screenAt`: which of the SCREENS shows `elapsed` seconds after the start and how far it is in (0..1): each screen
+	tweens in over TIMING.fadeIn, holds TIMING.hold, tweens out over TIMING.fadeOut, then TIMING.gap of nothing before
+	the next; one screen at a time. `over` once the last has gone. Pure.
 
 	@class ShiftLandingRules
 ]=]
@@ -28,15 +35,36 @@ export type ShowInput = {
 	client: string?,
 }
 
+-- The ARRIVAL card as this client has seen it (os.clock() times): when it first showed and when it closed.
+export type CardWatch = {
+	seenAt: number?,
+	closedAt: number?,
+}
+
+export type StartInput = {
+	-- os.clock() of this client's reveal (ShiftTransitStore.landing.at).
+	revealAt: number,
+	now: number,
+	seenAt: number?,
+	closedAt: number?,
+}
+
 local ShiftLandingRules = {}
 
--- Seconds: the wait after the reveal (the ARRIVED stamp, the cover's fade and a short beat), the card's fade in, its
--- time fully up and its fade out.
+-- How many screens play: temperature and weather, the time, the anomaly level.
+ShiftLandingRules.SCREENS = 3
+
+-- Seconds. `beat`: after the ARRIVAL card closes. `fallback`: after the reveal when no ARRIVAL card showed (the route
+-- slip's ARRIVED beat and fade, and a little more for a card still on its way). `wait`: the longest an ARRIVAL card
+-- that never closes holds the readout back. Each screen: `fadeIn`, `hold`, `fadeOut`, then `gap` before the next.
 ShiftLandingRules.TIMING = table.freeze({
-	delay = ShiftConstants.TRANSIT_ARRIVED_SECONDS + ShiftConstants.TRANSIT_FADE_OUT + 0.6,
-	fadeIn = 0.35,
-	hold = 6,
-	fadeOut = 0.6,
+	beat = 0.6,
+	fallback = ShiftConstants.TRANSIT_ARRIVED_SECONDS + ShiftConstants.TRANSIT_FADE_OUT + 1.5,
+	wait = 15,
+	fadeIn = 0.5,
+	hold = 2,
+	fadeOut = 0.45,
+	gap = 0.2,
 })
 
 function ShiftLandingRules.shows(input: ShowInput): boolean
@@ -51,37 +79,63 @@ function ShiftLandingRules.seedOf(hold: ShiftTypes.TransitHold): number
 	return if seed ~= nil then seed else hold.id
 end
 
--- Seconds from the reveal until the card has gone.
-function ShiftLandingRules.total(): number
-	local timing = ShiftLandingRules.TIMING
-	return timing.delay + timing.fadeIn + timing.hold + timing.fadeOut
+-- The watch after a look at the store at `now`: `arrival` is whether the ARRIVAL card is the card shown.
+function ShiftLandingRules.watch(state: CardWatch, arrival: boolean, now: number): CardWatch
+	if arrival then
+		return { seenAt = state.seenAt or now, closedAt = nil }
+	end
+	if state.seenAt ~= nil and state.closedAt == nil then
+		return { seenAt = state.seenAt, closedAt = now }
+	end
+	return state
 end
 
-function ShiftLandingRules.alpha(elapsed: number): number
-	if elapsed ~= elapsed or ShiftLandingRules.over(elapsed) then
-		return 0
-	end
+-- The os.clock() time the readout starts, or nil while it waits.
+function ShiftLandingRules.startAt(input: StartInput): number?
 	local timing = ShiftLandingRules.TIMING
-	local t = elapsed - timing.delay
-	if t <= 0 then
-		return 0
+	local closedAt = input.closedAt
+	if closedAt ~= nil then
+		return closedAt + timing.beat
 	end
-	if t < timing.fadeIn then
-		return t / timing.fadeIn
+	if input.seenAt ~= nil then
+		return if input.now >= input.revealAt + timing.wait then input.now else nil
 	end
-	t -= timing.fadeIn
-	if t < timing.hold then
-		return 1
-	end
-	t -= timing.hold
-	if t < timing.fadeOut then
-		return 1 - t / timing.fadeOut
-	end
-	return 0
+	local fallback = input.revealAt + timing.fallback
+	return if input.now >= fallback then fallback else nil
+end
+
+-- Seconds from the start until the last screen has gone.
+function ShiftLandingRules.total(): number
+	local timing = ShiftLandingRules.TIMING
+	local slot = timing.fadeIn + timing.hold + timing.fadeOut
+	return ShiftLandingRules.SCREENS * (slot + timing.gap) - timing.gap
 end
 
 function ShiftLandingRules.over(elapsed: number): boolean
 	return elapsed >= ShiftLandingRules.total()
+end
+
+-- The screen showing `elapsed` seconds after the start (1..SCREENS, 0: none) and how far it is in (0..1).
+function ShiftLandingRules.screenAt(elapsed: number): (number, number)
+	if elapsed ~= elapsed or elapsed < 0 or ShiftLandingRules.over(elapsed) then
+		return 0, 0
+	end
+	local timing = ShiftLandingRules.TIMING
+	local slot = timing.fadeIn + timing.hold + timing.fadeOut
+	local pitch = slot + timing.gap
+	local index = math.floor(elapsed / pitch) + 1
+	local t = elapsed - (index - 1) * pitch
+	if index > ShiftLandingRules.SCREENS or t >= slot then
+		return 0, 0
+	end
+	if t < timing.fadeIn then
+		return index, t / timing.fadeIn
+	end
+	t -= timing.fadeIn
+	if t < timing.hold then
+		return index, 1
+	end
+	return index, math.clamp(1 - (t - timing.hold) / timing.fadeOut, 0, 1)
 end
 
 return ShiftLandingRules

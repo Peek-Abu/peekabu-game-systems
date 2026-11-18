@@ -5,6 +5,8 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 
 local TIMING = ShiftLandingRules.TIMING
+local SLOT = TIMING.fadeIn + TIMING.hold + TIMING.fadeOut
+local PITCH = SLOT + TIMING.gap
 
 return function()
 	describe("shows", function()
@@ -32,37 +34,90 @@ return function()
 		end)
 	end)
 
-	describe("alpha", function()
-		it("waits until the route slip has lifted", function()
-			expect(TIMING.delay >= ShiftConstants.TRANSIT_ARRIVED_SECONDS + ShiftConstants.TRANSIT_FADE_OUT).to.equal(
-				true
-			)
-			expect(ShiftLandingRules.alpha(0)).to.equal(0)
-			expect(ShiftLandingRules.alpha(TIMING.delay - 0.01)).to.equal(0)
+	describe("watch", function()
+		it("notes when the arrival card first shows", function()
+			local state = ShiftLandingRules.watch({}, true, 10)
+			expect(state.seenAt).to.equal(10)
+			expect(state.closedAt).to.equal(nil)
+			state = ShiftLandingRules.watch(state, true, 11)
+			expect(state.seenAt).to.equal(10)
 		end)
 
-		it("comes in, holds for about six seconds, then goes", function()
-			local fadeInMid = TIMING.delay + TIMING.fadeIn / 2
-			local alpha = ShiftLandingRules.alpha(fadeInMid)
-			expect(alpha > 0 and alpha < 1).to.equal(true)
-			expect(ShiftLandingRules.alpha(TIMING.delay + TIMING.fadeIn)).to.equal(1)
-			expect(ShiftLandingRules.alpha(TIMING.delay + TIMING.fadeIn + TIMING.hold - 0.01)).to.equal(1)
-			local outMid = TIMING.delay + TIMING.fadeIn + TIMING.hold + TIMING.fadeOut / 2
-			local leaving = ShiftLandingRules.alpha(outMid)
-			expect(leaving > 0 and leaving < 1).to.equal(true)
-			expect(ShiftLandingRules.alpha(ShiftLandingRules.total())).to.equal(0)
-			expect(TIMING.hold >= 5 and TIMING.hold <= 7).to.equal(true)
+		it("notes when the arrival card closes", function()
+			local state = ShiftLandingRules.watch({}, true, 10)
+			state = ShiftLandingRules.watch(state, false, 15)
+			expect(state.seenAt).to.equal(10)
+			expect(state.closedAt).to.equal(15)
+			state = ShiftLandingRules.watch(state, false, 16)
+			expect(state.closedAt).to.equal(15)
 		end)
 
-		it("is 0 for a bad time", function()
-			expect(ShiftLandingRules.alpha(0 / 0)).to.equal(0)
-			expect(ShiftLandingRules.alpha(-1)).to.equal(0)
+		it("notes nothing while no arrival card has shown", function()
+			local state = ShiftLandingRules.watch({}, false, 10)
+			expect(state.seenAt).to.equal(nil)
+			expect(state.closedAt).to.equal(nil)
 		end)
 	end)
 
-	describe("over", function()
-		it("is over once the card has gone", function()
-			expect(ShiftLandingRules.over(0)).to.equal(false)
+	describe("startAt", function()
+		it("starts a short beat after the arrival card closes", function()
+			local start = ShiftLandingRules.startAt({ revealAt = 100, now = 106, seenAt = 99, closedAt = 106 })
+			expect(start).to.equal(106 + TIMING.beat)
+			expect(TIMING.beat > 0 and TIMING.beat <= 1).to.equal(true)
+		end)
+
+		it("waits while the arrival card is up", function()
+			expect(ShiftLandingRules.startAt({ revealAt = 100, now = 104, seenAt = 99 })).to.equal(nil)
+		end)
+
+		it("gives up waiting on a card that never closes", function()
+			local now = 100 + TIMING.wait
+			expect(ShiftLandingRules.startAt({ revealAt = 100, now = now, seenAt = 99 })).to.equal(now)
+			expect(TIMING.wait > ShiftConstants.TRANSIT_ARRIVED_SECONDS + 5).to.equal(true)
+		end)
+
+		it("falls back on the reveal when no arrival card shows (a late joiner)", function()
+			expect(TIMING.fallback >= ShiftConstants.TRANSIT_ARRIVED_SECONDS + ShiftConstants.TRANSIT_FADE_OUT).to.equal(
+				true
+			)
+			expect(ShiftLandingRules.startAt({ revealAt = 100, now = 100 + TIMING.fallback - 0.01 })).to.equal(nil)
+			expect(ShiftLandingRules.startAt({ revealAt = 100, now = 100 + TIMING.fallback })).to.equal(
+				100 + TIMING.fallback
+			)
+		end)
+	end)
+
+	describe("screenAt", function()
+		it("shows three screens, one at a time, in order", function()
+			expect(ShiftLandingRules.SCREENS).to.equal(3)
+			for index = 1, 3 do
+				local mid = (index - 1) * PITCH + TIMING.fadeIn + TIMING.hold / 2
+				local screen, alpha = ShiftLandingRules.screenAt(mid)
+				expect(screen).to.equal(index)
+				expect(alpha).to.equal(1)
+			end
+		end)
+
+		it("tweens each screen in, holds it about two seconds, then tweens it out", function()
+			local screen, alpha = ShiftLandingRules.screenAt(TIMING.fadeIn / 2)
+			expect(screen).to.equal(1)
+			expect(alpha > 0 and alpha < 1).to.equal(true)
+			screen, alpha = ShiftLandingRules.screenAt(TIMING.fadeIn + TIMING.hold + TIMING.fadeOut / 2)
+			expect(screen).to.equal(1)
+			expect(alpha > 0 and alpha < 1).to.equal(true)
+			expect(TIMING.hold >= 1.5 and TIMING.hold <= 2.5).to.equal(true)
+		end)
+
+		it("shows nothing between screens, before the start and after the last", function()
+			local screen = ShiftLandingRules.screenAt(SLOT + TIMING.gap / 2)
+			expect(screen).to.equal(0)
+			expect((ShiftLandingRules.screenAt(-1))).to.equal(0)
+			expect((ShiftLandingRules.screenAt(0 / 0))).to.equal(0)
+			expect((ShiftLandingRules.screenAt(ShiftLandingRules.total()))).to.equal(0)
+		end)
+
+		it("is over once the last screen has gone", function()
+			expect(ShiftLandingRules.total()).to.equal(3 * PITCH - TIMING.gap)
 			expect(ShiftLandingRules.over(ShiftLandingRules.total() - 0.01)).to.equal(false)
 			expect(ShiftLandingRules.over(ShiftLandingRules.total())).to.equal(true)
 		end)

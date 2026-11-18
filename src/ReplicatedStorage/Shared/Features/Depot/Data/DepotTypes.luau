@@ -31,7 +31,7 @@ export type MapSite = {
 	-- checks the two agree): its portrait on the route slip and the review. A plain id, so Depot's types never load
 	-- Occupant's data.
 	monster: string,
-	-- How dangerous the map is, in Gloom drops on the landing status card (ShiftLandingViewModel). Fixed per map.
+	-- How dangerous the map is, in Gloom drops on the landing readout's ANOMALY LEVEL (ShiftLandingViewModel). Fixed per map.
 	danger: number,
 }
 

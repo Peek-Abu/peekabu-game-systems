@@ -1,11 +1,15 @@
 --!strict
 --[=[
-	ShiftLandingViewModel: the landing status card (ShiftLandingCard), shown once when a crew arrives at a shift. Words
-	at a kid's reading level: TONIGHT over the map's site, then Temp, Time and Weather (the night drawn from the
-	shift's seed by ShiftLandingFormulas, the same for the whole crew), then Danger as the map's Gloom drops
-	(DepotConstants' map sites: the Office one, the School two). `frame` places the card on the HUD's left side, under
-	the meter and crew band and clear of the bottom corners (the phone's thumbstick), in HUD design px; `slide` is its
-	left edge as it comes in from off screen. Pure.
+	ShiftLandingViewModel: the landing readout (ShiftLandingReadout), "big stamps" with no card behind them: each line a
+	rendered icon and a big value in the HUD's toon type. Three screens, one at a time (ShiftLandingRules.screenAt):
+	the temperature and the weather together, then the time, then ANOMALY LEVEL with the map's Gloom drops (DepotConstants'
+	map sites: the Office one, the School two). The night is drawn from the shift's seed (ShiftLandingFormulas), the same
+	for the whole crew. Words at a kid's reading level, in caps (Luckiest Guy has caps only).
+
+	`image` is a line's icon id, nil while its UIAssets slot is "" (the line then draws its value with no icon, in the
+	same column). `frame` places the readout on the HUD's left side in HUD design px: on desktop under the crew list
+	(its height follows the crew) and above the hotbar; on a phone under the Gloom meter and above the thumbstick.
+	`rise` is how far below its place a screen is drawn while it tweens. Pure.
 
 	@class ShiftLandingViewModel
 ]=]
@@ -15,41 +19,57 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftLandingFormulas = require(ReplicatedStorage.Client.Features.Shift.Utils.ShiftLandingFormulas)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
-export type Row = {
-	label: string,
-	value: string,
+export type Line = {
+	text: string,
+	-- The line's render (nil: none, as ANOMALY LEVEL).
+	icon: UIAssets.ToonIcon?,
 }
 
-export type LandingView = {
-	heading: string,
-	-- The map's site ("4th floor offices").
-	place: string,
-	-- Temp, Time, Weather, in that order.
-	rows: { Row },
-	danger: string,
-	-- Gloom drops drawn after Danger.
+export type Screen = {
+	lines: { Line },
+	-- Gloom drops drawn under the lines (0: none).
 	drops: number,
+}
+
+export type Metrics = {
+	-- The icon column (square), the gap to the value, the value's text size and each line's height.
+	icon: number,
+	gap: number,
+	text: number,
+	line: number,
+	-- A Gloom drop's size and the room between drops.
+	drop: number,
+	dropGap: number,
 }
 
 local ShiftLandingViewModel = {}
 
--- The card's size in HUD design px. The phone's is narrow enough to stay left of the centred Gloom meter and its
--- Gloom render on a 667 px wide phone.
-ShiftLandingViewModel.SIZE = table.freeze({
-	desktop = Vector2.new(300, 262),
-	phone = Vector2.new(144, 128),
+ShiftLandingViewModel.METRICS = table.freeze({
+	desktop = table.freeze({ icon = 64, gap = 14, text = 48, line = 70, drop = 60, dropGap = 6 }),
+	phone = table.freeze({ icon = 38, gap = 8, text = 28, line = 42, drop = 36, dropGap = 4 }),
 })
 
--- The card's left edge, its preferred top (desktop: under the crew list; phone: under Roblox's top-left buttons, left
--- of the centred Gloom meter) and the highest it may go, in HUD design px.
+local WEATHER_ICON: { [ShiftLandingFormulas.Weather]: UIAssets.ToonIcon } = {
+	Clear = "weatherClear",
+	Cloudy = "weatherCloudy",
+	Windy = "weatherWindy",
+}
+ShiftLandingViewModel.WEATHER_ICON = table.freeze(WEATHER_ICON)
+
+-- The readout's left edge, its preferred top on a phone, and the gaps it keeps (HUD design px).
 local INSET = table.freeze({ desktop = 24, phone = 12 })
-local TOP = table.freeze({ desktop = 360, phone = 64 })
-local MIN_TOP = table.freeze({ desktop = 90, phone = 40 })
--- Desktop: the card never reaches lower than this share of the screen (the hotbar).
+local PHONE_TOP = 132
+-- Desktop: room under the crew list (which starts 66 px down), and the share of the screen it never passes (the hotbar).
+local CREW_TOP = 66
+local CREW_GAP = 24
 local DESKTOP_FOOT = 0.8
+-- How far below its place a screen starts as it tweens in (and ends as it tweens out).
+local RISE = 16
 
 -- `minutes` after midnight on a 12-hour clock ("1:12 AM").
 function ShiftLandingViewModel.clock(minutes: number): string
@@ -63,41 +83,56 @@ function ShiftLandingViewModel.clock(minutes: number): string
 	return string.format("%d:%02d %s", hour, minute, if hour24 < 12 then "AM" else "PM")
 end
 
-function ShiftLandingViewModel.card(seed: number, mapValue: ShiftTypes.MapId?): LandingView
+function ShiftLandingViewModel.screens(seed: number, mapValue: ShiftTypes.MapId?): { Screen }
 	local map: ShiftTypes.MapId = DepotMapRules.parse(mapValue)
 	local site = DepotMapRules.siteOf(map)
 	local night = ShiftLandingFormulas.night(seed)
 	return {
-		heading = "TONIGHT",
-		place = site.site,
-		rows = {
-			{ label = "Temp", value = `{night.temperature}°F` },
-			{ label = "Time", value = ShiftLandingViewModel.clock(night.minutes) },
-			{ label = "Weather", value = night.weather },
+		{
+			lines = {
+				{ text = `{night.temperature}°F`, icon = "temperature" },
+				{ text = string.upper(night.weather), icon = WEATHER_ICON[night.weather] },
+			},
+			drops = 0,
 		},
-		danger = "Danger",
-		drops = site.danger,
+		{ lines = { { text = ShiftLandingViewModel.clock(night.minutes), icon = "clock" } }, drops = 0 },
+		{ lines = { { text = "ANOMALY LEVEL" } }, drops = site.danger },
 	}
 end
 
--- The card's resting top-left corner in HUD design px for `layout` on a `viewport` (HUD design px).
-function ShiftLandingViewModel.frame(layout: UIPaperConstants.Layout, viewport: Vector2): Vector2
-	local size = ShiftLandingViewModel.SIZE[layout]
-	local preferred = if layout == "desktop" then math.max(TOP.desktop, viewport.Y * 0.34) else TOP.phone
-	-- Its foot stays above the hotbar (desktop) or the thumbstick's zone (phone).
-	local foot = if layout == "desktop"
-		then viewport.Y * DESKTOP_FOOT
-		else viewport.Y - ShiftCrewViewModel.PHONE_BAND.thumbTop
-	local top = math.max(math.min(preferred, foot - size.Y), MIN_TOP[layout])
-	return Vector2.new(INSET[layout], top)
+-- The icon's image id, nil when there is none or its slot is still "".
+function ShiftLandingViewModel.image(icon: UIAssets.ToonIcon?): string?
+	if icon == nil then
+		return nil
+	end
+	local id = UIAssets.toonIcons[icon]
+	return if id ~= nil and id ~= "" then id else nil
 end
 
--- The card's left edge at `alpha` (0: off the left edge, 1: at `rest`), eased out.
-function ShiftLandingViewModel.slide(alpha: number, rest: number, width: number): number
+-- The tallest screen's height (two lines, or a line and a row of drops).
+function ShiftLandingViewModel.blockHeight(layout: UIPaperConstants.Layout): number
+	local metrics: Metrics = ShiftLandingViewModel.METRICS[layout]
+	return math.max(2 * metrics.line, metrics.line + metrics.drop)
+end
+
+-- The readout's top-left corner in HUD design px for `layout` on a `viewport` (HUD design px) with `crew` members.
+function ShiftLandingViewModel.frame(layout: UIPaperConstants.Layout, viewport: Vector2, crew: number): Vector2
+	local height = ShiftLandingViewModel.blockHeight(layout)
+	if layout == "desktop" then
+		local list = ShiftCrewViewModel.listSize(false, math.max(crew, 1))
+		local top = CREW_TOP + list.Y + CREW_GAP
+		return Vector2.new(INSET.desktop, math.min(top, viewport.Y * DESKTOP_FOOT - height))
+	end
+	local meter = ShiftHudViewModel.METER.phone
+	local foot = viewport.Y - ShiftCrewViewModel.PHONE_BAND.thumbTop
+	local top = math.max(math.min(PHONE_TOP, foot - height), meter.top + meter.size.Y)
+	return Vector2.new(INSET.phone, top)
+end
+
+-- Px below its place a screen `alpha` in (0..1) is drawn: RISE at 0, none at 1, eased out.
+function ShiftLandingViewModel.rise(alpha: number): number
 	local t = math.clamp(alpha, 0, 1)
-	local eased = 1 - (1 - t) ^ 3
-	local away = -width - 16
-	return away + (rest - away) * eased
+	return RISE * (1 - t) ^ 2
 end
 
 return ShiftLandingViewModel

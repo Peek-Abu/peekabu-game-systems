@@ -3,7 +3,7 @@
 	ShiftServiceClient: the shift on the client. Registers the Shift widgets in the HUD during init (before the UI
 	starts), and sends the local player's results vote whenever ShiftStore.myVote changes (clearing it when results
 	end). Pushes the performance review scene (ShiftScene) when results begin and removes it when they end; the
-	ShiftReviewTab widget reopens it after Escape while the vote runs. Registers the landing status card's widget
+	ShiftReviewTab widget reopens it after Escape while the vote runs. Registers the landing readout's widget
 	(ShiftLandingHud). It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
 	registers the sticky-note, stamp and slip toast styles, and swaps the base toast stack for the paper one
 	(PaperToastStack: sticky notes top-right, stamps centre, appraisal slips bottom-right; ToastServiceClient:setDefaultWidget(false)). Starts
