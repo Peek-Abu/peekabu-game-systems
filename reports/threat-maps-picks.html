@@ -86,6 +86,30 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   </section>
 
   <section>
+    <h2>Next picks: more threat while cleaning (18 Nov)</h2>
+    <p><b>Where your "too easy while cleaning" ask stands.</b></p>
+    <ul>
+      <li><b>Built (ready for your check):</b> the ring skill check, where a miss makes a noise he can hear, and the landing readout with the anomaly level.</li>
+      <li><b>Waiting on you:</b> the second monster (which one?) and Floors mode (pick an idea below).</li>
+      <li><b>Later:</b> the slower game with real escapes, deeper buildings, and voices.</li>
+      <li><b>You said no:</b> busier manager, shorter rests, comes looking, third step, warning, wide halls, weather, and the map changes.</li>
+    </ul>
+    <p>I owe you the Floors ideas page; it's below now. Sorry it came late.</p>
+
+    <p class="when">The second monster: which one?</p>
+    <p>You picked Safety Sam and the Lookalike back on 13 Nov. First the game has to learn to run 2 monsters at once, which is about 2–3 days of work with an off switch. Then the monster itself:</p>
+    <div id="nextMonster"></div>
+
+    <p class="when">Floors mode: pick an idea</p>
+    <p>Each idea makes the early floors calm and the later floors scary. Honest size for any of them: 4–6 days, so after launch. Pick the idea now and building starts the day after launch.</p>
+    <div id="nextFloors"></div>
+
+    <p class="when">Quick ones: more threat while cleaning, before lock (Sun 22 Nov)</p>
+    <p>Both build on your ring idea, so skill decides the danger, not just more manager.</p>
+    <div id="nextQuick"></div>
+  </section>
+
+  <section>
     <h2>Your icons are in the game (18 Nov)</h2>
     <p>Your picks (T4, C2, K1, W4) are uploaded to Icey Labs and in the readout. Here they are in real play: the thermometer and the clear-night moon. Cloudy and windy show on nights with that weather. All 7590 tests pass.</p>
     <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-icons.jpg" alt="Readout screen 1 in the game: a thermometer icon next to 38°F and a yellow moon icon next to CLEAR, top left of the HUD." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
@@ -183,6 +207,29 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
+  { id: "x1-sam", group: "nextMonster", title: "Safety Sam joins at 4:30",
+    text: "The cardboard cutout of a smiling worker. Seen edge-on he's almost invisible. He slides along walls and slaps a sticker on you (you lose a coat). Vacuum him to fold him up for 10 s. <b>Threat while cleaning:</b> a lot. You have to keep checking the walls around you while you vacuum.",
+    effort: "2-monster engine 2–3 days + Sam 1–2 days. Could make launch, tight, with an off switch.", rec: "<b>Yes, Sam first.</b> His art is cheap (one flat printed standee), so he's the only new monster that can make launch." },
+  { id: "x2-lookalike", group: "nextMonster", title: "The Lookalike joins at 4:30",
+    text: "One \"crewmate\" is made of Gloom: a crew-shaped, drippy purple copy with a blank head (no face) and a blank name tag. It acts friendly and grabs a kid who is alone. 3 s of vacuum pops it. <b>Threat while cleaning:</b> high in a crew, less when solo.",
+    effort: "2-monster engine 2–3 days + the Lookalike 2–3 days. After launch.", rec: "<b>Second, after launch.</b> It's great for crews, but more work." },
+
+  { id: "f1-run", group: "nextFloors", title: "Floors A: one night, 3 floors",
+    text: "A run is 3 shorter shifts, one floor after another in the same building. Floor 1 is calm with a small contract. The manager keeps getting angrier floor by floor. The second monster joins from floor 2. Your pay grows each floor, and you can take it and leave between floors. <b>Threat while cleaning:</b> calm, then busy, then scary, every run.",
+    effort: "4–6 days, after launch", rec: "<b>My pick.</b> It's the smallest change to how the game plays now, and it fits shifts." },
+  { id: "f2-deeper", group: "nextFloors", title: "Floors B: go down until you drop",
+    text: "There's no end. Each floor down adds 1 to the anomaly level: more Gloom, a faster manager, more monsters. The run ends when the crew runs out of lives. A board shows the deepest floor each crew reached. <b>Threat while cleaning:</b> keeps rising until it beats you.",
+    effort: "5–7 days, after launch", rec: "Great for replay and for bragging, but harder to balance." },
+  { id: "f3-safe", group: "nextFloors", title: "Floors C: A or B, plus a safe floor every 3 floors",
+    text: "Every 3rd floor is a quiet break room. You can heal a coat, swap gear, and catch your breath. <b>Threat while cleaning:</b> the scary floors hit harder because you just had a rest.",
+    effort: "+1–2 days on top of A or B", rec: "Maybe. It's close to Dandy's World's breaks, and you said you don't want to copy it." },
+
+  { id: "q1-miss-setback", group: "nextQuick", title: "A miss also undoes some cleaning",
+    text: "Missing a ring now also puts back part of the pile, so a miss costs time and makes noise. <b>Threat while cleaning:</b> you stay longer at the pile, so he has more time to find you. We can count misses per shift to see if it's too hard.",
+    effort: "1–2 hours", rec: "<b>Yes.</b> It makes the ring matter." },
+  { id: "q2-last-ring", group: "nextQuick", title: "The last ring of a pile is the loud one",
+    text: "The final ring of each pile has the smallest gap. Miss it and there's a big crash he can hear from much farther away (about 120 studs instead of 70), and he comes to check. <b>Threat while cleaning:</b> every pile ends with a tense moment.",
+    effort: "1–2 hours", rec: "<b>Yes.</b> It's tense, and it's still your skill that decides it." },
   { id: "i1-thermometer", group: "icons", title: "Thermometer: which one?",
     text: "Yes = T4 (from the second try). No = write the one you want (T1–T5) in the note, or \"redo\".",
     effort: "Minutes", rec: "<b>Yes (T4).</b>" },
@@ -335,7 +382,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["icons", "built", "ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["nextMonster", "nextFloors", "nextQuick", "icons", "built","ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
