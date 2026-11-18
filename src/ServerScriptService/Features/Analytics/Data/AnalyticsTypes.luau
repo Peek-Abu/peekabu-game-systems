@@ -32,7 +32,7 @@ export type EconomyCall = {
 }
 
 -- One owner-facing off switch per tracking pick (AnalyticsSwitchConstants).
-export type Switch = "quits" | "hubTime" | "training" | "shiftsPerVisit" | "economy"
+export type Switch = "quits" | "hubTime" | "training" | "shiftsPerVisit" | "economy" | "nightShift"
 
 -- Where a player is when they quit.
 export type Place = "hub" | "training" | "shift" | "results"

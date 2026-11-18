@@ -10,7 +10,8 @@
 	It also takes what other features report for the tracking picks, each behind its own off switch
 	(AnalyticsSwitchConstants; Creator Hub's configs flip them live, AnalyticsSwitchSystem): `recordEconomy` (a
 	purchase or reward, after its transaction committed: AnalyticsEconomySystem), and for the visit events
-	(AnalyticsVisitSystem) `place`, `moment`, `shiftWorked`, `trainingStep` and `trainingSkipped`.
+	(AnalyticsVisitSystem) `place`, `moment`, `shiftWorked`, `trainingStep` and `trainingSkipped`, and the Night Shift's
+	custom events (`nightShift`, from ShiftNightSystem: nothing is sent while its switch is off).
 
 	Spec-exempt shell (AnalyticsService); naming and fields are the specced AnalyticsRules.
 
@@ -107,6 +108,8 @@ export type AnalyticsServiceServer = {
 	-- A training funnel step (AnalyticsConstants.TRAINING_STEPS).
 	trainingStep: (self: AnalyticsServiceServer, player: Player, step: string) -> (),
 	trainingSkipped: (self: AnalyticsServiceServer, player: Player) -> (),
+	-- A Night Shift custom event (ShiftNightAnalyticsUtils), behind the `nightShift` switch.
+	nightShift: (self: AnalyticsServiceServer, player: Player, event: string, value: number?, fields: { string }) -> (),
 	getState: (self: AnalyticsServiceServer) -> { [string]: any },
 }
 
@@ -273,6 +276,13 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 
 	trainingSkipped = function(_self, player)
 		AnalyticsVisitSystem.trainingSkipped(player)
+	end,
+
+	nightShift = function(self, player, event, value, fields)
+		if not AnalyticsSwitchSystem.isOn("nightShift") then
+			return
+		end
+		self:custom(player, event, value, fields)
 	end,
 
 	getState = function(_self)

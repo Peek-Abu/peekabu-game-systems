@@ -16,7 +16,10 @@
 	  same Currency grant as a shift's pay) and shows the week report (the state's `weekBonus`);
 	- `decide` (the vote): Next night moves the run on, Clock out ends it and sends the crew home with their pay; a run
 	  already over (fired or wiped) always goes home;
-	- `stamp` / `minTier`: the run's ShiftState fields and the manager's start tier for the night.
+	- `stamp` / `minTier`: the run's ShiftState fields and the manager's start tier for the night;
+	- analytics (ShiftNightAnalyticsUtils, to every crew member in the server, behind Analytics' `nightShift` switch):
+	  the mode when a run starts, each night as it is prepared (once a night), the vote's result, how the run ended
+	  and each week completed. One event per happening, never per tick; training sends none.
 
 	Spec-exempt shell (Round, Currency); the decisions are the specced ShiftNightRules, ShiftNightTracker,
 	ShiftNightFormulas and ShiftPaySystem.payAll.
@@ -24,6 +27,7 @@
 	@class ShiftNightSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -36,7 +40,9 @@ local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils
 local ShiftServer = ServerScriptService.Features.Shift
 local ShiftNightRules = require(ShiftServer.Rules.ShiftNightRules)
 local ShiftNightTracker = require(ShiftServer.State.ShiftNightTracker)
+local ShiftNightAnalyticsUtils = require(ShiftServer.Utils.ShiftNightAnalyticsUtils)
 local ShiftPaySystem = require(ShiftServer.Systems.ShiftPaySystem)
+local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 
@@ -50,6 +56,8 @@ export type Deps = {
 	-- Effects; absent = the real ones.
 	grant: ShiftPaySystem.Pay?,
 	setDuration: ((seconds: number) -> ())?,
+	-- Sends one analytics record to a crew member (absent = AnalyticsServiceServer:nightShift).
+	report: ((userId: number, record: ShiftNightAnalyticsUtils.Record) -> ())?,
 }
 
 -- What the vote's result does: send the crew home, or play the next night (a quick shift's Another shift).
@@ -82,12 +90,31 @@ local function realSetDuration(seconds: number)
 	RoundServiceServer:configure({ duration = seconds })
 end
 
+local function realReport(userId: number, record: ShiftNightAnalyticsUtils.Record)
+	local player = Players:GetPlayerByUserId(userId)
+	if player ~= nil then
+		AnalyticsServiceServer:nightShift(player, record.event, record.value, record.fields)
+	end
+end
+
 local ShiftNightSystem = {}
 
 function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 	local tracker = ShiftNightTracker.new()
 	local grant: ShiftPaySystem.Pay = deps.grant or realGrant
 	local setDuration: (number) -> () = deps.setDuration or realSetDuration
+	local reportTo: (number, ShiftNightAnalyticsUtils.Record) -> () = deps.report or realReport
+	-- The last night reported as reached (prepare may run twice for one night), reset with each run.
+	local reportedNight = 0
+
+	local function report(record: ShiftNightAnalyticsUtils.Record)
+		if deps.training() then
+			return
+		end
+		for _, userId in deps.crewIds() do
+			reportTo(userId, record)
+		end
+	end
 
 	local function stillPaying(userId: number): boolean
 		return table.find(deps.crewIds(), userId) ~= nil
@@ -99,7 +126,14 @@ function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 				-- Training is always a quick shift, however the server got its crew.
 				local mode: ShiftTypes.RunMode = if deps.training() then "quick" else deps.mode()
 				tracker:start(mode)
+				reportedNight = 0
 				log:info(`a {mode} run starts`)
+				report(ShiftNightAnalyticsUtils.mode(mode))
+			end
+			local reached = tracker:night()
+			if reached ~= nil and reached > reportedNight then
+				reportedNight = reached
+				report(ShiftNightAnalyticsUtils.night(reached))
 			end
 			if not configureRound then
 				return
@@ -145,7 +179,11 @@ function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 			log:info(
 				`night {night} settled: {results.cleared}/{results.quota}, bonus {settlement.bonus}, {settlement.runOver or "on"}`
 			)
+			if settlement.runOver ~= nil then
+				report(ShiftNightAnalyticsUtils.runEnd(settlement.runOver, night))
+			end
 			if settlement.bonus > 0 then
+				report(ShiftNightAnalyticsUtils.weekDone(ShiftNightFormulas.week(night), settlement.bonus))
 				ShiftPaySystem.payAll(
 					`week {ShiftNightFormulas.week(night)} bonus`,
 					deps.crewIds(),
@@ -163,8 +201,11 @@ function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 			if tracker:isOver() then
 				return "home"
 			end
+			local night = tracker:night() or 1
+			report(ShiftNightAnalyticsUtils.vote(depot, night))
 			if depot then
 				tracker:finish("clockout")
+				report(ShiftNightAnalyticsUtils.runEnd("clockout", night))
 				return "home"
 			end
 			tracker:nextNight()

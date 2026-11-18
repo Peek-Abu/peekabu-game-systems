@@ -16,7 +16,7 @@ return function()
 		for _ in AnalyticsSwitchConstants.CONFIG_KEYS do
 			keys += 1
 		end
-		expect(count).to.equal(5)
+		expect(count).to.equal(6)
 		expect(fallbacks).to.equal(count)
 		expect(keys).to.equal(count)
 	end)
@@ -34,5 +34,12 @@ return function()
 		for _, on in AnalyticsSwitchConstants.SWITCHES do
 			expect(on).to.equal(true)
 		end
+	end)
+
+	it("has the Night Shift switch last, on its Creator Hub key", function()
+		local order = AnalyticsSwitchConstants.ORDER
+		expect(order[#order]).to.equal("nightShift")
+		expect(AnalyticsSwitchConstants.CONFIG_KEYS.nightShift).to.equal("analytics_night_shift")
+		expect(AnalyticsSwitchConstants.SWITCHES.nightShift).to.equal(true)
 	end)
 end

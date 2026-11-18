@@ -34,6 +34,9 @@ local SWITCHES: { [Switch]: boolean } = table.freeze({
 	shiftsPerVisit = true,
 	-- Pick 5: every Gleam, Credits, Gloom and acorn in and out, with the item and its rarity.
 	economy = true,
+	-- Pick 6: Night Shift (owner 11-18): the mode picked at the truck, each night reached, how a run ended and on which
+	-- night, each week completed and the Next night / Clock out vote (ShiftNightAnalyticsUtils).
+	nightShift = true,
 })
 
 -- The Creator Hub config name for each switch.
@@ -43,10 +46,11 @@ local CONFIG_KEYS: { [Switch]: string } = table.freeze({
 	training = "analytics_training",
 	shiftsPerVisit = "analytics_shifts_per_visit",
 	economy = "analytics_economy",
+	nightShift = "analytics_night_shift",
 })
 
 -- Every switch, in pick order (for logs and the debug state).
-local ORDER: { Switch } = { "quits", "hubTime", "training", "shiftsPerVisit", "economy" }
+local ORDER: { Switch } = { "quits", "hubTime", "training", "shiftsPerVisit", "economy", "nightShift" }
 
 return table.freeze({
 	SWITCHES = SWITCHES,
