@@ -38,69 +38,38 @@ return function()
 		end)
 	end)
 
-	describe("weekQuota", function()
-		it("is the week's goals: those already played plus this goal for each night left", function()
-			expect(ShiftNightRules.weekQuota(0, 50, 1)).to.equal(50 * N)
-			expect(ShiftNightRules.weekQuota(50, 60, 2)).to.equal(50 + 60 * (N - 1))
-			expect(ShiftNightRules.weekQuota(110, 70, N)).to.equal(110 + 70)
-		end)
-
-		it("restarts with each week", function()
-			expect(ShiftNightRules.weekQuota(0, 80, N + 1)).to.equal(80 * N)
-		end)
-	end)
-
 	describe("settle", function()
-		it("adds the night's clearance to the week mid-week, with no bonus and the run going on", function()
-			local result = ShiftNightRules.settle({ night = 1, weekCleared = 0, weekQuota = 300, cleared = 120 })
-			expect(result.weekCleared).to.equal(120)
+		it("goes on after a met night mid-week, with no bonus", function()
+			local result = ShiftNightRules.settle({ night = 1, met = true })
 			expect(result.bonus).to.equal(0)
-			expect(result.newWeek).to.equal(false)
 			expect(result.runOver).to.equal(nil)
 		end)
 
-		it("pays the week bonus and starts a new week when the weekly quota is met on its last night", function()
-			local result = ShiftNightRules.settle({ night = N, weekCleared = 200, weekQuota = 300, cleared = 100 })
-			expect(result.weekCleared).to.equal(300)
+		it("fires the crew on any night that misses its goal", function()
+			for _, night in { 1, 2, N, N + 3 } do
+				local result = ShiftNightRules.settle({ night = night, met = false })
+				expect(result.runOver).to.equal("fired")
+				expect(result.bonus).to.equal(0)
+			end
+		end)
+
+		it("pays the week bonus for surviving the week's last night", function()
+			local result = ShiftNightRules.settle({ night = N, met = true })
 			expect(result.bonus).to.equal(ShiftNightFormulas.weekBonus(1))
-			expect(result.newWeek).to.equal(true)
 			expect(result.runOver).to.equal(nil)
 		end)
 
 		it("pays a later week's bigger bonus", function()
-			local result = ShiftNightRules.settle({ night = 2 * N, weekCleared = 500, weekQuota = 400, cleared = 0 })
+			local result = ShiftNightRules.settle({ night = 2 * N, met = true })
 			expect(result.bonus).to.equal(ShiftNightFormulas.weekBonus(2))
 		end)
 
-		it("fires the crew when the weekly quota is missed on its last night", function()
-			local result = ShiftNightRules.settle({ night = N, weekCleared = 100, weekQuota = 300, cleared = 50 })
-			expect(result.weekCleared).to.equal(150)
-			expect(result.bonus).to.equal(0)
-			expect(result.newWeek).to.equal(false)
-			expect(result.runOver).to.equal("fired")
-		end)
-
-		it("ends the run on a wipe", function()
-			local result =
-				ShiftNightRules.settle({ night = 1, weekCleared = 0, weekQuota = 300, cleared = 40, wiped = true })
-			expect(result.runOver).to.equal("wiped")
-			expect(result.weekCleared).to.equal(40)
-		end)
-
-		it("still pays a met week on a wipe, and calls a missed one fired", function()
-			local met =
-				ShiftNightRules.settle({ night = N, weekCleared = 250, weekQuota = 300, cleared = 60, wiped = true })
-			expect(met.bonus).to.equal(ShiftNightFormulas.weekBonus(1))
-			expect(met.runOver).to.equal("wiped")
-			local missed =
-				ShiftNightRules.settle({ night = N, weekCleared = 0, weekQuota = 300, cleared = 60, wiped = true })
-			expect(missed.bonus).to.equal(0)
-			expect(missed.runOver).to.equal("fired")
-		end)
-
-		it("never counts a negative clearance", function()
-			local result = ShiftNightRules.settle({ night = 1, weekCleared = 10, weekQuota = 300, cleared = -5 })
-			expect(result.weekCleared).to.equal(10)
+		it("ends the run on a wipe, met or not, with no bonus", function()
+			local missed = ShiftNightRules.settle({ night = 1, met = false, wiped = true })
+			expect(missed.runOver).to.equal("wiped")
+			local lastNight = ShiftNightRules.settle({ night = N, met = true, wiped = true })
+			expect(lastNight.runOver).to.equal("wiped")
+			expect(lastNight.bonus).to.equal(0)
 		end)
 	end)
 
@@ -124,8 +93,6 @@ return function()
 			runMode = "night",
 			night = N + 1,
 			week = 2,
-			weekQuota = 600,
-			weekCleared = 120,
 		}
 
 		it("copies the run's fields onto the state without changing the original", function()
@@ -134,10 +101,15 @@ return function()
 			expect(stamped.runMode).to.equal("night")
 			expect(stamped.night).to.equal(N + 1)
 			expect(stamped.week).to.equal(2)
-			expect(stamped.weekQuota).to.equal(600)
-			expect(stamped.weekCleared).to.equal(120)
+			expect(stamped.weekBonus).to.equal(nil)
 			expect(stamped.runOver).to.equal(nil)
 			expect(before.runMode).to.equal(nil)
+		end)
+
+		it("carries the week report's bonus", function()
+			local report = table.clone(view)
+			report.weekBonus = 150
+			expect(ShiftNightRules.stamp(state("results"), report, false).weekBonus).to.equal(150)
 		end)
 
 		it("carries the run-over reason and the night reached", function()
@@ -165,11 +137,11 @@ return function()
 		it("clears the night fields for a quick shift", function()
 			local before = state("running")
 			before.night = 4
-			before.weekQuota = 10
+			before.weekBonus = 10
 			local stamped = ShiftNightRules.stamp(before, { runMode = "quick" }, false)
 			expect(stamped.runMode).to.equal("quick")
 			expect(stamped.night).to.equal(nil)
-			expect(stamped.weekQuota).to.equal(nil)
+			expect(stamped.weekBonus).to.equal(nil)
 			expect(stamped.tier).to.equal(0)
 		end)
 	end)

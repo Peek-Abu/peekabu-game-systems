@@ -302,10 +302,10 @@ return function()
 	end)
 
 	describe("Night Shift fields", function()
-		it("round-trips the run's mode, night, week, weekly quota and clearance", function()
+		it("round-trips the run's mode, night, week and week report bonus", function()
 			local snapshot = ShiftSnapshotUtils.decode(
 				ShiftSnapshotUtils.build(
-					state({ runMode = "night", night = 4, week = 2, weekQuota = 600, weekCleared = 120 }),
+					state({ runMode = "night", night = 10, week = 2, weekBonus = 300 }),
 					0,
 					0,
 					0,
@@ -314,10 +314,9 @@ return function()
 				)
 			)
 			expect(snapshot.runMode).to.equal("night")
-			expect(snapshot.night).to.equal(4)
+			expect(snapshot.night).to.equal(10)
 			expect(snapshot.week).to.equal(2)
-			expect(snapshot.weekQuota).to.equal(600)
-			expect(snapshot.weekCleared).to.equal(120)
+			expect(snapshot.weekBonus).to.equal(300)
 			expect(snapshot.runOver).to.equal(nil)
 		end)
 

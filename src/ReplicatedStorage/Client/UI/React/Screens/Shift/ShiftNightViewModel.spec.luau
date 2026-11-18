@@ -8,8 +8,6 @@ local function snapshot(extra)
 		runMode = "night",
 		night = 4,
 		week = 2,
-		weekQuota = 1500,
-		weekCleared = 600,
 	}
 	for key, item in extra or {} do
 		value[key] = item
@@ -24,8 +22,7 @@ return function()
 			expect(night).to.be.ok()
 			expect(night.night).to.equal(4)
 			expect(night.week).to.equal(2)
-			expect(night.weekQuota).to.equal(1500)
-			expect(night.weekCleared).to.equal(600)
+			expect(night.weekBonus).to.equal(nil)
 			expect(night.runOver).to.equal(nil)
 			expect(night.nightReached).to.equal(4)
 		end)
@@ -37,10 +34,14 @@ return function()
 			expect(ShiftNightViewModel.of(snapshot({ night = false }))).to.equal(nil)
 		end)
 
-		it("works the week out from the night when the snapshot has none, and reads no cleared as 0", function()
-			local night = ShiftNightViewModel.of(snapshot({ night = 7, week = false, weekCleared = false }))
-			expect(night.week).to.equal(3)
-			expect(night.weekCleared).to.equal(0)
+		it("works the week out from the night when the snapshot has none", function()
+			local night = ShiftNightViewModel.of(snapshot({ night = 7, week = false }))
+			expect(night.week).to.equal(2)
+		end)
+
+		it("reads the week report's bonus", function()
+			expect(ShiftNightViewModel.of(snapshot({ weekBonus = 150 })).weekBonus).to.equal(150)
+			expect(ShiftNightViewModel.of(snapshot({ weekBonus = "x" })).weekBonus).to.equal(nil)
 		end)
 
 		it("keeps how the run ended and the night it reached", function()
@@ -55,20 +56,24 @@ return function()
 		expect(ShiftNightViewModel.weekTitle(2)).to.equal("WEEK 2")
 	end)
 
-	describe("weekLine", function()
-		it("adds tonight's Gloom to the week while the night runs", function()
-			local night = ShiftNightViewModel.of(snapshot())
-			expect(ShiftNightViewModel.weekLine(night, 300, "running")).to.equal("This week: 900 / 1,500")
+	describe("weekReport", function()
+		it("is nil on a night that did not end a week", function()
+			expect(ShiftNightViewModel.weekReport(ShiftNightViewModel.of(snapshot()))).to.equal(nil)
 		end)
 
-		it("does not count tonight twice once the night is over", function()
-			local night = ShiftNightViewModel.of(snapshot({ weekCleared = 900 }))
-			expect(ShiftNightViewModel.weekLine(night, 300, "results")).to.equal("This week: 900 / 1,500")
+		it("reports the week done, the nights survived and the bonus", function()
+			local report = ShiftNightViewModel.weekReport(
+				ShiftNightViewModel.of(snapshot({ night = 10, week = 2, weekBonus = 300 }))
+			)
+			expect(report.title).to.equal("WEEK 2 DONE!")
+			expect(report.good).to.equal(true)
+			expect(string.find(report.line, "10 nights", 1, true)).to.be.ok()
+			expect(string.find(report.line, "+300", 1, true)).to.be.ok()
 		end)
 
-		it("shows nothing without a weekly quota", function()
-			local night = ShiftNightViewModel.of(snapshot({ weekQuota = false }))
-			expect(ShiftNightViewModel.weekLine(night, 300, "running")).to.equal(nil)
+		it("gives way to a run that is over", function()
+			local over = ShiftNightViewModel.of(snapshot({ weekBonus = 150, runOver = "clockout" }))
+			expect(ShiftNightViewModel.weekReport(over)).to.equal(nil)
 		end)
 	end)
 
@@ -87,11 +92,12 @@ return function()
 			expect(ShiftNightViewModel.ended(ShiftNightViewModel.of(snapshot()))).to.equal(nil)
 		end)
 
-		it("says FIRED! for a missed weekly quota, with the night reached", function()
+		it("says FIRED! for a missed night goal, with the night reached", function()
 			local ended =
 				ShiftNightViewModel.ended(ShiftNightViewModel.of(snapshot({ runOver = "fired", nightReached = 6 })))
 			expect(ended.title).to.equal("FIRED!")
 			expect(ended.good).to.equal(false)
+			expect(string.find(ended.line, "tonight's goal", 1, true)).to.be.ok()
 			expect(string.find(ended.line, "night 6", 1, true)).to.be.ok()
 		end)
 

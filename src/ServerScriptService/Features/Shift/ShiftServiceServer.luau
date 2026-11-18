@@ -28,7 +28,7 @@
 	- analytics and the A/B variant (M5): each run's variant comes from ShiftAnalyticsSystem.pickVariant;
 	  ShiftAnalyticsWatchSystem turns the shift's and the other features' signals into the spec §6.6 events;
 	- Night Shift (ShiftNightSystem): the run's mode, night, week and carried coats outlive each shift's clearing; every
-	  state change is stamped with the run's fields (runMode, night, week, weekQuota, weekCleared, runOver,
+	  state change is stamped with the run's fields (runMode, night, week, weekBonus, runOver,
 	  nightReached); Next night / Clock out is the vote, and a fired or wiped crew skips it and goes home;
 	- results: ShiftResultsUtils builds the review; ShiftPaySystem pays the crew still present when it opens; the crew votes Another shift / Back to depot (ShiftVoteSystem;
 	  Back to depot sends the crew home through ShiftTripSystem with the review as its result card);
@@ -565,8 +565,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 			transit = transit:active(),
 			runMode = state.runMode,
 			night = state.night,
-			weekCleared = state.weekCleared,
-			weekQuota = state.weekQuota,
+			weekBonus = state.weekBonus,
 			runOver = state.runOver,
 		}
 	end,

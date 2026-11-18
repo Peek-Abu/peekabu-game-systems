@@ -47,29 +47,46 @@ return function()
 		end)
 	end)
 
+	describe("week length", function()
+		it("is 5 nights (owner 11-18)", function()
+			expect(N).to.equal(5)
+		end)
+	end)
+
 	describe("quotaScale", function()
-		it("grows by week and never passes the site's safe cap", function()
+		it("grows a little every night and never passes the site's safe cap", function()
 			local previous = 0
-			for week = 1, 30 do
-				local s = ShiftNightFormulas.quotaScale((week - 1) * N + 1)
+			for night = 1, 40 * N do
+				local s = ShiftNightFormulas.quotaScale(night)
 				expect(s >= previous).to.equal(true)
 				expect(s <= ShiftNightConstants.QUOTA_SCALE_CAP).to.equal(true)
 				previous = s
 			end
 		end)
+
+		it("starts each week at its table entry and climbs toward the next week's within the week", function()
+			local scales = ShiftNightConstants.QUOTA_SCALE
+			expect(ShiftNightFormulas.quotaScale(1)).to.equal(scales[1])
+			expect(ShiftNightFormulas.quotaScale(N + 1)).to.equal(scales[2])
+			expect(ShiftNightFormulas.quotaScale(2) > scales[1]).to.equal(true)
+			expect(ShiftNightFormulas.quotaScale(N) < scales[2]).to.equal(true)
+		end)
+
+		it("keeps the first nights' goals low", function()
+			expect(ShiftNightFormulas.quotaScale(1) <= 0.3).to.equal(true)
+			expect(ShiftNightFormulas.quotaScale(N) <= 0.5).to.equal(true)
+		end)
 	end)
 
-	describe("nightQuota and weekQuota", function()
+	describe("nightQuota", function()
 		it("scales the shift contract and rounds to the quota step", function()
 			local q = ShiftNightFormulas.nightQuota(1000, 1)
 			expect(q % 5).to.equal(0)
 			expect(q > 0 and q <= 1000).to.equal(true)
 		end)
 
-		it("makes the week's quota the sum of its nights", function()
-			for _, night in { 1, N + 2, 5 * N } do
-				expect(ShiftNightFormulas.weekQuota(800, night)).to.equal(ShiftNightFormulas.nightQuota(800, night) * N)
-			end
+		it("is never below one step", function()
+			expect(ShiftNightFormulas.nightQuota(1, 1)).to.equal(ShiftNightConstants.QUOTA_STEP)
 		end)
 	end)
 

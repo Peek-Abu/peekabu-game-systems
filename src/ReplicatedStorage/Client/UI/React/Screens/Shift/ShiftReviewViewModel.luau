@@ -108,6 +108,9 @@ export type ReviewView = {
 	-- A Night Shift run that is over: its header (FIRED!, OUT OF COATS, CLOCKED OUT) and the night reached; nil
 	-- otherwise.
 	ended: ShiftNightViewModel.EndView?,
+	-- The short week report on a survived week's last night (WEEK 1 DONE!, the nights survived and the bonus); the
+	-- vote still runs under it. Nil otherwise.
+	report: ShiftNightViewModel.EndView?,
 }
 
 local PHONE_AWARDS = 2
@@ -376,6 +379,8 @@ function ShiftReviewViewModel.review(
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
 	local run = ShiftNightViewModel.of(snapshot)
 	local ended = if run ~= nil then ShiftNightViewModel.ended(run) else nil
+	local report = if run ~= nil then ShiftNightViewModel.weekReport(run) else nil
+	local header = ended or report
 	local words = if run ~= nil then ShiftNightViewModel.votes(run) else nil
 	local another =
 		vote(if words ~= nil then words.another else "ANOTHER SHIFT", snapshot.votesAnother, total, myVote == "another")
@@ -386,18 +391,15 @@ function ShiftReviewViewModel.review(
 		myVote == "depot",
 		if words ~= nil then words.depot else "TO THE DEPOT"
 	)
-	if ended ~= nil then
-		-- The run is over: no vote, the crew heads home when the clock runs out.
-		another.disabled = true
-		depot.disabled = true
-	end
+	-- A run that is over takes no vote: the crew heads home when the clock runs out.
+	another.disabled, depot.disabled = ended ~= nil, ended ~= nil
 	local footer = if ended ~= nil
 		then `The run is over · back to the depot in {left}`
 		elseif words ~= nil then words.footer
 		elseif phone then `Majority decides · auto-picks in {left}\nA tie means Another shift`
 		else `Majority decides · auto-picks in {left} · a tie means Another shift`
 	return {
-		title = if ended ~= nil then ended.title elseif met then "GOAL DONE!" else "GOAL MISSED",
+		title = if header ~= nil then header.title elseif met then "GOAL DONE!" else "GOAL MISSED",
 		grade = GRADE[rating],
 		cards = {
 			{
@@ -481,6 +483,7 @@ function ShiftReviewViewModel.review(
 		depot = depot,
 		footer = footer,
 		ended = ended,
+		report = report,
 	}
 end
 

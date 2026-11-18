@@ -66,7 +66,7 @@ local DepotPlaceConstants = table.freeze({
 	MODE_TEXT = table.freeze({
 		night = "NIGHT SHIFT",
 		quick = "QUICK SHIFT",
-		nightLine = "Night after night. Make the week's goal!",
+		nightLine = "Night after night. Make each night's goal!",
 		quickLine = "Just one shift, then home.",
 	}),
 })

@@ -7,13 +7,13 @@
 	  crew's depart payload, ShiftTripSystem.mode) and sets Round's duration for the night (ShiftNightFormulas.seconds;
 	  a quick shift gets the normal SHIFT_SECONDS back) before `startNow`;
 	- `goal`: the night's goal from the shift contract (ShiftNightFormulas.nightQuota; a quick shift keeps the contract),
-	  which also sets the weekly quota as of tonight;
+	  the night's only fail line;
 	- `carried`: the coats each crew member ended the last night with (ShiftLivesSystem.begin carries them);
 	- `payScale`: the night's pay multiplier (ShiftNightFormulas.payScale, folded into the review's payScale, so
 	  ShiftPaySystem pays it once per shift as before);
-	- `settle` (each night's results, once per shift): the night's clearance joins the week; on the week's last night a met
-	  weekly quota pays every present crew member the week bonus in Credits (ShiftPaySystem.payAll through the same
-	  Currency grant as a shift's pay), a missed one fires the crew; a wipe ends the run;
+	- `settle` (each night's results, once per shift): a missed goal fires the crew and a wipe ends the run; surviving a
+	  week's last night pays every present crew member the week bonus in Credits (ShiftPaySystem.payAll through the
+	  same Currency grant as a shift's pay) and shows the week report (the state's `weekBonus`);
 	- `decide` (the vote): Next night moves the run on, Clock out ends it and sends the crew home with their pay; a run
 	  already over (fired or wiped) always goes home;
 	- `stamp` / `minTier`: the run's ShiftState fields and the manager's start tier for the night.
@@ -132,13 +132,18 @@ function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 			if night == nil or results == nil then
 				return
 			end
-			local settlement =
-				tracker:settle(state.shift, results.cleared, state.outcome == RoundConstants.OUTCOME_WIPED, lives)
+			local settlement = tracker:settle(
+				state.shift,
+				results.cleared,
+				results.quotaMet,
+				state.outcome == RoundConstants.OUTCOME_WIPED,
+				lives
+			)
 			if settlement == nil then
 				return
 			end
 			log:info(
-				`night {night} settled: week {settlement.weekCleared}/{state.weekQuota or 0}, bonus {settlement.bonus}, {settlement.runOver or "on"}`
+				`night {night} settled: {results.cleared}/{results.quota}, bonus {settlement.bonus}, {settlement.runOver or "on"}`
 			)
 			if settlement.bonus > 0 then
 				ShiftPaySystem.payAll(

@@ -46,16 +46,24 @@ function ShiftNightFormulas.seconds(night: number): number
 	return lengths[math.min(ShiftNightFormulas.week(night), #lengths)]
 end
 
+-- Week `week`'s starting share: QUOTA_SCALE by week, then +QUOTA_GROWTH a week.
+local function weekScale(week: number): number
+	local scales = ShiftNightConstants.QUOTA_SCALE
+	if week <= #scales then
+		return scales[week]
+	end
+	return scales[#scales] + (week - #scales) * ShiftNightConstants.QUOTA_GROWTH
+end
+
 --[=[
-	The night's goal as a share of the shift contract: QUOTA_SCALE by week, then +QUOTA_GROWTH a week, at most
-	QUOTA_SCALE_CAP.
+	The night's goal as a share of the shift contract: its week's share on the week's first night, climbing evenly toward
+	the next week's over the week's nights (so it rises a little every night), at most QUOTA_SCALE_CAP.
 ]=]
 function ShiftNightFormulas.quotaScale(night: number): number
-	local scales = ShiftNightConstants.QUOTA_SCALE
 	local week = ShiftNightFormulas.week(night)
-	local scale = if week <= #scales
-		then scales[week]
-		else scales[#scales] + (week - #scales) * ShiftNightConstants.QUOTA_GROWTH
+	local from = weekScale(week)
+	local step = (weekScale(week + 1) - from) / ShiftNightConstants.WEEK_NIGHTS
+	local scale = from + step * (ShiftNightFormulas.nightOfWeek(night) - 1)
 	return math.min(scale, ShiftNightConstants.QUOTA_SCALE_CAP)
 end
 
@@ -70,13 +78,6 @@ function ShiftNightFormulas.nightQuota(contract: number, night: number): number
 end
 
 --[=[
-	The weekly quota for the week `night` is in: its WEEK_NIGHTS nights' goals together.
-]=]
-function ShiftNightFormulas.weekQuota(contract: number, night: number): number
-	return ShiftNightFormulas.nightQuota(contract, night) * ShiftNightConstants.WEEK_NIGHTS
-end
-
---[=[
 	The night's pay multiplier: 1 on night 1, +PAY_STEP each night after.
 ]=]
 function ShiftNightFormulas.payScale(night: number): number
@@ -84,7 +85,7 @@ function ShiftNightFormulas.payScale(night: number): number
 end
 
 --[=[
-	The Credits each crew member gets for meeting week `week`'s quota.
+	The Credits each crew member gets for surviving week `week`.
 ]=]
 function ShiftNightFormulas.weekBonus(week: number): number
 	return math.max(1, math.floor(week)) * ShiftNightConstants.WEEK_BONUS

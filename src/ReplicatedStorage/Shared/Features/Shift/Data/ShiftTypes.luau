@@ -33,10 +33,11 @@ export type Platform = "pc" | "phone" | "tablet" | "console" | "unknown"
 export type Vote = "another" | "depot"
 
 -- How a crew's trip runs (ShiftNightConstants.MODE_KEY on the depart payload): "night" is the Night Shift run (nights
--- in a row, a weekly quota every WEEK_NIGHTS nights, no end); "quick" is one shift, as before.
+-- in a row, each night's goal the only fail line, a week every WEEK_NIGHTS nights, no end); "quick" is one shift, as
+-- before.
 export type RunMode = "night" | "quick"
 
--- Why a Night Shift run ended: the weekly quota was missed ("fired"), the whole crew ran out of coats ("wiped"), or the
+-- Why a Night Shift run ended: a night's goal was missed ("fired"), the whole crew ran out of coats ("wiped"), or the
 -- crew voted Clock out and went home with their pay ("clockout").
 export type RunOver = "fired" | "wiped" | "clockout"
 
@@ -76,14 +77,13 @@ export type ShiftState = {
 	-- are still in the shift (in the server and not caught; nil until first counted). ShiftClockOutRules.
 	punched: { number }?,
 	crewIn: number?,
-	-- The run's mode (nil reads "quick"). Night Shift only (nil otherwise): this night's number (from 1), its week, the
-	-- week's quota (ShiftNightFormulas.weekQuota) and the Gloom the crew has cleared toward it this week (this night's
-	-- clearance included once the night ends). `quota` stays this night's goal.
+	-- The run's mode (nil reads "quick"). Night Shift only (nil otherwise): this night's number (from 1) and its week.
+	-- `quota` is this night's goal, the run's only fail line. `weekBonus` is set on the results of a survived week's
+	-- last night (the week report: the Credits bonus each crew member got) until the next night.
 	runMode: RunMode?,
 	night: number?,
 	week: number?,
-	weekQuota: number?,
-	weekCleared: number?,
+	weekBonus: number?,
 	-- Night Shift only: set once the run is over (nil while it goes on), and the night it ended on. A fired or wiped
 	-- crew skips the vote and is sent home after the results.
 	runOver: RunOver?,
@@ -203,8 +203,7 @@ export type ShiftSnapshot = {
 	runMode: RunMode?,
 	night: number?,
 	week: number?,
-	weekQuota: number?,
-	weekCleared: number?,
+	weekBonus: number?,
 	runOver: RunOver?,
 	nightReached: number?,
 }

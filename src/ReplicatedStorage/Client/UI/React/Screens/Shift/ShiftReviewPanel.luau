@@ -231,10 +231,11 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 		end)
 	end, deps)
 	local nodes: Nodes = headline(view, phone, canvas)
-	local ended = view.ended
+	local ended = view.ended or view.report
 	if ended ~= nil then
-		-- A Night Shift run that is over: how it ended and the night reached, on the tab's spot (and over the phone's
-		-- title), coral for a bad ending, gold for a clock-out.
+		-- A Night Shift run that is over (how it ended and the night reached) or a survived week's report (the nights
+		-- survived and the bonus), on the tab's spot (and over the phone's title), coral for a bad ending, gold for a
+		-- clock-out or a week done.
 		nodes.tab = e(ToonPill, {
 			text = ended.line,
 			hue = if ended.good then "gold" else "coral",

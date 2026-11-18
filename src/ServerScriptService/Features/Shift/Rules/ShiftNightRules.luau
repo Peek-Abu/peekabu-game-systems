@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	ShiftNightRules: the Night Shift run's decisions (ShiftNightConstants, ShiftNightFormulas). It reads the run mode
-	off the untrusted depart payload (`parseMode`), keeps the weekly quota the sum of its nights' goals (`weekQuota`),
-	settles a night at its results (`settle`: the week's clearance, the week bonus, fired or wiped) and stamps the run's
-	fields onto the shift's state, raising a running night's tier to its start tier (`stamp`, `minTier`). Pure.
+	off the untrusted depart payload (`parseMode`), settles a night at its results (`settle`: tonight's goal is the only
+	fail line, a wipe ends the run, a survived week pays its bonus) and stamps the run's fields onto the shift's state,
+	raising a running night's tier to its start tier (`stamp`, `minTier`). Pure.
 
 	@class ShiftNightRules
 ]=]
@@ -23,8 +23,8 @@ export type NightView = {
 	runMode: RunMode,
 	night: number?,
 	week: number?,
-	weekQuota: number?,
-	weekCleared: number?,
+	-- Set on the results of a survived week's last night (the week report): the bonus each crew member got.
+	weekBonus: number?,
 	runOver: RunOver?,
 	nightReached: number?,
 }
@@ -32,22 +32,15 @@ export type NightView = {
 -- One night's end, as `settle` reads it.
 export type NightEnd = {
 	night: number,
-	-- The week's clearance before this night, and its quota.
-	weekCleared: number,
-	weekQuota: number,
-	-- The Gloom this night cleared.
-	cleared: number,
+	-- Tonight's goal was met (the review's GOAL DONE!, ShiftResults.quotaMet).
+	met: boolean,
 	-- Everyone ran out of coats (Round's "wiped").
 	wiped: boolean?,
 }
 
 export type Settlement = {
-	-- The week's clearance with this night's added.
-	weekCleared: number,
-	-- Credits each present crew member gets for meeting the weekly quota (0: none).
+	-- Credits each present crew member gets for surviving the week (0: none).
 	bonus: number,
-	-- The weekly quota was met: the next night starts a new week.
-	newWeek: boolean,
 	-- The run is over (nil: it goes on).
 	runOver: RunOver?,
 }
@@ -72,35 +65,21 @@ function ShiftNightRules.parseMode(value: unknown): RunMode
 end
 
 --[=[
-	The weekly quota as of `night`: the goals of the week's nights already played (`goalsBefore`) plus this night's
-	`goal` for this night and each one left in the week. On the week's last night it is exactly its nights' goals.
-]=]
-function ShiftNightRules.weekQuota(goalsBefore: number, goal: number, night: number): number
-	local left = ShiftNightConstants.WEEK_NIGHTS - ShiftNightFormulas.nightOfWeek(night) + 1
-	return goalsBefore + goal * left
-end
-
---[=[
-	A night's end: its clearance joins the week's. On the week's last night a met weekly quota pays the week bonus and
-	starts a new week, a missed one fires the crew. A wipe ends the run too (a missed week still reads "fired").
+	A night's end (owner 11-18: each night's goal is the only fail line, no weekly quota). A wipe ends the run
+	("wiped"); otherwise a missed goal fires the crew ("fired"); a met goal on the week's last night pays the week
+	bonus (a reward, never a goal).
 ]=]
 function ShiftNightRules.settle(input: NightEnd): Settlement
-	local weekCleared = input.weekCleared + math.max(0, input.cleared)
-	local bonus = 0
-	local newWeek = false
-	local runOver: RunOver? = nil
-	if ShiftNightFormulas.endsWeek(input.night) then
-		if weekCleared >= input.weekQuota then
-			bonus = ShiftNightFormulas.weekBonus(ShiftNightFormulas.week(input.night))
-			newWeek = true
-		else
-			runOver = "fired"
-		end
+	if input.wiped == true then
+		return { bonus = 0, runOver = "wiped" }
 	end
-	if input.wiped == true and runOver == nil then
-		runOver = "wiped"
+	if not input.met then
+		return { bonus = 0, runOver = "fired" }
 	end
-	return { weekCleared = weekCleared, bonus = bonus, newWeek = newWeek, runOver = runOver }
+	local bonus = if ShiftNightFormulas.endsWeek(input.night)
+		then ShiftNightFormulas.weekBonus(ShiftNightFormulas.week(input.night))
+		else 0
+	return { bonus = bonus, runOver = nil }
 end
 
 --[=[
@@ -123,8 +102,7 @@ function ShiftNightRules.stamp(state: ShiftTypes.ShiftState, view: NightView, tr
 	nextState.runMode = view.runMode
 	nextState.night = view.night
 	nextState.week = view.week
-	nextState.weekQuota = view.weekQuota
-	nextState.weekCleared = view.weekCleared
+	nextState.weekBonus = view.weekBonus
 	nextState.runOver = view.runOver
 	nextState.nightReached = view.nightReached
 	if nextState.phase == "running" then

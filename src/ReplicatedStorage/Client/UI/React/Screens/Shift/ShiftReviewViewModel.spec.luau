@@ -496,7 +496,7 @@ return function()
 	end)
 
 	describe("Night Shift", function()
-		local NIGHT = { runMode = "night", night = 4, week = 2, weekQuota = 1500, weekCleared = 900 }
+		local NIGHT = { runMode = "night", night = 4, week = 1 }
 
 		it("keeps a quick shift's vote and buttons as they were", function()
 			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
@@ -528,6 +528,19 @@ return function()
 			expect(view.title).to.equal("FIRED!")
 			expect(view.met).to.equal(false)
 			expect(string.find(view.ended.line, "night 6", 1, true)).to.be.ok()
+		end)
+
+		it("heads the last night of a survived week with the week report, and still votes", function()
+			local done = table.clone(NIGHT)
+			done.night = 5
+			done.weekBonus = 150
+			local view = ShiftReviewViewModel.review(snapshot(done), nil, 4, 100, false)
+			expect(view.ended).to.equal(nil)
+			expect(view.report).to.be.ok()
+			expect(view.title).to.equal("WEEK 1 DONE!")
+			expect(view.voting).to.equal(true)
+			expect(view.another.label).to.equal("NEXT: NIGHT 6")
+			expect(ShiftReviewViewModel.review(snapshot(NIGHT), nil, 4, 100, false).report).to.equal(nil)
 		end)
 
 		it("takes no vote once the run is over: the crew heads home when the clock runs out", function()

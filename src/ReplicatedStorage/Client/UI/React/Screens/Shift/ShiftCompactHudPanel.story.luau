@@ -2,7 +2,7 @@
 --[=[
     ShiftCompactHudPanel.story: the live V1 shift HUD in UI Labs. EmptyHands, Equipped and CrewOpen expose
     equipment/disclosure states; Variant exposes quota/overtime/clock-out, and Phone uses an 844x390 frame. Night
-    (0: a quick shift) makes it a Night Shift's night, with the week goal ("This week: 900 / 1,500") under the meter.
+    (0: a quick shift) makes it a Night Shift's night (its length on the card; tonight's goal only, owner 11-18).
     Compare with the V1 shift renders; real touch input is verified separately from this visual story.
 ]=]
 
@@ -67,8 +67,6 @@ return UILabs.CreateReactStory({
 		snapshot.runMode = "night"
 		snapshot.night = night
 		snapshot.week = ShiftNightFormulas.week(night)
-		snapshot.weekQuota = ShiftNightFormulas.weekQuota(500, night)
-		snapshot.weekCleared = 780
 	end
 	local me: PublicPlayerTypes.PublicPlayer = {}
 	for key, value in ShiftStoryFixtures.me do

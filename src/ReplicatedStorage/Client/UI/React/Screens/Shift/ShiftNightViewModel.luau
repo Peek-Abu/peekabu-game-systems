@@ -1,11 +1,12 @@
 --!strict
 --[=[
-	ShiftNightViewModel: the Night Shift words every shift screen shares (owner concept B 11-18: nights in a row, a
-	weekly quota every ShiftNightConstants.WEEK_NIGHTS nights, no end). `of` reads the run off the shift snapshot (nil
-	on a quick shift or an older snapshot, so every screen keeps its quick-shift look); the landing readout's NIGHT n /
-	WEEK w (`nightTitle`, `weekTitle`), the HUD's "This week: 900 / 1,500" (`weekLine`: the week's Gloom so far plus
-	tonight's while the night runs), the vote's "NEXT: NIGHT 5" and "CLOCK OUT" (`votes`), and the run-over header
-	(`ended`: FIRED!, OUT OF COATS or CLOCKED OUT, and the night reached). Words at a kid's reading level. Pure.
+	ShiftNightViewModel: the Night Shift words every shift screen shares (owner concept B 11-18: nights in a row, each
+	night's goal the only fail line, a week every ShiftNightConstants.WEEK_NIGHTS nights, no end). `of` reads the run
+	off the shift snapshot (nil on a quick shift or an older snapshot, so every screen keeps its quick-shift look); the
+	landing readout's NIGHT n / WEEK w (`nightTitle`, `weekTitle`), the vote's "NEXT: NIGHT 6" and "CLOCK OUT"
+	(`votes`), the short week report after a survived week (`weekReport`: WEEK 1 DONE!, the nights survived and the
+	bonus) and the run-over header (`ended`: FIRED!, OUT OF COATS or CLOCKED OUT, and the night reached). Screens show
+	tonight's goal only (owner 11-18: easier to read). Words at a kid's reading level. Pure.
 
 	@class ShiftNightViewModel
 ]=]
@@ -19,9 +20,8 @@ local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils
 export type Night = {
 	night: number,
 	week: number,
-	-- The week's quota (nil until the server sets one) and the Gloom cleared toward it (tonight's once it is over).
-	weekQuota: number?,
-	weekCleared: number,
+	-- The week report's bonus: set on the results of a survived week's last night (nil otherwise).
+	weekBonus: number?,
 	-- How the run ended (nil: it goes on) and the night it reached (this night when the server names none).
 	runOver: ShiftTypes.RunOver?,
 	nightReached: number,
@@ -62,8 +62,7 @@ function ShiftNightViewModel.of(snapshot: ShiftTypes.ShiftSnapshot?): Night?
 	return {
 		night = whole,
 		week = count(snapshot.week) or ShiftNightFormulas.week(whole),
-		weekQuota = count(snapshot.weekQuota),
-		weekCleared = count(snapshot.weekCleared) or 0,
+		weekBonus = count(snapshot.weekBonus),
 		runOver = snapshot.runOver,
 		nightReached = count(snapshot.nightReached) or whole,
 	}
@@ -77,16 +76,20 @@ function ShiftNightViewModel.weekTitle(week: number): string
 	return `WEEK {math.floor(week)}`
 end
 
--- The HUD's week line: the week's Gloom so far (plus tonight's `cleared` while the night runs, before the server
--- folds it in) over the week's quota; nil without a quota.
-function ShiftNightViewModel.weekLine(night: Night, cleared: number, phase: ShiftTypes.ShiftPhase): string?
-	local quota = night.weekQuota
-	if quota == nil then
+-- The short week report (owner 11-18) on the results of a survived week's last night: WEEK w DONE!, the nights
+-- survived and the bonus; nil on any other night and once the run is over (its own header wins). Later weeks may add
+-- choices here (items, power-ups, heals, a map pick, the company); none yet, so it stays one line.
+function ShiftNightViewModel.weekReport(night: Night): EndView?
+	local bonus = night.weekBonus
+	if bonus == nil or night.runOver ~= nil then
 		return nil
 	end
-	local tonight = if phase == "running" or phase == "starting" then cleared else 0
-	local done = math.max(0, night.weekCleared + tonight)
-	return `This week: {ShiftNightViewModel.commas(done)} / {ShiftNightViewModel.commas(quota)}`
+	local nights = if night.night == 1 then "1 night" else `{night.night} nights`
+	return {
+		title = `WEEK {night.week} DONE!`,
+		line = `{nights} survived · Week bonus +{ShiftNightViewModel.commas(bonus)} Credits`,
+		good = true,
+	}
 end
 
 -- The vote's two choices: the next night (by number) or clocking out with the pay.
@@ -106,7 +109,7 @@ function ShiftNightViewModel.ended(night: Night): EndView?
 	end
 	local reached = `You got to night {night.nightReached}`
 	if over == "fired" then
-		return { title = "FIRED!", line = `You missed the week's goal · {reached}`, good = false }
+		return { title = "FIRED!", line = `You missed tonight's goal · {reached}`, good = false }
 	elseif over == "wiped" then
 		return { title = "OUT OF COATS", line = `Everyone ran out of coats · {reached}`, good = false }
 	end

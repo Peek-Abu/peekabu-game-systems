@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	ShiftNightTracker: the Night Shift run's record, kept outside the shift's per-run clearing (ShiftRunSystem's
-	`clearRun`/`clearShift` never touch it), so it lasts from night to night: the run's mode, the night number, the
-	week's goals and clearance, the weekly quota, the coats each crew member ended the last night with, every night's
-	result, and how the run ended. A quick run keeps only its mode. The decisions are ShiftNightRules'.
+	`clearRun`/`clearShift` never touch it), so it lasts from night to night: the run's mode, the night number, tonight's
+	goal, the week report's bonus after a survived week, the coats each crew member ended the last night with, every
+	night's result, and how the run ended. A quick run keeps only its mode. The decisions are ShiftNightRules'.
 
 	A run starts at the first night's preparation (`needsStart`: no run yet, or the last one is over); Next night moves
 	it on (`nextNight`); each night's results settle it once per shift (`settle`); Clock out, a firing or a wipe ends it
@@ -36,19 +36,20 @@ export type ShiftNightTracker = {
 	mode: (self: ShiftNightTracker) -> RunMode,
 	-- The night number (nil in a quick run).
 	night: (self: ShiftNightTracker) -> number?,
-	-- This night's goal (ShiftNightFormulas.nightQuota), which sets the weekly quota as of tonight.
+	-- This night's goal (ShiftNightFormulas.nightQuota), kept in the night's record.
 	setGoal: (self: ShiftNightTracker, goal: number) -> (),
-	-- The night's results for shift `shift`: adds `cleared` to the week, keeps `lives` (userId -> coats left, 0 for
-	-- out) for the next night, and ends the run when fired or wiped. Nil in a quick run, after the run is over, and for
-	-- a shift already settled.
+	-- The night's results for shift `shift`: `cleared` Gloom and whether tonight's goal was `met`; keeps `lives`
+	-- (userId -> coats left, 0 for out) for the next night, ends the run when fired or wiped, and holds the week report's
+	-- bonus after a survived week. Nil in a quick run, after the run is over, and for a shift already settled.
 	settle: (
 		self: ShiftNightTracker,
 		shift: number,
 		cleared: number,
+		met: boolean,
 		wiped: boolean,
 		lives: { [number]: number }
 	) -> ShiftNightRules.Settlement?,
-	-- Next night: the night number moves on; after a met week the week's goals and clearance start over.
+	-- Next night: the night number moves on and the week report closes.
 	nextNight: (self: ShiftNightTracker) -> (),
 	-- Ends the run for `reason` on the current night (kept: the first reason wins).
 	finish: (self: ShiftNightTracker, reason: RunOver) -> (),
@@ -68,12 +69,8 @@ function ShiftNightTracker.new(): ShiftNightTracker
 	local runMode: RunMode = "quick"
 	local night = 1
 	local goal = 0
-	-- The goals of the week's nights already settled, and the Gloom cleared toward the week.
-	local weekGoals = 0
-	local weekCleared = 0
-	local weekQuota: number? = nil
-	-- The last settled night met its week: the next night starts a new one.
-	local weekDone = false
+	-- The week report's bonus: set when a survived week's last night settles, until the next night.
+	local weekBonus: number? = nil
 	local lives: { [number]: number }? = nil
 	local nights: { NightRecord } = {}
 	local runOver: RunOver? = nil
@@ -90,10 +87,7 @@ function ShiftNightTracker.new(): ShiftNightTracker
 			runMode = mode
 			night = 1
 			goal = 0
-			weekGoals = 0
-			weekCleared = 0
-			weekQuota = nil
-			weekDone = false
+			weekBonus = nil
 			lives = nil
 			table.clear(nights)
 			runOver = nil
@@ -111,24 +105,15 @@ function ShiftNightTracker.new(): ShiftNightTracker
 
 		setGoal = function(_self, next)
 			goal = next
-			weekQuota = ShiftNightRules.weekQuota(weekGoals, next, night)
 		end,
 
-		settle = function(_self, shift, cleared, wiped, kept)
+		settle = function(_self, shift, cleared, met, wiped, kept)
 			if not active or runMode ~= "night" or runOver ~= nil or settled == shift then
 				return nil
 			end
 			settled = shift
-			local settlement = ShiftNightRules.settle({
-				night = night,
-				weekCleared = weekCleared,
-				weekQuota = weekQuota or ShiftNightRules.weekQuota(weekGoals, goal, night),
-				cleared = cleared,
-				wiped = wiped,
-			})
-			weekCleared = settlement.weekCleared
-			weekGoals += goal
-			weekDone = settlement.newWeek
+			local settlement = ShiftNightRules.settle({ night = night, met = met, wiped = wiped })
+			weekBonus = if settlement.bonus > 0 then settlement.bonus else nil
 			lives = table.clone(kept)
 			table.insert(nights, { night = night, goal = goal, cleared = math.max(0, cleared) })
 			local over: RunOver? = settlement.runOver
@@ -141,12 +126,7 @@ function ShiftNightTracker.new(): ShiftNightTracker
 
 		nextNight = function(_self)
 			night += 1
-			weekQuota = nil
-			if weekDone then
-				weekDone = false
-				weekGoals = 0
-				weekCleared = 0
-			end
+			weekBonus = nil
 		end,
 
 		finish = function(_self, reason)
@@ -181,8 +161,7 @@ function ShiftNightTracker.new(): ShiftNightTracker
 				runMode = runMode,
 				night = night,
 				week = ShiftNightFormulas.week(night),
-				weekQuota = weekQuota,
-				weekCleared = weekCleared,
+				weekBonus = weekBonus,
 				runOver = runOver,
 				nightReached = nightReached,
 			}

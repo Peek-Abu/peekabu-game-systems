@@ -83,8 +83,6 @@ export type HudView = {
 	training: number?,
 	-- The run's map (the `shiftTransit` entry; nil: the office): it picks the meter's site line.
 	map: ShiftTypes.MapId?,
-	-- A Night Shift's week goal ("This week: 900 / 1,500", ShiftNightViewModel.weekLine); nil on a quick shift.
-	week: string?,
 }
 
 export type ButtonsView = {
@@ -312,7 +310,6 @@ function ShiftHudViewModel.hud(
 		hotbar = ShiftHotbarViewModel.hotbar(entry, snapshot.cleared, snapshot.quota),
 		endsAt = endsAt,
 		truck = snapshot.truck,
-		week = if run ~= nil then ShiftNightViewModel.weekLine(run, snapshot.cleared, snapshot.phase) else nil,
 	}
 end
 
