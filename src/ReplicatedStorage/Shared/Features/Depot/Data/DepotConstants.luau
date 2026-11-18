@@ -137,6 +137,10 @@ return table.freeze({
 	-- each truck's pick ({ [Queue pad id]: map id }), the pick's request rate, and the cards' words (kid reading level).
 	MAP_WORLD_ENTRY = "depotMap",
 	MAP_REQUEST_RATE = table.freeze({ maxRequests = 6, windowSeconds = 5 }),
+	-- The run mode pick (Night Shift or Quick shift; the ids and the default are DepotModeRules): the world entry that
+	-- publishes each truck's pick ({ [Queue pad id]: mode }) and the pick's request rate.
+	MODE_WORLD_ENTRY = "depotMode",
+	MODE_REQUEST_RATE = table.freeze({ maxRequests = 6, windowSeconds = 5 }),
 	MAP_TEXT = table.freeze({
 		office = "OFFICE",
 		school = "SCHOOL",

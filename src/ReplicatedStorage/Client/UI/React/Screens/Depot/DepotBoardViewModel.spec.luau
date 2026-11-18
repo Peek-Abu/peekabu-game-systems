@@ -367,4 +367,49 @@ return function()
 			expect(DepotBoardViewModel.board(nil, nil, false, nil).lastLine).to.equal(nil)
 		end)
 	end)
+	describe("run mode", function()
+		local function places(extra)
+			local value =
+				{ owned = nil, picked = nil, viewing = nil, role = "none", credits = 0, gleam = 0, confirming = nil }
+			for key, item in extra do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("offers Night Shift first, then Quick shift, in kid words", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, nil, places({}))
+			expect(#view.modes).to.equal(2)
+			expect(view.modes[1].key).to.equal("night")
+			expect(view.modes[1].label).to.equal(DepotPlaceConstants.MODE_TEXT.night)
+			expect(view.modes[2].key).to.equal("quick")
+			expect(view.modes[2].label).to.equal(DepotPlaceConstants.MODE_TEXT.quick)
+			expect(view.modeLine).to.equal(DepotPlaceConstants.MODE_TEXT.nightLine)
+		end)
+
+		it("marks Night Shift picked when nobody picked (the default), off a truck too", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, nil, places({}))
+			expect(view.modes[1].selected).to.equal(true)
+			expect(view.modes[2].selected).to.equal(false)
+			local bare = DepotBoardViewModel.board(nil, nil, false, nil)
+			expect(bare.modes[1].selected).to.equal(true)
+		end)
+
+		it("shows the truck's pick to its crew, and says what Quick shift is", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, 2, places({ role = "crew", mode = "quick" }))
+			expect(view.modes[1].selected).to.equal(false)
+			expect(view.modes[2].selected).to.equal(true)
+			expect(view.modeLine).to.equal(DepotPlaceConstants.MODE_TEXT.quickLine)
+		end)
+
+		it("lets only the host pick the mode", function()
+			local host = DepotBoardViewModel.board(nil, nil, false, 1, places({ role = "host" }))
+			expect(host.modes[1].canPick).to.equal(true)
+			expect(host.modes[2].canPick).to.equal(true)
+			local crew = DepotBoardViewModel.board(nil, nil, false, 2, places({ role = "crew" }))
+			expect(crew.modes[1].canPick).to.equal(false)
+			local none = DepotBoardViewModel.board(nil, nil, false, nil, places({}))
+			expect(none.modes[2].canPick).to.equal(false)
+		end)
+	end)
 end

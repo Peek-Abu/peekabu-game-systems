@@ -8,7 +8,9 @@
 	School map card's icon instead) and its monster's portrait (OccupantPortraitAssets). `advance` moves the loading bar
 	toward the client's readiness. `welcome` is a first join's welcome card in the hub (the game's name, a line, a tip
 	and the bar's words). Leaving on a teleport, the place being left shows the same cards: `leavingSlip` (the route
-	slip of the trip being left on) and `homeward` (the welcome card on the way back to the depot). Pure.
+	slip of the trip being left on) and `homeward` (the welcome card on the way back to the depot). On a Night Shift
+	(`night`) the slip wears a NIGHT n tag and its site line gives that night's length (ShiftNightFormulas.seconds).
+	Pure.
 
 	@class ShiftTransitViewModel
 ]=]
@@ -17,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftNightFormulas)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
@@ -24,6 +27,7 @@ local OccupantPortraitAssets = require(ReplicatedStorage.Client.Features.Occupan
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local ShiftNightViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftNightViewModel)
 
 export type SlipView = {
 	band: string,
@@ -46,6 +50,8 @@ export type SlipView = {
 	photo: string?,
 	photoIcon: UIAssets.ToonIcon,
 	portrait: UIAssets.ToonIcon,
+	-- A Night Shift's tag ("NIGHT 4"); nil on a quick shift.
+	night: string?,
 }
 
 -- A first join's welcome card (kid reading level).
@@ -135,21 +141,34 @@ function ShiftTransitViewModel.homeward(): WelcomeView
 	}
 end
 
-local slipOf: (client: string?, truck: number?, mapValue: ShiftTypes.MapId?, arrived: boolean) -> SlipView
+local slipOf: (
+	client: string?,
+	truck: number?,
+	mapValue: ShiftTypes.MapId?,
+	arrived: boolean,
+	night: number?
+) -> SlipView
 
-function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arrived: boolean): SlipView
+-- `night`: a Night Shift's night (ShiftNightViewModel.of), nil on a quick shift.
+function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arrived: boolean, night: number?): SlipView
 	if snapshot == nil then
-		return slipOf(nil, nil, nil, arrived)
+		return slipOf(nil, nil, nil, arrived, night)
 	end
-	return slipOf(snapshot.client, snapshot.truck, snapshot.map, arrived)
+	return slipOf(snapshot.client, snapshot.truck, snapshot.map, arrived, night)
 end
 
 -- The route slip of the trip this client is leaving on: the arrival's slip, in transit.
 function ShiftTransitViewModel.leavingSlip(leaving: ShiftTypes.TransitLeaving): SlipView
-	return slipOf(leaving.client, leaving.truck, leaving.map, false)
+	return slipOf(leaving.client, leaving.truck, leaving.map, false, nil)
 end
 
-function slipOf(client: string?, truck: number?, mapValue: ShiftTypes.MapId?, arrived: boolean): SlipView
+function slipOf(
+	client: string?,
+	truck: number?,
+	mapValue: ShiftTypes.MapId?,
+	arrived: boolean,
+	night: number?
+): SlipView
 	-- The run's map picks the site line, the tip, the picture and the portrait (the Office's when unknown).
 	local map: ShiftTypes.MapId = DepotMapRules.parse(mapValue)
 	local site = DepotMapRules.siteOf(map)
@@ -163,7 +182,9 @@ function slipOf(client: string?, truck: number?, mapValue: ShiftTypes.MapId?, ar
 		-- A training trip's slip names the training room and says what it is for, not the night's site and clock.
 		site = if client == TrainingConstants.CONTRACT.client
 			then TrainingConstants.ROOM_SITE
+			elseif night ~= nil then `{site.site} · {ShiftHudViewModel.clock(ShiftNightFormulas.seconds(night))} night`
 			else `{site.site} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} shift`,
+		night = if night ~= nil then ShiftNightViewModel.nightTitle(night) else nil,
 		tip = site.tip,
 		photo = if photo ~= "" then photo else nil,
 		photoIcon = PHOTO_ICON[map],

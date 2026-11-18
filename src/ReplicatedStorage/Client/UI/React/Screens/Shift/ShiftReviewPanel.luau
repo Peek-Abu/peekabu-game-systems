@@ -6,8 +6,10 @@
 	"SHIFT REVIEW · <client>" pill (view.pill); four stat cards whose renders break their left edge (the Credits card is the
 	gold one); the company rank (RankSlip) under them with the Manager's line and the vote's footer; CREW AWARDS on
 	the right, the first award featured on a gold card with its winner's own character standing on its corner; and
-	the crew vote: the mint ANOTHER SHIFT and the cream TO THE DEPOT with their counts, the local player's choice in
-	V2's lilac selected ring, the time left on a coral pill. Laid out at 1680x900 design px (phone 760x370,
+	the crew vote: the mint ANOTHER SHIFT and the cream TO THE DEPOT with their counts (a Night Shift's NEXT: NIGHT n
+	and CLOCK OUT; once its run is over the next night is off and a coral or gold pill on the tab's spot says how it
+	ended and the night reached, under the run-over title), the local player's choice in V2's lilac selected ring,
+	the time left on a coral pill. Laid out at 1680x900 design px (phone 760x370,
 	ShiftReviewViewModel.CANVAS) and scaled by `scale` (ShiftReviewViewModel.fit), centred. On the phone "+2 MORE
 	AWARDS" swaps in the folded awards (UI-only state); "WHAT NEXT?", the vote clock and that button share one row
 	above the vote, clear of the chosen button's lifted ring. Pills are sized from their measured labels
@@ -82,7 +84,7 @@ local function voteButton(
 	local count = if phone then 30 else 54
 	local content: Nodes = {
 		label = e(ToonText, {
-			text = if choice == "depot" then "TO THE DEPOT" else vote.label,
+			text = vote.button,
 			textSize = if phone then 20 else 38,
 			position = UDim2.fromOffset(if phone then 10 else 22, 0),
 			size = UDim2.new(1, -(count + (if phone then 22 else 44)), 1, -4),
@@ -109,7 +111,7 @@ local function voteButton(
 		size = UDim2.fromOffset(width, height),
 		position = position,
 		selected = vote.mine,
-		disabled = not open,
+		disabled = not open or vote.disabled,
 		content = content,
 		sound = if choice == "another" then "cta" else "back",
 		onActivated = function()
@@ -229,7 +231,20 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 		end)
 	end, deps)
 	local nodes: Nodes = headline(view, phone, canvas)
-	if not phone then
+	local ended = view.ended
+	if ended ~= nil then
+		-- A Night Shift run that is over: how it ended and the night reached, on the tab's spot (and over the phone's
+		-- title), coral for a bad ending, gold for a clock-out.
+		nodes.tab = e(ToonPill, {
+			text = ended.line,
+			hue = if ended.good then "gold" else "coral",
+			textSize = if phone then 14 else 26,
+			anchor = Vector2.new(0.5, 0),
+			position = UDim2.fromOffset(canvas.X / 2, if phone then -8 else 0),
+			size = UDim2.fromOffset(if phone then 440 else 820, if phone then 24 else 52),
+			zIndex = 4,
+		})
+	elseif not phone then
 		nodes.tab = e(ToonPill, {
 			text = view.pill,
 			hue = "night",
@@ -338,7 +353,7 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 	local voteRow = ShiftReviewViewModel.voteRow(awardsBottom, phone)
 	local headerTop = voteRow.headerTop
 	nodes.voteTitle = e(ToonText, {
-		text = "WHAT NEXT?",
+		text = if view.voting then "WHAT NEXT?" else view.voteTitle,
 		textSize = if phone then 18 else 40,
 		position = UDim2.fromOffset(right, headerTop),
 		size = UDim2.fromOffset(if phone then 120 else 260, if phone then 22 else 44),
@@ -350,7 +365,7 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 		headerTop + (if phone then ShiftReviewViewModel.PHONE_CLOCK.top else 4)
 	)
 	nodes.voteClock = e(ToonPill, {
-		text = `VOTE · {view.voteClock}`,
+		text = if view.voting then `VOTE · {view.voteClock}` else `HOME · {view.voteClock}`,
 		hue = "coral",
 		textSize = if phone then 12 else 20,
 		padX = if phone then 8 else nil,
@@ -359,7 +374,8 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 	})
 	local gap = if phone then 10 else 20
 	local half = (width - gap) / 2
-	for index = 1, 2 do
+	-- A Night Shift run that is over takes no vote: the header and the clock home stand alone.
+	for index = 1, if view.voting then 2 else 0 do
 		local choice: ShiftTypes.Vote = if index == 1 then "another" else "depot"
 		local vote = if index == 1 then view.another else view.depot
 		local at = UDim2.fromOffset(right + (index - 1) * (half + gap), voteRow.buttonsTop)

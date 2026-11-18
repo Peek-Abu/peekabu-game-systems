@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	DepotPlaceSender: the places menu's two requests (p1-places-menu): `pick` sends a truck host's place pick
-	(DepotEvents.PickMap) and `buy` a place bought with Credits (DepotEvents.BuyPlace). The server decides both
-	(DepotMapSystem, DepotPlaceSystem); the menu sees the result in the synced pick and `places` slice. Its own module
+	(DepotEvents.PickMap), `pickMode` the host's run mode pick (DepotEvents.PickMode: Night Shift or Quick shift) and
+	`buy` a place bought with Credits (DepotEvents.BuyPlace). The server decides all three (DepotMapSystem,
+	DepotPlaceSystem); the menu sees the result in the synced picks and `places` slice. Its own module
 	so the places menu (DepotBoardScreen, under DepotServiceClient's scene) can send without requiring the service.
 	Thin ByteNet shell (spec-exempt).
 
@@ -19,6 +20,11 @@ local DepotPlaceSender = {}
 -- The host picks `map` for the truck they are aboard (the server checks they host it and own the place).
 function DepotPlaceSender.pick(map: ShiftTypes.MapId)
 	DepotEvents.packets.PickMap.send(map)
+end
+
+-- The host picks run mode `mode` for the truck they are aboard (the server checks they host it).
+function DepotPlaceSender.pickMode(mode: ShiftTypes.RunMode)
+	DepotEvents.packets.PickMode.send(mode)
 end
 
 -- Buys `map` with Credits, `gleam` Gleam at most paying the rest when short (0: Credits only). The server checks

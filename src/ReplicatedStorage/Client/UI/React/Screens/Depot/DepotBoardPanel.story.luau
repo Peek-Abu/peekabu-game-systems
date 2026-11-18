@@ -4,6 +4,8 @@
 	side-by-side check against Figma 2a (31:458) and 2b (31:516). The board is drawn in a fixed screen-sized frame
 	centred in the viewport: `Phone` switches to the 844x390 landscape phone, `Small` draws desktop at 1366x768 (the
 	board scales down to fit), `LastShift` shows or omits the returning player's card and `QuotaMet` stamps it.
+	`Host` reads the board as the truck's host (the mode buttons pick) and `Quick` marks Quick shift as the truck's
+	run mode (Night Shift otherwise, the default).
 
 	@class DepotBoardPanel.story
 ]=]
@@ -33,6 +35,8 @@ return UILabs.CreateReactStory({
 		Small = false,
 		LastShift = true,
 		QuotaMet = true,
+		Host = true,
+		Quick = false,
 	},
 }, function(props)
 	local phone: boolean = props.controls.Phone
@@ -53,12 +57,25 @@ return UILabs.CreateReactStory({
 		else nil
 	local screen = if phone then PHONE elseif small then SMALL else DESKTOP
 	local layout: UIPaperConstants.Layout = if phone then "phone" else "desktop"
+	local places: DepotBoardViewModel.PlacesInput = {
+		owned = nil,
+		picked = "office",
+		viewing = nil,
+		role = if props.controls.Host then "host" else "crew",
+		credits = 0,
+		gleam = 0,
+		confirming = nil,
+		mode = if props.controls.Quick then "quick" else "night",
+	}
 	local panelProps: DepotBoardPanel.DepotBoardPanelProps = {
-		view = DepotBoardViewModel.board(DepotConstants.CONTRACTS[1].id, last, phone),
+		view = DepotBoardViewModel.board(DepotConstants.CONTRACTS[1].id, last, phone, 2, places),
 		layout = layout,
 		scale = DepotBoardViewModel.fit(screen, phone),
 		onClose = function()
 			print("close")
+		end,
+		onPickMode = function(mode)
+			print("pick mode", mode)
 		end,
 	}
 	return e("Frame", {

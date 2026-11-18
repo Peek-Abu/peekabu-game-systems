@@ -6,7 +6,7 @@
 	DepotStore.card (kind "arrival") through ShiftLandingRules.watch, and starts at ShiftLandingRules.startAt (a beat
 	after the card closed; the reveal's fallback when no card showed). From the start it plays the three screens one
 	at a time (ShiftLandingRules.screenAt: temperature and weather, the time, the anomaly level; ShiftLandingViewModel
-	.screens), driving the screen's `alpha` binding on a Heartbeat and re-rendering only when the screen changes. Drawn
+	.screens; a Night Shift plays four, NIGHT n / WEEK w first, read off the shift snapshot by ShiftNightViewModel), driving the screen's `alpha` binding on a Heartbeat and re-rendering only when the screen changes. Drawn
 	at the game's one UI scale (PaperHudFrame, usePaperHudScale) where ShiftLandingViewModel.frame puts it (under the
 	crew list, which grows with the crew). Once ShiftLandingRules.over it stops and draws nothing until the next
 	arrival. Hidden while the transit screen covers the view. HUD widget shell (exempt; the timing is the specced
@@ -28,6 +28,7 @@ local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.Pa
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftLandingReadout = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftLandingReadout)
 local ShiftLandingViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftLandingViewModel)
+local ShiftNightViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftNightViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -48,6 +49,10 @@ local function ShiftLandingHud(): React.ReactNode
 	local screen, setScreen = React.useState(0)
 	local doneId, setDoneId = React.useState(0)
 	local landingId = if landing ~= nil then landing.id else 0
+	local run = ShiftNightViewModel.of(shift)
+	-- How many screens this arrival plays, read by the Heartbeat step (a Night Shift's run can sync after the start).
+	local count = React.useRef(ShiftLandingRules.SCREENS)
+	count.current = if run ~= nil then ShiftLandingRules.SCREENS + 1 else ShiftLandingRules.SCREENS
 	React.useEffect(function(): (() -> ())?
 		local current = landing
 		if current == nil then
@@ -81,13 +86,14 @@ local function ShiftLandingHud(): React.ReactNode
 				return
 			end
 			local elapsed = now - start
-			local index, value = ShiftLandingRules.screenAt(elapsed)
+			local screens = count.current or ShiftLandingRules.SCREENS
+			local index, value = ShiftLandingRules.screenAt(elapsed, screens)
 			setAlpha(value)
 			if index ~= shown then
 				shown = index
 				setScreen(index)
 			end
-			if ShiftLandingRules.over(elapsed) then
+			if ShiftLandingRules.over(elapsed, screens) then
 				stop()
 				setDoneId(current.id)
 			end
@@ -99,7 +105,7 @@ local function ShiftLandingHud(): React.ReactNode
 	if landing == nil or doneId == landing.id or covered or screen == 0 then
 		return nil
 	end
-	local screens = ShiftLandingViewModel.screens(landing.seed, if transit ~= nil then transit.map else nil)
+	local screens = ShiftLandingViewModel.screens(landing.seed, if transit ~= nil then transit.map else nil, run)
 	local current = screens[screen]
 	if current == nil then
 		return nil

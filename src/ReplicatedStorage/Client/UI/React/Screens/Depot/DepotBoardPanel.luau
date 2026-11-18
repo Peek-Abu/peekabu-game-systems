@@ -13,7 +13,9 @@
 	host's truck (`onPick`); anyone else's tap only shows that place's detail (`onView`). The line under the header
 	says who picks. The detail: the place's monster on site (Harlow or Bramble), the client, four contract chips with
 	renders (QUOTA, SHIFT, PAY, CREW), the tip line, FIND A TRUCK and READ THE BRIEF, and the returning player's last
-	shift. Drawn at 1580x900 (phone 748x320) and scaled by `scale` (DepotBoardViewModel.fit), centred.
+	shift. Beside the tabs (on a phone, along the bottom) the run mode pick: NIGHT SHIFT (the default) and QUICK SHIFT,
+	the truck's pick in V2's lilac ring, the other receded; only the host's tap picks (`onPickMode`), with a line
+	saying what the picked mode is. Drawn at 1580x900 (phone 748x320) and scaled by `scale` (DepotBoardViewModel.fit), centred.
 	Presentational: it draws the view it is given (specced in DepotBoardViewModel).
 
 	@class DepotBoardPanel
@@ -56,6 +58,8 @@ export type DepotBoardPanelProps = {
 	onView: ((map: ShiftTypes.MapId) -> ())?,
 	-- A tap on a locked place's BUY (the first asks SURE?, the second buys), with the Gleam it offered for the rest.
 	onBuy: ((map: ShiftTypes.MapId, gleam: number) -> ())?,
+	-- A host's tap on a run mode (Night Shift or Quick shift) for their truck.
+	onPickMode: ((mode: ShiftTypes.RunMode) -> ())?,
 }
 
 type Nodes = { [string]: React.ReactNode }
@@ -96,6 +100,37 @@ local function chip(view: DepotBoardViewModel.ChipView, phone: boolean, size: Ve
 		radius = if phone then 12 else 20,
 		children = face,
 	})
+end
+
+-- The run mode buttons (DepotBoardViewModel's `modes`), side by side from `origin`, each `size`.
+local function modeButtons(
+	props: DepotBoardPanelProps,
+	phone: boolean,
+	origin: Vector2,
+	size: Vector2,
+	gap: number
+): Nodes
+	local nodes: Nodes = {}
+	local onPickMode = props.onPickMode
+	for index, mode in props.view.modes do
+		nodes[`mode_{mode.key}`] = e(ToonButton, {
+			variant = if mode.selected then "grape" else "secondary",
+			sound = "tab",
+			text = mode.label,
+			textSize = if phone then 15 else 26,
+			small = phone,
+			selected = mode.selected,
+			receded = not mode.selected,
+			position = UDim2.fromOffset(origin.X + (index - 1) * (size.X + gap), origin.Y),
+			size = UDim2.fromOffset(size.X, size.Y),
+			onActivated = function()
+				if mode.canPick and onPickMode ~= nil then
+					onPickMode(mode.key)
+				end
+			end,
+		})
+	end
+	return nodes
 end
 
 type Monster = { image: string, title: string, line: string }
@@ -201,13 +236,28 @@ local function desktop(props: DepotBoardPanelProps): Nodes
 		})
 		x += tab.width + 22
 	end
-	-- Who picks the place, beside the tabs.
+	-- The run mode pick at the row's right end, and between it and the tabs who picks and what the mode is.
+	local modeSize = Vector2.new(250, 58)
+	local modesLeft = DESKTOP.X - 44 - 2 * modeSize.X - 16
+	for key, node in modeButtons(props, false, Vector2.new(modesLeft, 178), modeSize, 16) do
+		nodes[key] = node
+	end
 	nodes.pickLine = e(ToonText, {
 		text = view.pickLine,
-		textSize = 26,
+		textSize = 24,
 		anchor = Vector2.new(1, 0),
-		position = UDim2.new(1, -44, 0, 190),
-		size = UDim2.fromOffset(DESKTOP.X - x - 60, 34),
+		position = UDim2.fromOffset(modesLeft - 20, 176),
+		size = UDim2.fromOffset(modesLeft - x - 40, 30),
+		align = "right",
+		fit = true,
+	})
+	nodes.modeLine = e(ToonText, {
+		text = view.modeLine,
+		font = "body",
+		textSize = 20,
+		anchor = Vector2.new(1, 0),
+		position = UDim2.fromOffset(modesLeft - 20, 208),
+		size = UDim2.fromOffset(modesLeft - x - 40, 26),
 		align = "right",
 		fit = true,
 	})
@@ -313,7 +363,7 @@ local function phoneNodes(props: DepotBoardPanelProps): Nodes
 	end
 	for index, view_chip in view.chips do
 		nodes[`chip{index}`] =
-			chip(view_chip, true, Vector2.new(124, 42), UDim2.fromOffset(28 + (index - 1) * 134, 232))
+			chip(view_chip, true, Vector2.new(124, 42), UDim2.fromOffset(28 + (index - 1) * 134, 226))
 	end
 	nodes.find = e(ToonButton, {
 		variant = "primary",
@@ -326,11 +376,15 @@ local function phoneNodes(props: DepotBoardPanelProps): Nodes
 		sound = "cta",
 		onActivated = props.onClose,
 	})
+	-- The run mode pick along the bottom (44 px tall: a thumb's target), then the client and who picks.
+	for key, node in modeButtons(props, true, Vector2.new(12, 274), Vector2.new(132, 42), 8) do
+		nodes[key] = node
+	end
 	nodes.tip = e(ToonText, {
 		text = `{view.client} · {view.pickLine}`,
 		textSize = 14,
-		position = UDim2.fromOffset(16, 282),
-		size = UDim2.fromOffset(530, 22),
+		position = UDim2.fromOffset(292, 284),
+		size = UDim2.fromOffset(260, 22),
 		fit = true,
 	})
 	return nodes

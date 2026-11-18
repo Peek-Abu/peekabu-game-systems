@@ -89,6 +89,26 @@ return function()
 			expect(view.tip).to.equal("Bramble the owl still guards these halls.")
 		end)
 
+		it("tags a Night Shift's slip with the night and gives that night's length", function()
+			local view = ShiftTransitViewModel.slip(
+				{ holds = {}, client = "Harlow & Finch Ltd.", truck = 1, map = "office" },
+				false,
+				4
+			)
+			expect(view.night).to.equal("NIGHT 4")
+			expect(view.site).to.equal("4th floor offices · 5:00 night")
+			local first = ShiftTransitViewModel.slip({ holds = {}, client = "Harlow & Finch Ltd." }, false, 1)
+			expect(first.site).to.equal("4th floor offices · 3:00 night")
+		end)
+
+		it("leaves a quick shift's slip untagged", function()
+			local view = ShiftTransitViewModel.slip({ holds = {}, client = "Harlow & Finch Ltd." }, false)
+			expect(view.night).to.equal(nil)
+			expect(ShiftTransitViewModel.leavingSlip({ home = false, client = "Harlow & Finch Ltd." }).night).to.equal(
+				nil
+			)
+		end)
+
 		it("keeps the Office run's slip as it was", function()
 			local view = ShiftTransitViewModel.slip(
 				{ holds = {}, client = "Harlow & Finch Ltd.", truck = 1, map = "office" },

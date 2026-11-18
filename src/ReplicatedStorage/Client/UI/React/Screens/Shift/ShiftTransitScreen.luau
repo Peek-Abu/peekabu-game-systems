@@ -2,7 +2,7 @@
 --[=[
 	ShiftTransitScreen: the transit screen's root, mounted on the Overlay layer by ShiftServiceClient (above the HUD and
 	every panel). Draws ShiftTransitPanel from ShiftTransitStore (the cover, the welcome card on a first join to the hub, the ARRIVED stamp, the loading bar's progress, the slip's lines through
-	ShiftTransitViewModel; while leaving on a teleport, the trip's slip or the homeward card) at the screen's scale (ShiftTransitViewModel.fit).
+	ShiftTransitViewModel, a Night Shift's night from the shift snapshot through ShiftNightViewModel; while leaving on a teleport, the trip's slip or the homeward card) at the screen's scale (ShiftTransitViewModel.fit).
 
 	@class ShiftTransitScreen
 ]=]
@@ -15,6 +15,8 @@ local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.
 local UIPreloadStore = require(ReplicatedStorage.Client.Features.UI.State.UIPreloadStore)
 local ShiftTransitPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitPanel)
 local ShiftTransitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitViewModel)
+local ShiftNightViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftNightViewModel)
+local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 
 local function ShiftTransitScreen(): React.ReactNode
@@ -27,6 +29,7 @@ local function ShiftTransitScreen(): React.ReactNode
 	local progress = ReactCharm.useAtom(ShiftTransitStore.progress)
 	local fadeSeconds = ReactCharm.useAtom(ShiftTransitStore.fadeSeconds)
 	local leaving = ReactCharm.useAtom(ShiftTransitStore.leaving)
+	local run = ShiftNightViewModel.of(ReactCharm.useAtom(ShiftStore.snapshot))
 	local viewport = usePaperViewport()
 	local view: ShiftTransitViewModel.SlipView? = nil
 	local greeting: ShiftTransitViewModel.WelcomeView? = nil
@@ -38,7 +41,7 @@ local function ShiftTransitScreen(): React.ReactNode
 			view = ShiftTransitViewModel.leavingSlip(leaving)
 		end
 	elseif covered and slip then
-		view = ShiftTransitViewModel.slip(snapshot, arrived)
+		view = ShiftTransitViewModel.slip(snapshot, arrived, if run ~= nil then run.night else nil)
 	elseif covered and welcome then
 		greeting = ShiftTransitViewModel.welcome(arrived)
 	end

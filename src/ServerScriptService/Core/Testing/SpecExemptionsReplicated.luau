@@ -275,7 +275,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: Depot
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants"] = "static names, place ids, contracts and card texts (no logic)",
-	["ReplicatedStorage.Client.Features.Depot.Net.DepotPlaceSender"] = "thin ByteNet sender (two packet sends; the server decides, specced in DepotPlaceRules)",
+	["ReplicatedStorage.Client.Features.Depot.Net.DepotPlaceSender"] = "thin ByteNet sender (three packet sends; the server decides, specced in DepotPlaceRules)",
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants"] = "static place prices, danger levels and menu words (read through the specced DepotPlaceRules)",
 	["ReplicatedStorage.Shared.Features.Depot.Net.DepotEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Client.Features.Depot.DepotServiceClient"] = "ByteNet/HUD registration/RunService shell (DepotStore is specced)",

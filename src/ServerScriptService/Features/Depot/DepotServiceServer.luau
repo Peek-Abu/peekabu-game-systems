@@ -28,7 +28,8 @@
 	- The hub's spots (Studio parts with a `depot-spot-*` Interaction kind) are answered by DepotSpotSystem.
 	- The map pick (the School map plan) is DepotMapSystem: a truck host's pick rides the depart data as `map` (the
 	  Shift server reads it back with DepotMapRules.parse) and picks the run's job; a truck nobody picked for plays
-	  the office.
+	  the office. The host's run mode pick (Night Shift or Quick shift) rides it as ShiftNightConstants.MODE_KEY
+	  ("night" | "quick"; ShiftNightConstants.DEFAULT_MODE when nobody picked).
 	- The contract board's prompt (Interaction kind DepotConstants.BOARD_KIND) sends the player Board with
 	  tonight's contract id; the depart data carries the truck number (layout order) beside the contract id,
 	  and each player's public `truck` field (DepotConstants.PUBLIC_TRUCK) follows the truck bed they stand in.
@@ -57,6 +58,7 @@ local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interactio
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
+local ShiftNightConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftNightConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
@@ -301,6 +303,7 @@ local DepotServiceServer: DepotServiceServer = {
 				payload[TrainingConstants.MODE_KEY] = TrainingConstants.MODE
 			else
 				payload.map = map
+				payload[ShiftNightConstants.MODE_KEY] = DepotMapSystem.modeOfPad(pad)
 			end
 			return payload
 		end)

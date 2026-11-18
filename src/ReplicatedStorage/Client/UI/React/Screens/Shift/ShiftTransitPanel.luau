@@ -5,7 +5,7 @@
 	mounted covered, so a booting client never sees an unlit frame). With cover "slip" it carries the trip, laid out on
 	a 1440x720 canvas scaled by `scale` (ShiftTransitViewModel.fit): the cream "EN ROUTE TO" card (the client in big
 	stroked letters, the site line, the run's map's graded photo (while a map's photo is not uploaded, its map card's icon on
-	a coloured plate), the truck's number on a sticker), the map's monster's tip and portrait on a
+	a coloured plate), the truck's number on a sticker, a Night Shift's NIGHT n on a grape sticker at the other corner), the map's monster's tip and portrait on a
 	dark plate with Gloom pooled along its floor, the company truck render driving in on speed lines, and the grape
 	loading bar: a real progress bar that follows this client's readiness (`progress`) and never goes back, easing to
 	full with DOORS OPEN! once this client is ready, then the cover fades. With cover "welcome" (a first join to the hub,
@@ -94,7 +94,8 @@ local function card(view: ShiftTransitViewModel.SlipView): React.ReactNode
 		heading = e(ToonText, {
 			text = view.heading,
 			textSize = 30,
-			position = UDim2.fromOffset(28, 22),
+			-- Past the NIGHT n sticker when there is one.
+			position = UDim2.fromOffset(if view.night ~= nil then 164 else 28, 22),
 			size = UDim2.fromOffset(360, 36),
 			fit = true,
 		}),
@@ -125,6 +126,19 @@ local function card(view: ShiftTransitViewModel.SlipView): React.ReactNode
 			anchor = Vector2.new(1, 0.5),
 			position = UDim2.new(1, 14, 0, 8),
 			size = UDim2.fromOffset(140, 42),
+			zIndex = 6,
+		})
+	end
+	local night = view.night
+	if night ~= nil then
+		face.night = e(ToonPill, {
+			text = night,
+			hue = "grape",
+			textSize = 26,
+			tilt = -6,
+			anchor = Vector2.new(0, 0.5),
+			position = UDim2.fromOffset(-14, 8),
+			size = UDim2.fromOffset(160, 46),
 			zIndex = 6,
 		})
 	end

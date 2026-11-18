@@ -4,7 +4,8 @@
 	shift from DepotStore, the reader's truck crew from QueueStore, its host from HostStore, the truck's place pick from
 	the world entry (DepotMapRules.decode), the reader's bought places and Credits from the synced profile, and the
 	device layout, and draws DepotBoardPanel from DepotBoardViewModel, scaled to the viewport. A host's tap on an open
-	place picks it (DepotPlaceSender.pick); anyone's tap on a card shows its detail; BUY takes two taps (the first asks
+	place picks it (DepotPlaceSender.pick), and a host's tap on a run mode picks that (DepotPlaceSender.pickMode; the
+	truck's mode pick read from its world entry, DepotModeRules.decode); anyone's tap on a card shows its detail; BUY takes two taps (the first asks
 	SURE? for DepotPlaceConstants.CONFIRM_SECONDS, and while a host has it open the truck's idle start waits
 	(HostServiceClient:browse); the second sends DepotPlaceSender.buy; short of Credits, the
 	button offers the Gleam for the rest at the Shop's rate and sends that as the agreed most). The GUIDE tab (and
@@ -23,6 +24,7 @@ local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Dat
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotPlaceConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants)
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
+local DepotModeRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotModeRules)
 local HostSnapshotUtils = require(ReplicatedStorage.Shared.Features.Host.Utils.HostSnapshotUtils)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -89,6 +91,9 @@ local function DepotBoardScreen(): React.ReactNode
 	local picked: MapId? = if role ~= "none"
 		then DepotMapRules.mapOf(DepotMapRules.decode(world[DepotConstants.MAP_WORLD_ENTRY]), padId)
 		else nil
+	local mode: ShiftTypes.RunMode? = if role ~= "none"
+		then DepotModeRules.modeOf(DepotModeRules.decode(world[DepotConstants.MODE_WORLD_ENTRY]), padId)
+		else nil
 	-- While the host has the menu open, the truck's idle start waits (capped on the server).
 	React.useEffect(function(): (() -> ())?
 		if role ~= "host" then
@@ -111,6 +116,7 @@ local function DepotBoardScreen(): React.ReactNode
 		credits = credits,
 		gleam = premium.balance,
 		confirming = confirming,
+		mode = mode,
 	}
 	local props: DepotBoardPanel.DepotBoardPanelProps = {
 		view = DepotBoardViewModel.board(board, lastShift, phone, crew, places),
@@ -121,6 +127,9 @@ local function DepotBoardScreen(): React.ReactNode
 		onPick = function(map: MapId)
 			setViewing(map)
 			DepotPlaceSender.pick(map)
+		end,
+		onPickMode = function(choice: ShiftTypes.RunMode)
+			DepotPlaceSender.pickMode(choice)
 		end,
 		onView = function(map: MapId)
 			setViewing(map)

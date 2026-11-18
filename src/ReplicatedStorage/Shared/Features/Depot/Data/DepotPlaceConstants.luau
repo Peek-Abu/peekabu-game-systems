@@ -61,6 +61,14 @@ local DepotPlaceConstants = table.freeze({
 		findTruck = "Get on a truck to pick a place.",
 		placeButton = "PLACE",
 	}),
+	-- The run mode pick beside the places (Night Shift, owner concept B 11-18): each mode's button and the line that
+	-- says what the picked one is (kid reading level).
+	MODE_TEXT = table.freeze({
+		night = "NIGHT SHIFT",
+		quick = "QUICK SHIFT",
+		nightLine = "Night after night. Make the week's goal!",
+		quickLine = "Just one shift, then home.",
+	}),
 })
 
 return DepotPlaceConstants

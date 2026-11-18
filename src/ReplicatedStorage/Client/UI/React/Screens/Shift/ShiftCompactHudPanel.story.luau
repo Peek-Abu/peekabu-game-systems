@@ -1,7 +1,8 @@
 --!strict
 --[=[
     ShiftCompactHudPanel.story: the live V1 shift HUD in UI Labs. EmptyHands, Equipped and CrewOpen expose
-    equipment/disclosure states; Variant exposes quota/overtime/clock-out, and Phone uses an 844x390 frame.
+    equipment/disclosure states; Variant exposes quota/overtime/clock-out, and Phone uses an 844x390 frame. Night
+    (0: a quick shift) makes it a Night Shift's night, with the week goal ("This week: 900 / 1,500") under the meter.
     Compare with the V1 shift renders; real touch input is verified separately from this visual story.
 ]=]
 
@@ -16,6 +17,7 @@ local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shi
 local ShiftHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCompactHudPanel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local ShiftStoryFixtures = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftStoryFixtures)
+local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftNightFormulas)
 
 local e = React.createElement
 
@@ -53,12 +55,21 @@ return UILabs.CreateReactStory({
 		Equipped = true,
 		CrewOpen = false,
 		SecondsLeft = 252,
+		Night = 4,
 	},
 }, function(props)
 	local variant: string = props.controls.Variant
 	local phone: boolean = props.controls.Phone
 	local secondsLeft: number = props.controls.SecondsLeft
 	local snapshot = ShiftStoryFixtures.snapshot(changesFor(variant, secondsLeft))
+	local night: number = math.floor(props.controls.Night)
+	if night > 0 then
+		snapshot.runMode = "night"
+		snapshot.night = night
+		snapshot.week = ShiftNightFormulas.week(night)
+		snapshot.weekQuota = ShiftNightFormulas.weekQuota(500, night)
+		snapshot.weekCleared = 780
+	end
 	local me: PublicPlayerTypes.PublicPlayer = {}
 	for key, value in ShiftStoryFixtures.me do
 		if not props.controls.EmptyHands or (key ~= "carrying" and key ~= "inv3" and key ~= "invHands") then

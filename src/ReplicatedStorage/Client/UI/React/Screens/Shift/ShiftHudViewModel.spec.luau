@@ -168,6 +168,21 @@ return function()
 			expect(view.overtime).to.equal(false)
 		end)
 
+		it("shows a Night Shift's week goal in kid words, counting tonight's Gloom", function()
+			local night = snapshot({ runMode = "night", night = 4, week = 2, weekQuota = 1500, weekCleared = 780 })
+			local view = ShiftHudViewModel.hud(night, nil, 748, false)
+			expect(view.week).to.equal("This week: 900 / 1,500")
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 748, false).week).to.equal(nil)
+		end)
+
+		it("times a Night Shift's card by that night's length", function()
+			local night = snapshot({ runMode = "night", night = 1, week = 1, weekQuota = 300, weekCleared = 0 })
+			local view = ShiftHudViewModel.hud(night, nil, 820, false)
+			expect(view.outText).to.equal("OUT 3:00")
+			-- 180 s left of a 180 s night: nothing punched yet.
+			expect(view.punched).to.equal(0)
+		end)
+
 		it("labels the break, the warning and overtime", function()
 			expect(ShiftHudViewModel.hud(snapshot({ stage = "break", stageEndsAt = 124 }), nil, 100, false).clockLabel).to.equal(
 				"MANAGER ON BREAK 0:24"

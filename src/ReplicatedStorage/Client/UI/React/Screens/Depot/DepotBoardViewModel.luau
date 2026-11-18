@@ -7,7 +7,8 @@
 	for the crew in the reader's truck (`crewOf`, else the range by crew size), its tip and its monster. Also tonight's
 	work order (numbered from the contract id, the same everywhere), its rows (desktop six, phone four; the HAZARD row
 	marked), the night guard's sticky, the returning player's last-shift card (none for a player who has not played)
-	and the dispatch slip; and `fit`, the scale that keeps the board on a smaller screen. Pure.
+	and the dispatch slip; the run mode pick (`modes`: Night Shift, the default, or Quick shift; the truck's pick
+	marked, only the host's tap picks, `modeLine` says what the picked one is); and `fit`, the scale that keeps the board on a smaller screen. Pure.
 
 	@class DepotBoardViewModel
 ]=]
@@ -17,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotPlaceConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants)
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
+local DepotModeRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotModeRules)
 local DepotPlaceRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotPlaceRules)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
@@ -79,6 +81,10 @@ export type BuildingView = {
 	buy: BuyView?,
 }
 
+-- One run mode button: Night Shift or Quick shift, `selected` the truck's pick (the default off a truck), `canPick`
+-- whether the reader's tap picks it (the host only).
+export type ModeView = { key: ShiftTypes.RunMode, label: string, selected: boolean, canPick: boolean }
+
 -- A tab along the places menu's top: CONTRACTS (this page) and GUIDE (the hub's Guide page). The Vacuums tab is gone
 -- (owner play check 11-14: the vacuum lives in the Inventory, not the places menu).
 export type Tab = "contracts" | "guide"
@@ -101,6 +107,8 @@ export type PlacesInput = {
 	gleam: number,
 	-- The place whose BUY was tapped once and waits on SURE?.
 	confirming: MapId?,
+	-- The truck's run mode pick when aboard a hosted truck (the server's, DepotModeRules.modeOf), else nil.
+	mode: ShiftTypes.RunMode?,
 }
 
 export type BoardView = {
@@ -115,6 +123,9 @@ export type BoardView = {
 	client: string,
 	chips: { ChipView },
 	buildings: { BuildingView },
+	-- The run mode pick and the line saying what the picked mode is.
+	modes: { ModeView },
+	modeLine: string,
 	tip: string,
 	lastLine: string?,
 	title: string,
@@ -339,6 +350,18 @@ local function placeCard(map: MapId, name: string, places: PlacesInput, focus: M
 	}
 end
 
+-- The run mode buttons: the truck's pick (the default off a truck or when nobody picked), only the host picks.
+local function modesOf(places: PlacesInput): ({ ModeView }, string)
+	local text = DepotPlaceConstants.MODE_TEXT
+	local picked = DepotModeRules.parse(if places.role ~= "none" then places.mode else nil)
+	local host = places.role == "host"
+	local modes: { ModeView } = {
+		{ key = "night", label = text.night, selected = picked == "night", canPick = host },
+		{ key = "quick", label = text.quick, selected = picked == "quick", canPick = host },
+	}
+	return modes, if picked == "quick" then text.quickLine else text.nightLine
+end
+
 -- The client a run on `map` works for (the Office's from tonight's board contract `office`).
 local function clientOf(map: MapId, office: DepotTypes.Contract): string
 	if map == "school" then
@@ -404,6 +427,7 @@ function DepotBoardViewModel.board(
 	end
 	local site = DepotMapRules.siteOf(focus)
 	local lastView = if last ~= nil then lastOf(last, phone) else nil
+	local modes, modeLine = modesOf(input)
 	return {
 		header = DepotPlaceConstants.TEXT.title,
 		pickLine = pickLine(input.role),
@@ -419,6 +443,8 @@ function DepotBoardViewModel.board(
 			{ label = "CREW", value = "1–4 employees", icon = "pippaHappy" },
 		},
 		buildings = buildings,
+		modes = modes,
+		modeLine = modeLine,
 		tip = if focus == "office" then copy.hazard else site.tip,
 		lastLine = if last ~= nil then `Last shift: {lastOf(last, true).lines[1]}` else nil,
 		title = copy.title,

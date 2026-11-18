@@ -6,7 +6,8 @@
 	844x390 landscape phone (5b), `MyVote` marks the local player's vote (or none) and `Small` draws desktop at
 	1366x768 (the folder scales down to fit). Crew Sam, Alex, Jo and you (userId 4); 20 s left on the vote. `Rank` draws
 	the company rank slip: none (not published yet), a first shift at level 1, a promotion to level 2 that has
-	landed, or a caught shift with its incident line.
+	landed, or a caught shift with its incident line. `Run` makes it a Night Shift: night 4 going on (the vote reads
+	NEXT: NIGHT 5 and CLOCK OUT), or a run that is over (FIRED!, OUT OF COATS, CLOCKED OUT, with the night reached).
 
 	@class ShiftReviewPanel.story
 ]=]
@@ -80,6 +81,7 @@ return UILabs.CreateReactStory({
 		Small = false,
 		Rating = UILabs.Choose({ "satisfactory", "exceeds" }),
 		Rank = UILabs.Choose({ "promoted", "first shift", "caught", "none" }),
+		Run = UILabs.Choose({ "quick", "night 4", "fired", "wiped", "clockout" }),
 	},
 }, function(props)
 	local met = props.controls.Variant ~= MISSED
@@ -92,6 +94,20 @@ return UILabs.CreateReactStory({
 	snapshot.votesAnother = 2
 	snapshot.votesDepot = 1
 	snapshot.results = results(met, ratingOf(props.controls.Rating))
+	local run: string = props.controls.Run
+	if run ~= "quick" then
+		snapshot.runMode = "night"
+		snapshot.night = 4
+		snapshot.week = 2
+		snapshot.weekQuota = 1500
+		snapshot.weekCleared = 900
+		snapshot.nightReached = 4
+		snapshot.runOver = if run == "fired"
+			then "fired"
+			elseif run == "wiped" then "wiped"
+			elseif run == "clockout" then "clockout"
+			else nil
+	end
 	-- The rank slip reads its own one-line review for you (the panel's review keeps its crew list empty).
 	local rankChoice: string = props.controls.Rank
 	local mine: ShiftTypes.CrewLine = {

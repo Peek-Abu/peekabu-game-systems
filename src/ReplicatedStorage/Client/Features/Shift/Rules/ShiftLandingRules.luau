@@ -15,7 +15,7 @@
 	(a late joiner's card can miss), the readout starts then, the old trigger: after the route slip's ARRIVED beat
 	and fade.
 
-	`screenAt`: which of the SCREENS shows `elapsed` seconds after the start and how far it is in (0..1): each screen
+	`screenAt`: which of the SCREENS (or of `count` screens: a Night Shift plays four, its NIGHT n / WEEK w first) shows `elapsed` seconds after the start and how far it is in (0..1): each screen
 	tweens in over TIMING.fadeIn, holds TIMING.hold, tweens out over TIMING.fadeOut, then TIMING.gap of nothing before
 	the next; one screen at a time. `over` once the last has gone. Pure.
 
@@ -104,20 +104,22 @@ function ShiftLandingRules.startAt(input: StartInput): number?
 	return if input.now >= fallback then fallback else nil
 end
 
--- Seconds from the start until the last screen has gone.
-function ShiftLandingRules.total(): number
+-- Seconds from the start until the last of `count` screens (SCREENS when nil) has gone.
+function ShiftLandingRules.total(count: number?): number
 	local timing = ShiftLandingRules.TIMING
 	local slot = timing.fadeIn + timing.hold + timing.fadeOut
-	return ShiftLandingRules.SCREENS * (slot + timing.gap) - timing.gap
+	return (count or ShiftLandingRules.SCREENS) * (slot + timing.gap) - timing.gap
 end
 
-function ShiftLandingRules.over(elapsed: number): boolean
-	return elapsed >= ShiftLandingRules.total()
+function ShiftLandingRules.over(elapsed: number, count: number?): boolean
+	return elapsed >= ShiftLandingRules.total(count)
 end
 
--- The screen showing `elapsed` seconds after the start (1..SCREENS, 0: none) and how far it is in (0..1).
-function ShiftLandingRules.screenAt(elapsed: number): (number, number)
-	if elapsed ~= elapsed or elapsed < 0 or ShiftLandingRules.over(elapsed) then
+-- The screen showing `elapsed` seconds after the start (1..count, SCREENS when nil; 0: none) and how far it is in
+-- (0..1).
+function ShiftLandingRules.screenAt(elapsed: number, count: number?): (number, number)
+	local screens = count or ShiftLandingRules.SCREENS
+	if elapsed ~= elapsed or elapsed < 0 or ShiftLandingRules.over(elapsed, screens) then
 		return 0, 0
 	end
 	local timing = ShiftLandingRules.TIMING
@@ -125,7 +127,7 @@ function ShiftLandingRules.screenAt(elapsed: number): (number, number)
 	local pitch = slot + timing.gap
 	local index = math.floor(elapsed / pitch) + 1
 	local t = elapsed - (index - 1) * pitch
-	if index > ShiftLandingRules.SCREENS or t >= slot then
+	if index > screens or t >= slot then
 		return 0, 0
 	end
 	if t < timing.fadeIn then

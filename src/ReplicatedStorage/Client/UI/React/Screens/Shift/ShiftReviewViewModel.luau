@@ -5,7 +5,9 @@
 	closing line, the joke awards ("you" by userId, never by name; the phone shows two and folds the rest), and the
 	crew vote (counts against the crew, your vote marked in words, the auto-pick countdown); and `fit`, the scale that
 	keeps the review sheet on a smaller screen; and `reopen`, the manila tab that brings the review back after Escape
-	closed it while the vote still runs. Pure.
+	closed it while the vote still runs. On a Night Shift (ShiftNightViewModel.of) the vote reads NEXT: NIGHT n and
+	CLOCK OUT (keep your pay), and once the run is over (`ended`) the review is headed FIRED!, OUT OF COATS or CLOCKED
+	OUT with the night reached, and only the depot is left to pick. Pure.
 
 	@class ShiftReviewViewModel
 ]=]
@@ -24,6 +26,7 @@ local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local ShiftNightViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftNightViewModel)
 
 -- A totals row; `detail` is its breakdown line under the label (desktop), e.g. "Dust 260 · Item cleaning 80".
 export type RowView = { label: string, value: string, detail: string? }
@@ -63,6 +66,10 @@ export type VoteView = {
 	text: string,
 	-- "your vote" in marker ink beside the choice the local player made; nil otherwise.
 	mark: string?,
+	-- The desktop button's words ("TO THE DEPOT", "NEXT: NIGHT 5") and whether this choice is off (a run that is over
+	-- has no next night).
+	button: string,
+	disabled: boolean,
 }
 
 export type ReviewView = {
@@ -92,9 +99,15 @@ export type ReviewView = {
 	voteClock: string,
 	-- Whether a vote can still be cast (until the vote closes at 0:00); the buttons are disabled after.
 	voteOpen: boolean,
+	-- Whether the crew votes at all: a Night Shift run that is over takes no vote (the crew heads home when the
+	-- clock runs out), so the buttons are not drawn.
+	voting: boolean,
 	another: VoteView,
 	depot: VoteView,
 	footer: string,
+	-- A Night Shift run that is over: its header (FIRED!, OUT OF COATS, CLOCKED OUT) and the night reached; nil
+	-- otherwise.
+	ended: ShiftNightViewModel.EndView?,
 }
 
 local PHONE_AWARDS = 2
@@ -194,7 +207,7 @@ function ShiftReviewViewModel.fit(viewport: Vector2, phone: boolean): number
 	return math.max(fit, ShiftReviewViewModel.MIN_SCALE)
 end
 
-local function vote(label: string, count: number, total: number, mine: boolean): VoteView
+local function vote(label: string, count: number, total: number, mine: boolean, button: string?): VoteView
 	return {
 		label = label,
 		count = count,
@@ -202,6 +215,8 @@ local function vote(label: string, count: number, total: number, mine: boolean):
 		mine = mine,
 		text = `{label}  {count}/{total}`,
 		mark = if mine then YOUR_VOTE else nil,
+		button = button or label,
+		disabled = false,
 	}
 end
 
@@ -359,8 +374,30 @@ function ShiftReviewViewModel.review(
 	local paid = math.floor(split.credits * scale)
 	local coffee = results.coffee
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
+	local run = ShiftNightViewModel.of(snapshot)
+	local ended = if run ~= nil then ShiftNightViewModel.ended(run) else nil
+	local words = if run ~= nil then ShiftNightViewModel.votes(run) else nil
+	local another =
+		vote(if words ~= nil then words.another else "ANOTHER SHIFT", snapshot.votesAnother, total, myVote == "another")
+	local depot = vote(
+		if words ~= nil then words.depot else "BACK TO DEPOT",
+		snapshot.votesDepot,
+		total,
+		myVote == "depot",
+		if words ~= nil then words.depot else "TO THE DEPOT"
+	)
+	if ended ~= nil then
+		-- The run is over: no vote, the crew heads home when the clock runs out.
+		another.disabled = true
+		depot.disabled = true
+	end
+	local footer = if ended ~= nil
+		then `The run is over · back to the depot in {left}`
+		elseif words ~= nil then words.footer
+		elseif phone then `Majority decides · auto-picks in {left}\nA tie means Another shift`
+		else `Majority decides · auto-picks in {left} · a tie means Another shift`
 	return {
-		title = if met then "GOAL DONE!" else "GOAL MISSED",
+		title = if ended ~= nil then ended.title elseif met then "GOAL DONE!" else "GOAL MISSED",
 		grade = GRADE[rating],
 		cards = {
 			{
@@ -371,8 +408,18 @@ function ShiftReviewViewModel.review(
 				gold = false,
 			},
 			{
+				-- The pay scale holds the coffee and a Night Shift's night pay together.
 				label = if coffee ~= nil
-					then string.format(CoffeeConstants.TEXT.card, CoffeeRules.scaleText(scale))
+						and run ~= nil
+						and run.night > 1
+					then `Credits · Coffee + night {CoffeeRules.scaleText(scale)}x`
+					elseif coffee ~= nil then string.format(
+						CoffeeConstants.TEXT.card,
+						CoffeeRules.scaleText(scale)
+					)
+					elseif run ~= nil and scale ~= 1 then `Credits earned · Night pay {CoffeeRules.scaleText(
+						scale
+					)}x`
 					else "Credits earned",
 				value = `+{paid}`,
 				icon = "credits",
@@ -394,11 +441,14 @@ function ShiftReviewViewModel.review(
 				gold = false,
 			},
 		},
-		tab = if phone then "HOW YOU DID" else "HOW YOU DID — NIGHT SHIFT",
+		tab = if phone
+			then "HOW YOU DID"
+			elseif run ~= nil then `HOW YOU DID — {ShiftNightViewModel.nightTitle(run.night)}`
+			else "HOW YOU DID — NIGHT SHIFT",
 		pill = site.reviewTab,
 		subtitle = `{crewText} · {client} · {site.site}`,
 		headline = if met then "GOAL DONE!" else "GOAL MISSED",
-		met = met,
+		met = if ended ~= nil then ended.good else met,
 		rows = {
 			{
 				label = "GLOOM REMOVED",
@@ -425,12 +475,12 @@ function ShiftReviewViewModel.review(
 		lessAwards = if extra > 0 then `FIRST {PHONE_AWARDS} AWARDS` else nil,
 		voteOpen = voteEndsAt == nil or now < voteEndsAt,
 		voteClock = left,
-		voteTitle = if phone then "WHAT NEXT?" else "WHAT NEXT? (crew vote)",
-		another = vote("ANOTHER SHIFT", snapshot.votesAnother, total, myVote == "another"),
-		depot = vote("BACK TO DEPOT", snapshot.votesDepot, total, myVote == "depot"),
-		footer = if phone
-			then `Majority decides · auto-picks in {left}\nA tie means Another shift`
-			else `Majority decides · auto-picks in {left} · a tie means Another shift`,
+		voting = ended == nil,
+		voteTitle = if ended ~= nil then "GOING HOME" elseif phone then "WHAT NEXT?" else "WHAT NEXT? (crew vote)",
+		another = another,
+		depot = depot,
+		footer = footer,
+		ended = ended,
 	}
 end
 

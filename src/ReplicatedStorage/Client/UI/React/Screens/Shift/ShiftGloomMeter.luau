@@ -6,7 +6,9 @@
 	corner, where a little Gloom is poured along the top edge (the Gloom is what this plate is about). The bar eases to
 	each new total (useProgressTween); the total and time are drawn as they are. Restrained on purpose: one plate.
 	With a `deadline` the time is a live ShiftCountdown to it (only the digits re-render as it ticks); without one (a
-	story) it is the view's time.
+	story) it is the view's time. On a Night Shift the week's goal ("This week: 900 / 1,500") hangs off the plate's
+	bottom-left corner on a grape sticker, clear of the coat pips centred under the plate and of overtime's boost
+	sticker (on a phone, where they would meet, the boost takes the spot during overtime).
 	Presentational (exempt; story in ShiftCompactHudPanel.story; words specced in ShiftHudViewModel.meter).
 
 	@class ShiftGloomMeter
@@ -111,6 +113,18 @@ local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
 			align = "right",
 			fit = true,
 			zIndex = 3,
+		})
+	end
+	local week = view.week
+	if week ~= nil and not (phone and view.overtime and view.feeBoostShort ~= nil) then
+		face.week = e(ToonPill, {
+			text = week,
+			hue = "grape",
+			textSize = if phone then 12 else 17,
+			anchor = Vector2.new(0, 0.5),
+			position = UDim2.new(0, if phone then 12 else 24, 1, 2),
+			size = UDim2.fromOffset(if phone then 150 else 210, if phone then 22 else 30),
+			zIndex = 7,
 		})
 	end
 	if view.overtime and view.feeBoostShort ~= nil then

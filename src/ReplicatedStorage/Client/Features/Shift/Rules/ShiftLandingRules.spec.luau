@@ -121,5 +121,16 @@ return function()
 			expect(ShiftLandingRules.over(ShiftLandingRules.total() - 0.01)).to.equal(false)
 			expect(ShiftLandingRules.over(ShiftLandingRules.total())).to.equal(true)
 		end)
+
+		it("plays a fourth screen when given four (a Night Shift's NIGHT n / WEEK w first)", function()
+			expect(ShiftLandingRules.total(4)).to.equal(4 * PITCH - TIMING.gap)
+			local mid = 3 * PITCH + TIMING.fadeIn + TIMING.hold / 2
+			local screen, alpha = ShiftLandingRules.screenAt(mid, 4)
+			expect(screen).to.equal(4)
+			expect(alpha).to.equal(1)
+			expect((ShiftLandingRules.screenAt(mid))).to.equal(0)
+			expect(ShiftLandingRules.over(mid, 4)).to.equal(false)
+			expect(ShiftLandingRules.over(mid)).to.equal(true)
+		end)
 	end)
 end

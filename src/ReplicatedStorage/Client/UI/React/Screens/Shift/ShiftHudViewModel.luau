@@ -25,6 +25,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftNightFormulas)
 local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants)
 local SprintRules = require(ReplicatedStorage.Shared.Features.Sprint.Rules.SprintRules)
 local CrouchRules = require(ReplicatedStorage.Shared.Features.Crouch.Rules.CrouchRules)
@@ -33,6 +34,7 @@ local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.S
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftHotbarViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHotbarViewModel)
 local ShiftKeyHintViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftKeyHintViewModel)
+local ShiftNightViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftNightViewModel)
 
 type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
@@ -81,6 +83,8 @@ export type HudView = {
 	training: number?,
 	-- The run's map (the `shiftTransit` entry; nil: the office): it picks the meter's site line.
 	map: ShiftTypes.MapId?,
+	-- A Night Shift's week goal ("This week: 900 / 1,500", ShiftNightViewModel.weekLine); nil on a quick shift.
+	week: string?,
 }
 
 export type ButtonsView = {
@@ -276,7 +280,9 @@ function ShiftHudViewModel.hud(
 	local entry: PublicPlayerTypes.PublicPlayer = me or {}
 	local endsAt = snapshot.endsAt
 	local left = if endsAt ~= nil then endsAt - now else 0
-	local total = ShiftConstants.SHIFT_SECONDS
+	-- A Night Shift's night runs its own length (short at first).
+	local run = ShiftNightViewModel.of(snapshot)
+	local total = if run ~= nil then ShiftNightFormulas.seconds(run.night) else ShiftConstants.SHIFT_SECONDS
 	local elapsed = math.clamp(total - left, 0, total)
 	local overtime = snapshot.stage == "overtime"
 	return {
@@ -306,6 +312,7 @@ function ShiftHudViewModel.hud(
 		hotbar = ShiftHotbarViewModel.hotbar(entry, snapshot.cleared, snapshot.quota),
 		endsAt = endsAt,
 		truck = snapshot.truck,
+		week = if run ~= nil then ShiftNightViewModel.weekLine(run, snapshot.cleared, snapshot.phase) else nil,
 	}
 end
 

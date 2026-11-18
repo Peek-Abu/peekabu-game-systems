@@ -3,7 +3,8 @@
 	ShiftTransitPanel.story: the transit screen in Studio's edit mode (UI Labs), in a fixed screen-sized frame: `Cover`
 	switches the cover on and off (watch it fade), `Black` shows the plain black cover (booting, a respawn), `Welcome` the first join's welcome card, `Arrived`
 	stamps ARRIVED, `Truck` sets the truck number (0 hides it), `LongClient` tries a 60-character client, `Progress` sets the client's readiness (the bar
-	catches up and creeps, never back; `Arrived` fills it) and `Phone` draws it at the 844x390 phone's scale.
+	catches up and creeps, never back; `Arrived` fills it), `Night` tags a Night Shift's slip NIGHT n (0: a quick shift)
+	and `Phone` draws it at the 844x390 phone's scale.
 
 	@class ShiftTransitPanel.story
 ]=]
@@ -35,6 +36,7 @@ return UILabs.CreateReactStory({
 		LongClient = false,
 		Phone = false,
 		Progress = 0.45,
+		Night = 4,
 	},
 }, function(props)
 	local snapshot: ShiftTypes.TransitSnapshot = {
@@ -49,7 +51,11 @@ return UILabs.CreateReactStory({
 	local screen = if props.controls.Phone then PHONE else DESKTOP
 	local panelProps: ShiftTransitPanel.ShiftTransitPanelProps = {
 		cover = cover,
-		view = ShiftTransitViewModel.slip(snapshot, props.controls.Arrived),
+		view = ShiftTransitViewModel.slip(
+			snapshot,
+			props.controls.Arrived,
+			if props.controls.Night > 0 then math.floor(props.controls.Night) else nil
+		),
 		welcome = ShiftTransitViewModel.welcome(props.controls.Arrived),
 		mascot = true,
 		scale = ShiftTransitViewModel.fit(screen),

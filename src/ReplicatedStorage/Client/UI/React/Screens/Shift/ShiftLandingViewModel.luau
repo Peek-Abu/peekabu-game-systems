@@ -4,7 +4,8 @@
 	rendered icon and a big value in the HUD's toon type. Three screens, one at a time (ShiftLandingRules.screenAt):
 	the temperature and the weather together, then the time, then ANOMALY LEVEL with the map's Gloom drops (DepotConstants'
 	map sites: the Office one, the School two). The night is drawn from the shift's seed (ShiftLandingFormulas), the same
-	for the whole crew. Words at a kid's reading level, in caps (Luckiest Guy has caps only).
+	for the whole crew. A Night Shift (`night`) opens with its own screen first, NIGHT n and WEEK w, and its anomaly
+	level gains a drop a week (ShiftNightFormulas.anomaly). Words at a kid's reading level, in caps (Luckiest Guy has caps only).
 
 	`image` is a line's icon id, nil while its UIAssets slot is "" (the line then draws no icon and its value starts
 	where the icon would have, `textLeft`); `dropLeft` lays the anomaly level's drops side by side under its words. `frame` places the readout on the HUD's left side in HUD design px: on desktop under the crew list
@@ -18,11 +19,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local ShiftNightFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftNightFormulas)
 local ShiftLandingFormulas = require(ReplicatedStorage.Client.Features.Shift.Utils.ShiftLandingFormulas)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local ShiftNightViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftNightViewModel)
 
 export type Line = {
 	text: string,
@@ -35,6 +38,9 @@ export type Screen = {
 	-- Gloom drops drawn under the lines (0: none).
 	drops: number,
 }
+
+-- A Night Shift's night and week (ShiftNightViewModel.of); nil on a quick shift.
+export type NightInput = { night: number, week: number }
 
 export type Metrics = {
 	-- The icon column (square), the gap to the value, the value's text size and each line's height.
@@ -86,11 +92,11 @@ function ShiftLandingViewModel.clock(minutes: number): string
 	return string.format("%d:%02d %s", hour, minute, if hour24 < 12 then "AM" else "PM")
 end
 
-function ShiftLandingViewModel.screens(seed: number, mapValue: ShiftTypes.MapId?): { Screen }
+function ShiftLandingViewModel.screens(seed: number, mapValue: ShiftTypes.MapId?, run: NightInput?): { Screen }
 	local map: ShiftTypes.MapId = DepotMapRules.parse(mapValue)
 	local site = DepotMapRules.siteOf(map)
 	local night = ShiftLandingFormulas.night(seed)
-	return {
+	local screens: { Screen } = {
 		{
 			lines = {
 				{ text = `{night.temperature}°F`, icon = "temperature" },
@@ -99,8 +105,22 @@ function ShiftLandingViewModel.screens(seed: number, mapValue: ShiftTypes.MapId?
 			drops = 0,
 		},
 		{ lines = { { text = ShiftLandingViewModel.clock(night.minutes), icon = "clock" } }, drops = 0 },
-		{ lines = { { text = "ANOMALY LEVEL" } }, drops = site.danger },
+		{
+			lines = { { text = "ANOMALY LEVEL" } },
+			drops = if run ~= nil then ShiftNightFormulas.anomaly(run.night, site.danger) else site.danger,
+		},
 	}
+	if run ~= nil then
+		local opening: Screen = {
+			lines = {
+				{ text = ShiftNightViewModel.nightTitle(run.night), icon = "stopwatch" },
+				{ text = ShiftNightViewModel.weekTitle(run.week), icon = "daily" },
+			},
+			drops = 0,
+		}
+		table.insert(screens, 1, opening)
+	end
+	return screens
 end
 
 -- The icon's image id, nil when there is none or its slot is still "".

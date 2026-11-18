@@ -494,4 +494,79 @@ return function()
 			expect(ShiftReviewViewModel.acornsText(nil)).to.equal(nil)
 		end)
 	end)
+
+	describe("Night Shift", function()
+		local NIGHT = { runMode = "night", night = 4, week = 2, weekQuota = 1500, weekCleared = 900 }
+
+		it("keeps a quick shift's vote and buttons as they were", function()
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
+			expect(view.another.button).to.equal("ANOTHER SHIFT")
+			expect(view.depot.button).to.equal("TO THE DEPOT")
+			expect(view.another.disabled).to.equal(false)
+			expect(view.ended).to.equal(nil)
+		end)
+
+		it("reads Next night (with its number) and Clock out (keep your pay)", function()
+			local view = ShiftReviewViewModel.review(snapshot(NIGHT), "another", 4, 100, false)
+			expect(view.another.label).to.equal("NEXT: NIGHT 5")
+			expect(view.another.button).to.equal("NEXT: NIGHT 5")
+			expect(view.another.text).to.equal("NEXT: NIGHT 5  2/3")
+			expect(view.depot.label).to.equal("CLOCK OUT")
+			expect(view.depot.button).to.equal("CLOCK OUT")
+			expect(string.find(view.footer, "keep your pay", 1, true)).to.be.ok()
+			expect(view.tab).to.equal("HOW YOU DID — NIGHT 4")
+			expect(view.ended).to.equal(nil)
+		end)
+
+		it("heads a run that is over with how it ended and the night reached", function()
+			local over = table.clone(NIGHT)
+			over.runOver = "fired"
+			over.nightReached = 6
+			local view = ShiftReviewViewModel.review(snapshot(over), nil, 4, 100, false)
+			expect(view.ended).to.be.ok()
+			expect(view.ended.title).to.equal("FIRED!")
+			expect(view.title).to.equal("FIRED!")
+			expect(view.met).to.equal(false)
+			expect(string.find(view.ended.line, "night 6", 1, true)).to.be.ok()
+		end)
+
+		it("takes no vote once the run is over: the crew heads home when the clock runs out", function()
+			local over = table.clone(NIGHT)
+			over.runOver = "wiped"
+			local view = ShiftReviewViewModel.review(snapshot(over), nil, 4, 100, true)
+			expect(view.title).to.equal("OUT OF COATS")
+			expect(view.voting).to.equal(false)
+			expect(view.voteTitle).to.equal("GOING HOME")
+			expect(view.another.disabled).to.equal(true)
+			expect(view.depot.disabled).to.equal(true)
+			expect(ShiftReviewViewModel.review(snapshot(NIGHT), nil, 4, 100, true).voting).to.equal(true)
+			expect(ShiftReviewViewModel.review(snapshot(), nil, 4, 100, true).voting).to.equal(true)
+		end)
+
+		it("names the night pay on the Credits card, with or without coffee", function()
+			local paid = ShiftReviewViewModel.review(snapshot(NIGHT, review({ payScale = 1.5 })), nil, 4, 100, false)
+			expect(paid.cards[2].label).to.equal("Credits earned · Night pay 1.5x")
+			local first = table.clone(NIGHT)
+			first.night = 1
+			local plain = ShiftReviewViewModel.review(snapshot(first, review({ payScale = 1 })), nil, 4, 100, false)
+			expect(plain.cards[2].label).to.equal("Credits earned")
+			local both = ShiftReviewViewModel.review(
+				snapshot(NIGHT, review({ coffee = "Ice", payScale = 2.5 })),
+				nil,
+				4,
+				100,
+				false
+			)
+			expect(both.cards[2].label).to.equal("Credits · Coffee + night 2.5x")
+		end)
+
+		it("stamps a clock-out a good ending", function()
+			local over = table.clone(NIGHT)
+			over.runOver = "clockout"
+			over.nightReached = 9
+			local view = ShiftReviewViewModel.review(snapshot(over), nil, 4, 100, false)
+			expect(view.title).to.equal("CLOCKED OUT")
+			expect(view.met).to.equal(true)
+		end)
+	end)
 end

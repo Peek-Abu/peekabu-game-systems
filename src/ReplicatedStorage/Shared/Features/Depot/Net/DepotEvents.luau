@@ -5,7 +5,7 @@
 	DepotStore.show), Board (server → client: open the contract board), Spot (server → client: a hub spot used) and Bell (server → all: a shift bell rang), LastShift (server → client: the
 	returning player's last shift, for the board's card), and Ready (client → server), sent once the client is listening for cards, so the server
 	holds a card until then (an arrival card can be sent before the client has loaded), PickMap (client → server),
-	a truck host's map pick, and BuyPlace (client → server), a place bought with Credits.
+	a truck host's map pick, PickMode (client → server), a truck host's run mode pick (Night Shift or Quick shift), and BuyPlace (client → server), a place bought with Credits.
 
 	Boot-timing note (the CarryEvents precedent): the client waits for the per-namespace replicated value the
 	server creates when IT requires this module (at DepotServiceServer load).
@@ -78,6 +78,13 @@ local DepotEvents = ByteNet.defineNamespace(NAMESPACE, function()
 			-- A truck host picks their truck's map ("office" | "school"; anything else is dropped). The server checks the
 			-- sender hosts the truck they are aboard (DepotMapRules) and publishes the pick (DepotConstants.MAP_WORLD_ENTRY).
 			PickMap = ByteNet.definePacket({
+				value = ByteNet.string,
+				reliabilityType = "reliable",
+			}),
+			-- A truck host picks their truck's run mode ("night" | "quick"; anything else is dropped). Checked like PickMap
+			-- (DepotMapSystem) and published as DepotConstants.MODE_WORLD_ENTRY; it rides the depart data as
+			-- ShiftNightConstants.MODE_KEY.
+			PickMode = ByteNet.definePacket({
 				value = ByteNet.string,
 				reliabilityType = "reliable",
 			}),
