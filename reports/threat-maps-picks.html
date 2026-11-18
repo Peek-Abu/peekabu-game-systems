@@ -86,26 +86,71 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   </section>
 
   <section>
-    <h2>Next picks: more threat while cleaning (18 Nov)</h2>
-    <p><b>Where your "too easy while cleaning" ask stands.</b></p>
+    <h2>Floors mode: let's design it (18 Nov)</h2>
+    <p>You said yes to Floors mode and asked to talk ideas through first. Here's the full picture. Further down are the choices for you, each with Yes / No, and then the plan to have a first version you can play <b>before content lock (Sun 22 Nov)</b>, with an off switch.</p>
+
+    <p class="when">Good news from the code</p>
+    <p>The game can already run shift after shift on the same server: "Another shift" builds a brand new office each time. So floors are mostly new rules on top of what works today: harder each floor, coats carried over, and a finish line. We don't need a new map or new art for a first version.</p>
+
+    <p class="when">What other games do (research, not copying)</p>
     <ul>
-      <li><b>Built (ready for your check):</b> the ring skill check, where a miss makes a noise he can hear, and the landing readout with the anomaly level.</li>
-      <li><b>Waiting on you:</b> the second monster (which one?) and Floors mode (pick an idea below).</li>
-      <li><b>Later:</b> the slower game with real escapes, deeper buildings, and voices.</li>
+      <li><b>Dandy's World:</b> each floor has a goal (machines). Then an elevator opens for a few seconds and anyone left outside is lost. More monsters on deeper floors, and a quiet break floor now and then.</li>
+      <li><b>DOORS / Pressure:</b> about 100 rooms in a row, getting harder, with a big finale near the end. Revives are rare (one per run in DOORS).</li>
+      <li><b>Lethal Company / R.E.P.O.:</b> each level has a money goal (a quota) that grows. A shop between levels. Miss the goal and the run ends.</li>
+      <li><b>What almost all of them share:</b> a clear goal each floor, a short "everyone get in" moment between floors, <b>one new danger at a time</b>, a calm moment now and then, and only limited second chances.</li>
+    </ul>
+    <p class="status">My research notes have the sources. A few wikis blocked my reader, so some details are from search snippets and marked unsure.</p>
+
+    <p class="when">My suggestion for Odd Hours: "The Night Run"</p>
+    <ul>
+      <li><b>One floor = one shorter shift</b> in the same building (a new layout each floor). The landing readout says <b>FLOOR 2</b>, and the ANOMALY LEVEL drops go up with the floor, so the readout you picked tells you how scary it will be.</li>
+      <li><b>Goal:</b> clean the floor's Gloom goal, then get to the elevator (the truck spot today) together. That's the "everyone in" moment.</li>
+      <li><b>Getting scarier:</b> floor 1 is calm, and each floor starts the manager one step angrier with shorter rests. From floor 3 the rings are tighter. Later (after launch) the second monster joins on deep floors.</li>
+      <li><b>Coats carry over</b> between floors. That's what makes deep floors tense. Caught on your last coat? You sit out the rest of that floor and come back on the next floor with 1 coat.</li>
+      <li><b>Push or bank:</b> between floors the crew votes <b>Next floor</b> (more pay, more danger) or <b>Clock out</b> (keep your pay). Each floor pays more than the last.</li>
+      <li><b>The run ends</b> when the whole crew is out, the floor's goal isn't met in time, or you finish the last floor. Later: the hub shows your best floor.</li>
+    </ul>
+
+    <p class="when">Your choices</p>
+    <div id="floorsPicks"></div>
+
+    <p class="when">Plan: first playable Floors before lock (Sun 22 Nov)</p>
+    <ul>
+      <li><b>Thu:</b> 3 sessions work side by side, each on its own part of the code.
+        <ol>
+          <li>The run itself: floor number, a goal and time per floor, coats carried over, Next floor / Clock out, how the run ends.</li>
+          <li>The screens: choosing Floors at the truck, FLOOR N on the readout and load screen, the run-over screen.</li>
+          <li>The manager getting angrier per floor.</li>
+        </ol>
+      </li>
+      <li><b>Fri:</b> the three parts join up, then my own real-play test: 3 floors solo and with a second player.</li>
+      <li><b>Sat:</b> your play-check. Fixes the same day.</li>
+      <li><b>Sun:</b> lock. If anything is shaky, the off switch keeps Floors hidden and the normal shift plays exactly as now.</li>
+    </ul>
+    <p><b>Honest risks:</b> pay must not be counted twice across floors (the plan pays each floor as you go, which the game already does safely). The load screen between floors must stay quick. Kids must understand "Next floor or clock out" at a glance. You've been right that we move faster than my estimates, so this plan is tight but doable.</p>
+  </section>
+
+  <section>
+    <h2>Your question: halls or open spaces? (my answer)</h2>
+    <p>You asked me to weigh it for our game. <b>My answer: keep our halls and rooms.</b> Don't copy Dandy's World's open floors. Here's why:</p>
+    <ul>
+      <li>Our maps are real buildings (an office, a school). Halls and rooms are what make them feel real and spooky. Lethal Company is the same: tight insides, and players get good by <b>listening and remembering</b>, not by seeing far.</li>
+      <li>What the measuring showed is not "too many halls". It's that <b>nothing is deep</b>: every room is one step off a loop, so you never have to make a risky choice. The fix is the DFS hall growth you liked (on the list for after launch), not open floors.</li>
+      <li>Skill in our game should come from <b>reading the manager</b> (his pen clicks, flickering lights and footsteps are already in) and from the ring. A good next step after launch: some glass office walls, so you can glimpse him through rooms. They show real offices and give you sight without opening the map up.</li>
+    </ul>
+    <div id="mapDir"></div>
+  </section>
+
+  <section>
+    <h2>Where your "too easy while cleaning" ask stands</h2>
+    <ul>
+      <li><b>Built, ready for your check:</b> the ring skill check (2–3 rings a pile, a miss makes noise) and the landing readout with the anomaly level and icons.</li>
+      <li><b>Approved, being designed now:</b> Floors mode (above).</li>
+      <li><b>Saved for later, as you said:</b> the second monster. Also later: the slower game with real escapes, deeper buildings (DFS halls), and voices.</li>
       <li><b>You said no:</b> busier manager, shorter rests, comes looking, third step, warning, wide halls, weather, and the map changes.</li>
     </ul>
-    <p>I owe you the Floors ideas page; it's below now. Sorry it came late.</p>
-
-    <p class="when">The second monster: which one?</p>
-    <p>You picked Safety Sam and the Lookalike back on 13 Nov. First the game has to learn to run 2 monsters at once, which is about 2–3 days of work with an off switch. Then the monster itself:</p>
-    <div id="nextMonster"></div>
-
-    <p class="when">Floors mode: pick an idea</p>
-    <p>Each idea makes the early floors calm and the later floors scary. Honest size for any of them: 4–6 days, so after launch. Pick the idea now and building starts the day after launch.</p>
-    <div id="nextFloors"></div>
-
-    <p class="when">Quick ones: more threat while cleaning, before lock (Sun 22 Nov)</p>
-    <p>Both build on your ring idea, so skill decides the danger, not just more manager.</p>
+    <p class="when">Quick ones: more threat while cleaning, before lock</p>
+    <p>Both build on your ring idea, so skill decides the danger.</p>
     <div id="nextQuick"></div>
   </section>
 
@@ -207,23 +252,33 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
-  { id: "x1-sam", group: "nextMonster", title: "Safety Sam joins at 4:30",
-    text: "The cardboard cutout of a smiling worker. Seen edge-on he's almost invisible. He slides along walls and slaps a sticker on you (you lose a coat). Vacuum him to fold him up for 10 s. <b>Threat while cleaning:</b> a lot. You have to keep checking the walls around you while you vacuum.",
-    effort: "2-monster engine 2–3 days + Sam 1–2 days. Could make launch, tight, with an off switch.", rec: "<b>Yes, Sam first.</b> His art is cheap (one flat printed standee), so he's the only new monster that can make launch." },
-  { id: "x2-lookalike", group: "nextMonster", title: "The Lookalike joins at 4:30",
-    text: "One \"crewmate\" is made of Gloom: a crew-shaped, drippy purple copy with a blank head (no face) and a blank name tag. It acts friendly and grabs a kid who is alone. 3 s of vacuum pops it. <b>Threat while cleaning:</b> high in a crew, less when solo.",
-    effort: "2-monster engine 2–3 days + the Lookalike 2–3 days. After launch.", rec: "<b>Second, after launch.</b> It's great for crews, but more work." },
-
-  { id: "f1-run", group: "nextFloors", title: "Floors A: one night, 3 floors",
-    text: "A run is 3 shorter shifts, one floor after another in the same building. Floor 1 is calm with a small contract. The manager keeps getting angrier floor by floor. The second monster joins from floor 2. Your pay grows each floor, and you can take it and leave between floors. <b>Threat while cleaning:</b> calm, then busy, then scary, every run.",
-    effort: "4–6 days, after launch", rec: "<b>My pick.</b> It's the smallest change to how the game plays now, and it fits shifts." },
-  { id: "f2-deeper", group: "nextFloors", title: "Floors B: go down until you drop",
-    text: "There's no end. Each floor down adds 1 to the anomaly level: more Gloom, a faster manager, more monsters. The run ends when the crew runs out of lives. A board shows the deepest floor each crew reached. <b>Threat while cleaning:</b> keeps rising until it beats you.",
-    effort: "5–7 days, after launch", rec: "Great for replay and for bragging, but harder to balance." },
-  { id: "f3-safe", group: "nextFloors", title: "Floors C: A or B, plus a safe floor every 3 floors",
-    text: "Every 3rd floor is a quiet break room. You can heal a coat, swap gear, and catch your breath. <b>Threat while cleaning:</b> the scary floors hit harder because you just had a rest.",
-    effort: "+1–2 days on top of A or B", rec: "Maybe. It's close to Dandy's World's breaks, and you said you don't want to copy it." },
-
+  { id: "fl1-length", group: "floorsPicks", title: "A run is 5 floors with a finish",
+    text: "Yes = 5 floors, and floor 5 is the big final one. No = floors never end (go as deep as you can).",
+    effort: "Same either way", rec: "<b>Yes.</b> A finish is clearer for kids and easier to balance. An endless mode can come later with a best-floor board." },
+  { id: "fl2-short", group: "floorsPicks", title: "Floors are shorter than a shift",
+    text: "Yes = about 4 minutes and a smaller goal per floor, so a 5-floor run is about 20–25 minutes. No = each floor is a full 8.5-minute shift.",
+    effort: "Same", rec: "<b>Yes.</b>" },
+  { id: "fl3-vote", group: "floorsPicks", title: "Between floors: Next floor or Clock out",
+    text: "Yes = the vote you already have after a shift becomes \"Next floor (more pay, scarier)\" or \"Clock out (keep your pay)\".",
+    effort: "Small", rec: "<b>Yes.</b> It's the push-your-luck moment, and it reuses what works." },
+  { id: "fl4-coats", group: "floorsPicks", title: "Coats carry over, and you come back with 1",
+    text: "Yes = your coats carry to the next floor. If you lose your last coat, you sit out the rest of that floor and come back on the next floor with 1 coat. No = out for the whole run.",
+    effort: "Small", rec: "<b>Yes.</b> It's tense but forgiving, so kids aren't stuck watching for 20 minutes." },
+  { id: "fl5-ramp", group: "floorsPicks", title: "Each floor starts the manager angrier",
+    text: "Yes = floor 1 is calm. Each floor starts him one step angrier with shorter rests, and the ANOMALY LEVEL drops show the floor's danger. Rings get tighter from floor 3.",
+    effort: "Small", rec: "<b>Yes.</b> This is the \"more threat over time\" you asked for, built into the mode." },
+  { id: "fl6-pay", group: "floorsPicks", title: "Each floor pays more",
+    text: "Yes = each floor pays 25% more than the one before (floor 5 pays double). The pay lands as each floor ends, so a bad floor never takes away what you earned.",
+    effort: "Small", rec: "<b>Yes.</b>" },
+  { id: "fl7-main", group: "floorsPicks", title: "Floors is the main way to play",
+    text: "Yes = the truck starts a Floors run by default, and the host can still pick a single shift. No = Floors is an extra mode you have to choose.",
+    effort: "Small", rec: "<b>Yes.</b> That's what you asked for. While it's new, the off switch can flip it back." },
+  { id: "fl8-build", group: "floorsPicks", title: "Build the first playable version before lock",
+    text: "Yes = 3 sessions start Thursday as planned above, with an off switch. You play-check it Saturday.",
+    effort: "About 2–3 days with 3 sessions side by side", rec: "<b>Yes.</b>" },
+  { id: "md1-halls", group: "mapDir", title: "Keep halls and rooms (my answer above)",
+    text: "Yes = keep our halls and rooms. After launch: DFS halls for depth, plus a few glass office walls to glimpse him. No = tell me in the note what you'd change.",
+    effort: "Nothing now", rec: "<b>Yes.</b>" },
   { id: "q1-miss-setback", group: "nextQuick", title: "A miss also undoes some cleaning",
     text: "Missing a ring now also puts back part of the pile, so a miss costs time and makes noise. <b>Threat while cleaning:</b> you stay longer at the pile, so he has more time to find you. We can count misses per shift to see if it's too hard.",
     effort: "1–2 hours", rec: "<b>Yes.</b> It makes the ring matter." },
@@ -382,7 +437,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["nextMonster", "nextFloors", "nextQuick", "icons", "built","ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["floorsPicks", "mapDir", "nextQuick", "icons", "built","ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
