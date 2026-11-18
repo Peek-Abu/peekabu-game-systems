@@ -12,7 +12,8 @@
 	- On a training run (tutorial v3): from the stop in the `training` world entry, the hall's lights out, creeping
 	  Gloom, red danger screen and glowing desk (TrainingHallSystem), the floor trail, arrow and ring
 	  (TrainingTrailSystem), and the coach's lines and stop dots (TrainingCoachStore, read by the TrainingGuideHud
-	  widget and the HUD); all put back when the entry goes. A catch (TrainingEvents.Caught) plays the catch beat; the
+	  widget and the HUD; each new line plays the coach card's sound, TrainingAssets.COACH_CARD); all put back when
+	  the entry goes. A catch (TrainingEvents.Caught) plays the catch beat; the
 	  finish (TrainingEvents.Finish) shows the finish screen (the TrainingFinish widget).
 	- Back in the hub after PLAY AGAIN (TrainingEvents.Again): the arrow to the Training pad.
 
@@ -189,7 +190,8 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 end
 
 -- Pippa's last run line: a new one holds the spotlight tour aside (TrainingGuideRules.tourHeld), so a tour step never
--- hides a stop line (owner, 11-10: "Run! Hold Shift" covered every stop line until the player sprinted).
+-- hides a stop line (owner, 11-10: "Run! Hold Shift" covered every stop line until the player sprinted), and her
+-- coach card's sound plays as it shows (TrainingAssets.COACH_CARD).
 local lastLine: string? = nil
 local function onCoachLine()
 	local now = os.clock()
@@ -202,6 +204,7 @@ local function onCoachLine()
 	local text = if line ~= nil then line.text else nil
 	if TrainingGuideRules.lineChanged(lastLine, text) then
 		TrainingSpotlightSystem.hold(now + TrainingConstants.COACH_HOLD)
+		SoundServiceClient:playOneShot(TrainingAssets.COACH_CARD)
 	end
 	lastLine = text
 end

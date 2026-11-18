@@ -86,6 +86,27 @@ return function()
 		end)
 	end)
 
+	describe("passSoundAt", function()
+		it("starts the pass-by sound so its middle lands when the truck is mid-road", function()
+			local drive = DepotSpotConstants.DRIVE_BY
+			expect(drive.PASS_SOUND).to.equal("depotDriveBy")
+			expect(drive.HORN_SOUND).to.equal(nil)
+			expect(drive.HORN_CHANCE).to.equal(nil)
+			expect(drive.PASS_SOUND_MIDDLE > 0).to.equal(true)
+			-- A 20 s drive: mid-road at 10 s, so the sound starts MIDDLE seconds before that.
+			expect(DepotSpotRules.passSoundAt(20)).to.equal(10 - drive.PASS_SOUND_MIDDLE)
+			-- A drive exactly twice the middle: the sound starts as the truck starts moving.
+			expect(DepotSpotRules.passSoundAt(drive.PASS_SOUND_MIDDLE * 2)).to.equal(0)
+		end)
+
+		it("leads the truck on a road too short for the sound's approach (a negative start)", function()
+			local drive = DepotSpotConstants.DRIVE_BY
+			expect(DepotSpotRules.passSoundAt(2)).to.equal(1 - drive.PASS_SOUND_MIDDLE)
+			expect(DepotSpotRules.passSoundAt(0)).to.equal(-drive.PASS_SOUND_MIDDLE)
+			expect(DepotSpotRules.passSoundAt(-4)).to.equal(-drive.PASS_SOUND_MIDDLE)
+		end)
+	end)
+
 	describe("road", function()
 		it("orders the road's points and needs two at least", function()
 			local road = DepotSpotRules.road({

@@ -105,7 +105,7 @@ local DepotSpotConstants = {
 		rank = "depot.RankChart",
 	}),
 	-- The delivery truck outside: a road of parts tagged TAG with Order = 1..N; a truck drives it every
-	-- MIN_GAP..MAX_GAP seconds at SPEED studs/s and honks once on the way.
+	-- MIN_GAP..MAX_GAP seconds at SPEED studs/s, its pass-by sound playing on every pass.
 	DRIVE_BY = table.freeze({
 		TAG = "DepotDriveBy",
 		ORDER_ATTRIBUTE = "Order",
@@ -115,9 +115,12 @@ local DepotSpotConstants = {
 		MIN_GAP = 35,
 		MAX_GAP = 75,
 		SPEED = 26,
-		HORN_SOUND = "depotDriveByHorn",
-		-- The chance the truck honks on a pass.
-		HORN_CHANCE = 0.5,
+		-- The pass-by sound (DepotAssets), played from the truck on every pass; it replaced the 50% honk (owner
+		-- tryout round 3, 2026-11-17).
+		PASS_SOUND = "depotDriveBy",
+		-- Seconds into that sound where it is loudest (the file's middle: 5.0 s long, its approach and fade baked
+		-- in); DepotSpotRules.passSoundAt lines this up with the truck being mid-road.
+		PASS_SOUND_MIDDLE = 2.5,
 	}),
 	-- The Supply Counter clerk (DepotClerkSystem, DepotClerkRules; owner 11-11 "Stamp & Stack"): Pippa (she ran the
 	-- front desk before night shifts) stands on the part tagged TAG (facing its LookVector) behind the counter in an

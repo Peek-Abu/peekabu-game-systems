@@ -3,7 +3,8 @@
 	UISoundFormulas: which UI sound plays (Cleanup Crew round-2 UI picks, the paperwork hierarchy hover < click < confirm
 	< CTA, with back and error beside it). A button's tier is the one its caller names, else its look's default (a filled
 	action button confirms, everything else clicks); a disabled button answers a press with the error; a hold prompt's
-	wind-up is stretched to fill its hold, and the prompt that is a CTA (clock out) completes with the CTA. Pure.
+	wind-up is stretched to fill its hold, and the prompt that is a CTA (clock out) completes with the CTA; the emote and
+	chat wheels open with their own tier (`wheelOpen`). Pure.
 
 	@class UISoundFormulas
 ]=]
@@ -20,6 +21,7 @@ export type Tier =
 	| "open"
 	| "purchase"
 	| "tab"
+	| "wheel"
 
 -- The PaperButton looks whose default is the confirm (the rest default to the click).
 local CONFIRMS: { [string]: boolean } = { go = true, primary = true, danger = true }
@@ -29,6 +31,13 @@ local UISoundFormulas = {}
 -- The wind-up's PlaybackSpeed bounds (a 0.25 s or a 4 s hold still sounds like the same wind-up).
 UISoundFormulas.MIN_SPEED = 0.25
 UISoundFormulas.MAX_SPEED = 4
+
+--[=[
+	The tier the emote and chat wheels play as they open (their scenes open quietly, so the menu's open never doubles it).
+]=]
+function UISoundFormulas.wheelOpen(): Tier
+	return "wheel"
+end
 
 --[=[
 	The sound tier of a button with the look `variant`: `explicit` when its caller names one, else the look's default.

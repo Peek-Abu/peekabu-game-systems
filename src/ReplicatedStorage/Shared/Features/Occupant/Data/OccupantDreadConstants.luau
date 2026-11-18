@@ -184,6 +184,11 @@ local DREAD = {
 	FACE_RED = 0.2,
 	FACE_GRAIN = 0.5,
 	FACE_EASE = 12,
+	-- The "monster near" sting (OccupantAssets monsterNear, every kind's; owner 2026-11-17: "any monster getting close, a
+	-- new sound for all"): once as the near or aware stage begins, then not again for this many seconds. Your own chase
+	-- restarts the wait too (its sting covers that moment), so the end of a chase never stings
+	-- (OccupantDreadFormulas.nearSting).
+	NEAR_STING_COOLDOWN = 25,
 }
 
 return table.freeze(DREAD)

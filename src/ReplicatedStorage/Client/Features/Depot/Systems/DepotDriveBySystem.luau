@@ -4,8 +4,10 @@
 	so the outside feels alive. Studio places the road (parts tagged DepotSpotConstants.DRIVE_BY.TAG, `Order` 1..N) and
 	the truck (one Model tagged DRIVE_BY.VEHICLE_TAG, parked out of sight at the road's start, its pivot facing
 	forward). Every DepotSpotRules.driveGap seconds this client drives the truck down the road at DRIVE_BY.SPEED
-	(DepotSpotRules.along) and, on some passes, honks once halfway; then it parks it back at the start. The truck is
-	moved on this client only (its anchored parts' CFrames are local writes), so nothing replicates and the server
+	(DepotSpotRules.along) with its pass-by sound playing from the truck on every pass (timed by
+	DepotSpotRules.passSoundAt so the sound's loudest middle lands as the truck is mid-road; on a road shorter than
+	the sound the sound starts first and the truck sets off when it should); then it parks it back at the start. The
+	truck is moved on this client only (its anchored parts' CFrames are local writes), so nothing replicates and the server
 	never sees it. A place without a road or a truck does nothing.
 
 	Spec-exempt shell (CollectionService, RunService, Sound); the road, the timing and the motion are the specced
@@ -21,7 +23,7 @@ local RunService = game:GetService("RunService")
 local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 local DepotSpotRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotSpotRules)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
--- Registers the horn.
+-- Registers the pass-by sound.
 require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
 
 local DRIVE = DepotSpotConstants.DRIVE_BY
@@ -55,11 +57,24 @@ local function place(vehicle: Model, road: { Vector3 }, distance: number)
 	vehicle:PivotTo(CFrame.lookAt(ground, ground + Vector3.new(heading.X, 0, heading.Z)))
 end
 
+-- The pass-by sound, from the truck: its PrimaryPart, so the sound rides along; a truck without one plays it where
+-- the truck is at that moment.
+local function playPass(vehicle: Model)
+	local part = vehicle.PrimaryPart
+	SoundServiceClient:playOneShot(DRIVE.PASS_SOUND, { at = if part ~= nil then part else vehicle:GetPivot().Position })
+end
+
 -- Drives one pass; returns once the truck is parked again (or the system stopped).
-local function drive(vehicle: Model, road: { Vector3 }, alive: () -> boolean, rng: Random)
+local function drive(vehicle: Model, road: { Vector3 }, alive: () -> boolean)
 	local length = DepotSpotRules.roadLength(road)
 	local seconds = length / DRIVE.SPEED
-	local honkAt = if rng:NextNumber() < DRIVE.HORN_CHANCE then seconds * rng:NextNumber(0.35, 0.65) else math.huge
+	local soundAt = DepotSpotRules.passSoundAt(seconds)
+	if soundAt < 0 then
+		-- A road shorter than the sound: the sound leads, and the truck sets off when it should.
+		playPass(vehicle)
+		soundAt = math.huge
+		task.wait(-DepotSpotRules.passSoundAt(seconds))
+	end
 	local started = os.clock()
 	while alive() do
 		local t = os.clock() - started
@@ -67,9 +82,9 @@ local function drive(vehicle: Model, road: { Vector3 }, alive: () -> boolean, rn
 			break
 		end
 		place(vehicle, road, t * DRIVE.SPEED)
-		if t >= honkAt then
-			honkAt = math.huge
-			SoundServiceClient:playOneShot(DRIVE.HORN_SOUND, { at = vehicle:GetPivot().Position })
+		if t >= soundAt then
+			soundAt = math.huge
+			playPass(vehicle)
 		end
 		RunService.RenderStepped:Wait()
 	end
@@ -97,7 +112,7 @@ function DepotDriveBySystem.start(): () -> ()
 				place(vehicle, road, 0)
 				task.wait(DepotSpotRules.driveGap(rng:NextNumber()))
 				if running then
-					drive(vehicle, road, alive, rng)
+					drive(vehicle, road, alive)
 				end
 			end
 		end

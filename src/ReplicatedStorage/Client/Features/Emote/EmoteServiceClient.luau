@@ -4,7 +4,8 @@
 
 	- Hold the `emoteWheel` action (B, or L2 on a gamepad) to open the wheel (its scene is registered here, at init);
 	  let go over a slot
-	  to play it. A click or tap on a slot plays it too (`play`), and the phone's HUD button opens the wheel.
+	  to play it. A click or tap on a slot plays it too (`play`), and the phone's HUD button opens the wheel. Opening
+	  plays the wheel's own sound (UISoundFormulas.wheelOpen), not the menu's open.
 	- `play(slot)` asks the server (EmoteEvents.PlayRequest); the server decides and grants the replicated clip.
 	- While an emote may be playing, moving or jumping asks the server to stop it (EmoteEvents.StopRequest), once.
 	- Every character's emote props show and hide from its clip's markers (EmotePropSystem), and its bundle
@@ -40,6 +41,8 @@ local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.
 local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
+local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
+local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local React = require(ReplicatedStorage.Packages.React)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
@@ -113,6 +116,8 @@ local function openWheel()
 	if not EmoteWheelStore.open() then
 		EmoteWheelStore.show()
 		SceneStack.push(EmoteWheelViewModel.SCENE)
+		-- The wheel's own open (its scene opens quietly, so the menu's open never doubles it).
+		UISoundSystem.play(UISoundFormulas.wheelOpen())
 	end
 end
 
@@ -166,6 +171,8 @@ local EmoteServiceClient: EmoteServiceClient = {
 					},
 				},
 				suppress = { mouse = true },
+				-- openWheel plays the wheel's own open (UISoundFormulas.wheelOpen) instead of the menu's.
+				quietOpen = true,
 			})
 		end
 		if not InputActionRegistry.has(EmoteConstants.WHEEL_ACTION) then

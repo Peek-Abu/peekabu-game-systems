@@ -10,6 +10,9 @@
 	- `bellSwing`: the bell's swing after a ring; `noteRate`: the radio's music notes on a station.
 	- `driveGap`, `road`, `roadLength`, `along`: the delivery truck outside: the wait before its next pass, the road
 	  its tagged parts make (ordered; needs two at least, whole and unique orders), and where it is a distance down it.
+	- `passSoundAt`: when, in seconds after the truck starts moving, its pass-by sound starts so the sound's middle
+	  (DRIVE_BY.PASS_SOUND_MIDDLE) lands as the truck is mid-road; negative when the drive is shorter than the sound
+	  (the sound then starts that long before the truck moves).
 
 	@class DepotSpotRules
 ]=]
@@ -87,6 +90,10 @@ function DepotSpotRules.driveGap(roll: number): number
 	local drive = DepotSpotConstants.DRIVE_BY
 	local t = math.clamp(roll, 0, 1)
 	return drive.MIN_GAP + (drive.MAX_GAP - drive.MIN_GAP) * t
+end
+
+function DepotSpotRules.passSoundAt(driveSeconds: number): number
+	return math.max(driveSeconds, 0) / 2 - DepotSpotConstants.DRIVE_BY.PASS_SOUND_MIDDLE
 end
 
 function DepotSpotRules.road(markers: { RoadMarker }): { Vector3 }?

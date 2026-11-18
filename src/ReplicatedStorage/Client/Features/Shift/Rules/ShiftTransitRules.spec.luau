@@ -290,4 +290,17 @@ return function()
 			expect(ShiftConstants.LEAVING_CLIENT_TIMEOUT > 4 * 30 + 1 + 2 + 4).to.equal(true)
 		end)
 	end)
+
+	describe("arrivedStamp", function()
+		it("stamps once, as the route slip turns to ARRIVED", function()
+			expect(ShiftTransitRules.arrivedStamp(false, true, true)).to.equal(true)
+		end)
+
+		it("stays quiet while the stamp holds, as it lifts, and for the welcome card's ALL SET!", function()
+			expect(ShiftTransitRules.arrivedStamp(true, true, true)).to.equal(false)
+			expect(ShiftTransitRules.arrivedStamp(true, false, true)).to.equal(false)
+			expect(ShiftTransitRules.arrivedStamp(false, false, true)).to.equal(false)
+			expect(ShiftTransitRules.arrivedStamp(false, true, false)).to.equal(false)
+		end)
+	end)
 end

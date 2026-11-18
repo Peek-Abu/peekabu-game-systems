@@ -2,7 +2,7 @@
 --[=[
 	OfficeAssets: every asset id the Office feature uses (Cleanup Crew spec §7: "Asset id literals live only in each
 	feature's Data/<Feature>Assets"): the office bed (four looped beds and the sweetener one-shots code scatters round
-	you, pinned Building), the yard bed (its own four beds and sweeteners, pinned Outside, and the yard's fixed
+	you, pinned Building), the yard bed (one looped bed and its sweeteners, pinned Outside, and the yard's fixed
 	emitters' loops: yard design Y1, docs/superpowers/specs/2026-11-04-yard-place-design.md), a broken light's zap, the ambient dread (a phone ringing, the elevator's ding, typing), and the exterior
 	anomalies' sounds (a cooling engine's tick, TV static, an automatic door). Client-only: nothing on the server
 	plays them. An id is PENDING ("")
@@ -58,28 +58,14 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		looped = true,
 		place = "Building",
 	},
-	-- The yard bed (yard design Y1, in-house, the owner's pick B, 2026-11-04): the quiet, slightly lonely half of the
-	-- night. Looped beds of co-prime lengths (17.33 / 31.09 / 37.97 s), 2D because they come from everywhere: a far
-	-- sodium hum on B (the office's tonic, so the doors stay in one key), darker wind in the pines, and sparse crickets.
-	-- Pinned Outside: silent in the building. (Its fourth layer, the far road, plays from the road side: yardTraffic.)
-	yardBedLamp = {
-		assetId = "rbxassetid://75472286543334",
-		group = "Ambient",
-		bus = "Beds",
-		volume = 1,
-		looped = true,
-		place = "Outside",
-	},
-	yardBedWind = {
-		assetId = "rbxassetid://110525679324475",
-		group = "Ambient",
-		bus = "Beds",
-		volume = 1,
-		looped = true,
-		place = "Outside",
-	},
-	yardBedCrickets = {
-		assetId = "rbxassetid://139015816808505",
+	-- The yard bed: ONE looped bed, 2D because it comes from everywhere: crickets, a buzzing street lamp and faint
+	-- wind in dry leaves, a 5.0 s seamless loop (-21 LUFS integrated). Pinned Outside: silent in the building. (The far
+	-- road plays from the road side: yardTraffic.) Owner tryout round 3 pick (2026-11-17); ElevenLabs SFX, Starter
+	-- plan, Icey Labs. It replaced the three in-house layers of yard design Y1 (yardBedLamp 75472286543334, yardBedWind
+	-- 110525679324475, yardBedCrickets 139015816808505, each at volume 1); volume 1 is a starting level that awaits the
+	-- owner's hear-check.
+	yardBed = {
+		assetId = "rbxassetid://94535589052622",
 		group = "Ambient",
 		bus = "Beds",
 		volume = 1,
@@ -297,7 +283,7 @@ return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	-- The bed's looped layers (each its own SoundServiceClient ambience layer, named by its id).
 	BED = table.freeze({ "officeBedHum", "officeBedTube", "officeBedAir", "officeBedColour" }),
-	YARD_BED = table.freeze({ "yardBedLamp", "yardBedWind", "yardBedCrickets" }),
+	YARD_BED = table.freeze({ "yardBed" }),
 	SWEETENERS = table.freeze(SWEETENERS),
 	YARD_SWEETENERS = table.freeze(YARD_SWEETENERS),
 	EMITTER_LOOPS = table.freeze(EMITTER_LOOPS),

@@ -345,9 +345,17 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- ding and two coins (ElevenLabs SFX, Starter plan, Icey Labs; mastered to -20 LUFS short-term, peak -1 dBFS).
 	-- Volume 1 is a starting level until the owner's hear-check. Was Roblox GUI - Purchase (17208380755) at volume 2.
 	uiPurchase = { assetId = "rbxassetid://96002741326326", group = "UI", volume = 1, maxConcurrent = 1 },
-	-- Switching tabs (menu bar, board tabs, shop filter chips): Roblox_UI_Paper_Swipe (15675037413), the owner's
-	-- library-round pick B (2026-11-14), lighter than a click (about -23 dB).
-	uiTab = { assetId = "rbxassetid://15675037413", group = "UI", volume = 1.5, maxConcurrent = 2 },
+	-- Switching tabs (menu bar, board tabs, shop filter chips): one quiet finger tap on a cardboard folder. Owner
+	-- tryout round 3 pick (2026-11-17); ElevenLabs SFX, Starter plan, Icey Labs (-24 LUFS). Was Roblox_UI_Paper_Swipe
+	-- (15675037413, the library-round pick B) at volume 1.5; volume 1 is a starting level that awaits the owner's
+	-- hear-check.
+	uiTab = { assetId = "rbxassetid://72293470737561", group = "UI", volume = 1, maxConcurrent = 2 },
+	-- The emote wheel or the chat wheel opening (UISoundFormulas.wheelOpen, played by EmoteServiceClient and
+	-- CalloutServiceClient; their scenes open quietly): a paper fan flicks open with a soft whoosh (0.6 s, -22 LUFS).
+	-- Owner tryout round 3 pick (2026-11-17); ElevenLabs SFX, Starter plan, Icey Labs. It replaced the menu open
+	-- (uiOpen, Roblox GUI - Swipe 17208405682) for those two wheels only. Volume 1 is a starting level that awaits the
+	-- owner's hear-check.
+	uiWheelOpen = { assetId = "rbxassetid://124416513239859", group = "UI", volume = 1, maxConcurrent = 1 },
 }
 for id, def in SOUNDS do
 	if not SoundRegistry.has(id) then
@@ -369,6 +377,7 @@ local TIERS: { [string]: string } = {
 	open = "uiOpen",
 	purchase = "uiPurchase",
 	tab = "uiTab",
+	wheel = "uiWheelOpen",
 }
 UIAssets.soundTiers = table.freeze(TIERS)
 

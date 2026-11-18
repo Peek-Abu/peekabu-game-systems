@@ -34,12 +34,16 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMinDistance = 18,
 		rollOffMaxDistance = 140,
 	},
-	-- The delivery truck driving past the yard (DepotDriveBySystem): the shift truck's honk, far away.
-	depotDriveByHorn = {
-		assetId = "rbxassetid://121905159563801",
+	-- The delivery truck driving past the yard (DepotDriveBySystem, DepotSpotConstants.DRIVE_BY.PASS_SOUND): a box
+	-- truck approaching and fading away (5.0 s, the approach and fade baked in, loudest around the middle), played
+	-- from the truck on every pass, timed so its middle lands as the truck is mid-road. Owner tryout round 3 pick
+	-- (2026-11-17); ElevenLabs SFX, Starter plan, Icey Labs. It replaced depotDriveByHorn (the shift truck's honk,
+	-- 121905159563801, on half the passes at volume 0.7); volume 1 is a starting level that awaits the owner's
+	-- hear-check.
+	depotDriveBy = {
+		assetId = "rbxassetid://121878543226168",
 		group = "SFX",
-		volume = 0.7,
-		pitch = { min = 0.92, max = 1.0 },
+		volume = 1,
 		maxConcurrent = 1,
 		rollOffMinDistance = 30,
 		rollOffMaxDistance = 220,

@@ -9,6 +9,8 @@
 	- your heartbeat (harlowHeartbeat): slow and quiet at the edge of his range, faster and louder as he closes, louder
 	  still when he hunts, locked to the chase music's beat (OccupantChaseMusicSystem.beatPosition) while he chases you,
 	  loud while you hide near him;
+	- the "monster near" sting (monsterNear, 2D, every kind's) once as a near or aware stage begins, never in your own
+	  chase, at most once per DREAD.NEAR_STING_COOLDOWN (OccupantDreadFormulas.nearSting);
 	- the dread loop (harlowDread, 2D) while he is near, hunting, or near a crewmate's chase (the chase music replaces it
 	  in your own chase);
 	- the screen: desaturated and, on each beat, a soft red pulse (VfxServiceClient), plus the vignette, the grain and
@@ -76,6 +78,8 @@ export type OccupantDreadState = {
 }
 
 local DREAD = OccupantConstants.DREAD
+-- The "monster near" sting (OccupantAssets).
+local NEAR_STING = "monsterNear"
 -- The camera FOV offset's owner.
 local FOV_OWNER = "OccupantDread"
 -- Below this a look value counts as off (the screen request, the loop and the EQs are released).
@@ -102,7 +106,10 @@ local reduceFlag = DREAD.REDUCE_MOTION
 local screenToken: number? = nil
 local dreadLoop: SoundServiceClient.SoundHandle? = nil
 local dreadBase = 0
-local counters = { beats = 0, musicBeats = 0, shakes = 0, stages = 0, loops = 0, pending = 0, sightRays = 0 }
+-- When the "monster near" sting last played (or your own chase began: its sting covers that moment).
+local lastNearStingAt: number? = nil
+local counters =
+	{ beats = 0, musicBeats = 0, shakes = 0, stages = 0, loops = 0, pending = 0, sightRays = 0, nearStings = 0 }
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 rayParams.IgnoreWater = true
@@ -319,6 +326,17 @@ local function step(dt: number)
 	})
 	if nextStage ~= stage then
 		counters.stages += 1
+		if nextStage == "chase" then
+			lastNearStingAt = now
+		elseif OccupantDreadFormulas.nearSting(stage, nextStage, lastNearStingAt, now) then
+			lastNearStingAt = now
+			if SoundRegistry.has(NEAR_STING) then
+				counters.nearStings += 1
+				SoundServiceClient:playOneShot(NEAR_STING)
+			else
+				counters.pending += 1
+			end
+		end
 		stage = nextStage
 		OccupantDreadStore.setStage(stage)
 	end

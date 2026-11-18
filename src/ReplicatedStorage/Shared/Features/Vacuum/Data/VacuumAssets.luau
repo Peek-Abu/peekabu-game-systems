@@ -49,13 +49,29 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	},
 	-- The canister's Gloom gauge rising, and the chime when the contract is met (the gauge is full).
 	-- (Mix 2026-11-10: it can fire every GLOOM_TICK_GAP = 0.15 s, so each tick is pitched a little differently.)
+	-- The tick is one tiny wooden abacus-bead click: owner tryout round 3 pick (2026-11-17); ElevenLabs SFX, Starter
+	-- plan, Icey Labs (-24 LUFS). Was 112926891018046 at volume 0.5; volume 1 is a starting level that awaits the
+	-- owner's hear-check.
 	canisterTick = {
-		assetId = "rbxassetid://112926891018046",
+		assetId = "rbxassetid://132119520777479",
 		group = "UI",
-		volume = 0.5,
+		volume = 1,
 		pitch = { min = 0.96, max = 1.04 },
 	},
 	canisterChime = { assetId = "rbxassetid://134210659787428", group = "UI", volume = 0.5 },
+	-- A new Gloom pile appearing during a shift, positional at the pile: a heavy wet blob drops onto carpet and spreads
+	-- with a soft squelch (1.95 s, -16 LUFS short-term). Owner tryout round 3 pick (2026-11-17); ElevenLabs SFX, Starter
+	-- plan, Icey Labs. Volume 1 is a starting level that awaits the owner's hear-check. REGISTERED BUT NOT PLAYED YET:
+	-- every shift pile is placed while the office is built under the load screen, and the only pile that appears
+	-- mid-shift is a spilled recycling box's paper pile (CargoServiceServer), so where it plays awaits the owner's call.
+	gloomSpawn = {
+		assetId = "rbxassetid://81298241998494",
+		group = "SFX",
+		volume = 1,
+		maxConcurrent = 2,
+		rollOffMinDistance = 8,
+		rollOffMaxDistance = 70,
+	},
 }
 
 for id, def in SOUNDS do

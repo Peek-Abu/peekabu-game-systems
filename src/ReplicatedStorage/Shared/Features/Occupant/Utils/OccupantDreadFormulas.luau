@@ -3,6 +3,8 @@
 	OccupantDreadFormulas: the Manager's proximity dread, as maths (2026-10-17 feedback: "getting chased doesn't feel
 	scary"; "him nearby should have screen effects or heartbeats or both"). Every knob is OccupantConstants.DREAD.
 
+	- `nearSting`: whether the "monster near" sting plays on a stage change: into near or aware from none or crew (never
+	  from or into your own chase), at most once per NEAR_STING_COOLDOWN.
 	- `stage`: none (outside a shift, in the hub, him far or on his break, or catching you), near (he is within
 	  RANGE_FAR and unaware, or only following a noise), aware (he hunts, stares or turns on you), chase (he chases you),
 	  crew (a crewmate is chased
@@ -137,6 +139,16 @@ function OccupantDreadFormulas.crewWeight(distance: number): number
 		return 0
 	end
 	return lerp(1, DREAD.CREW_FLOOR, math.clamp(distance / DREAD.CREW_RANGE, 0, 1))
+end
+
+function OccupantDreadFormulas.nearSting(from: DreadStage, to: DreadStage, lastAt: number?, now: number): boolean
+	if to ~= "near" and to ~= "aware" then
+		return false
+	end
+	if from ~= "none" and from ~= "crew" then
+		return false
+	end
+	return lastAt == nil or now - lastAt >= DREAD.NEAR_STING_COOLDOWN
 end
 
 function OccupantDreadFormulas.stage(input: StageInput): DreadStage

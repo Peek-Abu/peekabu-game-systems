@@ -63,6 +63,11 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The toast styles' sounds (ShiftConstants.TOAST_STYLES): a paper rustle and a rubber stamp.
 	shiftStickyNote = { assetId = "rbxassetid://99429190384090", group = "UI", volume = 0.6 },
 	shiftStamp = { assetId = "rbxassetid://121483921177102", group = "UI", volume = 0.9 },
+	-- The load screen's route slip stamping ARRIVED (ShiftTransitSystem, ShiftTransitRules.arrivedStamp; not the
+	-- welcome card's ALL SET!): a heavy rubber stamp on paper + a punch-clock ka-chunk (1.2 s, -18 LUFS). Owner tryout
+	-- round 3 pick (2026-11-17); ElevenLabs SFX, Starter plan, Icey Labs. No sound played there before (shiftStamp stays
+	-- the stamp toast's). Volume 1 is a starting level that awaits the owner's hear-check.
+	shiftArrived = { assetId = "rbxassetid://135431418965222", group = "UI", volume = 1, maxConcurrent = 1 },
 	-- The neutral "notice" toast (an invite, waiting for the crew, the result card pinned, a social perk):
 	-- Roblox_UI_Tonal_Stinger (Creator Store 15675043410), the owner's library-round pick C (2026-11-14), played in place
 	-- at about -24 dB. "Can't do that" refusals stay silent (the owner said none to their options).
@@ -103,6 +108,8 @@ return table.freeze({
 	COUNTDOWN_TICK = "shiftCountdownTick",
 	TRUCK_DOOR = "shiftTruckDoor",
 	TRUCK_START = "shiftTruckStart",
+	-- The route slip's ARRIVED stamp (ShiftTransitSystem).
+	ARRIVED = "shiftArrived",
 	-- The engine starts this long after the door latches.
 	TRUCK_START_DELAY = 0.9,
 	-- Everyone within this many studs of the truck hears it leave.

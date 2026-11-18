@@ -52,6 +52,35 @@ return function()
 		end)
 	end)
 
+	describe("nearSting", function()
+		it("rests 20 to 30 seconds between stings", function()
+			expect(DREAD.NEAR_STING_COOLDOWN >= 20 and DREAD.NEAR_STING_COOLDOWN <= 30).to.equal(true)
+		end)
+
+		it("stings once as a monster comes near, from nothing or a crewmate's chase", function()
+			for _, to in { "near", "aware" } do
+				expect(OccupantDreadFormulas.nearSting("none", to, nil, 100)).to.equal(true)
+				expect(OccupantDreadFormulas.nearSting("crew", to, nil, 100)).to.equal(true)
+			end
+		end)
+
+		it("never stings for your own chase, its end, or staying near", function()
+			expect(OccupantDreadFormulas.nearSting("none", "chase", nil, 100)).to.equal(false)
+			expect(OccupantDreadFormulas.nearSting("chase", "aware", nil, 100)).to.equal(false)
+			expect(OccupantDreadFormulas.nearSting("chase", "near", nil, 100)).to.equal(false)
+			expect(OccupantDreadFormulas.nearSting("near", "aware", nil, 100)).to.equal(false)
+			expect(OccupantDreadFormulas.nearSting("aware", "near", nil, 100)).to.equal(false)
+			expect(OccupantDreadFormulas.nearSting("near", "none", nil, 100)).to.equal(false)
+			expect(OccupantDreadFormulas.nearSting("none", "crew", nil, 100)).to.equal(false)
+		end)
+
+		it("waits out the cooldown after the last sting (or chase)", function()
+			local rest = DREAD.NEAR_STING_COOLDOWN
+			expect(OccupantDreadFormulas.nearSting("none", "near", 100, 100 + rest - 0.1)).to.equal(false)
+			expect(OccupantDreadFormulas.nearSting("none", "near", 100, 100 + rest)).to.equal(true)
+		end)
+	end)
+
 	describe("stage", function()
 		it("feels nothing outside a shift, in the hub, or with him far", function()
 			expect(OccupantDreadFormulas.stage(input({ active = false }))).to.equal("none")

@@ -134,6 +134,12 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		volume = 0.12,
 		rollOffMaxDistance = 60,
 	},
+	-- The "monster near" sting, every kind's (owner 2026-11-17: "any monster getting close, a new sound for all"): 2D,
+	-- once for the local player as a monster's near or aware dread begins (OccupantDreadSystem,
+	-- OccupantDreadFormulas.nearSting; never in their own chase, at most once per DREAD.NEAR_STING_COOLDOWN). A music
+	-- box winding down and detuning, a porcelain creak (2.0 s, -16 LUFS). Owner tryout round 3 pick (2026-11-17);
+	-- ElevenLabs SFX, Starter plan, Icey Labs. Volume 1 is a starting level that awaits the owner's hear-check.
+	monsterNear = { assetId = "rbxassetid://125302277330425", group = "SFX", bus = "Stings", volume = 1 },
 	-- The "spotted" sting at every chase start (2D for the one he chases, positional for everyone else).
 	harlowSpotted = {
 		assetId = "rbxassetid://71081947321557",

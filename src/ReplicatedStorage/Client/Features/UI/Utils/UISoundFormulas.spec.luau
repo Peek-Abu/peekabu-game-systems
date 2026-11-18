@@ -1,4 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local UISoundFormulas = require(script.Parent.UISoundFormulas)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
 return function()
 	describe("buttonTier", function()
@@ -77,6 +80,16 @@ return function()
 		it("stays quiet when the scene pushed opens quietly", function()
 			expect(UISoundFormulas.stackTier(1, 2, true)).to.equal(nil)
 			expect(UISoundFormulas.stackTier(1, 2, false)).to.equal("open")
+		end)
+	end)
+
+	-- Owner tryout round 3 (2026-11-17): the emote and chat wheels open with their own paper-fan flick, not the menu
+	-- swipe (their scenes open quietly; their service clients play this tier).
+	describe("wheels", function()
+		it("opens a wheel with its own tier, mapped to the wheel's sound", function()
+			expect(UISoundFormulas.wheelOpen()).to.equal("wheel")
+			expect(UIAssets.soundTiers[UISoundFormulas.wheelOpen()]).to.equal("uiWheelOpen")
+			expect(UIAssets.sounds.uiWheelOpen).to.be.ok()
 		end)
 	end)
 

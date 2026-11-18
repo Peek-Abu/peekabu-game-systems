@@ -27,7 +27,10 @@
 	`progress`: how far along those stages the client is (0..1), which the load screen's bar draws.
 
 	`entranceSettled`: whether an office entrance's black cover may lift, from the frame times since the server's
-	uncover arrived: ENTRANCE_SETTLE_FRAMES quick frames in a row, or ENTRANCE_SETTLE_MAX_SECONDS in all. Pure.
+	uncover arrived: ENTRANCE_SETTLE_FRAMES quick frames in a row, or ENTRANCE_SETTLE_MAX_SECONDS in all.
+
+	`arrivedStamp`: whether the ARRIVED stamp's sound plays: on the frame the route slip's stamp turns to ARRIVED (not
+	while it holds, not the welcome card's ALL SET!). Pure.
 
 	@class ShiftTransitRules
 ]=]
@@ -228,6 +231,10 @@ function ShiftTransitRules.entranceSettled(frames: { number }): boolean
 		quick = if seconds < ShiftConstants.ENTRANCE_SETTLE_FRAME_SECONDS then quick + 1 else 0
 	end
 	return quick >= ShiftConstants.ENTRANCE_SETTLE_FRAMES or total >= ShiftConstants.ENTRANCE_SETTLE_MAX_SECONDS
+end
+
+function ShiftTransitRules.arrivedStamp(wasArrived: boolean, arrived: boolean, slip: boolean): boolean
+	return arrived and not wasArrived and slip
 end
 
 return ShiftTransitRules

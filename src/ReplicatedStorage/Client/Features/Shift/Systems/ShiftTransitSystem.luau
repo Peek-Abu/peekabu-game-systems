@@ -14,7 +14,8 @@
 	  reveal. How far along it is (ShiftTransitRules.progress) goes to ShiftTransitStore.progress for the loading bar.
 	  When ready, or out of
 	  time (logged with what it still waited for), it reports ready for that hold (ShiftEvents.TransitReady), stamps
-	  ARRIVED for TRANSIT_ARRIVED_SECONDS, then clears. At that reveal an arrival at a shift (ShiftLandingRules.shows:
+	  ARRIVED for TRANSIT_ARRIVED_SECONDS (its sound, ShiftAssets.ARRIVED, as the slip's stamp lands:
+	  ShiftTransitRules.arrivedStamp), then clears. At that reveal an arrival at a shift (ShiftLandingRules.shows:
 	  not the hub, not training) is written to ShiftTransitStore.landing for the landing readout (ShiftLandingHud).
 	- a first join to the hub (the lobby place): the welcome card (ShiftTransitRules.welcoming) while the art preload
 	  runs (UIPreloadStore: its progress is the bar's) and until the first sync, at most TRANSIT_WELCOME_SECONDS, then
@@ -55,6 +56,8 @@ local ShiftLandingRules = require(ReplicatedStorage.Client.Features.Shift.Rules.
 local ShiftTransitRules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftTransitRules)
 local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
 local UIPreloadStore = require(ReplicatedStorage.Client.Features.UI.State.UIPreloadStore)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
 
 local log = Logger.new("ShiftTransitSystem")
 
@@ -69,6 +72,8 @@ export type ShiftTransitState = {
 	waitingFor: string,
 	shown: number,
 	timeouts: number,
+	-- ARRIVED stamps heard (ShiftAssets.ARRIVED).
+	stamps: number,
 }
 
 local stoppers: { () -> () } = {}
@@ -97,7 +102,7 @@ local hub = game.PlaceId == DepotConstants.HUB_PLACE_ID or game.PlaceId == 0
 local landingHub = game.PlaceId == DepotConstants.HUB_PLACE_ID
 local synced = false
 local waitingFor = ""
-local counters = { shown = 0, timeouts = 0 }
+local counters = { shown = 0, timeouts = 0, stamps = 0 }
 -- The settle (ShiftTransitRules): since when (os.clock()) and for how many frames the held scene has been complete and
 -- unchanged (nil: it is not), and the office light count it was complete with.
 local settledSince: number? = nil
@@ -283,6 +288,10 @@ local function step()
 	end
 	local stamped = arriving or (isWelcome and welcomeArriving)
 	if ShiftTransitStore.arrived() ~= stamped then
+		if ShiftTransitRules.arrivedStamp(ShiftTransitStore.arrived(), stamped, slip) then
+			counters.stamps += 1
+			SoundServiceClient:playOneShot(ShiftAssets.ARRIVED)
+		end
 		ShiftTransitStore.arrived(stamped)
 	end
 	if arriving then
@@ -389,6 +398,7 @@ function ShiftTransitSystem.getState(): ShiftTransitState
 		waitingFor = waitingFor,
 		shown = counters.shown,
 		timeouts = counters.timeouts,
+		stamps = counters.stamps,
 	}
 end
 

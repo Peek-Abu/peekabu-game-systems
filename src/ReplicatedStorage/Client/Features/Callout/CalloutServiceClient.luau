@@ -2,7 +2,8 @@
 --[=[
 	CalloutServiceClient: the chat wheel on this client (design §8; plan 2026-10-25 step 5).
 
-	- Hold the `chatWheel` action (T, or d-pad up) to open the wheel (its scene is registered here, at init). The spot
+	- Hold the `chatWheel` action (T, or d-pad up) to open the wheel (its scene is registered here, at init; opening plays
+	  the wheel's own sound, UISoundFormulas.wheelOpen, not the menu's open). The spot
 	  a ping would mark is aimed as T goes down: where the mouse points (the screen's centre on a phone or gamepad),
 	  out to CalloutConstants.PING_RANGE. Letting go over a ping or sticker sends it; a click or tap sends at once.
 	- On phones, one round talk button opens this wheel, which swaps to the emote wheel and back (ChatWheelButtons,
@@ -40,6 +41,7 @@ local EmployeeBusyUtils = require(ReplicatedStorage.Client.Features.Employee.Uti
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
+local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local EmoteServiceClient = require(ReplicatedStorage.Client.Features.Emote.EmoteServiceClient)
@@ -91,6 +93,8 @@ local function openWheel()
 	if not CalloutWheelStore.open() then
 		CalloutWheelStore.show(aimSpot())
 		SceneStack.push(ChatWheelViewModel.SCENE)
+		-- The wheel's own open (its scene opens quietly, so the menu's open never doubles it).
+		UISoundSystem.play(UISoundFormulas.wheelOpen())
 	end
 end
 
@@ -219,6 +223,8 @@ local CalloutServiceClient: CalloutServiceClient = {
 					},
 				},
 				suppress = { mouse = true },
+				-- openWheel plays the wheel's own open (UISoundFormulas.wheelOpen) instead of the menu's.
+				quietOpen = true,
 			})
 		end
 		if not InputActionRegistry.has(CalloutConstants.WHEEL_ACTION) then

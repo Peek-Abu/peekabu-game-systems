@@ -5,7 +5,8 @@
 
 	INTERIM Creator Store picks (2026-11-10, free library audio, not yet heard by the owner): to be replaced by in-house
 	sounds (game-sound-design) once he has listened. The STAFF door's creak as it swings open and his exit door's slam
-	(3D, at the door), and the relief sting when he has gone (2D).
+	(3D, at the door), and the relief sting when he has gone (2D). Also the finish fanfare and Pippa's coach card
+	(owner-picked).
 
 	Static data + registration (spec-exempt).
 
@@ -40,6 +41,11 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- library-round pick B (2026-11-14), played in place. Its file opens on ~0.5 s of silence (no start offset exists),
 	-- so the fanfare lands just after the screen. About -18 dB, a reward sting.
 	trainingFinish = { assetId = "rbxassetid://1840120056", group = "SFX", bus = "Reward", volume = 2.7 },
+	-- Pippa's coach card showing a new tip on a training run (TrainingServiceClient, on each new run line:
+	-- TrainingGuideRules.lineChanged): a paper note slides onto a desk + a tiny desk bell (1.0 s, -20 LUFS). Owner tryout
+	-- round 3 pick (2026-11-17); ElevenLabs SFX, Starter plan, Icey Labs. No sound played there before. Volume 1 is a
+	-- starting level that awaits the owner's hear-check.
+	trainingCoachCard = { assetId = "rbxassetid://119489026512972", group = "UI", volume = 1, maxConcurrent = 1 },
 }
 
 for id, def in SOUNDS do
@@ -54,6 +60,7 @@ return table.freeze({
 	SLAM = "trainingDoorSlam",
 	RELIEF = "trainingRelief",
 	FINISH = "trainingFinish",
+	COACH_CARD = "trainingCoachCard",
 	-- The coach's wave at the hub's Training pad (TrainingCoachSystem): wave v2, forearm-led from a bent elbow
 	-- (owner 11-11), generic for every employee (design/animations/coach, Icey Labs, uploaded with the owner's OK
 	-- 2026-11-11).
