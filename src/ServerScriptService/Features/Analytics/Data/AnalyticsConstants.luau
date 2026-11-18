@@ -29,6 +29,7 @@ local CURRENCY_EXPERIMENTS: { [string]: { string } } = table.freeze({
 	gleam = table.freeze({ "exp-stars", "exp-starter" }),
 	credits = table.freeze({ "exp-unlock", "exp-employee2" }),
 	gloom = table.freeze({ "exp-timecard" }),
+	acorns = table.freeze({}),
 })
 
 -- The name each economy currency is reported under.
