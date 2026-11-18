@@ -108,6 +108,72 @@ return function()
 		end)
 	end)
 
+	describe("hintFrame", function()
+		-- HUD design viewports: 1080p desktop; a laptop at the 73% HUD scale (1366x768 / 0.73); Studio's short play
+		-- pane (1601x652 / 0.75); a phone; a narrow phone.
+		local cases = {
+			{ "desktop", Vector2.new(1920, 1080) },
+			{ "desktop", Vector2.new(1871, 1052) },
+			{ "desktop", Vector2.new(2135, 869) },
+			{ "phone", Vector2.new(844, 390) },
+			{ "phone", Vector2.new(667, 375) },
+		}
+
+		local function box(layout, viewport)
+			local centre = SkillCheckRingViewModel.centre(layout, viewport)
+			local frame = SkillCheckRingViewModel.hintFrame(layout)
+			local at = centre + frame.offset
+			local left = at.X - frame.anchor.X * frame.size.X
+			local top = at.Y - frame.anchor.Y * frame.size.Y
+			return { left = left, top = top, right = left + frame.size.X, bottom = top + frame.size.Y }, centre
+		end
+
+		it("stays clear of the bottom stack (hotbar, stamina, prompt) on every screen", function()
+			for _, case in cases do
+				local layout, viewport = case[1], case[2]
+				local b = box(layout, viewport)
+				local reserve = SkillCheckRingViewModel.HINT_BOTTOM_RESERVE[layout]
+				expect(b.bottom <= viewport.Y - reserve).to.equal(true)
+			end
+		end)
+
+		it("sits beside the ring at its centre height, never on the ring", function()
+			for _, case in cases do
+				local layout, viewport = case[1], case[2]
+				local b, centre = box(layout, viewport)
+				local metrics = SkillCheckRingViewModel.METRICS[layout]
+				local reach = metrics.outerStart + metrics.bead
+				expect(near((b.top + b.bottom) / 2, centre.Y)).to.equal(true)
+				local rightOfRing = b.left >= centre.X + reach
+				local leftOfRing = b.right <= centre.X - reach
+				expect(rightOfRing or leftOfRing).to.equal(true)
+			end
+		end)
+
+		it("stays on the screen, clear of the side reserve", function()
+			for _, case in cases do
+				local layout, viewport = case[1], case[2]
+				local b = box(layout, viewport)
+				local side = SkillCheckRingViewModel.HINT_SIDE_RESERVE[layout]
+				expect(b.left >= side).to.equal(true)
+				expect(b.right <= viewport.X - side).to.equal(true)
+				expect(b.top >= 0).to.equal(true)
+			end
+		end)
+
+		it("goes right of the ring on desktop, left on a phone (the action arc is right of it)", function()
+			expect(SkillCheckRingViewModel.hintFrame("desktop").anchor.X).to.equal(0)
+			expect(SkillCheckRingViewModel.hintFrame("phone").anchor.X).to.equal(1)
+		end)
+
+		it("keeps a phone's hint off the action arc's helper button", function()
+			-- ShiftHudViewModel's phone HELPER spot: 76 px at (-291, -198) from the bottom-right corner (844x390).
+			local b = box("phone", Vector2.new(844, 390))
+			local helperLeft = 844 - 291 - 38
+			expect(b.right <= helperLeft).to.equal(true)
+		end)
+	end)
+
 	describe("flash", function()
 		it("starts full and fades out", function()
 			expect(SkillCheckRingViewModel.flash(0)).to.equal(1)

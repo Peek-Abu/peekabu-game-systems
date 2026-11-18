@@ -53,8 +53,32 @@ local METRICS: { [Layout]: Metrics } = table.freeze({
 	}),
 })
 
+export type HintFrame = {
+	-- The hint box's anchor point, as an offset from the ring's centre (design px).
+	offset: Vector2,
+	anchor: Vector2,
+	size: Vector2,
+}
+
+-- The hint box's size (the words fit inside it).
+local HINT_SIZE: { [Layout]: Vector2 } = table.freeze({
+	desktop = Vector2.new(220, 40),
+	phone = Vector2.new(130, 28),
+})
+
 local SkillCheckRingViewModel = {
 	METRICS = METRICS,
+	-- Design px kept free at the bottom of the screen for the HUD's bottom-centre stack (hotbar, stamina bar, the
+	-- prompt chip over them), and at each side (Roblox's buttons, the phone's thumbstick and action arc): the hint never
+	-- goes there (2026-11-18: under the ring it sat on the hotbar).
+	HINT_BOTTOM_RESERVE = table.freeze({ desktop = 220, phone = 130 }),
+	HINT_SIDE_RESERVE = table.freeze({ desktop = 60, phone = 50 }),
+	-- The side the hint prefers: right on desktop; left on a phone, whose action arc (HELPER, SPRINT) is right of the
+	-- ring at its height.
+	HINT_SIDE = table.freeze({ desktop = 1, phone = -1 }),
+	-- The gap between the outer ring's start and the hint.
+	HINT_GAP = 12,
+	HINT_SIZE = HINT_SIZE,
 	-- Seconds a verdict's flash lasts, and the ring stays after arriving.
 	FLASH_SECONDS = 0.4,
 	LINGER = 0.45,
@@ -118,6 +142,21 @@ function SkillCheckRingViewModel.centre(layout: Layout, viewport: Vector2): Vect
 		math.max(metrics.outerStart, viewport.Y - metrics.outerStart)
 	)
 	return Vector2.new(viewport.X / 2, y)
+end
+
+--[=[
+	Where the "Line it up!" words sit: beside the ring at its centre's height, just past the outer ring's start, on the
+	layout's HINT_SIDE (the ring is centred, so both sides have the same room; the spec checks every supported screen
+	keeps it clear of HINT_SIDE_RESERVE). Never under the ring, where the HUD's bottom stack (the hotbar) is.
+]=]
+function SkillCheckRingViewModel.hintFrame(layout: Layout): HintFrame
+	local metrics = METRICS[layout]
+	local size = HINT_SIZE[layout]
+	local reach = metrics.outerStart + metrics.bead + SkillCheckRingViewModel.HINT_GAP
+	if SkillCheckRingViewModel.HINT_SIDE[layout] > 0 then
+		return { offset = Vector2.new(reach, 0), anchor = Vector2.new(0, 0.5), size = size }
+	end
+	return { offset = Vector2.new(-reach, 0), anchor = Vector2.new(1, 0.5), size = size }
 end
 
 --[=[

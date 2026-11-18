@@ -6,7 +6,7 @@
 	out and two cream posts at its edges, closing in on the inner circle by `fraction` (fading in over its first
 	moments). The icon is a cream knob with the vacuum render and the kit's lilac selected ring, riding the inner circle
 	at `angle`. A verdict flashes by `flash`: a mint ring and a pop on a hit, a coral ring and a shake on a miss. The
-	`hint` words ("Line it up!") sit under the ring. No sparkle shapes, no faces. Laid out in HUD design px (SkillCheckHud
+	`hint` words ("Line it up!") sit beside the ring (never under it, where the hotbar is). No sparkle shapes, no faces. Laid out in HUD design px (SkillCheckHud
 	draws it inside PaperHudFrame). Presentational (exempt; story in SkillCheckRing.story; layout and motion specced in
 	SkillCheckRingViewModel).
 
@@ -258,13 +258,16 @@ local function SkillCheckRing(props: SkillCheckRingProps): React.ReactNode
 
 	local hint = props.hint
 	if hint ~= nil then
+		-- Beside the ring, never under it (the hotbar is there): SkillCheckRingViewModel.hintFrame.
+		local frame = SkillCheckRingViewModel.hintFrame(layout)
 		children.hint = e(ToonText, {
 			text = hint,
 			textSize = metrics.hint,
 			meaning = "mint",
-			anchor = Vector2.new(0.5, 0),
-			position = UDim2.new(0.5, 0, 0.5, metrics.outerStart + metrics.bead * 0.5),
-			size = UDim2.fromOffset(if phone then 200 else 320, metrics.hint + 10),
+			anchor = frame.anchor,
+			align = if frame.anchor.X > 0 then "right" else "left",
+			position = UDim2.new(0.5, frame.offset.X, 0.5, frame.offset.Y),
+			size = UDim2.fromOffset(frame.size.X, frame.size.Y),
 			fit = true,
 			zIndex = 12,
 		})
