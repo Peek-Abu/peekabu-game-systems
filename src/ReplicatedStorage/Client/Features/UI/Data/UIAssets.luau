@@ -200,13 +200,14 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	vacuum = "rbxassetid://95204983643911",
 	vacuumBrass = "rbxassetid://70576303094914",
 	xp = "rbxassetid://77433204551858",
-	-- The landing readout's renders (ShiftLandingReadout), PENDING "" until uploaded: a thermometer and the night's
-	-- weather (clear night sky, clouds, wind). 256 px, ink outline baked, no drop baked, no face, no 4-point sparkle;
-	-- the readout draws a line with no icon while its slot is "".
-	temperature = "",
-	weatherClear = "",
-	weatherCloudy = "",
-	weatherWindy = "",
+	-- The landing readout's renders (ShiftLandingReadout): a thermometer and the night's weather (clear night, clouds,
+	-- wind). Local Flux + iconize, 256 px, ink outline baked, no drop baked, no face, no 4-point sparkle; owner picks
+	-- 2026-11-18 (T4, C2, K1, W4; reports/threat-maps/icons). Icey Labs; decals 121508007017554, 135053246137181,
+	-- 113222859411399, 116178114931214. The readout draws a line with no icon while its slot is "".
+	temperature = "rbxassetid://123287956488424",
+	weatherClear = "rbxassetid://94381949907537",
+	weatherCloudy = "rbxassetid://93629359480804",
+	weatherWindy = "rbxassetid://76996302988307",
 }
 UIAssets.toonIcons = table.freeze(TOON_ICONS)
 
