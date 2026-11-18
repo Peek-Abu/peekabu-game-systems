@@ -59,6 +59,19 @@ section { display: grid; gap: 14px; }
 textarea { width: 100%; box-sizing: border-box; min-height: 2.6em; font: .95rem var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; resize: vertical; }
 .note { background: var(--chip); border-radius: 10px; padding: 12px 14px; font-size: .95rem; }
 ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.concepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.concept { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+.concept.rec { border: 2px solid var(--gleam); }
+.concept .tag { font: 700 .8rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--gloom); }
+.concept.rec .tag { color: var(--gleam); }
+.flow { display: flex; flex-wrap: wrap; gap: 6px; }
+.flow span { background: var(--chip); border-radius: 8px; padding: 3px 8px; font-size: .85rem; font-weight: 600; }
+.flow span:not(:last-child)::after { content: " \2192"; color: var(--muted); }
+table.grid { width: 100%; border-collapse: collapse; font-size: .95rem; }
+table.grid th { text-align: left; vertical-align: top; width: 9.5em; padding: 8px 10px 8px 0; color: var(--gloom); font-family: var(--display); font-weight: 600; }
+table.grid td { padding: 8px 0; border-top: 1px solid var(--line); }
+table.grid tr:first-child td { border-top: 0; }
+@media (max-width: 560px) { table.grid th { width: 6.5em; } }
 </style>
 
 <div class="wrap">
@@ -86,7 +99,81 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   </section>
 
   <section>
-    <h2>Floors mode: let's design it (18 Nov)</h2>
+    <h2>The whole new mode: pick a concept (18 Nov)</h2>
+    <p>You're right: "floors" is just how Dandy's World does it, and Lethal Company uses days. So I've stepped back to the <b>whole mode</b>: what a round is in our story, leaving the building and coming back, what the outside is for, rewards, crews, the hub, and new players. Your answers so far are built into all three concepts:</p>
+    <ul>
+      <li>No end: you go until you're out.</li>
+      <li>The goal and the shift time change every few rounds, starting short.</li>
+      <li>Next / Clock out vote between rounds.</li>
+      <li>Coats carry over.</li>
+      <li>He gets angrier each round.</li>
+      <li>Each round pays more.</li>
+      <li>It's the main way to play.</li>
+      <li>No off switch.</li>
+    </ul>
+
+    <div class="concepts">
+      <article class="concept">
+        <p class="tag">A</p>
+        <h3>Going Down: floors inside one building</h3>
+        <div class="flow"><span>Truck drops you</span><span>Clean floor 1</span><span>Elevator down</span><span>Floor 2, 3, 4...</span><span>Walk out to the truck = clock out</span></div>
+        <p><b>Story:</b> the Gloom comes from deep under the building. Every floor down is darker and the manager is stronger.</p>
+        <p><b>Leaving the building:</b> only once, at the very end. Loot rides down with you in the elevator. If the crew is wiped, everything that wasn't banked yet is lost.</p>
+        <p><b>The outside:</b> only the start and the end.</p>
+        <p><b>Feels like:</b> one long, rising dread. Closest to Dandy's World, which you said you don't want to copy.</p>
+      </article>
+
+      <article class="concept rec">
+        <p class="tag">B &middot; my pick</p>
+        <h3>The Night Shift: nights in a row, a quota every week</h3>
+        <div class="flow"><span>Truck to a building</span><span>Night 1 (short)</span><span>Load the truck + clock out</span><span>Yard: bank, vote, next night's readout</span><span>Night 2, 3... every 3 nights = the Weekly Quota</span></div>
+        <p><b>Story:</b> you're the night crew. The company gives you a <b>weekly quota</b>. Meet it and next week's is bigger and the nights are longer. Miss it and you're <b>fired</b> (the run ends). The anomaly grows night by night. It's "Odd Hours" exactly, like Lethal Company's days but in our world.</p>
+        <p><b>Leaving the building:</b> every night. Carry your loot out and load it on the truck to bank it. Anything still inside when the truck leaves is lost. That last run to the truck with the manager awake is the skill moment.</p>
+        <p><b>The outside:</b> it finally has a job. The yard is the break between nights: bank, vote "Next night / Clock out", see the next night's readout (temp, weather, ANOMALY LEVEL). Later: a small truck shop.</p>
+        <p><b>Feels like:</b> calm, scary, breathe, scarier. Every night is a full little story.</p>
+      </article>
+
+      <article class="concept">
+        <p class="tag">C</p>
+        <h3>The Deep Shift: deeper every night, same building</h3>
+        <div class="flow"><span>Truck to a building</span><span>Clean floor 1</span><span>Walk out to the truck to bank</span><span>Service lift from the yard</span><span>Floor B1, B2... deeper</span></div>
+        <p><b>Story:</b> one building, deeper each round (B1, B2...). It uses your earlier "go under the building" idea.</p>
+        <p><b>Leaving the building:</b> every round you walk back up to the truck to bank, then take the lift down again.</p>
+        <p><b>The outside:</b> the bank and the lift.</p>
+        <p><b>Feels like:</b> B and A mixed. Cool, but it needs basement map art we don't have yet, so it can't make the lock.</p>
+      </article>
+    </div>
+
+    <p class="when">How concept B works, piece by piece</p>
+    <table class="grid">
+      <tr><th>Run starts / ends</th><td>The host picks "Night Shift" at the truck. The run ends when you're fired (missed weekly quota), the whole crew is out of coats, or you vote Clock out to keep your pay.</td></tr>
+      <tr><th>Difficulty</th><td>Week 1: 3 nights of about 3 minutes with small goals, and the manager calm. Each new week: longer nights (up to the full 8.5 min) and a bigger weekly quota. Each night: the manager starts angrier and the ANOMALY LEVEL drops go up.</td></tr>
+      <tr><th>Rewards</th><td>Each night pays more. Meeting the weekly quota pays a <b>week bonus</b>. Your best night shows on the map card and in the hub.</td></tr>
+      <tr><th>Coats</th><td>Coats carry over. Lose your last one and you sit out the night, then come back next night with 1. Everyone out = fired.</td></tr>
+      <tr><th>Solo vs crew</th><td>The goal already scales with crew size. Solo works the same, just smaller.</td></tr>
+      <tr><th>Joining mid-run</th><td>A friend who joins rides in on the next night's truck with 3 coats.</td></tr>
+      <tr><th>Screens that change</th><td>The readout says NIGHT 4 · WEEK 2. The load screen says the night. A night card in the yard. A "Fired!" or "Clocked out" run-over screen with your best night.</td></tr>
+      <tr><th>New players</th><td>Training first (as now). Week 1 is short and calm, so a first run teaches the loop.</td></tr>
+      <tr><th>The normal shift</th><td>Stays as "Quick shift" (one night, no quota week) for short play.</td></tr>
+      <tr><th>Money touchpoints</th><td>None new for launch. The Big Crew pass fits well (bigger crews go deeper). Later ideas are cosmetic only, like truck skins or a "Week 5" badge. No paying for extra coats.</td></tr>
+      <tr><th>What we measure</th><td>The night and week reached, where runs end (fired / wiped / clocked out), Next vs Clock out votes, and loot lost at the truck.</td></tr>
+      <tr><th>Skill hooks</th><td>The ring, the push-or-bank vote, the run out to the truck with loot, and reading the manager.</td></tr>
+    </table>
+
+    <p class="when">Plan and honest risks</p>
+    <p><b>B by lock (Sun 22 Nov):</b> it's the cheapest concept, because "Another shift" already takes the crew out on the truck and back into a new building. Three sessions work side by side Thu–Fri, you check it Sat, then fix and lock. Risks:</p>
+    <ul>
+      <li>Pay counted twice across nights. Paying each night as it ends avoids this.</li>
+      <li>The yard break must stay short.</li>
+      <li>Kids must get "weekly quota" at a glance, with words like "This week: 1,500 Gloom".</li>
+      <li>Balancing an endless run takes a few rounds of your play.</li>
+    </ul>
+    <p>A is about the same work but closer to Dandy's World. C needs new basement art, so it's after launch.</p>
+    <div id="concepts"></div>
+  </section>
+
+  <section>
+    <h2>Earlier: the floors ideas and research (18 Nov)</h2>
     <p>You said yes to Floors mode and asked to talk ideas through first. Here's the full picture. Further down are the choices for you, each with Yes / No, and then the plan to have a first version you can play <b>before content lock (Sun 22 Nov)</b>, with an off switch.</p>
 
     <p class="when">Good news from the code</p>
@@ -252,6 +339,15 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
+  { id: "cn1-concept", group: "concepts", title: "Which concept? Yes = B, The Night Shift",
+    text: "Yes = build B (nights in a row, weekly quota, leave on the truck every night, the yard between nights). No = write A or C (or your own mix) in the note.",
+    effort: "B: about 2-3 days with 3 sessions, playable for your Saturday check", rec: "<b>Yes (B).</b> It's our own fiction, it gives the outside a job, it fits your Lethal-style days idea, and it reuses the most code." },
+  { id: "cn2-names", group: "concepts", title: "Call it \"Night Shift\" with weekly quotas",
+    text: "Yes = the mode is \"Night Shift\", rounds are \"nights\", and every 3 nights is a \"week\" with a quota. No = suggest names in the note.",
+    effort: "-", rec: "<b>Yes.</b>" },
+  { id: "cn3-week", group: "concepts", title: "A week is 3 nights",
+    text: "Yes = the quota and night length change every 3 nights (your \"every x floors\" idea). No = write another number in the note.",
+    effort: "-", rec: "<b>Yes.</b> Short weeks keep the next goal close for kids." },
   { id: "fl1-length", group: "floorsPicks", title: "A run is 5 floors with a finish",
     text: "Yes = 5 floors, and floor 5 is the big final one. No = floors never end (go as deep as you can).",
     effort: "Same either way", rec: "<b>Yes.</b> A finish is clearer for kids and easier to balance. An endless mode can come later with a best-floor board." },
@@ -437,7 +533,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["floorsPicks", "mapDir", "nextQuick", "icons", "built","ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["concepts", "floorsPicks", "mapDir", "nextQuick", "icons", "built","ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
