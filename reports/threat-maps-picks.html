@@ -99,6 +99,23 @@ table.grid tr:first-child td { border-top: 0; }
   </section>
 
   <section>
+    <h2>Night Shift is being built (18 Nov)</h2>
+    <p>You picked <b>B, The Night Shift</b>: nights in a row, 3 nights a week, a weekly quota. The build has started in 3 parts side by side:</p>
+    <ol>
+      <li>The run itself: nights, weeks, quota, coats, pay, and getting fired.</li>
+      <li>The screens: picking Night Shift at the truck, NIGHT 4 · WEEK 2 on the readout, "This week: 900 / 1,500", Next night / Clock out, and the Fired! screen.</li>
+      <li>The manager and the ring getting harder each week.</li>
+    </ol>
+    <p>Your play-check is planned for Saturday.</p>
+    <p><b>Truck closer to the building</b> (your ask): the truck's spot is a single number in the code, so moving it now and back later is easy. I'll check the yard in Studio so it lands clear of the props, then move it close to the loading door.</p>
+
+    <p class="when">Your question: can we pick the next place? Won't the same map get boring?</p>
+    <p><b>The same map:</b> the building is rebuilt every night with a new layout: new halls, rooms, piles, props and spooky surprises. So it's never the exact same place. But it always looks like the same kind of building, and after many nights that can feel samey. You're right to think about it.</p>
+    <p><b>Picking the next place:</b> both the Office and the School are already built in the same game place, so switching between nights is possible. The School is scarier (2 drops) and asks for more Gloom, so it fits as the brave choice. Three ways:</p>
+    <div id="dest"></div>
+  </section>
+
+  <section>
     <h2>The whole new mode: pick a concept (18 Nov)</h2>
     <p>You're right: "floors" is just how Dandy's World does it, and Lethal Company uses days. So I've stepped back to the <b>whole mode</b>: what a round is in our story, leaving the building and coming back, what the outside is for, rewards, crews, the hub, and new players. Your answers so far are built into all three concepts:</p>
     <ul>
@@ -339,6 +356,15 @@ table.grid tr:first-child td { border-top: 0; }
 
 <script>
 const IDEAS = [
+  { id: "dn1-pick-next", group: "dest", title: "Crew picks the next place between nights",
+    text: "In the yard, the vote gets a second choice: Office or School for the next night. School = scarier, bigger goal, more pay.",
+    effort: "About half a day + screens. Could make lock if you pick it now", rec: "<b>Yes, after the main build works</b> (Friday). It adds choice and variety cheaply." },
+  { id: "dn2-auto-swap", group: "dest", title: "Or: a new building every week (automatic)",
+    text: "No choice. Every new week the truck drives to the other building (Office week, School week...).",
+    effort: "About 1-2 hours", rec: "The cheapest. Less fun than choosing, but always fresh." },
+  { id: "dn3-later", group: "dest", title: "Or: decide later",
+    text: "Launch with one building per run (the one picked at the truck). Add place-picking in the first update, along with more buildings.",
+    effort: "Nothing now", rec: "Fine too. Remember each night already gets a new layout." },
   { id: "cn1-concept", group: "concepts", title: "Which concept? Yes = B, The Night Shift",
     text: "Yes = build B (nights in a row, weekly quota, leave on the truck every night, the yard between nights). No = write A or C (or your own mix) in the note.",
     effort: "B: about 2-3 days with 3 sessions, playable for your Saturday check", rec: "<b>Yes (B).</b> It's our own fiction, it gives the outside a job, it fits your Lethal-style days idea, and it reuses the most code." },
@@ -533,7 +559,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["concepts", "floorsPicks", "mapDir", "nextQuick", "icons", "built","ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["dest", "concepts", "floorsPicks", "mapDir", "nextQuick", "icons", "built","ring","readout","landing","round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");
