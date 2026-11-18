@@ -1,0 +1,58 @@
+[
+ {
+  "name": "ic_temperature_0",
+  "prompt": "a chunky cartoon thermometer with a round glass bulb full of sky blue liquid, a white body with thick lilac tick marks and a rounded purple cap, a little frost on the bulb, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 300
+ },
+ {
+  "name": "ic_temperature_1",
+  "prompt": "a chunky cartoon thermometer with a round glass bulb full of sky blue liquid, a white body with thick lilac tick marks and a rounded purple cap, a little frost on the bulb, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 301
+ },
+ {
+  "name": "ic_weather_clear_0",
+  "prompt": "a chunky glowing pale yellow crescent moon, smooth and round, alone, nothing else around it, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 302
+ },
+ {
+  "name": "ic_weather_clear_1",
+  "prompt": "a chunky glowing pale yellow crescent moon, smooth and round, alone, nothing else around it, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 303
+ },
+ {
+  "name": "ic_weather_cloudy_0",
+  "prompt": "a chunky puffy lilac grey cloud partly covering a pale yellow crescent moon behind it, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 304
+ },
+ {
+  "name": "ic_weather_cloudy_1",
+  "prompt": "a chunky puffy lilac grey cloud partly covering a pale yellow crescent moon behind it, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 305
+ },
+ {
+  "name": "ic_weather_windy_0",
+  "prompt": "three chunky curly teal wind swirl ribbons blowing to the right with one orange autumn leaf tumbling in them, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 306
+ },
+ {
+  "name": "ic_weather_windy_1",
+  "prompt": "three chunky curly teal wind swirl ribbons blowing to the right with one orange autumn leaf tumbling in them, chunky stylized 3D game icon in the style of Roblox simulator UI icons, bright saturated colours, glossy toy plastic, soft studio key light from top left, strong specular highlights, rounded exaggerated toy proportions, centered, isolated on a plain flat light grey background, no stars, no sparkles, no text, no letters, no outline",
+  "w": 768,
+  "h": 768,
+  "seed": 307
+ }
+]
