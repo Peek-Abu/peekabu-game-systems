@@ -103,42 +103,52 @@ table.grid tr:first-child td { border-top: 0; }
     <p><b>Coats carry over: works.</b> In your 2-player test, Player 2 lost all 3 coats on night 1 (OUT), and Player 1 lost 1. On night 2, <b>Player 2 came back with 1 coat</b> and <b>Player 1 still had 2</b>. The crew list and hearts showed it right, and "This week 260 / 720" carried over.</p>
     <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/duo-night1-p1.jpg" alt="Night 1, Player 1's screen: the crew list shows Player 2 crossed out with OUT, and Player 1 with 2 red hearts and 1 purple (lost); THIS WEEK 0/720 under the Gloom meter." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Night 1: Player 2 is OUT, Player 1 has 2 coats left.</figcaption></figure>
     <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/duo-night2-p2.jpg" alt="Night 2, Player 2's screen: the readout says NIGHT 2 and WEEK 1; the crew list shows Player 2 with 1 red heart and Player 1 with 2; THIS WEEK 260/720." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Night 2: Player 2 is back with 1 coat, Player 1 still has 2.</figcaption></figure>
-    <p><b>The truck pick in the hub:</b> the PLACES panel has NIGHT SHIFT (picked by default) and QUICK SHIFT, with "Night after night. Make the week's goal!" underneath. I fixed one thing: the contract card still showed a full shift (640 Gloom, 8:30) under Night Shift. It now shows night 1's goal and "3:00 · night 1". I couldn't press QUICK SHIFT with my test tools, so please tap it once in your check.</p>
+    <p><b>The truck pick in the hub:</b> the PLACES panel has NIGHT SHIFT (picked by default) and QUICK SHIFT, with a line underneath (now "Night after night. Make each night's goal!"). I fixed one thing: the contract card still showed a full shift (640 Gloom, 8:30) under Night Shift. It now shows night 1's goal and "3:00 · night 1". I couldn't press QUICK SHIFT with my test tools, so please tap it once in your check.</p>
     <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/lobby-mode-pick.jpg" alt="The PLACES panel in the hub, with NIGHT SHIFT and QUICK SHIFT buttons top right, and the line Night after night. Make the week's goal!" style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">The mode pick on the PLACES panel (this capture is from before the contract-card fix).</figcaption></figure>
   </section>
 
   <section>
+    <h2>Night Shift, made easier to read (18 Nov)</h2>
+    <p>Your change is built and pushed (a4a1cba8):</p>
+    <ul>
+      <li><b>Each night has one goal.</b> Miss tonight's goal and you're <b>FIRED!</b> The weekly quota is gone.</li>
+      <li><b>A week is 5 nights.</b> After night 5 the results say <b>WEEK 1 DONE!</b>, with "5 nights survived" and the week bonus (+150 Credits, more each week). Then you vote for night 6 as usual. Later this is where picking items, power-ups, heals, a map or a visit to the company can go. None of that is built yet.</li>
+      <li><b>First nights are easy.</b> Night 1's goal is lower (about 190 Gloom for one player). It grows a little every night.</li>
+      <li>The manager, the anomaly level, the monster's pace and the ring still step up once a week. With 5-night weeks that is gentler per night.</li>
+      <li>The "This week" pill under the Gloom meter is gone. The hub now says "Night after night. Make each night's goal!"</li>
+    </ul>
+    <p class="status">Not tested in Studio yet: I've asked for a Studio slot. The captures further down still show the old weekly pill.</p>
+  </section>
+
+  <section>
     <h2>Your play-check: Night Shift (about 15 minutes)</h2>
-    <p>Everything below is built and pushed. Two things I couldn't check myself, because I can only test as one player: <b>coats carrying over</b> and <b>picking the mode at the truck</b>. Here's exactly what to do.</p>
+    <p>Everything below is built and pushed. Coats carrying over and the hub's mode pick were checked in your 2-player test (above). Here's what's still yours to look at.</p>
     <p class="when">Setup</p>
     <ol>
       <li>Rojo connected to the latest <code>game/cleanup-crew</code>, then open the <b>Odd Hours: Shift</b> place.</li>
-      <li>Studio top bar: <b>Test</b> tab, then <b>Clients and Servers</b>. Set it to <b>2 Players</b> and press <b>Start</b>. Two player windows open.</li>
+      <li>Studio top bar: <b>Test</b> tab, then <b>Clients and Servers</b>. Set it to <b>2 Players</b> and press <b>Start</b>.</li>
     </ol>
-    <p class="when">Check 1: picking the mode (host = Player 1)</p>
+    <p class="when">Check 1: tonight's goal is the line</p>
     <ol>
-      <li>Both players walk onto truck 1. Player 1 is the host.</li>
-      <li>On the truck panel, Player 1 taps <b>NIGHT SHIFT</b> (it should already be picked). Player 2 taps <b>QUICK SHIFT</b>: nothing should change, because only the host picks.</li>
-      <li>Player 1 presses START.</li>
+      <li>Both players get on truck 1. The host keeps <b>NIGHT SHIFT</b> and presses START.</li>
+      <li>Night 1 (3 minutes): the readout shows NIGHT 1 · WEEK 1. The Gloom meter shows tonight's goal only.</li>
+      <li>Meet the goal, then vote <b>NEXT: NIGHT 2</b>. On night 2, clean almost nothing. When the night ends you should see <b>FIRED!</b> "You missed tonight's goal", and the crew goes home.</li>
     </ol>
-    <p class="when">Check 2: coats carry over</p>
+    <p class="when">Check 2: the week report</p>
     <ol>
-      <li>Night 1 (3 minutes): the readout shows NIGHT 1 · WEEK 1, and the Gloom meter shows "THIS WEEK 0 / ...".</li>
-      <li><b>Player 2</b> lets the manager catch them <b>3 times</b> (out of coats). They sit out the rest of the night.</li>
-      <li><b>Player 1</b> gets caught <b>once</b> (2 hearts left), then vacuums piles until the goal is met. Then clock out at the truck, or wait for the timer.</li>
-      <li>On the results, both vote <b>NEXT: NIGHT 2</b>.</li>
-      <li>Night 2, check: the load screen says NIGHT 2. <b>Player 1 has 2 hearts. Player 2 has 1 heart.</b> The night pays more ("Night pay 1.25x" on the results).</li>
+      <li>Start again and meet the goal 5 nights in a row. The goals should grow a little each night.</li>
+      <li>Night 5's results: <b>WEEK 1 DONE!</b>, "5 nights survived · Week bonus +150 Credits". The vote is still there.</li>
+      <li>Vote next: night 6 is WEEK 2, a longer night (5:00), and the manager starts angrier.</li>
     </ol>
     <p class="when">Check 3: quick shift still works</p>
     <ol>
-      <li>Stop, start again. This time the host picks <b>QUICK SHIFT</b>: it's a normal 8:30 shift, with no night or week anywhere.</li>
+      <li>In the hub, the host taps <b>QUICK SHIFT</b>: it's a normal 8:30 shift, with no night or week anywhere.</li>
     </ol>
     <p class="when">Also look at</p>
     <ul>
-      <li>Does a 3-minute first night feel right, or too short?</li>
-      <li>Is "This week: ... / ..." clear?</li>
-      <li>Is the FIRED! screen clear? (To see it: clean almost nothing for 3 nights.)</li>
-      <li>On a phone (Studio's device view): the truck panel buttons and the week pill.</li>
+      <li>Is night 1's goal easy enough? Does a 3-minute first night feel right?</li>
+      <li>Are 5 nights before the week report too many?</li>
+      <li>On a phone (Studio's device view): the truck panel buttons and the WEEK DONE line.</li>
     </ul>
     <p class="status">Tell the coordinator what you see, or write it in a note here, and I'll fix it.</p>
   </section>
