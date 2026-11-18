@@ -5,8 +5,8 @@
 
 	INTERIM Creator Store picks (2026-11-10, free library audio, not yet heard by the owner): to be replaced by in-house
 	sounds (game-sound-design) once he has listened. The STAFF door's creak as it swings open and his exit door's slam
-	(3D, at the door), and the relief sting when he has gone (2D). Also the finish fanfare and Pippa's coach card
-	(owner-picked).
+	(3D, at the door), and the relief sting when he has gone (2D). Also the finish fanfare and the guide's coach card
+	(owner-picked; the guide is Prickles, TrainingConstants.GUIDE_EMPLOYEE).
 
 	Static data + registration (spec-exempt).
 
@@ -41,10 +41,17 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- library-round pick B (2026-11-14), played in place. Its file opens on ~0.5 s of silence (no start offset exists),
 	-- so the fanfare lands just after the screen. About -18 dB, a reward sting.
 	trainingFinish = { assetId = "rbxassetid://1840120056", group = "SFX", bus = "Reward", volume = 2.7 },
-	-- Pippa's coach card showing a new tip on a training run (TrainingServiceClient, on each new run line:
-	-- TrainingGuideRules.lineChanged): a paper note slides onto a desk + a tiny desk bell (1.0 s, -20 LUFS). Owner tryout
-	-- round 3 pick (2026-11-17); ElevenLabs SFX, Starter plan, Icey Labs. No sound played there before. Volume 1 is a
-	-- starting level that awaits the owner's hear-check.
+	-- The guide's coach card (TrainingCoach: Prickles, or the step's own `coach`) showing a new line, once per new line
+	-- (TrainingGuideRules.lineChanged), everywhere that card speaks (owner 11-17: "All dialogue events that leverage
+	-- that same mechanic"):
+	--   - a training run's stop and catch lines (TrainingServiceClient.onCoachLine, the TrainingGuideHud card);
+	--   - every spotlight tour step's card as it first shows (TrainingSpotlightSystem.draw): the hub's "New here? Start
+	--     training!" hint, the after-training Shop / trucks tour, "Play training again", a training run's first-stop
+	--     tips and a first real shift's hotbar tour. The same line coming back (after a hold, a page closing, or the
+	--     hub hint after stepping off the pad) does not play it again.
+	-- A paper note slides onto a desk + a tiny desk bell (1.0 s, -20 LUFS). Owner tryout round 3 pick (2026-11-17);
+	-- ElevenLabs SFX, Starter plan, Icey Labs. No sound played at any of these before. Volume 1 is a starting level
+	-- that awaits the owner's hear-check.
 	trainingCoachCard = { assetId = "rbxassetid://119489026512972", group = "UI", volume = 1, maxConcurrent = 1 },
 }
 

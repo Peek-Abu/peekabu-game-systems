@@ -157,8 +157,9 @@ function TrainingGuideRules.ranEnough(sprintSeconds: number): boolean
 end
 
 --[=[
-	Whether Pippa's run line changed to a new one (`current` differs from `previous`; the first line of a run counts),
-	which holds the spotlight tour aside (`tourHeld`): stop lines always show, a tour step waits and comes back after.
+	Whether the guide's line changed to a new one (`current` differs from `previous`; the first line counts). A new run
+	line holds the spotlight tour aside (`tourHeld`): stop lines always show, a tour step waits and comes back after.
+	A new run line, or a spotlight step's card drawing a new line, plays the coach card's sound once.
 ]=]
 function TrainingGuideRules.lineChanged(previous: string?, current: string?): boolean
 	return current ~= nil and current ~= previous

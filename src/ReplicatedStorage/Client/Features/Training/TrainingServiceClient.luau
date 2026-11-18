@@ -12,9 +12,9 @@
 	- On a training run (tutorial v3): from the stop in the `training` world entry, the hall's lights out, creeping
 	  Gloom, red danger screen and glowing desk (TrainingHallSystem), the floor trail, arrow and ring
 	  (TrainingTrailSystem), and the coach's lines and stop dots (TrainingCoachStore, read by the TrainingGuideHud
-	  widget and the HUD; each new line plays the coach card's sound, TrainingAssets.COACH_CARD); all put back when
-	  the entry goes. A catch (TrainingEvents.Caught) plays the catch beat; the
-	  finish (TrainingEvents.Finish) shows the finish screen (the TrainingFinish widget).
+	  widget and the HUD; each new line, and each spotlight tour step's card, plays the coach card's sound,
+	  TrainingAssets.COACH_CARD); all put back when the entry goes. A catch (TrainingEvents.Caught) plays the catch
+	  beat; the finish (TrainingEvents.Finish) shows the finish screen (the TrainingFinish widget).
 	- Back in the hub after PLAY AGAIN (TrainingEvents.Again): the arrow to the Training pad.
 
 	@class TrainingServiceClient
@@ -189,9 +189,10 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 	return steps
 end
 
--- Pippa's last run line: a new one holds the spotlight tour aside (TrainingGuideRules.tourHeld), so a tour step never
--- hides a stop line (owner, 11-10: "Run! Hold Shift" covered every stop line until the player sprinted), and her
--- coach card's sound plays as it shows (TrainingAssets.COACH_CARD).
+-- The guide's (Prickles') last run line: a new one holds the spotlight tour aside (TrainingGuideRules.tourHeld), so a tour step never
+-- hides a stop line (owner, 11-10: "Run! Hold Shift" covered every stop line until the player sprinted), and the
+-- coach card's sound plays as it shows (TrainingAssets.COACH_CARD; a tour step's card plays it too, in
+-- TrainingSpotlightSystem).
 local lastLine: string? = nil
 local function onCoachLine()
 	local now = os.clock()

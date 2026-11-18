@@ -21,6 +21,11 @@
 
 	`point` replaces whatever is showing; `clear` hides it. Redrawn every FRAME_SECONDS (the arrow follows the camera).
 
+	A step's card plays the coach card's sound (TrainingAssets.COACH_CARD) the first time it draws with a new line
+	(TrainingGuideRules.lineChanged against the last line drawn), the same sound as a training run's stop lines (owner
+	11-17: every dialogue event on that card). Redraws never play it, nor does the same line coming back after a hold,
+	a page closing or a new `point` with it (the hub hint once the player steps off the pad); `clear` forgets the line.
+
 	Spec-exempt shell (the camera, PlayerGui, CollectionService, the React root); the layout is the specced
 	TrainingSpotlightUtils.
 
@@ -35,6 +40,9 @@ local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingGuideRules)
+local TrainingAssets = require(ReplicatedStorage.Client.Features.Training.Data.TrainingAssets)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
@@ -109,6 +117,8 @@ local startedAt = 0
 local seenAt: number? = nil
 local skipped = false
 local holdUntil = 0
+-- The last line a step's card drew (its coach card sound plays when a new one draws); nil after `clear`.
+local shownLine: string? = nil
 local connection: RBXScriptConnection? = nil
 local elapsed = 0
 -- When the local character last spawned (os.clock).
@@ -292,6 +302,10 @@ local function draw(step: Step, now: number)
 			math.clamp(at.Y + LINE_GAP, 0, math.max(screen.Y - LINE_SIZE.Y, 0))
 		)
 	end
+	if TrainingGuideRules.lineChanged(shownLine, step.line) then
+		SoundServiceClient:playOneShot(TrainingAssets.COACH_CARD)
+	end
+	shownLine = step.line
 	render(React.createElement(TrainingSpotlight, props))
 end
 
@@ -398,6 +412,7 @@ end
 function TrainingSpotlightSystem.clear()
 	table.clear(steps)
 	index = 0
+	shownLine = nil
 	stopTicking()
 end
 
