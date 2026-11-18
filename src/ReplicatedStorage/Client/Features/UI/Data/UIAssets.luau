@@ -357,6 +357,19 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- (uiOpen, Roblox GUI - Swipe 17208405682) for those two wheels only. Volume 1 is a starting level that awaits the
 	-- owner's hear-check.
 	uiWheelOpen = { assetId = "rbxassetid://124416513239859", group = "UI", volume = 1, maxConcurrent = 1 },
+	-- A Legendary shop buy (the offer's top rarity; a bundle's highest-rarity item), played by ShopServiceClient on top
+	-- of the purchase (uiPurchase stays for every buy; UISoundFormulas.buyExtra over UIAssets.buySounds). One F major
+	-- full-orchestra hit with a felt bass drum and a soft crash, hit at 0 s, 2.05 s (-13 LUFS integrated, true peak
+	-- -1 dBFS). Owner pick 2026-11-17 ("For legendary purchase - orchestra hit style!"), in-house (ElevenLabs Starter
+	-- stems hand-layered with mix_sting.py), Icey Labs. A reward sting, so the Reward bus. Mastered loud: volume 0.6
+	-- is a starting level that awaits the owner's hear-check.
+	shopBuyLegendary = {
+		assetId = "rbxassetid://125716350432533",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.6,
+		maxConcurrent = 1,
+	},
 }
 for id, def in SOUNDS do
 	if not SoundRegistry.has(id) then
@@ -381,5 +394,12 @@ local TIERS: { [string]: string } = {
 	wheel = "uiWheelOpen",
 }
 UIAssets.soundTiers = table.freeze(TIERS)
+
+-- The extra sting a shop buy plays on top of the purchase, by the buy's top rarity (UISoundFormulas.buyExtra). Only
+-- Legendary has one (owner pick 2026-11-17); the other rarities are being decided, each a line here when picked.
+local BUY_SOUNDS: { [string]: string } = {
+	legendary = "shopBuyLegendary",
+}
+UIAssets.buySounds = table.freeze(BUY_SOUNDS)
 
 return UIAssets

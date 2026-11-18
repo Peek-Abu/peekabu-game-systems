@@ -103,4 +103,30 @@ return function()
 			expect(UISoundFormulas.buyTier("owned")).to.equal("error")
 		end)
 	end)
+
+	-- Owner pick 2026-11-17 ("For legendary purchase - orchestra hit style!"): a buy whose top rarity is Legendary plays
+	-- an extra sting on top of the purchase; the other rarities have no extra yet (a data change in UIAssets.buySounds).
+	describe("buy extras", function()
+		it("plays the Legendary sting for a Legendary buy that went through", function()
+			expect(UISoundFormulas.buyExtra("", "legendary", UIAssets.buySounds)).to.equal("shopBuyLegendary")
+			expect(UIAssets.sounds.shopBuyLegendary).to.be.ok()
+			expect(UIAssets.sounds.shopBuyLegendary.bus).to.equal("Reward")
+		end)
+
+		it("plays no extra for a refused buy", function()
+			expect(UISoundFormulas.buyExtra("short", "legendary", UIAssets.buySounds)).to.equal(nil)
+			expect(UISoundFormulas.buyExtra("owned", "legendary", UIAssets.buySounds)).to.equal(nil)
+		end)
+
+		it("plays no extra for the other rarities yet, or an unknown one", function()
+			for _, rarity in { "default", "uncommon", "rare", "epic", "odd" } do
+				expect(UISoundFormulas.buyExtra("", rarity, UIAssets.buySounds)).to.equal(nil)
+			end
+			expect(UISoundFormulas.buyExtra("", nil, UIAssets.buySounds)).to.equal(nil)
+		end)
+
+		it("follows the rarity map it is given", function()
+			expect(UISoundFormulas.buyExtra("", "epic", { epic = "someEpicSting" })).to.equal("someEpicSting")
+		end)
+	end)
 end

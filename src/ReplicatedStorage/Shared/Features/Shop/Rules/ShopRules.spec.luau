@@ -58,4 +58,30 @@ return function()
 		expect(ShopRules.missing(ShopRegistry.get("Prickles"), 2000)).to.equal(3000)
 		expect(ShopRules.missing(ShopRegistry.get("Prickles"), 9000)).to.equal(0)
 	end)
+
+	-- A buy's top rarity (owner, legendary purchase sting 2026-11-17: "if bundle - highest rarity item").
+	describe("topRarity", function()
+		local function offer(items)
+			return { id = "Test", items = items, currency = "gleam", price = 1, pool = "picks" }
+		end
+
+		it("is a single item's own rarity", function()
+			expect(ShopRules.topRarity(ShopRegistry.get("Pippa.BubbleBuddy"))).to.equal("legendary")
+			expect(ShopRules.topRarity(ShopRegistry.get("Prickles"))).to.equal("default")
+		end)
+
+		it("is a bundle's highest-rarity item, wherever it sits in the bundle", function()
+			expect(ShopRules.topRarity(offer({ "Pippa.Bubbles", "Cappy.PJ", "Pippa.GloomTouched" }))).to.equal(
+				"legendary"
+			)
+			expect(ShopRules.topRarity(offer({ "Pippa.GloomTouched", "Pippa.Bubbles" }))).to.equal("epic")
+			expect(ShopRules.topRarity(ShopRegistry.get("Bundle.BubbleBuddy"))).to.equal("legendary")
+		end)
+
+		it("skips unknown items, and is nil when it knows none", function()
+			expect(ShopRules.topRarity(offer({ "Nope", "Pippa.GloomTouched" }))).to.equal("uncommon")
+			expect(ShopRules.topRarity(offer({ "Nope" }))).to.equal(nil)
+			expect(ShopRules.topRarity(offer({}))).to.equal(nil)
+		end)
+	end)
 end

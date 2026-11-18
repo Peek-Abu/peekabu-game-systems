@@ -8,7 +8,8 @@
 	tab, into ShopStore.passInfo, and each Gleam bundle's developer product price and icon, into ShopStore.bundleInfo
 	(so the bundle cards show what the Roblox prompt and store page show). A Robux buy of Gleam, coffee or a pass that
 	the server has granted (ShopEvents.Purchased) goes into CosmeticRevealStore for the "You bought it!" screen, except
-	a coffee bought outside the hub (ShopPurchaseRules.shows).
+	a coffee bought outside the hub (ShopPurchaseRules.shows). A buy that went through plays the purchase, and a
+	Legendary one (ShopRules.topRarity: a bundle's highest-rarity item) adds its sting on top (UISoundFormulas.buyExtra).
 
 	@class ShopServiceClient
 ]=]
@@ -22,6 +23,7 @@ local ShopEvents = require(Shop.Net.ShopEvents)
 local ShopRegistry = require(Shop.Data.ShopRegistry)
 local ShopPurchaseRules = require(Shop.Rules.ShopPurchaseRules)
 local ShopRequestRules = require(Shop.Rules.ShopRequestRules)
+local ShopRules = require(Shop.Rules.ShopRules)
 local ShopRotationUtils = require(Shop.Utils.ShopRotationUtils)
 local ShopTypes = require(Shop.Data.ShopTypes)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
@@ -30,6 +32,8 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local ShopConstants = require(Shop.Data.ShopConstants)
 
@@ -112,6 +116,14 @@ local ShopServiceClient: ShopServiceClient = {
 				ShopStore.setResult({ offer = data.offer, reason = data.reason })
 				-- The buy's answer is heard: the purchase when it went through, the error when it was refused.
 				UISoundSystem.play(UISoundFormulas.buyTier(data.reason))
+				-- A rarity's sting on top (only Legendary today). BuyResult is the one answer to a Credits / Gleam buy
+				-- (a Robux buy answers through Purchased, never a cosmetic offer), so it plays once.
+				local offer = ShopRegistry.get(data.offer)
+				local rarity = if offer ~= nil then ShopRules.topRarity(offer) else nil
+				local extra = UISoundFormulas.buyExtra(data.reason, rarity, UIAssets.buySounds)
+				if extra ~= nil then
+					SoundServiceClient:playOneShot(extra)
+				end
 			end)
 		)
 		table.insert(

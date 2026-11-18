@@ -4,7 +4,8 @@
 	< CTA, with back and error beside it). A button's tier is the one its caller names, else its look's default (a filled
 	action button confirms, everything else clicks); a disabled button answers a press with the error; a hold prompt's
 	wind-up is stretched to fill its hold, and the prompt that is a CTA (clock out) completes with the CTA; the emote and
-	chat wheels open with their own tier (`wheelOpen`). Pure.
+	chat wheels open with their own tier (`wheelOpen`); a buy that went through can add a rarity's sting on top of the
+	purchase (`buyExtra`, the map in UIAssets.buySounds). Pure.
 
 	@class UISoundFormulas
 ]=]
@@ -98,6 +99,18 @@ end
 ]=]
 function UISoundFormulas.buyTier(reason: string): Tier
 	return if reason == "" then "purchase" else "error"
+end
+
+--[=[
+	The extra sound a shop buy plays on top of its purchase: the sound `extras` names for the buy's rarity (ShopRules.
+	topRarity: a bundle's highest-rarity item) when the buy went through (an empty reason); nil for a refusal, an
+	unknown rarity, or a rarity with no extra (today only Legendary has one, owner pick 2026-11-17).
+]=]
+function UISoundFormulas.buyExtra(reason: string, rarity: string?, extras: { [string]: string }): string?
+	if reason ~= "" or rarity == nil then
+		return nil
+	end
+	return extras[rarity]
 end
 
 return UISoundFormulas

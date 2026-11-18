@@ -4,17 +4,29 @@
 	live event's id, is its event), they don't already own
 	everything it grants (owning a bundled extra is fine: the rest is still new), and their balance in the offer's
 	currency covers the price. The server runs the same check inside the purchase; the client uses it to draw the
-	button.
+	button. `topRarity` is a buy's rarity for its sound: a bundle's highest-rarity item (owner, 2026-11-17).
 
 	@class ShopRules
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.ShopRotationUtils)
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 
 local ShopRules = {}
+
+-- The rarities worst to best (Odd above Legendary, as the Locker rolls them).
+local RARITY_RANK: { [CosmeticTypes.Rarity]: number } = {
+	default = 0,
+	uncommon = 1,
+	rare = 2,
+	epic = 3,
+	legendary = 4,
+	odd = 5,
+}
 
 export type Refusal = "owned" | "short" | "not on sale"
 
@@ -49,6 +61,21 @@ end
 -- How much more of the offer's currency the player needs (0 when they have enough).
 function ShopRules.missing(offer: ShopTypes.Offer, balance: number): number
 	return math.max(0, offer.price - balance)
+end
+
+--[=[
+	An offer's rarity: its one item's, or a bundle's highest-rarity item's (owner, 2026-11-17: "if bundle - highest
+	rarity item"). Items the catalogue doesn't know are skipped; nil when it knows none.
+]=]
+function ShopRules.topRarity(offer: ShopTypes.Offer): CosmeticTypes.Rarity?
+	local top: CosmeticTypes.Rarity? = nil
+	for _, id in offer.items do
+		local item = CosmeticRegistry.get(id)
+		if item ~= nil and (top == nil or RARITY_RANK[item.rarity] > RARITY_RANK[top]) then
+			top = item.rarity
+		end
+	end
+	return top
 end
 
 return ShopRules
