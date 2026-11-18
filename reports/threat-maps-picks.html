@@ -86,6 +86,15 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
   </section>
 
   <section>
+    <h2>Landing readout: pick a look (18 Nov)</h2>
+    <p>You picked: wait until the ARRIVAL card closes, and no card or back frame, more like a diagnostics screen or a voice report. Here are 3 quick looks, drawn over a real game screenshot. In the game, the lines come in <b>one at a time</b> (typed or faded), stay a few seconds, then fade away. Grey circles mean an icon still to be made. Pick <b>Yes</b> on the one you want.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-looks/a.jpg" alt="Look A, Site scan: a mint SITE SCAN header with a line under it, then labels Temp, Time, Weather, Danger on the left and big values on the right, with no box behind them." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-looks/b.jpg" alt="Look B, Truck radio: a small purple sound-wave badge and the words TRUCK RADIO, then spoken lines: Brr! It's 37°F out. It's 2:52 AM. The sky is cloudy. Danger: one Gloom drop." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/readout-looks/c.jpg" alt="Look C, Big stamps: four big icon-and-value lines with no labels: 37°F, 2:52 AM, Cloudy, Danger 1 with a Gloom drop." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"></figure>
+    <div id="readout"></div>
+  </section>
+
+  <section>
     <h2>Your answers, round 2 (17 Nov, late)</h2>
     <p><b>Building now:</b> the landing card. When you touch down, it shows Temp, Time, Weather and Danger (Office 1 drop, School 2) for a few seconds. It is always night. The temp and time are random, the weather is Clear, Cloudy or Windy, and the whole crew sees the same card. <b>On hold:</b> the second monster, until you pick which one. <b>Later:</b> the slower game.</p>
     <figure style="margin:0;display:grid;gap:6px">
@@ -130,6 +139,15 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
 
 <script>
 const IDEAS = [
+  { id: "r1-look-a-scan", group: "readout", title: "Look A: Site scan",
+    text: "Like a diagnostics screen: a glowing SITE SCAN title, then each line types in with a blinking cursor.",
+    effort: "Half a day", rec: "Clean and techy. A little cold for little kids." },
+  { id: "r1-look-b-radio", group: "readout", title: "Look B: Truck radio",
+    text: "Like a voice report: a sound-wave badge bounces while short sentences fade in one by one. \"Brr! It's 37°F out.\" A soft radio crackle, quiet, if you want sound.",
+    effort: "Half a day", rec: "<b>My pick.</b> Kids read it like someone talking, and it fits the truck that drops you off." },
+  { id: "r1-look-c-stamps", group: "readout", title: "Look C: Big stamps",
+    text: "Just a big icon and a big value per line, each popping in. No labels.",
+    effort: "Half a day + 2 new icons (thermometer, cloud)", rec: "The fastest to read, but it needs 2 new icons, and with no labels Danger 1 says less." },
   { id: "c1-card-after-arrival", group: "landing", title: "Show the card after the big ARRIVAL card closes?",
     text: "Right now the landing card pops up at the same time as the big ARRIVAL card in the middle, so you have two cards to read at once. Yes = it waits until the ARRIVAL card closes, then slides in. No = put Temp, Time, Weather and Danger inside the ARRIVAL card instead (say so in the note).",
     effort: "An hour", rec: "<b>Yes.</b> One card at a time is easier to read." },
@@ -255,7 +273,7 @@ async function save(id, patch) {
 }
 
 IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
-["landing", "round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
+["readout", "landing", "round2", "plan", "now", "later"].forEach(g => { const c = document.getElementById(g); c.style.display = "grid"; c.style.gap = "14px"; });
 
 (async () => {
   const status = document.getElementById("dbstatus");

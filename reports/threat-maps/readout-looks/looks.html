@@ -1,0 +1,83 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Luckiest+Guy&display=swap">
+<style>
+/* Three frameless landing-readout looks over a real Odd Hours HUD capture (1601x652). Frame shown = URL hash. */
+:root { --ink:#1E0F3A; --grape:#7B3FF2; --grape-hi:#B48BFF; --mint:#33E8A9; --mint-hi:#BFFFE7; --gold:#FFC93A; --coral:#FF4F6E; --sky:#5CC8FF; }
+html, body { margin:0; background:#000; }
+.frame { display:none; position:relative; width:1601px; height:652px; background:url(bg.jpg) 0 0 / 1601px 652px no-repeat; overflow:hidden; }
+.frame:target { display:block; }
+.tag { position:absolute; right:18px; bottom:14px; font:600 22px Fredoka, sans-serif; color:#fff; background:rgba(30,15,58,.75); padding:4px 12px; border-radius:10px; }
+/* shared outlined game text */
+.lg { font-family:"Luckiest Guy", sans-serif; letter-spacing:.02em; color:#fff;
+  -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink); }
+.fd { font-family:Fredoka, sans-serif; font-weight:600; color:#fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--ink); }
+
+/* A: site scan (diagnostics) */
+#a .scan { position:absolute; left:26px; top:142px; display:grid; gap:6px; }
+#a .head { font-size:24px; color:var(--mint); filter: drop-shadow(0 0 10px rgba(51,232,169,.55)); display:flex; align-items:center; gap:10px; }
+#a .head i { width:10px; height:10px; border-radius:50%; background:var(--mint); box-shadow:0 0 10px var(--mint); outline:3px solid var(--ink); }
+#a .row { display:flex; align-items:baseline; gap:14px; }
+#a .k { width:118px; font-size:19px; color:var(--mint-hi); }
+#a .v { font-size:30px; }
+#a .v.cool { color:var(--sky); }
+#a .rule { height:3px; width:250px; background:linear-gradient(90deg, var(--mint), transparent); box-shadow:0 2px 0 var(--ink); margin:2px 0 4px; }
+#a .typing .v::after { content:"_"; color:var(--mint); }
+#a .drops img { width:38px; height:38px; vertical-align:middle; margin-right:-4px; }
+
+/* B: radio report (voice assistant) */
+#b .rep { position:absolute; left:26px; top:140px; display:grid; gap:10px; max-width:430px; }
+#b .who { display:flex; align-items:center; gap:12px; }
+#b .wave { display:flex; gap:4px; align-items:center; height:38px; padding:0 4px; }
+#b .wave span { width:7px; border-radius:4px; background:var(--grape-hi); outline:3px solid var(--ink); box-shadow:0 0 10px rgba(180,139,255,.7); }
+#b .who .lg { font-size:22px; color:var(--grape-hi); }
+#b .line { font-size:27px; line-height:1.15; }
+#b .line b { font-family:"Luckiest Guy", sans-serif; font-weight:400; color:var(--gold); letter-spacing:.02em; }
+#b .line.fade { opacity:.45; }
+#b .line img { width:40px; height:40px; vertical-align:middle; }
+
+/* C: big stamps */
+#c .stamps { position:absolute; left:24px; top:136px; display:grid; gap:4px; }
+#c .s { display:flex; align-items:center; gap:12px; }
+#c .s .ic { width:50px; height:50px; display:grid; place-items:center; }
+#c .s .ic img { width:50px; height:50px; }
+#c .ph { width:40px; height:40px; border-radius:50%; background:#9a93ad; outline:4px solid var(--ink); display:grid; place-items:center; font:600 9px Fredoka, sans-serif; color:var(--ink); }
+#c .s .lg { font-size:38px; }
+#c .gold { background:linear-gradient(#FFFBE0, #FFE066 45%, #FFB21A 75%, #E8730C); -webkit-background-clip:text; background-clip:text; color:transparent; }
+#c .s.pop { transform:scale(1.12) rotate(-3deg); transform-origin:left center; }
+#c .lbl { font-size:16px; color:var(--grape-hi); margin-left:62px; margin-top:-8px; }
+</style></head><body>
+
+<div class="frame" id="a">
+  <div class="scan">
+    <div class="head lg"><i></i>SITE SCAN</div>
+    <div class="rule"></div>
+    <div class="row"><span class="k fd">Temp</span><span class="v lg cool">37°F</span></div>
+    <div class="row"><span class="k fd">Time</span><span class="v lg">2:52 AM</span></div>
+    <div class="row"><span class="k fd">Weather</span><span class="v lg">Cloudy</span></div>
+    <div class="row typing"><span class="k fd">Danger</span><span class="v drops"><img src="gloom.png" alt=""></span></div>
+  </div>
+  <span class="tag">A · Site scan</span>
+</div>
+
+<div class="frame" id="b">
+  <div class="rep">
+    <div class="who"><div class="wave"><span style="height:14px"></span><span style="height:30px"></span><span style="height:20px"></span><span style="height:36px"></span><span style="height:12px"></span></div><span class="lg">Truck radio</span></div>
+    <div class="line fd">Brr! It's <b>37°F</b> out.</div>
+    <div class="line fd">It's <b>2:52 AM</b>.</div>
+    <div class="line fd">The sky is <b>cloudy</b>.</div>
+    <div class="line fd fade">Danger: <img src="gloom.png" alt=""></div>
+  </div>
+  <span class="tag">B · Truck radio</span>
+</div>
+
+<div class="frame" id="c">
+  <div class="stamps">
+    <div class="s"><span class="ic"><span class="ph">temp</span></span><span class="lg" style="color:#BFE9FF">37°F</span></div>
+    <div class="s"><span class="ic"><img src="clock.png" alt=""></span><span class="lg">2:52 AM</span></div>
+    <div class="s"><span class="ic"><span class="ph">cloud</span></span><span class="lg">Cloudy</span></div>
+    <div class="s pop"><span class="ic"><img src="gloom.png" alt=""></span><span class="lg" style="color:var(--grape-hi)">Danger 1</span></div>
+  </div>
+  <span class="tag">C · Big stamps</span>
+</div>
+</body></html>
