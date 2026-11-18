@@ -33,6 +33,10 @@ local centre: Vector2? = nil
 local radius = 1
 -- The virtual cursor for a locked mouse, relative to the ring's centre.
 local cursor = Vector2.zero
+-- What steered last, so a ring that moves (it follows the character every frame) re-reads a still pointer or a
+-- still finger round its new centre: a free mouse, a held touch at `touchPoint`, or anything else (it holds).
+local steer: "pointer" | "touch" | "other" = "other"
+local touchPoint: Vector2? = nil
 
 local function setAngle(value: number?)
 	if value ~= nil then
@@ -54,25 +58,31 @@ local function onInput(input: InputObject)
 	local kind = input.UserInputType
 	if kind == Enum.UserInputType.MouseMovement then
 		if UserInputService.MouseBehavior == Enum.MouseBehavior.Default then
+			steer = "pointer"
 			setAngle(
 				SkillCheckInputFormulas.fromPoint(Vector2.new(input.Position.X, input.Position.Y), at, DEAD_CENTRE)
 			)
 		else
+			steer = "other"
 			cursor = SkillCheckInputFormulas.nudge(cursor, Vector2.new(input.Delta.X, input.Delta.Y), radius)
 			setAngle(SkillCheckInputFormulas.fromPoint(cursor, Vector2.zero, 1))
 		end
 	elseif kind == Enum.UserInputType.Touch then
 		local point = Vector2.new(input.Position.X, input.Position.Y)
 		if SkillCheckInputFormulas.withinReach(point, at, radius * SkillCheckConstants.TOUCH_REACH) then
+			steer = "touch"
+			touchPoint = point
 			setAngle(SkillCheckInputFormulas.fromPoint(point, at, DEAD_CENTRE))
 		end
 	elseif input.KeyCode == Enum.KeyCode.Thumbstick2 then
-		setAngle(
-			SkillCheckInputFormulas.stick(
-				Vector2.new(input.Position.X, input.Position.Y),
-				SkillCheckConstants.STICK_DEADZONE
-			)
+		local stick = SkillCheckInputFormulas.stick(
+			Vector2.new(input.Position.X, input.Position.Y),
+			SkillCheckConstants.STICK_DEADZONE
 		)
+		if stick ~= nil then
+			steer = "other"
+		end
+		setAngle(stick)
 	end
 end
 
@@ -88,26 +98,47 @@ function SkillCheckInputSystem.start(): () -> ()
 			onInput(input)
 		end
 	end)
+	-- A lifted finger leaves the icon where it was.
+	local ended = UserInputService.InputEnded:Connect(function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.Touch and steer == "touch" then
+			steer = "other"
+			touchPoint = nil
+		end
+	end)
 	return function()
 		changed:Disconnect()
 		began:Disconnect()
+		ended:Disconnect()
 		centre = nil
 	end
 end
 
 --[=[
-	The ring now on screen: its centre (inset-free screen px) and inner radius (px); nil when none shows. A ring
-	appearing starts the locked-mouse cursor at the icon's angle and, with a free mouse, takes the pointer's angle now.
+	The ring now on screen: its centre (inset-free screen px) and inner radius (px); nil when none shows. Called every
+	frame (the ring follows the character). A ring appearing starts the locked-mouse cursor at the icon's angle and,
+	with a free mouse, takes the pointer's angle now; a ring that moved re-reads a free mouse or a held finger round its
+	new centre (a locked mouse's cursor and a stick are relative already).
 ]=]
 function SkillCheckInputSystem.setRing(at: Vector2?, innerRadius: number)
 	local appeared = centre == nil and at ~= nil
 	centre = at
 	radius = math.max(innerRadius, 1)
-	if at ~= nil and appeared then
+	if at == nil then
+		return
+	end
+	local freeMouse = UserInputService.MouseEnabled and UserInputService.MouseBehavior == Enum.MouseBehavior.Default
+	if appeared then
 		cursor = SkillCheckAngleFormulas.toVector(angle) * radius
-		if UserInputService.MouseEnabled and UserInputService.MouseBehavior == Enum.MouseBehavior.Default then
+		if freeMouse then
 			setAngle(SkillCheckInputFormulas.fromPoint(pointer(), at, DEAD_CENTRE))
 		end
+		return
+	end
+	local held = touchPoint
+	if steer == "pointer" and freeMouse then
+		setAngle(SkillCheckInputFormulas.fromPoint(pointer(), at, DEAD_CENTRE))
+	elseif steer == "touch" and held ~= nil then
+		setAngle(SkillCheckInputFormulas.fromPoint(held, at, DEAD_CENTRE))
 	end
 end
 

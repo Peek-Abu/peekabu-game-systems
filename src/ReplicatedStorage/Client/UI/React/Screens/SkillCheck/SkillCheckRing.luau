@@ -31,8 +31,8 @@ local BEAD_FILL = 0.62
 
 export type SkillCheckRingProps = {
 	layout: SkillCheckRingViewModel.Layout,
-	-- The ring's centre in HUD design px.
-	centre: Vector2,
+	-- The ring's centre in HUD design px (a binding: it follows the character every frame, SkillCheckRingViewModel.placement).
+	centre: React.Binding<Vector2>,
 	gap: number,
 	width: number,
 	-- 0 at the ring's start to 1 at its arrival.
@@ -42,9 +42,11 @@ export type SkillCheckRingProps = {
 	-- The verdict flash's strength (1 just judged, fading to 0) and the verdict (nil: none yet).
 	flash: React.Binding<number>,
 	hit: boolean?,
-	-- The words under the ring (the first rings only); nil: none.
+	-- The words beside the ring (the first rings only); nil: none. `hintSide`: 1 right of the ring, -1 left (default
+	-- the layout's side; SkillCheckRingViewModel.hintSide).
 	hint: string?,
-	-- Handed the inner circle's frame (the input's centre and radius are read from it).
+	hintSide: number?,
+	-- Handed the ring's unshaken centre frame, the inner circle's size (the input's centre and radius are read from it).
 	onHub: ((Frame?) -> ())?,
 }
 
@@ -259,7 +261,7 @@ local function SkillCheckRing(props: SkillCheckRingProps): React.ReactNode
 	local hint = props.hint
 	if hint ~= nil then
 		-- Beside the ring, never under it (the hotbar is there): SkillCheckRingViewModel.hintFrame.
-		local frame = SkillCheckRingViewModel.hintFrame(layout)
+		local frame = SkillCheckRingViewModel.hintFrame(layout, props.hintSide)
 		children.hint = e(ToonText, {
 			text = hint,
 			textSize = metrics.hint,
@@ -273,18 +275,25 @@ local function SkillCheckRing(props: SkillCheckRingProps): React.ReactNode
 		})
 	end
 
-	-- A miss shakes the whole ring sideways a few px as its flash fades.
+	-- The centre frame follows `centre`; inside it, a miss shakes the whole ring sideways a few px as its flash fades.
 	local hub = 2 * metrics.inner
 	return e("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = props.flash:map(function(value: number): UDim2
-			local shake = if hit == false then math.sin(value * 40) * 6 * value else 0
-			return UDim2.fromOffset(props.centre.X + shake, props.centre.Y)
+		Position = props.centre:map(function(value: Vector2): UDim2
+			return UDim2.fromOffset(value.X, value.Y)
 		end),
 		Size = UDim2.fromOffset(hub, hub),
 		BackgroundTransparency = 1,
 		ref = props.onHub,
-	}, children)
+	}, {
+		shake = e("Frame", {
+			Position = props.flash:map(function(value: number): UDim2
+				return UDim2.fromOffset(if hit == false then math.sin(value * 40) * 6 * value else 0, 0)
+			end),
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+		}, children),
+	})
 end
 
 return SkillCheckRing

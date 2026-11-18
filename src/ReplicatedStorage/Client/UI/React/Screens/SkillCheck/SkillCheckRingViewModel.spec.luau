@@ -124,6 +124,214 @@ return function()
 		end)
 	end)
 
+	describe("toDesign", function()
+		it("turns a viewport point into HUD design px from the HUD frame's origin and scale", function()
+			local at = SkillCheckRingViewModel.toDesign(Vector2.new(730, 420), Vector2.new(0, 20), 0.5)
+			expect(at.X).to.equal(1460)
+			expect(at.Y).to.equal(800)
+		end)
+
+		it("is the point itself at scale 1 from the corner", function()
+			local at = SkillCheckRingViewModel.toDesign(Vector2.new(12, 34), Vector2.zero, 1)
+			expect(at.X).to.equal(12)
+			expect(at.Y).to.equal(34)
+		end)
+	end)
+
+	describe("screenBox", function()
+		it("spans the points it is given", function()
+			local box = SkillCheckRingViewModel.screenBox({
+				Vector2.new(10, 50),
+				Vector2.new(30, 20),
+				Vector2.new(25, 80),
+			})
+			expect(box.left).to.equal(10)
+			expect(box.right).to.equal(30)
+			expect(box.top).to.equal(20)
+			expect(box.bottom).to.equal(80)
+		end)
+
+		it("has no box without points", function()
+			expect(SkillCheckRingViewModel.screenBox({})).to.equal(nil)
+		end)
+	end)
+
+	describe("placement", function()
+		-- The same screens as centre: 1080p, the 73% laptop scale, Studio's short pane, two phones.
+		local screens = {
+			{ "desktop", Vector2.new(1920, 1080) },
+			{ "desktop", Vector2.new(1871, 1052) },
+			{ "desktop", Vector2.new(2135, 869) },
+			{ "phone", Vector2.new(844, 390) },
+			{ "phone", Vector2.new(667, 375) },
+		}
+
+		-- A character standing mid-screen, its top (ears, hat) `top` px down, `tall` px tall and `wide` px wide.
+		local function body(viewport, top, tall, wide)
+			local mid = viewport.X / 2
+			return { left = mid - wide / 2, right = mid + wide / 2, top = top, bottom = top + tall }
+		end
+
+		local function clear(layout)
+			local metrics = SkillCheckRingViewModel.METRICS[layout]
+			return metrics.inner + metrics.bead + SkillCheckRingViewModel.HEAD_MARGIN[layout]
+		end
+
+		-- Whether the inner circle's square (with its beads) reaches into the character's box.
+		local function overlaps(layout, centre, box)
+			local metrics = SkillCheckRingViewModel.METRICS[layout]
+			local r = metrics.inner + metrics.bead
+			return centre.X + r > box.left
+				and centre.X - r < box.right
+				and centre.Y + r > box.top
+				and centre.Y - r < box.bottom
+		end
+
+		local function keepsClamps(layout, viewport, centre)
+			local outer = SkillCheckRingViewModel.METRICS[layout].outerStart
+			expect(centre.Y - outer >= SkillCheckRingViewModel.TOP_RESERVE[layout] - 1e-6).to.equal(true)
+			expect(centre.Y + outer <= viewport.Y + 1e-6).to.equal(true)
+			expect(centre.X - outer >= -1e-6).to.equal(true)
+			expect(centre.X + outer <= viewport.X + 1e-6).to.equal(true)
+		end
+
+		it("falls back to the middle placement with no character on screen", function()
+			for _, case in screens do
+				local layout, viewport = case[1], case[2]
+				local placed = SkillCheckRingViewModel.placement(layout, viewport, nil)
+				expect(placed.spot).to.equal("middle")
+				expect(placed.centre).to.equal(SkillCheckRingViewModel.centre(layout, viewport))
+			end
+		end)
+
+		it("puts the inner circle just above the character's top when there is room", function()
+			local viewport = Vector2.new(1920, 1080)
+			local box = body(viewport, 520, 380, 160)
+			local placed = SkillCheckRingViewModel.placement("desktop", viewport, box)
+			expect(placed.spot).to.equal("above")
+			expect(near(placed.centre.Y, 520 - clear("desktop"))).to.equal(true)
+			expect(placed.centre.X).to.equal(960)
+			expect(overlaps("desktop", placed.centre, box)).to.equal(false)
+			keepsClamps("desktop", viewport, placed.centre)
+		end)
+
+		it("follows a taller character up (ears, hats): never a fixed offset", function()
+			local viewport = Vector2.new(1920, 1080)
+			local short = SkillCheckRingViewModel.placement("desktop", viewport, body(viewport, 600, 300, 160))
+			local tall = SkillCheckRingViewModel.placement("desktop", viewport, body(viewport, 560, 340, 160))
+			expect(short.spot).to.equal("above")
+			expect(tall.spot).to.equal("above")
+			expect(near(short.centre.Y - tall.centre.Y, 40)).to.equal(true)
+		end)
+
+		it("follows a character off the middle sideways, kept on screen", function()
+			local viewport = Vector2.new(1920, 1080)
+			local box = { left = 1700, right = 1880, top = 560, bottom = 900 }
+			local placed = SkillCheckRingViewModel.placement("desktop", viewport, box)
+			expect(placed.spot).to.equal("above")
+			keepsClamps("desktop", viewport, placed.centre)
+		end)
+
+		it("goes beside the character, not over its face, when the top has no room (camera close)", function()
+			local viewport = Vector2.new(1920, 1080)
+			local box = body(viewport, 250, 700, 300)
+			local placed = SkillCheckRingViewModel.placement("desktop", viewport, box)
+			expect(placed.spot).to.equal("right")
+			expect(placed.centre.X - (box.right + clear("desktop")) >= -1e-6).to.equal(true)
+			expect(overlaps("desktop", placed.centre, box)).to.equal(false)
+			keepsClamps("desktop", viewport, placed.centre)
+		end)
+
+		it("goes left when the right has no room on desktop", function()
+			local viewport = Vector2.new(1920, 1080)
+			local box = { left = 1200, right = 1700, top = 250, bottom = 950 }
+			local placed = SkillCheckRingViewModel.placement("desktop", viewport, box)
+			expect(placed.spot).to.equal("left")
+			expect(overlaps("desktop", placed.centre, box)).to.equal(false)
+			keepsClamps("desktop", viewport, placed.centre)
+		end)
+
+		it("on a phone, tries the left side first (the action arc is on the right)", function()
+			local viewport = Vector2.new(844, 390)
+			local box = body(viewport, 150, 200, 120)
+			local placed = SkillCheckRingViewModel.placement("phone", viewport, box)
+			expect(placed.spot).to.equal("left")
+			expect(overlaps("phone", placed.centre, box)).to.equal(false)
+			keepsClamps("phone", viewport, placed.centre)
+		end)
+
+		it("uses the same above rule on a phone when it fits", function()
+			local viewport = Vector2.new(844, 390)
+			local box = body(viewport, 340, 50, 60)
+			local placed = SkillCheckRingViewModel.placement("phone", viewport, box)
+			expect(placed.spot).to.equal("above")
+			expect(overlaps("phone", placed.centre, box)).to.equal(false)
+			keepsClamps("phone", viewport, placed.centre)
+		end)
+
+		it("keeps every clamp for any character box on every screen", function()
+			for _, case in screens do
+				local layout, viewport = case[1], case[2]
+				for _, top in { -200, 0, 100, 300, 500, 900 } do
+					for _, wide in { 40, 300, viewport.X } do
+						local box = body(viewport, top, 400, wide)
+						keepsClamps(layout, viewport, SkillCheckRingViewModel.placement(layout, viewport, box).centre)
+					end
+				end
+			end
+		end)
+
+		it("when nothing clears the character, takes the side with more room", function()
+			local viewport = Vector2.new(1920, 1080)
+			local box = { left = 200, right = 1800, top = 100, bottom = 1000 }
+			local placed = SkillCheckRingViewModel.placement("desktop", viewport, box)
+			expect(placed.spot == "right" or placed.spot == "left").to.equal(true)
+			keepsClamps("desktop", viewport, placed.centre)
+		end)
+	end)
+
+	describe("hintSide", function()
+		local function fits(layout, viewport, centre, side)
+			local frame = SkillCheckRingViewModel.hintFrame(layout, side)
+			local at = centre + frame.offset
+			local left = at.X - frame.anchor.X * frame.size.X
+			local reserve = SkillCheckRingViewModel.HINT_SIDE_RESERVE[layout]
+			return left >= reserve and left + frame.size.X <= viewport.X - reserve
+		end
+
+		it("keeps the layout's side for a ring in the middle", function()
+			for _, layout in { "desktop", "phone" } do
+				local viewport = if layout == "desktop" then Vector2.new(1920, 1080) else Vector2.new(844, 390)
+				local centre = SkillCheckRingViewModel.centre(layout, viewport)
+				expect(SkillCheckRingViewModel.hintSide(layout, centre, viewport, nil)).to.equal(
+					SkillCheckRingViewModel.HINT_SIDE[layout]
+				)
+			end
+		end)
+
+		it("goes away from the character when the ring sits beside it", function()
+			local viewport = Vector2.new(1920, 1080)
+			expect(SkillCheckRingViewModel.hintSide("desktop", Vector2.new(1300, 500), viewport, 1)).to.equal(1)
+			expect(SkillCheckRingViewModel.hintSide("desktop", Vector2.new(600, 500), viewport, -1)).to.equal(-1)
+		end)
+
+		it("flips to the other side when its side would leave the screen", function()
+			local viewport = Vector2.new(1920, 1080)
+			local centre = Vector2.new(1700, 500)
+			local side = SkillCheckRingViewModel.hintSide("desktop", centre, viewport, 1)
+			expect(side).to.equal(-1)
+			expect(fits("desktop", viewport, centre, side)).to.equal(true)
+		end)
+
+		it("mirrors the default frame on the other side", function()
+			local right = SkillCheckRingViewModel.hintFrame("desktop", 1)
+			local left = SkillCheckRingViewModel.hintFrame("desktop", -1)
+			expect(right.offset.X).to.equal(-left.offset.X)
+			expect(right.anchor.X).to.equal(0)
+			expect(left.anchor.X).to.equal(1)
+		end)
+	end)
+
 	describe("hintFrame", function()
 		-- HUD design viewports: 1080p desktop; a laptop at the 73% HUD scale (1366x768 / 0.73); Studio's short play
 		-- pane (1601x652 / 0.75); a phone; a narrow phone.

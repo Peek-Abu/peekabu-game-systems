@@ -5,7 +5,9 @@
 	icon); the outer ring is a ring of Gloom-grape beads with the opening left out, closing straight in from
 	`outerStart` to the inner circle over the ring's travel (`fraction`, on the server clock). The icon rides the inner
 	circle at the player's angle (`place`). A verdict flashes for FLASH_SECONDS; the ring stays LINGER seconds past its
-	arrival so the flash reads, then goes. The words show under the first rings only (`hint`). Pure.
+	arrival so the flash reads, then goes. It sits over the local character's real top on screen, or beside the
+	character when the top has no room (`placement`), and the words show beside it for the first rings only (`hint`,
+	`hintSide`). Pure.
 
 	@class SkillCheckRingViewModel
 ]=]
@@ -55,6 +57,13 @@ local METRICS: { [Layout]: Metrics } = table.freeze({
 	}),
 })
 
+-- A box on screen in HUD design px (the character's projected bounds).
+export type Box = { left: number, top: number, right: number, bottom: number }
+
+-- Where the ring goes: above the character, beside it (right or left), or the plain middle placement (no character).
+export type Spot = "above" | "right" | "left" | "middle"
+export type Placement = { centre: Vector2, spot: Spot }
+
 export type HintFrame = {
 	-- The hint box's anchor point, as an offset from the ring's centre (design px).
 	offset: Vector2,
@@ -82,6 +91,11 @@ local SkillCheckRingViewModel = {
 	-- The side the hint prefers: right on desktop; left on a phone, whose action arc (HELPER, SPRINT) is right of the
 	-- ring at its height.
 	HINT_SIDE = table.freeze({ desktop = 1, phone = -1 }),
+	-- Design px between the character's box and the inner circle's beads (placement).
+	HEAD_MARGIN = table.freeze({ desktop = 16, phone = 10 }),
+	-- The sides placement tries, in order, when the character's top has no room: right then left on desktop; left
+	-- first on a phone, whose action arc (HELPER, SPRINT) is on the right.
+	SIDE_ORDER = table.freeze({ desktop = table.freeze({ 1, -1 }), phone = table.freeze({ -1, 1 }) }),
 	-- The gap between the outer ring's start and the hint.
 	HINT_GAP = 12,
 	HINT_SIZE = HINT_SIZE,
@@ -148,18 +162,97 @@ function SkillCheckRingViewModel.centre(layout: Layout, viewport: Vector2): Vect
 end
 
 --[=[
-	Where the "Line it up!" words sit: beside the ring at its centre's height, just past the outer ring's start, on the
-	layout's HINT_SIDE (the ring is centred, so both sides have the same room; the spec checks every supported screen
-	keeps it clear of HINT_SIDE_RESERVE). Never under the ring, where the HUD's bottom stack (the hotbar) is.
+	A viewport point (real px, as Camera:WorldToViewportPoint gives it) in HUD design px: measured from the HUD frame's
+	`origin` (its AbsolutePosition, in the same px) and divided by the HUD's `scale`.
 ]=]
-function SkillCheckRingViewModel.hintFrame(layout: Layout): HintFrame
+function SkillCheckRingViewModel.toDesign(point: Vector2, origin: Vector2, scale: number): Vector2
+	return (point - origin) / scale
+end
+
+--[=[
+	The box spanning `points` (the character's projected bounds), or nil for none.
+]=]
+function SkillCheckRingViewModel.screenBox(points: { Vector2 }): Box?
+	if #points == 0 then
+		return nil
+	end
+	local left, top, right, bottom = math.huge, math.huge, -math.huge, -math.huge
+	for _, point in points do
+		left = math.min(left, point.X)
+		right = math.max(right, point.X)
+		top = math.min(top, point.Y)
+		bottom = math.max(bottom, point.Y)
+	end
+	return { left = left, top = top, right = right, bottom = bottom }
+end
+
+--[=[
+	Where the ring goes for the local character's on-screen box `body` (design px; nil: no character on screen, the
+	plain `centre` placement). The rule: the INNER circle (the icon and the opening, what the player watches) never
+	overlaps the character; the outer ring may sweep over it for its short close. So the inner circle sits HEAD_MARGIN
+	above the character's real top (ears, hats, tall skins: whatever its box holds), centred on it. When that would push
+	the outer ring's start into TOP_RESERVE (camera close, or looking down), the ring goes beside the character at its
+	top's height, its inner circle HEAD_MARGIN clear of the box, on the first side in SIDE_ORDER that keeps the outer
+	ring on screen; with neither, the side with more room, against the screen's edge. Every placement keeps the outer
+	ring's start under TOP_RESERVE and on screen.
+]=]
+function SkillCheckRingViewModel.placement(layout: Layout, viewport: Vector2, body: Box?): Placement
+	if body == nil then
+		return { centre = SkillCheckRingViewModel.centre(layout, viewport), spot = "middle" }
+	end
+	local metrics = METRICS[layout]
+	local clear = metrics.inner + metrics.bead + SkillCheckRingViewModel.HEAD_MARGIN[layout]
+	local minY = SkillCheckRingViewModel.TOP_RESERVE[layout] + metrics.outerStart
+	local maxY = math.max(minY, viewport.Y - metrics.outerStart)
+	local minX = metrics.outerStart
+	local maxX = math.max(minX, viewport.X - metrics.outerStart)
+	local above = body.top - clear
+	if above >= minY then
+		local x = math.clamp((body.left + body.right) / 2, minX, maxX)
+		return { centre = Vector2.new(x, math.min(above, maxY)), spot = "above" }
+	end
+	local y = math.clamp(body.top, minY, maxY)
+	for _, side in SkillCheckRingViewModel.SIDE_ORDER[layout] do
+		local x = if side > 0 then body.right + clear else body.left - clear
+		if x >= minX and x <= maxX then
+			return { centre = Vector2.new(x, y), spot = if side > 0 then "right" else "left" }
+		end
+	end
+	if viewport.X - body.right >= body.left then
+		return { centre = Vector2.new(maxX, y), spot = "right" }
+	end
+	return { centre = Vector2.new(minX, y), spot = "left" }
+end
+
+--[=[
+	Where the "Line it up!" words sit: beside the ring at its centre's height, just past the outer ring's start, on
+	`side` (1 right, -1 left; default the layout's HINT_SIDE). Never under the ring, where the HUD's bottom stack (the
+	hotbar) is.
+]=]
+function SkillCheckRingViewModel.hintFrame(layout: Layout, side: number?): HintFrame
 	local metrics = METRICS[layout]
 	local size = HINT_SIZE[layout]
 	local reach = metrics.outerStart + metrics.bead + SkillCheckRingViewModel.HINT_GAP
-	if SkillCheckRingViewModel.HINT_SIDE[layout] > 0 then
+	if (side or SkillCheckRingViewModel.HINT_SIDE[layout]) > 0 then
 		return { offset = Vector2.new(reach, 0), anchor = Vector2.new(0, 0.5), size = size }
 	end
 	return { offset = Vector2.new(-reach, 0), anchor = Vector2.new(1, 0.5), size = size }
+end
+
+--[=[
+	The side the words go for a ring at `centre`: `away` (the side of the character the ring sits on, so the words
+	are not over the character) or, for a ring above it or in the middle, the layout's HINT_SIDE; the other side when
+	that one would cross HINT_SIDE_RESERVE.
+]=]
+function SkillCheckRingViewModel.hintSide(layout: Layout, centre: Vector2, viewport: Vector2, away: number?): number
+	local preferred = away or SkillCheckRingViewModel.HINT_SIDE[layout]
+	local reserve = SkillCheckRingViewModel.HINT_SIDE_RESERVE[layout]
+	local frame = SkillCheckRingViewModel.hintFrame(layout, preferred)
+	local left = centre.X + frame.offset.X - frame.anchor.X * frame.size.X
+	if left >= reserve and left + frame.size.X <= viewport.X - reserve then
+		return preferred
+	end
+	return -preferred
 end
 
 --[=[
