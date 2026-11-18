@@ -219,7 +219,10 @@ local OUTSIDE = table.freeze({
 	-- are 1 thick centred on room edges and trim stands up to ~0.55 proud, so room boxes inside the envelope keep
 	-- built parts clear of the shell.
 	ENVELOPE = table.freeze({ minX = -39, maxX = 294, minZ = -52, maxZ = 203 }),
-	TRUCK_CENTRE = Vector2.new(168, -276),
+	-- The yard truck parks just outside the loading dock (owner 11-18: "move starting truck ... much closer to building
+	-- so there's not much repetitiveness for now! (once outside is exciting / dangerous we can potentially swap back!)"):
+	-- its ramp end 34 studs from the dock door, clear of the yard dressing (Studio read 11-18). Swap back: (168, -276).
+	TRUCK_CENTRE = Vector2.new(168, -110),
 	TRUCK_YAW = math.pi,
 	-- The roller door on the dock block's front face; you arrive facing -Z, toward the truck.
 	DOCK_OUTSIDE = table.freeze({ x = 168, z = -64, yaw = 0 }),

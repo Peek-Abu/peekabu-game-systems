@@ -40,8 +40,9 @@ return function()
 			local bed = TruckVisual.BED_SIZE
 			expect(truck.maxX - truck.minX).to.equal(bed.X)
 			expect(truck.maxZ - truck.minZ).to.equal(bed.Z)
-			expect((truck.minX + truck.maxX) / 2).to.equal(168)
-			expect((truck.minZ + truck.maxZ) / 2).to.equal(-276)
+			local centre = OfficeConstants.OUTSIDE.TRUCK_CENTRE
+			expect((truck.minX + truck.maxX) / 2).to.equal(centre.X)
+			expect((truck.minZ + truck.maxZ) / 2).to.equal(centre.Y)
 			expect(truck.yaw).to.equal(math.pi)
 			local yard = OfficeGroundsUtils.grounds()[1]
 			expect(truck.minX >= yard.minX and truck.maxX <= yard.maxX).to.equal(true)
@@ -53,9 +54,23 @@ return function()
 			expect(
 				near(
 					Vector2.new(truck.clockX, truck.clockZ),
-					Vector2.new(168 - OfficeConstants.CLOCK_SIDE, -276 + OfficeConstants.CLOCK_BACK)
+					Vector2.new(
+						OfficeConstants.OUTSIDE.TRUCK_CENTRE.X - OfficeConstants.CLOCK_SIDE,
+						OfficeConstants.OUTSIDE.TRUCK_CENTRE.Y + OfficeConstants.CLOCK_BACK
+					)
 				)
 			).to.equal(true)
+		end)
+	end)
+
+	describe("truck near the dock", function()
+		it("parks with its ramp end close to the dock door, so the walk in is short (owner 11-18)", function()
+			local truck = OfficeGroundsUtils.truck()
+			local door = OfficeConstants.OUTSIDE.DOCK_OUTSIDE
+			local gap = door.z - truck.maxZ
+			expect(gap > 0).to.equal(true)
+			expect(gap <= 40).to.equal(true)
+			expect(math.abs((truck.minX + truck.maxX) / 2 - door.x) <= 8).to.equal(true)
 		end)
 	end)
 
