@@ -99,6 +99,15 @@ table.grid tr:first-child td { border-top: 0; }
   </section>
 
   <section>
+    <h2>2-player test and the truck pick (18 Nov)</h2>
+    <p><b>Coats carry over: works.</b> In your 2-player test, Player 2 lost all 3 coats on night 1 (OUT), and Player 1 lost 1. On night 2, <b>Player 2 came back with 1 coat</b> and <b>Player 1 still had 2</b>. The crew list and hearts showed it right, and "This week 260 / 720" carried over.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/duo-night1-p1.jpg" alt="Night 1, Player 1's screen: the crew list shows Player 2 crossed out with OUT, and Player 1 with 2 red hearts and 1 purple (lost); THIS WEEK 0/720 under the Gloom meter." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Night 1: Player 2 is OUT, Player 1 has 2 coats left.</figcaption></figure>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/duo-night2-p2.jpg" alt="Night 2, Player 2's screen: the readout says NIGHT 2 and WEEK 1; the crew list shows Player 2 with 1 red heart and Player 1 with 2; THIS WEEK 260/720." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Night 2: Player 2 is back with 1 coat, Player 1 still has 2.</figcaption></figure>
+    <p><b>The truck pick in the hub:</b> the PLACES panel has NIGHT SHIFT (picked by default) and QUICK SHIFT, with "Night after night. Make the week's goal!" underneath. I fixed one thing: the contract card still showed a full shift (640 Gloom, 8:30) under Night Shift. It now shows night 1's goal and "3:00 · night 1". I couldn't press QUICK SHIFT with my test tools, so please tap it once in your check.</p>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/lobby-mode-pick.jpg" alt="The PLACES panel in the hub, with NIGHT SHIFT and QUICK SHIFT buttons top right, and the line Night after night. Make the week's goal!" style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">The mode pick on the PLACES panel (this capture is from before the contract-card fix).</figcaption></figure>
+  </section>
+
+  <section>
     <h2>Your play-check: Night Shift (about 15 minutes)</h2>
     <p>Everything below is built and pushed. Two things I couldn't check myself, because I can only test as one player: <b>coats carrying over</b> and <b>picking the mode at the truck</b>. Here's exactly what to do.</p>
     <p class="when">Setup</p>
