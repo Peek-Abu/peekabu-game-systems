@@ -1,0 +1,223 @@
+<title>Ring, Stat and Night Picks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700&display=swap">
+<style>
+/* Layout: one narrow reading column; three numbered topics, each a short "today" note, a fact table, then yes/no cards. */
+:root {
+  --bg: #f4f2f8; --card: #ffffff; --ink: #241f33; --muted: #645d78; --line: #ddd8e8;
+  --gloom: #6b3fa0; --gleam: #1f8a78; --warn: #b5541c; --chip: #ece6f6;
+  --yes: #1f8a78; --no: #b03a48;
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17141f; --card: #221d2e; --ink: #ece8f5; --muted: #a79fbd; --line: #362f47;
+  --gloom: #b48ae8; --gleam: #4fc9b3; --warn: #e89a62; --chip: #2e2640;
+  --yes: #4fc9b3; --no: #e67b88; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #17141f; --card: #221d2e; --ink: #ece8f5; --muted: #a79fbd; --line: #362f47;
+  --gloom: #b48ae8; --gleam: #4fc9b3; --warn: #e89a62; --chip: #2e2640;
+  --yes: #4fc9b3; --no: #e67b88; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; margin: 0; }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 30px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 2rem; line-height: 1.15; }
+h2 { font-size: 1.35rem; color: var(--gloom); }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 62ch; }
+section { display: grid; gap: 14px; }
+.note { background: var(--chip); border-radius: 10px; padding: 12px 14px; font-size: .95rem; display: grid; gap: 6px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+.card[data-pick="yes"] { border: 2px solid var(--yes); }
+.card[data-pick="no"] { border-color: var(--no); opacity: .8; }
+.code { font: 700 .8rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--gloom); }
+.how { display: grid; gap: 4px; font-size: .95rem; }
+.how b { font-family: var(--display); font-weight: 600; }
+.rec { font-size: .95rem; }
+.rec b { color: var(--gleam); }
+.picks { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.picks button { font: 600 .95rem var(--body); border: 2px solid var(--line); background: transparent; color: var(--ink); border-radius: 8px; padding: 6px 18px; cursor: pointer; }
+.picks button:focus-visible { outline: 3px solid var(--gloom); outline-offset: 2px; }
+.picks button[data-v="yes"][aria-pressed="true"] { background: var(--yes); border-color: var(--yes); color: var(--card); }
+.picks button[data-v="no"][aria-pressed="true"] { background: var(--no); border-color: var(--no); color: var(--card); }
+.status { font-size: .82rem; color: var(--muted); }
+textarea { width: 100%; box-sizing: border-box; min-height: 2.6em; font: .95rem var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; resize: vertical; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .93rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+thead th { border-top: 0; color: var(--gloom); font-family: var(--display); font-weight: 600; }
+td.up { color: var(--gleam); font-weight: 700; }
+td.down { color: var(--warn); font-weight: 700; }
+.cards { display: grid; gap: 14px; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Ring, Stat and Night Picks</h1>
+    <p class="lede">Your three notes from playing: holding the click while steering the ring feels weird, maybe there should be a stat for the ring, and Night Shift's clock is too much stress. Here are the ways to fix each. Pick <b>Yes</b> or <b>No</b> on each card. Your picks save by themselves. Nothing is built until you pick. Content lock is Sun 22 Nov.</p>
+    <p class="status" id="dbstatus">Loading your picks…</p>
+  </header>
+
+  <section>
+    <h2>1. Cleaning without holding the click</h2>
+    <div class="note">
+      <p><b>Today:</b> you hold the left mouse button (R2 on a gamepad, the vacuum button on a phone) the whole time you clean. While you hold it, you also move the mouse to steer the ring's icon. You can walk at 75% speed while cleaning.</p>
+      <p><b>Phones have it worst:</b> one thumb is on the move stick and the other holds the vacuum button. That leaves no finger free to steer the ring.</p>
+    </div>
+    <div class="cards" id="input"></div>
+  </section>
+
+  <section>
+    <h2>2. A stat for the ring</h2>
+    <div class="note">
+      <p><b>Today:</b> every employee has 5 stats shown as 1–5 icons: Speed, Stamina, Strength, Suction and Quiet. Every employee adds up to 15. One bar plays like the base game, and each bar above it helps a little (for example, Suction is 4% faster cleaning per bar).</p>
+      <p><b>What a ring stat would change:</b> my pick is <b>the opening's width</b>. It's easy to see and fair, and with 1 bar it plays like today, so solo play never gets harder. Other ideas were a slower ring or fewer rings per pile. Both are harder to feel, and fewer rings means less game.</p>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Bars</th><th>Opening at a pile's start</th><th>At a pile's end</th></tr></thead>
+      <tbody>
+        <tr><td>1 (today)</td><td>120°</td><td>55°</td></tr>
+        <tr><td>2</td><td>125° (+4%)</td><td>57°</td></tr>
+        <tr><td>3</td><td>130° (+8%)</td><td>59°</td></tr>
+        <tr><td>4</td><td>134° (+12%)</td><td>62°</td></tr>
+        <tr><td>5</td><td>139° (+16%)</td><td>64°</td></tr>
+      </tbody>
+    </table></div>
+    <p class="status">Night Shift still makes the opening smaller each week. The stat widens whatever the week gives.</p>
+    <div class="cards" id="stat"></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Employee</th><th>Now (Speed · Stamina · Strength · Suction · Quiet)</th><th>Ring stat with S1 (new stat)</th><th>Ring bars with S2 (Quiet)</th></tr></thead>
+      <tbody>
+        <tr><td><b>Pippa</b></td><td>4 · 4 · 2 · 3 · 2</td><td><b>Steady 2</b>. Her Quiet goes <span style="color:var(--gleam);font-weight:700">2 → 3</span> to keep totals even.</td><td>2 (a little narrower than the others)</td></tr>
+        <tr><td><b>Cappy</b></td><td>3 · 2 · 3 · 3 · 4</td><td><b>Steady 4</b>. His Quiet goes <span style="color:var(--warn);font-weight:700">4 → 3</span> to keep totals even.</td><td>4 (widest)</td></tr>
+        <tr><td><b>Prickles</b></td><td>3 · 3 · 3 · 3 · 3</td><td><b>Steady 3</b>, still the all-rounder.</td><td>3</td></tr>
+      </tbody>
+    </table></div>
+    <p class="status">With S1, everyone adds up to 18, so the "equal totals" rule holds. Pippa is the busy bunny, Cappy the careful spotter. Folding it into Suction does nothing, because all three have Suction 3.</p>
+  </section>
+
+  <section>
+    <h2>3. Longer nights in Night Shift</h2>
+    <div class="note">
+      <p><b>Today:</b> nights are 3:00 in week 1, 5:00 in week 2, 7:00 in week 3, and 8:30 from week 4 on. Goals grow each night: for one player, night 1 is 190 Gloom and night 5 is 320. Quick shift (8:30) doesn't change with any of this.</p>
+      <p><b>"Pace"</b> means the Gloom you must clean per minute to make the goal. Lower pace = less clock stress. Today the hardest pace is at the end of week 1 (107 a minute).</p>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Week</th><th>Today: length · pace</th><th>T1 (+35%)</th><th>T2 (+1 minute)</th></tr></thead>
+      <tbody>
+        <tr><td>1 (nights 1–5)</td><td>3:00 · 63 → 107</td><td class="up">4:00 · 48 → 80</td><td class="up">4:00 · 48 → 80</td></tr>
+        <tr><td>2 (nights 6–10)</td><td>5:00 · 70 → 96</td><td class="up">6:45 · 52 → 71</td><td class="up">6:00 · 58 → 80</td></tr>
+        <tr><td>3 (nights 11–15)</td><td>7:00 · 73 → 88</td><td class="up">9:30 · 54 → 65</td><td class="up">8:00 · 64 → 77</td></tr>
+        <tr><td>4+ (night 16 on)</td><td>8:30 · 75 → 78</td><td class="up">11:30 · 56 → 58</td><td class="up">9:30 · 67 → 70</td></tr>
+      </tbody>
+    </table></div>
+    <p class="status">Pace is for one player, from the first to the last night of each week. Goals stay as they are. More players get bigger goals, so the pace stays about the same.</p>
+    <div class="note">
+      <p><b>For longer nights:</b> the clock stops being the main stress. You spend more time in the building with the manager walking around, so the scare comes from him, not from a timer. Kids who play slower can still make it.</p>
+      <p><b>Against:</b> runs get longer. Week 1 goes from about 15 minutes of play to about 20. With T1, week 4 nights reach 11:30, which is long for a kid. With too much spare time, goals can feel too easy for 2+ players who split up. After launch, we can watch the analytics (which night runs end on, and why) to tune it.</p>
+    </div>
+    <div class="cards" id="time"></div>
+  </section>
+</div>
+
+<script>
+const IDEAS = [
+  { id: "in1-click-once", group: "input", code: "I1", title: "Click once to start cleaning",
+    how: [
+      ["PC", "Click a pile once. The vacuum stays on until the pile is clean, you walk out of reach, or you click again. Your mouse is free to steer the ring."],
+      ["Phone", "Tap the vacuum button once (it stays lit). Your other thumb steers the ring. Tap it again to stop."],
+      ["Gamepad", "Press R2 once. The right stick steers the ring. Press R2 again to stop."]],
+    rec: "<b>Yes.</b> The smallest change, it fixes phones, and you can still walk away from the manager mid-pile." },
+  { id: "in2-auto-start", group: "input", code: "I2", title: "The vacuum starts by itself at a pile",
+    how: [
+      ["All", "Stand at a pile and face it for half a second, and the vacuum turns on by itself. It stops when the pile is clean or you walk off. No button at all, so the mouse, a thumb or the right stick only steers the ring."]],
+    rec: "No. It's simple, but you can start making noise by accident while sneaking past a pile, and the vacuum stops feeling like yours." },
+  { id: "in3-stand-still", group: "input", code: "I3", title: "Click once, then stand still while you clean",
+    how: [
+      ["All", "Same start as I1 (one click, one tap or one R2 press), but you plant your feet while the vacuum runs. Moving (WASD, the move stick or the left stick) stops cleaning. Your hands only do one thing at a time: move, or clean and steer."]],
+    rec: "Maybe. It's the clearest for little kids and scarier (you're stuck in place while you clean), but it's slower than I1." },
+
+  { id: "s1-new-stat", group: "stat", code: "S1", title: "A sixth stat: \"Steady\"",
+    how: [
+      ["What", "A new icon row on the employee card: Steady, 1–5. More bars = a wider ring opening (the first table)."],
+      ["Values", "Pippa 2, Cappy 4, Prickles 3. Pippa's and Cappy's Quiet move by 1 so totals stay equal (the second table)."],
+      ["Work", "About a day, plus a new icon. Icons are concepted in Figma for your OK first, and the row shows in 3 places: hiring, the pick screen and the locker."]],
+    rec: "<b>Yes, if you can OK the icon by Friday.</b> Otherwise it waits for the first update and S2 holds it until then." },
+  { id: "s2-into-quiet", group: "stat", code: "S2", title: "Or: Quiet also widens the ring",
+    how: [
+      ["What", "No new stat. Quiet means careful: a quiet employee is also steadier on the ring. A miss is still a loud noise."],
+      ["Values", "No changes. Pippa 2, Cappy 4, Prickles 3 already differ."],
+      ["Work", "About 2 hours. No new icon, and the card only gets one more line of words under Quiet."]],
+    rec: "The safe launch pick. Easy to undo if S1 comes later." },
+
+  { id: "t1-plus-35", group: "time", code: "T1", title: "Every night 35% longer",
+    how: [["Lengths", "4:00, 6:45, 9:30, then 11:30 from week 4. Goals stay the same."]],
+    rec: "No. The later weeks get too long." },
+  { id: "t2-plus-minute", group: "time", code: "T2", title: "Every night 1 minute longer",
+    how: [["Lengths", "4:00, 6:00, 8:00, then 9:30 from week 4. Goals stay the same. Week 1, where kids start, gets the biggest help (+33%)."]],
+    rec: "<b>Yes.</b> It eases the start the most without making late nights drag. One number to change." },
+  { id: "t3-overtime", group: "time", code: "T3", title: "Also: Overtime when you're close",
+    how: [["How", "When the clock hits 0:00 and the crew has at least 80% of tonight's goal, a big OVERTIME! gives 30 more seconds, once a night. Works with T1 or T2."]],
+    rec: "<b>Yes, with T2.</b> Almost-made-it nights turn into a tense last dash instead of a sad FIRED. About half a day." },
+];
+
+const picks = {};
+let db = null;
+
+function card(idea) {
+  const el = document.createElement("article");
+  el.className = "card"; el.id = idea.id;
+  const how = idea.how.map(([k, v]) => `<p><b>${k}:</b> ${v}</p>`).join("");
+  el.innerHTML = `
+    <span class="code">${idea.code}</span>
+    <h3>${idea.title}</h3>
+    <div class="how">${how}</div>
+    <p class="rec">My pick: ${idea.rec}</p>
+    <div class="picks" role="group" aria-label="Your pick for ${idea.code}">
+      <button type="button" data-v="yes" aria-pressed="false">Yes</button>
+      <button type="button" data-v="no" aria-pressed="false">No</button>
+      <span class="status" data-role="saved"></span>
+    </div>
+    <textarea placeholder="Anything to add? (optional)" aria-label="Note for ${idea.code}"></textarea>`;
+  el.querySelectorAll("button").forEach(b => b.addEventListener("click", () => save(idea.id, { pick: b.dataset.v })));
+  const ta = el.querySelector("textarea");
+  ta.addEventListener("change", () => save(idea.id, { note: ta.value }));
+  return el;
+}
+
+function paint(id) {
+  const el = document.getElementById(id); const p = picks[id] || {};
+  el.dataset.pick = p.pick || "";
+  el.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === p.pick)));
+  const ta = el.querySelector("textarea");
+  if (document.activeElement !== ta && typeof p.note === "string") ta.value = p.note;
+}
+
+async function save(id, patch) {
+  picks[id] = Object.assign({}, picks[id], patch); paint(id);
+  const s = document.getElementById(id).querySelector('[data-role="saved"]');
+  if (!db) { s.textContent = "Not saved: picks can't be stored here."; return; }
+  s.textContent = "Saving…";
+  try {
+    const idea = IDEAS.find(i => i.id === id);
+    await db.doc("picks/" + id).set(Object.assign({ code: idea.code, title: idea.title, at: new Date().toISOString() }, picks[id]));
+    s.textContent = "Saved";
+  } catch (e) { s.textContent = "Not saved: you may only have view access."; }
+}
+
+IDEAS.forEach(i => document.getElementById(i.group).appendChild(card(i)));
+
+(async () => {
+  const status = document.getElementById("dbstatus");
+  const timer = setTimeout(() => { status.textContent = "Picks are taking a while to load."; }, 10000);
+  try { db = await window.claude?.use?.("db"); } catch (e) { db = null; }
+  if (!db) { clearTimeout(timer); status.textContent = "Picks can't be saved in this view."; return; }
+  db.collection("picks").onSnapshot(snap => {
+    clearTimeout(timer);
+    snap.docs.forEach(d => { const v = d.data() || {}; picks[d.id] = { pick: v.pick, note: v.note }; if (document.getElementById(d.id)) paint(d.id); });
+    const n = Object.values(picks).filter(p => p.pick).length;
+    status.textContent = `${n} of ${IDEAS.length} picked.`;
+  }, () => { clearTimeout(timer); status.textContent = "Couldn't load picks. Try reopening the page."; });
+})();
+</script>
