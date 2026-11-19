@@ -48,9 +48,10 @@ return table.freeze({
 	MISS_NOISE_SOURCE = "skillcheck",
 	-- Seconds between the server's checks of who is vacuuming (rings start and expire on this beat).
 	STEP_INTERVAL = 0.05,
-	-- The client's feedback sounds (existing UI cues, UIAssets.sounds): the miss's dull clunk and the hit's light tick.
+	-- The client's feedback sounds (UI cues, UIAssets.sounds): the miss's dull clunk and the hit's own "got it" pop (owner
+	-- pick A, 11-19; was the uiHover tick, too faint to read as a success).
 	MISS_SOUND = "uiError",
-	HIT_SOUND = "uiHover",
+	HIT_SOUND = "uiRingHit",
 	-- Input: a gamepad stick pushed less than this far keeps the icon where it is; a touch counts only within this many
 	-- inner radii of the ring's centre (so the thumbstick and the vacuum button never steer it).
 	STICK_DEADZONE = 0.35,

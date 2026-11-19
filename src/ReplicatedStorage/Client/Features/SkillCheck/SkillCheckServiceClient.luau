@@ -4,8 +4,8 @@
 	and starts SkillCheckInputSystem. A Ring from the server goes to SkillCheckStore (drawn by the HUD); at its arrival
 	(the server clock, workspace:GetServerTimeNow) this client reports the icon's angle once (SkillCheckEvents.Report)
 	and the ring stays a moment for the verdict's flash (SkillCheckRingViewModel.shown), then goes. The server's Result
-	is kept for the flash and plays an existing UI cue: the dull clunk on a miss (SkillCheckConstants.MISS_SOUND), a
-	light tick on a hit (HIT_SOUND). The judging, the timing window and the miss's noise are the server's.
+	is kept for the flash and plays a UI cue: the dull clunk on a miss (SkillCheckConstants.MISS_SOUND), its own
+	"got it" pop on a hit (HIT_SOUND). The judging, the timing window and the miss's noise are the server's.
 
 	Spec-exempt shell (the HUD registry, RunService, ByteNet, Sound); the decisions are the specced SkillCheckStore,
 	SkillCheckInputFormulas and SkillCheckRingViewModel.

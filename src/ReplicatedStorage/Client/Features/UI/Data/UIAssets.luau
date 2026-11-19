@@ -344,6 +344,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	uiCta = { assetId = "rbxassetid://78569365251759", group = "UI", volume = 1, maxConcurrent = 1 },
 	uiPromptHold = { assetId = "rbxassetid://105267179969138", group = "UI", volume = 1, maxConcurrent = 1 },
 	uiPromptDone = { assetId = "rbxassetid://134811176097827", group = "UI", volume = 0.6, maxConcurrent = 2 },
+	-- The skill check ring's hit (SkillCheckConstants.HIT_SOUND): owner pick A "Suck-pop" (2026-11-19), in-house (a
+	-- cartoony vacuum gulp, a felt body and one violin pizz D5), -19 LUFS, Icey Labs. Plays 2-3 times a pile, so it is
+	-- short; volume 1 is a starting level until the owner's hear-check. Was the uiHover tick (too faint to read).
+	uiRingHit = { assetId = "rbxassetid://112432955475175", group = "UI", volume = 1, maxConcurrent = 2 },
 	-- Creator Store picks (the owner's sound route test, 2026-11-14: the library on every card), played in place:
 	-- a scene / menu opening (Roblox GUI - Swipe, the "panel open" pick) and a shop buy that went through (Roblox GUI -
 	-- Purchase, the "shop buy" pick). Volumes put them at about -24 and -19 dB (the UI band; the buy's peak under -1).
