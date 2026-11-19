@@ -104,6 +104,19 @@ function RoundPhaseRules.tick(state: RoundState, config: RoundConfig, counts: Ro
 end
 
 --[=[
+	Adds `seconds` to a timed run (a game's extra time, asked through the config's `extraTime` when the clock runs out):
+	the new end is `seconds` after the old end, or after `now` if the clock already passed it. Nil outside a timed run
+	or with nothing to add.
+]=]
+function RoundPhaseRules.extend(state: RoundState, now: number, seconds: number): RoundState?
+	local endsAt = state.endsAt
+	if state.phase ~= "running" or endsAt == nil or seconds <= 0 then
+		return nil
+	end
+	return { phase = "running", round = state.round, endsAt = math.max(endsAt, now) + seconds }
+end
+
+--[=[
 	Starts the countdown by request (autoStart off: a lever, a ready pad). Only from the lobby, and only
 	with at least minPlayers present.
 ]=]

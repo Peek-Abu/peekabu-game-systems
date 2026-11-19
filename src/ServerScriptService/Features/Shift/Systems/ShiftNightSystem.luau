@@ -16,6 +16,8 @@
 	  same Currency grant as a shift's pay) and shows the week report (the state's `weekBonus`);
 	- `decide` (the vote): Next night moves the run on, Clock out ends it and sends the crew home with their pay; a run
 	  already over (fired or wiped) always goes home;
+	- `extraTime` (Round's extraTime hook, when a night's clock runs out): ShiftNightRules.extraTime's seconds, once a
+	  night (reset as each night is prepared);
 	- `stamp` / `minTier`: the run's ShiftState fields and the manager's start tier for the night;
 	- analytics (ShiftNightAnalyticsUtils, to every crew member in the server, behind Analytics' `nightShift` switch):
 	  the mode when a run starts, each night as it is prepared (once a night), the vote's result, how the run ended
@@ -75,6 +77,7 @@ export type ShiftNightSystem = {
 		lives: { [number]: number }
 	) -> (),
 	decide: (self: ShiftNightSystem, depot: boolean) -> Decision,
+	extraTime: (self: ShiftNightSystem, quota: number, cleared: number, quotaMet: boolean) -> number,
 	isOver: (self: ShiftNightSystem) -> boolean,
 	stamp: (self: ShiftNightSystem, state: ShiftTypes.ShiftState) -> ShiftTypes.ShiftState,
 	minTier: (self: ShiftNightSystem) -> number,
@@ -106,6 +109,8 @@ function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 	local reportTo: (number, ShiftNightAnalyticsUtils.Record) -> () = deps.report or realReport
 	-- The last night reported as reached (prepare may run twice for one night), reset with each run.
 	local reportedNight = 0
+	-- Whether this night already had its extra time (reset as each night is prepared).
+	local extraUsed = false
 
 	local function report(record: ShiftNightAnalyticsUtils.Record)
 		if deps.training() then
@@ -122,6 +127,7 @@ function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 
 	local system: ShiftNightSystem = {
 		prepare = function(_self, configureRound)
+			extraUsed = false
 			if tracker:needsStart() then
 				-- Training is always a quick shift, however the server got its crew.
 				local mode: ShiftTypes.RunMode = if deps.training() then "quick" else deps.mode()
@@ -214,6 +220,22 @@ function ShiftNightSystem.new(deps: Deps): ShiftNightSystem
 
 		isOver = function(_self)
 			return tracker:isOver()
+		end,
+
+		extraTime = function(_self, quota, cleared, quotaMet)
+			local seconds = ShiftNightRules.extraTime({
+				night = tracker:night(),
+				training = deps.training(),
+				used = extraUsed,
+				quota = quota,
+				cleared = cleared,
+				quotaMet = quotaMet,
+			})
+			if seconds > 0 then
+				extraUsed = true
+				log:info(`night {tracker:night() or 0} gets {seconds} s of extra time at {cleared}/{quota}`)
+			end
+			return seconds
 		end,
 
 		stamp = function(_self, state)

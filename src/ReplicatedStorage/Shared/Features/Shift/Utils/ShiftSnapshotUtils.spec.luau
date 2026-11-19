@@ -320,6 +320,23 @@ return function()
 			expect(snapshot.runOver).to.equal(nil)
 		end)
 
+		it("round-trips a night's extra time, absent when there is none", function()
+			local function decoded(extraTime)
+				return ShiftSnapshotUtils.decode(
+					ShiftSnapshotUtils.build(
+						state({ runMode = "night", night = 2, week = 1, extraTime = extraTime }),
+						0,
+						0,
+						0,
+						0,
+						nil
+					)
+				)
+			end
+			expect(decoded(true).extraTime).to.equal(true)
+			expect(decoded(nil).extraTime).to.equal(nil)
+		end)
+
 		it("round-trips how the run ended and the night reached", function()
 			for _, reason in { "fired", "wiped", "clockout" } do
 				local snapshot = ShiftSnapshotUtils.decode(

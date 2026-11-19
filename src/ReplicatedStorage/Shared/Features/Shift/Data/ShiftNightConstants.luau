@@ -17,8 +17,10 @@ return table.freeze({
 	-- nights' goals low"); the goal is what climbs every night (quotaScale).
 	WEEK_NIGHTS = 5,
 	-- A night's length (seconds) by week: short at first (owner fl2: "start with short shifts"), the last entry for
-	-- every later week (the full shift, ShiftConstants.SHIFT_SECONDS).
-	NIGHT_SECONDS = table.freeze({ 180, 300, 420, 510 }),
+	-- every later week. One minute more a night than at first (owner pick T2, 11-19: "I dont think losing on time should
+	-- be the biggest stress"; was 3:00 / 5:00 / 7:00 / 8:30): week 1's last-night pace drops from about 107 to 80 Gloom a
+	-- minute solo, and from week 4 a night (9:30) is a minute longer than a quick shift.
+	NIGHT_SECONDS = table.freeze({ 240, 360, 480, 570 }),
 	-- A night's goal as a share of the shift contract (ShiftQuotaFormulas.quota): each week starts at its entry and climbs
 	-- evenly toward the next week's over its nights (week 1: 0.3, 0.35, 0.4, 0.45, 0.5; week 2 from 0.55); after the
 	-- table, +QUOTA_GROWTH a week, never above QUOTA_SCALE_CAP (the site holds about 1070 Gloom and a contract stays
@@ -28,6 +30,12 @@ return table.freeze({
 	QUOTA_GROWTH = 0.05,
 	QUOTA_SCALE_CAP = 1.2,
 	QUOTA_STEP = 5,
+	-- Extra time (owner pick T3, 11-19): when a night's clock runs out with the crew at EXTRA_TIME_SHARE of tonight's goal
+	-- or more (and the goal not met), the night gets EXTRA_TIME_SECONDS more, once a night (ShiftNightRules.extraTime),
+	-- so an almost-made-it night ends in a last dash instead of a FIRED. Not in a quick shift or training. Called "extra
+	-- time", never "overtime": that is the stage after a met quota (ShiftConstants).
+	EXTRA_TIME_SECONDS = 30,
+	EXTRA_TIME_SHARE = 0.8,
 	-- Each night pays 1 + PAY_STEP x (night - 1) times a normal shift's pay (owner fl6: each round pays more).
 	PAY_STEP = 0.25,
 	-- Surviving a week pays WEEK_BONUS x the week number in Credits to each crew member (a reward, never a goal; 150 for

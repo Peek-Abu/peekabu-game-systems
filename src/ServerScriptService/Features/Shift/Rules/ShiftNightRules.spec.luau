@@ -73,6 +73,37 @@ return function()
 		end)
 	end)
 
+	describe("extraTime", function()
+		local function close(changes)
+			local input = { night = 3, training = false, used = false, quota = 200, cleared = 160, quotaMet = false }
+			for key, value in changes or {} do
+				input[key] = value
+			end
+			return input
+		end
+
+		it("gives a Night Shift crew close to tonight's goal extra time", function()
+			expect(ShiftNightRules.extraTime(close())).to.equal(ShiftNightConstants.EXTRA_TIME_SECONDS)
+			expect(ShiftNightRules.extraTime(close({ cleared = 199 }))).to.equal(ShiftNightConstants.EXTRA_TIME_SECONDS)
+		end)
+
+		it("gives none to a crew far from the goal", function()
+			expect(ShiftNightRules.extraTime(close({ cleared = 159 }))).to.equal(0)
+			expect(ShiftNightRules.extraTime(close({ cleared = 0 }))).to.equal(0)
+		end)
+
+		it("gives it only once a night", function()
+			expect(ShiftNightRules.extraTime(close({ used = true }))).to.equal(0)
+		end)
+
+		it("gives none once the goal is met, in a quick shift or in training", function()
+			expect(ShiftNightRules.extraTime(close({ quotaMet = true }))).to.equal(0)
+			expect(ShiftNightRules.extraTime(close({ night = nil }))).to.equal(0)
+			expect(ShiftNightRules.extraTime(close({ training = true }))).to.equal(0)
+			expect(ShiftNightRules.extraTime(close({ quota = 0, cleared = 0 }))).to.equal(0)
+		end)
+	end)
+
 	describe("minTier", function()
 		it("is the night's start tier in Night Shift", function()
 			expect(ShiftNightRules.minTier("night", N + 1, false)).to.equal(

@@ -66,6 +66,8 @@ export type ShiftRunSystem = {
 	startTransit: () -> boolean,
 	-- Follows Round's phase changes.
 	onRoundPhase: (roundState: RoundTypes.RoundState) -> (),
+	-- Round gave the run extra time (Night Shift's, ShiftNightSystem.extraTime): the later end and the EXTRA TIME! flag.
+	onExtended: (roundState: RoundTypes.RoundState) -> (),
 	-- The clock's tick: pacing, the lobby start, the clock out and the vote's deadline.
 	step: () -> (),
 }
@@ -221,6 +223,17 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 		end
 	end
 
+	local function onExtended(roundState: RoundTypes.RoundState)
+		local state = getState()
+		if state.phase ~= "running" then
+			return
+		end
+		local nextState = table.clone(state)
+		nextState.endsAt = roundState.endsAt
+		nextState.extraTime = true
+		setState(nextState)
+	end
+
 	local function step()
 		local advanced = ShiftPhaseRules.advance(getState(), now(), run.training, nights:minTier())
 		if advanced ~= nil then
@@ -251,6 +264,7 @@ function ShiftRunSystem.new(deps: Deps): ShiftRunSystem
 		prepareShift = prepareShift,
 		startTransit = startTransit,
 		onRoundPhase = onRoundPhase,
+		onExtended = onExtended,
 		step = step,
 	}
 end

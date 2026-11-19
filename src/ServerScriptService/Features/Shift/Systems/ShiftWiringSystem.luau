@@ -64,6 +64,7 @@ export type Deps = {
 	clockOuts: ShiftClockOutSystem.ShiftClockOutSystem,
 	voting: ShiftVoteSystem.ShiftVoteSystem,
 	onRoundPhase: (roundState: RoundTypes.RoundState) -> (),
+	onExtended: (roundState: RoundTypes.RoundState) -> (),
 	step: () -> (),
 }
 
@@ -202,6 +203,7 @@ function ShiftWiringSystem.start(deps: Deps, stoppers: { () -> () })
 	table.insert(stoppers, deps.clockOuts.start())
 
 	local phases = RoundServiceServer.phaseChanged:Connect(deps.onRoundPhase)
+	local extended = RoundServiceServer.extended:Connect(deps.onExtended)
 	local elapsed = 0
 	local ticking = RunService.Heartbeat:Connect(function(deltaTime)
 		elapsed += deltaTime
@@ -212,6 +214,7 @@ function ShiftWiringSystem.start(deps: Deps, stoppers: { () -> () })
 	end)
 	table.insert(stoppers, function()
 		phases:Disconnect()
+		extended:Disconnect()
 		ticking:Disconnect()
 	end)
 	table.insert(stoppers, deps.voting:start())

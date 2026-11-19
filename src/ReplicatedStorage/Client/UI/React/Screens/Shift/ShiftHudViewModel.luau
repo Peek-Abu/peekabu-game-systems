@@ -258,6 +258,9 @@ local function stageLabel(snapshot: ShiftSnapshot, now: number): string
 	elseif snapshot.quotaMet then
 		-- Quota met, the break over: overtime waits on the crew's choice at the truck.
 		return "OVERTIME OPTIONAL"
+	elseif snapshot.extraTime == true then
+		-- A Night Shift night close to its goal got its extra time (ShiftNightRules.extraTime).
+		return "EXTRA TIME!"
 	end
 	return "SHIFT"
 end

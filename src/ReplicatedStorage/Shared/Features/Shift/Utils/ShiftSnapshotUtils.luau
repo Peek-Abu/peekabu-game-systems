@@ -343,6 +343,7 @@ function ShiftSnapshotUtils.build(
 		weekBonus = state.weekBonus,
 		runOver = state.runOver,
 		nightReached = state.nightReached,
+		extraTime = if state.extraTime == true then true else nil,
 	}
 end
 
@@ -434,6 +435,7 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 		weekBonus = weekBonus,
 		runOver = runOver,
 		nightReached = nightReached,
+		extraTime = if value.extraTime == true then true else nil,
 	}
 	return snapshot
 end

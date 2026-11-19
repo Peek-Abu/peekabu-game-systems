@@ -96,9 +96,9 @@ return function()
 				6
 			)
 			expect(view.night).to.equal("NIGHT 6")
-			expect(view.site).to.equal("4th floor offices · 5:00 night")
+			expect(view.site).to.equal("4th floor offices · 6:00 night")
 			local first = ShiftTransitViewModel.slip({ holds = {}, client = "Harlow & Finch Ltd." }, false, 1)
-			expect(first.site).to.equal("4th floor offices · 3:00 night")
+			expect(first.site).to.equal("4th floor offices · 4:00 night")
 		end)
 
 		it("leaves a quick shift's slip untagged", function()

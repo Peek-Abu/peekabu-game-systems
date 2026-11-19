@@ -88,6 +88,9 @@ export type ShiftState = {
 	-- crew skips the vote and is sent home after the results.
 	runOver: RunOver?,
 	nightReached: number?,
+	-- Night Shift only: this night's clock ran out close to the goal and it got its extra time (ShiftNightRules.extraTime;
+	-- the HUD says EXTRA TIME!). Nil otherwise; a new night starts without it.
+	extraTime: boolean?,
 }
 
 -- The performance review's overall stamp (Figma 35:1096): quota missed, met, or met with the salvage threshold.
@@ -206,6 +209,7 @@ export type ShiftSnapshot = {
 	weekBonus: number?,
 	runOver: RunOver?,
 	nightReached: number?,
+	extraTime: boolean?,
 }
 
 -- One player held by a transit (the load screen while the office is built and they are placed in its truck). `id` is

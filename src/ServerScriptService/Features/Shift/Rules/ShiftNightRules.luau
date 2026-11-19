@@ -2,7 +2,8 @@
 --[=[
 	ShiftNightRules: the Night Shift run's decisions (ShiftNightConstants, ShiftNightFormulas). It reads the run mode
 	off the untrusted depart payload (`parseMode`), settles a night at its results (`settle`: tonight's goal is the only
-	fail line, a wipe ends the run, a survived week pays its bonus) and stamps the run's fields onto the shift's state,
+	fail line, a wipe ends the run, a survived week pays its bonus), gives a nearly-made night its extra time
+	(`extraTime`) and stamps the run's fields onto the shift's state,
 	raising a running night's tier to its start tier (`stamp`, `minTier`). Pure.
 
 	@class ShiftNightRules
@@ -27,6 +28,17 @@ export type NightView = {
 	weekBonus: number?,
 	runOver: RunOver?,
 	nightReached: number?,
+}
+
+-- A night whose clock just ran out, as `extraTime` reads it. `night` is nil outside a Night Shift run; `used` is whether
+-- this night already had its extra time.
+export type ClockOut = {
+	night: number?,
+	training: boolean,
+	used: boolean,
+	quota: number,
+	cleared: number,
+	quotaMet: boolean,
 }
 
 -- One night's end, as `settle` reads it.
@@ -80,6 +92,21 @@ function ShiftNightRules.settle(input: NightEnd): Settlement
 		then ShiftNightFormulas.weekBonus(ShiftNightFormulas.week(input.night))
 		else 0
 	return { bonus = bonus, runOver = nil }
+end
+
+--[=[
+	The extra time (seconds) a night gets when its clock runs out (owner pick T3): EXTRA_TIME_SECONDS once a night when
+	the crew has EXTRA_TIME_SHARE of tonight's goal or more but has not met it; 0 in a quick shift, in training, with
+	no goal or once used.
+]=]
+function ShiftNightRules.extraTime(input: ClockOut): number
+	if input.night == nil or input.training or input.used or input.quotaMet or input.quota <= 0 then
+		return 0
+	end
+	if input.cleared < input.quota * ShiftNightConstants.EXTRA_TIME_SHARE then
+		return 0
+	end
+	return ShiftNightConstants.EXTRA_TIME_SECONDS
 end
 
 --[=[

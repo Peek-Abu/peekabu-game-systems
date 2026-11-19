@@ -322,6 +322,7 @@ local wiring: ShiftWiringSystem.Deps = {
 	clockOuts = clockOuts,
 	voting = voting,
 	onRoundPhase = runs.onRoundPhase,
+	onExtended = runs.onExtended,
 	step = runs.step,
 }
 
@@ -389,6 +390,14 @@ local ShiftServiceServer: ShiftServiceServer = {
 			autoStart = false,
 			lateJoin = true,
 			eligible = trip.eligible,
+			-- Night Shift's extra time when a night's clock runs out close to the goal (owner pick T3).
+			extraTime = function(): number
+				return nights:extraTime(
+					state.quota,
+					RoundServiceServer:teamValue(ShiftConstants.CLEARANCE),
+					state.quotaMet
+				)
+			end,
 		})
 		DeathServiceServer:setSpawnPoint(trip.spawnFor)
 		trip:start(publish)

@@ -42,6 +42,8 @@ local log = Logger.new("RoundServiceServer")
 local phaseChanged: SignalTyped.Signal<RoundState> = SignalTyped.new()
 local runStarted: SignalTyped.Signal<{ Player }> = SignalTyped.new()
 local runEnded: SignalTyped.Signal<string> = SignalTyped.new()
+-- A run given extra time (the config's extraTime): the same phase with a later endsAt.
+local extended: SignalTyped.Signal<RoundState> = SignalTyped.new()
 
 local config: RoundConfig = table.clone(RoundConstants.DEFAULT_CONFIG)
 local state: RoundState = RoundPhaseRules.initial()
@@ -117,8 +119,35 @@ local function apply(nextState: RoundState)
 	phaseChanged:Fire(table.clone(nextState))
 end
 
+-- The game's extra time for a run whose clock just ran out (0 when it has none or it errors).
+local function askExtraTime(): number
+	local ask = config.extraTime
+	if ask == nil then
+		return 0
+	end
+	local ok, result = pcall(ask)
+	if not ok then
+		log:error(`extraTime errored: {result}`)
+		return 0
+	end
+	return if type(result) == "number" then result else 0
+end
+
 local function step()
-	local nextState = RoundPhaseRules.tick(state, config, tracker:counts(#Players:GetPlayers()), now())
+	local clock = now()
+	local counts = tracker:counts(#Players:GetPlayers())
+	local endsAt = state.endsAt
+	if state.phase == "running" and endsAt ~= nil and clock >= endsAt and counts.alive > 0 then
+		local longer = RoundPhaseRules.extend(state, clock, askExtraTime())
+		if longer ~= nil then
+			state = longer
+			log:info(`run {state.round} gets extra time until {longer.endsAt}`)
+			publish()
+			extended:Fire(table.clone(longer))
+			return
+		end
+	end
+	local nextState = RoundPhaseRules.tick(state, config, counts, clock)
 	if nextState ~= nil then
 		apply(nextState)
 	end
@@ -133,6 +162,7 @@ export type RoundServiceServer = {
 	phaseChanged: SignalTyped.Signal<RoundState>,
 	runStarted: SignalTyped.Signal<{ Player }>,
 	runEnded: SignalTyped.Signal<string>,
+	extended: SignalTyped.Signal<RoundState>,
 
 	start: (self: RoundServiceServer) -> (),
 	stop: (self: RoundServiceServer) -> (),
@@ -182,6 +212,7 @@ local RoundServiceServer: RoundServiceServer = {
 	phaseChanged = phaseChanged,
 	runStarted = runStarted,
 	runEnded = runEnded,
+	extended = extended,
 
 	--[=[
 		Publishes the lobby, follows players joining (late join) and leaving, and starts the clock.

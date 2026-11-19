@@ -24,6 +24,8 @@ export type Phase = "lobby" | "starting" | "running" | "results"
 	- lateJoin: a player who joins during `running` joins the run (otherwise they watch).
 	- containerCapacity: entries per run container.
 	- eligible: who joins a run when it starts; nil = everyone present.
+	- extraTime: asked when a timed run's clock runs out (with someone still in it): seconds > 0 are added to the run
+	  (RoundPhaseRules.extend, the `extended` signal) instead of ending it; nil or 0 = the run times out.
 ]=]
 export type RoundConfig = {
 	minPlayers: number,
@@ -34,6 +36,7 @@ export type RoundConfig = {
 	lateJoin: boolean,
 	containerCapacity: number,
 	eligible: ((player: Player) -> boolean)?,
+	extraTime: (() -> number)?,
 }
 
 export type RoundConfigUpdate = {
@@ -45,6 +48,7 @@ export type RoundConfigUpdate = {
 	lateJoin: boolean?,
 	containerCapacity: number?,
 	eligible: ((player: Player) -> boolean)?,
+	extraTime: (() -> number)?,
 }
 
 --[=[

@@ -176,10 +176,15 @@ return function()
 
 		it("times a Night Shift's card by that night's length", function()
 			local night = snapshot({ runMode = "night", night = 1, week = 1 })
-			local view = ShiftHudViewModel.hud(night, nil, 820, false)
-			expect(view.outText).to.equal("OUT 3:00")
-			-- 180 s left of a 180 s night: nothing punched yet.
+			local view = ShiftHudViewModel.hud(night, nil, 760, false)
+			expect(view.outText).to.equal("OUT 4:00")
+			-- 240 s left of a 240 s night: nothing punched yet.
 			expect(view.punched).to.equal(0)
+		end)
+
+		it("labels a night's extra time", function()
+			local extra = snapshot({ runMode = "night", night = 2, week = 1, extraTime = true })
+			expect(ShiftHudViewModel.hud(extra, nil, 990, false).clockLabel).to.equal("EXTRA TIME!")
 		end)
 
 		it("labels the break, the warning and overtime", function()
