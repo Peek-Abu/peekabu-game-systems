@@ -239,6 +239,21 @@ return function()
 			expect(OccupantTellRules.musicGain(0, false, 0.1)).to.equal(0)
 		end)
 
+		it("lets a chase start the music any time with no catch", function()
+			expect(OccupantTellRules.musicAllowed(nil, 0)).to.equal(true)
+			expect(OccupantTellRules.musicAllowed(nil, 1000)).to.equal(true)
+		end)
+
+		it("keeps the music quiet for a while after a catch, then lets a new chase start it", function()
+			expect(OccupantTellRules.musicAllowed(100, 100)).to.equal(false)
+			expect(OccupantTellRules.musicAllowed(100, 100 + C.CHASE_MUSIC_CATCH_QUIET - 0.01)).to.equal(false)
+			expect(OccupantTellRules.musicAllowed(100, 100 + C.CHASE_MUSIC_CATCH_QUIET)).to.equal(true)
+		end)
+
+		it("stays quiet after a catch longer than the fade takes", function()
+			expect(C.CHASE_MUSIC_CATCH_QUIET > C.CHASE_MUSIC_FADE).to.equal(true)
+		end)
+
 		it("fades out slower than it fades in, over more than a bar", function()
 			expect(C.CHASE_MUSIC_FADE > C.CHASE_MUSIC_FADE_IN).to.equal(true)
 			expect(C.CHASE_MUSIC_FADE >= C.CHASE_STING_LEAD).to.equal(true)

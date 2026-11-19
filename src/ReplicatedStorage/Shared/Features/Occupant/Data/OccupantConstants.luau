@@ -242,6 +242,10 @@ return table.freeze({
 	CHASE_MUSIC_FADE = 2.5,
 	CHASE_MUSIC_FADE_IN = 0.5,
 	CHASE_MUSIC_HOLD = 4,
+	-- Owner 11-19 ("chase music should end / fade gracefully after a catch"): a catch on you skips the hold and fades the
+	-- music out over CHASE_MUSIC_FADE at once, and for CHASE_MUSIC_CATCH_QUIET seconds after it (the scare beat, the
+	-- CCTV, the rehire) a chase on you starts no new sting or stems (OccupantTellRules.musicAllowed).
+	CHASE_MUSIC_CATCH_QUIET = 8,
 	-- The truck box's PathfindingModifier label (Office builds it; his kind's pathCosts never enter it), and
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",

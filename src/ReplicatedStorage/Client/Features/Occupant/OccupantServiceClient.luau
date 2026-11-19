@@ -187,6 +187,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 			stoppers,
 			OccupantEvents.packets.CatchCam.listen(function(cframe: CFrame)
 				snap(cframe)
+				OccupantChaseMusicSystem.caught()
 				OccupantScareSystem.snap()
 				OccupantCatchStore.snap()
 				task.delay(OccupantConstants.SNAP_SECONDS, OccupantCatchStore.endSnap)
@@ -195,6 +196,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 		table.insert(
 			stoppers,
 			OccupantEvents.packets.Strike.listen(function(_hit: boolean)
+				OccupantChaseMusicSystem.caught()
 				OccupantScareSystem.strike()
 			end)
 		)

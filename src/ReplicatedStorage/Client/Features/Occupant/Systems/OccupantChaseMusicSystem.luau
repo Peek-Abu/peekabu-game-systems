@@ -14,6 +14,9 @@
 	  has been off CHASE_MUSIC_HOLD seconds, then a master gain fades every stem out over CHASE_MUSIC_FADE
 	  (OccupantTellRules.musicGain) and the stems stop at silence. A chase back on you inside the hold changes nothing; one
 	  back inside the fade brings the same stems up over CHASE_MUSIC_FADE_IN: no new sting, no restart from bar one.
+	- `caught` (owner 11-19: "should end / fade gracefully after a catch"): a catch on you skips the hold: the master gain
+	  fades every stem out over CHASE_MUSIC_FADE at once, and for CHASE_MUSIC_CATCH_QUIET seconds a chase on you starts
+	  no new sting or stems (OccupantTellRules.musicAllowed).
 	- `finish`: his rig is gone or the system stops: the stems fade out over `fade` now, no hold (a chase that ends
 	  inside the sting bar never starts them).
 	- A chase that flickers off and on inside the sting bar (measured live: three starts in 0.85 s at the edge of his
@@ -63,13 +66,15 @@ local gain = 0
 local startAt: number? = nil
 -- When the last sting started (os.clock()).
 local stingAt = -math.huge
+-- When the local player was last caught (os.clock(); nil: not this session).
+local caughtAt: number? = nil
 local stems: { Stem } = {}
 local layer = 0
 local distanceOf: () -> number? = function(): number?
 	return nil
 end
 local connection: RBXScriptConnection? = nil
-local counters = { chases = 0, stings = 0, relocks = 0, pending = 0, resumes = 0, holds = 0 }
+local counters = { chases = 0, stings = 0, relocks = 0, pending = 0, resumes = 0, holds = 0, catches = 0, quiet = 0 }
 
 local function playStem(id: string, near: boolean)
 	if not SoundRegistry.has(id) then
@@ -180,6 +185,11 @@ end
 	A chase on you began: the sting now, the stems a bar later. `distance` reads his distance to you (nil: unknown).
 ]=]
 function OccupantChaseMusicSystem.begin(distance: () -> number?)
+	if not OccupantTellRules.musicAllowed(caughtAt, os.clock()) then
+		-- Just caught: the music is fading out; no new sting, no stems come back up.
+		counters.quiet += 1
+		return
+	end
 	wanted = true
 	distanceOf = distance
 	if active then
@@ -216,6 +226,17 @@ end
 ]=]
 function OccupantChaseMusicSystem.release()
 	wanted = false
+end
+
+--[=[
+	The local player was caught: the music lets go now with no hold and fades out over CHASE_MUSIC_FADE (step stops the
+	stems at silence; stems still waiting on the sting bar never start), and stays quiet CHASE_MUSIC_CATCH_QUIET seconds.
+]=]
+function OccupantChaseMusicSystem.caught()
+	counters.catches += 1
+	caughtAt = os.clock()
+	wanted = false
+	hold = OccupantTellRules.newMusicHold()
 end
 
 --[=[

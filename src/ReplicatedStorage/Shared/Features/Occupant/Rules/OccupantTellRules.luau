@@ -172,6 +172,14 @@ function OccupantTellRules.musicGain(current: number, on: boolean, deltaTime: nu
 end
 
 --[=[
+	Whether a chase on you may start the chase music at `now`: always, except within CHASE_MUSIC_CATCH_QUIET seconds of
+	your last catch (`caughtAt`, nil: never caught), so the music fades out after a catch and no new sting restarts it.
+]=]
+function OccupantTellRules.musicAllowed(caughtAt: number?, now: number): boolean
+	return caughtAt == nil or now - caughtAt >= OccupantConstants.CHASE_MUSIC_CATCH_QUIET
+end
+
+--[=[
 	Whether he just sat down at a desk: walking to it (`toDesk`), then typing.
 ]=]
 function OccupantTellRules.sat(before: string, after: string): boolean
