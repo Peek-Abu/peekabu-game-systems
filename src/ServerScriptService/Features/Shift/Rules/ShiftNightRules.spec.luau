@@ -98,7 +98,10 @@ return function()
 
 		it("gives none once the goal is met, in a quick shift or in training", function()
 			expect(ShiftNightRules.extraTime(close({ quotaMet = true }))).to.equal(0)
-			expect(ShiftNightRules.extraTime(close({ night = nil }))).to.equal(0)
+			-- A nil in `close`'s changes would be skipped, so a quick shift's input clears the night by hand.
+			local quick = close()
+			quick.night = nil
+			expect(ShiftNightRules.extraTime(quick)).to.equal(0)
 			expect(ShiftNightRules.extraTime(close({ training = true }))).to.equal(0)
 			expect(ShiftNightRules.extraTime(close({ quota = 0, cleared = 0 }))).to.equal(0)
 		end)
