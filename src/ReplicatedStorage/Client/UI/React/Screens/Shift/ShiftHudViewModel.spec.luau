@@ -182,9 +182,16 @@ return function()
 			expect(view.punched).to.equal(0)
 		end)
 
-		it("labels a night's extra time", function()
+		it("labels a night's extra time, with its whole card punched", function()
 			local extra = snapshot({ runMode = "night", night = 2, week = 1, extraTime = true })
-			expect(ShiftHudViewModel.hud(extra, nil, 990, false).clockLabel).to.equal("EXTRA TIME!")
+			local view = ShiftHudViewModel.hud(extra, nil, 990, false)
+			expect(view.clockLabel).to.equal("EXTRA TIME!")
+			expect(view.extraTime).to.equal(true)
+			expect(view.compactSub).to.equal("EXTRA TIME")
+			expect(view.punched).to.equal(ShiftHudViewModel.PUNCH_HOLES)
+			expect(
+				ShiftHudViewModel.hud(snapshot({ runMode = "night", night = 2, week = 1 }), nil, 990, false).extraTime
+			).to.equal(false)
 		end)
 
 		it("labels the break, the warning and overtime", function()
@@ -494,6 +501,18 @@ return function()
 				"Maple Hill · school"
 			)
 		end)
+
+		it(
+			"calls out a night's extra time on the meter until the goal is met (Studio 11-19: the clock label is not drawn)",
+			function()
+				expect(ShiftHudViewModel.meter({ quotaMet = false, overtime = false, extraTime = true }).title).to.equal(
+					"EXTRA TIME!"
+				)
+				expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false, extraTime = true }).title).to.equal(
+					"GOAL DONE!"
+				)
+			end
+		)
 
 		it("celebrates a met contract, and calls out overtime", function()
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).title).to.equal("GOAL DONE!")

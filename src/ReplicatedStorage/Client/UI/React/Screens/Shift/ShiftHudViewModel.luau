@@ -57,6 +57,8 @@ export type HudView = {
 	-- The phone's compact card has one line beside the clock: OUT until overtime, then OVERTIME (Figma 1d/1e).
 	compactSub: string,
 	overtime: boolean,
+	-- A Night Shift night in its extra time (ShiftNightRules.extraTime): the meter says EXTRA TIME!.
+	extraTime: boolean,
 	punched: number,
 	pressure: number,
 	-- The clearance folder and the finder's fee plate.
@@ -284,15 +286,21 @@ function ShiftHudViewModel.hud(
 	-- A Night Shift's night runs its own length (short at first).
 	local run = ShiftNightViewModel.of(snapshot)
 	local total = if run ~= nil then ShiftNightFormulas.seconds(run.night) else ShiftConstants.SHIFT_SECONDS
-	local elapsed = math.clamp(total - left, 0, total)
+	local extraTime = snapshot.extraTime == true
+	-- Extra time runs past the night's own length: its card stays fully punched.
+	local elapsed = if extraTime then total else math.clamp(total - left, 0, total)
 	local overtime = snapshot.stage == "overtime"
 	return {
 		vacuumEquipped = entry[VacuumConstants.PUBLIC_EQUIPPED_FIELD] == true,
 		clockLabel = stageLabel(snapshot, now),
 		time = ShiftHudViewModel.clock(left),
 		outText = `OUT {ShiftHudViewModel.clock(total)}`,
-		compactSub = if overtime then "OVERTIME" else `OUT {ShiftHudViewModel.clock(total)}`,
+		compactSub = if overtime
+			then "OVERTIME"
+			elseif extraTime then "EXTRA TIME"
+			else `OUT {ShiftHudViewModel.clock(total)}`,
 		overtime = overtime,
+		extraTime = extraTime,
 		punched = math.clamp(
 			math.floor(elapsed / total * ShiftHudViewModel.PUNCH_HOLES),
 			0,
@@ -543,15 +551,24 @@ end
 
 export type MeterView = { title: string, site: string, met: boolean }
 
--- The V1 Gloom meter's words: the job until the contract is met, then the win, then overtime's push. The site line is
+-- The V1 Gloom meter's words: the job until the contract is met (EXTRA TIME! while a night runs its extra time), then
+-- the win, then overtime's push. The site line is
 -- the run's map's (DepotMapRules.siteOf; the office's when unknown). A training run is TRAINING.
-function ShiftHudViewModel.meter(
-	view: { quotaMet: boolean, overtime: boolean, training: number?, map: ShiftTypes.MapId? }
-): MeterView
+function ShiftHudViewModel.meter(view: {
+	quotaMet: boolean,
+	overtime: boolean,
+	extraTime: boolean?,
+	training: number?,
+	map: ShiftTypes.MapId?,
+}): MeterView
 	if view.training ~= nil then
 		return { title = "TRAINING", site = "Harlow & Finch · training", met = false }
 	end
-	local title = if view.overtime then "OVERTIME!" elseif view.quotaMet then "GOAL DONE!" else "CLEAN THE GLOOM"
+	local title = if view.overtime
+		then "OVERTIME!"
+		elseif view.quotaMet then "GOAL DONE!"
+		elseif view.extraTime == true then "EXTRA TIME!"
+		else "CLEAN THE GLOOM"
 	return { title = title, site = DepotMapRules.siteOf(DepotMapRules.parse(view.map)).hud, met = view.quotaMet }
 end
 
