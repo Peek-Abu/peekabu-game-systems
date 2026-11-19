@@ -399,6 +399,7 @@ return table.freeze({
 	REVEAL_PRIORITY = 60,
 	-- The gestures, how fast one lets go, and the catch's head tilt (degrees of roll, seconds, shiver).
 	GESTURES = OccupantGestureConstants.GESTURES,
+	CLOCK = OccupantGestureConstants.CLOCK,
 	GESTURE_RELEASE = 0.4,
 	TILT_DEGREES = 25,
 	TILT_SECONDS = 0.45,

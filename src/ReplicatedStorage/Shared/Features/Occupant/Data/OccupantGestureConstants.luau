@@ -162,6 +162,16 @@ local GESTURES: { [string]: Gesture } = {
 
 return table.freeze({
 	GESTURES = table.freeze(GESTURES),
+	-- His clock-head hands (OccupantClockFormulas): how fast the minute hand winds while he hunts and on the catch
+	-- (turns per second; the hour hand goes one twelfth as fast), how fast it spins up and winds down (turns per
+	-- second, per second), and the slow speed it settles back onto 12 at.
+	CLOCK = table.freeze({
+		huntTurns = 1.25,
+		catchTurns = 3,
+		spinUp = 6,
+		spinDown = 3,
+		settleTurns = 0.6,
+	}),
 	SLOW_TURN_SECONDS = SLOW_TURN_SECONDS,
 	WHIP_SECONDS = WHIP_SECONDS,
 	DROP_FALL_SECONDS = DROP_FALL_SECONDS,

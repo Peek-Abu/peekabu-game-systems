@@ -224,6 +224,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Employee.Systems.EmployeeStageSystem"] = "Camera/RunService/Instance shell over the emote systems (the camera and wall maths specced in EmployeeStageFormulas)",
 	["ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem"] = "Instance/RunService/VfxBurstSystem shell over live characters (marker logic specced in EmoteEffectSystem, numbers in EmoteVfxConstants)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem"] = "Instance/tween/Sound shell (the scare beat; no decisions)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantClockSystem"] = "Motor6D/RunService shell (winding specced in OccupantClockFormulas)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem"] = "Motor6D/RunService shell (poses and easing specced in OccupantGestureFormulas)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantClearanceSystem"] = "Instance/raycast shell (the paths and the box test are specced in OccupantGestureFormulas)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem"] = "Sound/Instance/RunService shell (stages and typing specced in OccupantTellRules)",

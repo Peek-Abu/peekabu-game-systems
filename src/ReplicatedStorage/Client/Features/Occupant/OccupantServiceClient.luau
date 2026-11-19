@@ -52,6 +52,7 @@ local OccupantChaseMusicSystem = require(ReplicatedStorage.Client.Features.Occup
 local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem)
 local OccupantScareSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem)
 local OccupantGestureSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem)
+local OccupantClockSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantClockSystem)
 local OccupantWarningSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem)
 local OccupantDreadSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantDreadSystem)
 local DreadOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Dread.DreadOverlay)
@@ -243,6 +244,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 		table.insert(stoppers, OccupantPresenceSystem.stop)
 		OccupantGestureSystem.start()
 		table.insert(stoppers, OccupantGestureSystem.stop)
+		OccupantClockSystem.start()
+		table.insert(stoppers, OccupantClockSystem.stop)
 		OccupantWarningSystem.start()
 		OccupantCatchVfxSystem.start()
 		table.insert(stoppers, OccupantCatchVfxSystem.stop)
@@ -273,6 +276,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 			chaseMusic = OccupantChaseMusicSystem.getState(),
 			scare = OccupantScareSystem.getState(),
 			gestures = OccupantGestureSystem.getState(),
+			clock = OccupantClockSystem.getState(),
 			warnings = OccupantWarningSystem.getState(),
 			dread = OccupantDreadSystem.getState(),
 			watchReports = OccupantWatchReportSystem.getState(),

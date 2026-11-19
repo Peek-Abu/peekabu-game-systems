@@ -356,6 +356,10 @@ return table.freeze({
 	FACE_APPEARANCE = "Face",
 	FACE_ATTRIBUTE = "ManagerFace",
 	FACES_FOLDER = "Faces",
+	-- His clock head's two hands (characters/manager/clockhead): their own parts, each on a Motor6D from the Head whose
+	-- C0 / C1 sit at the clock's centre with +Z out of the face, modelled at the painted rest (minute on 12, hour on 3).
+	-- OccupantClockSystem turns them; no clip keys them.
+	CLOCK_HANDS = table.freeze({ minute = "MinuteHandSpin", hour = "HourHandSpin" }),
 	-- The studs/s his walk and run clips plant their feet at when played at 1x (the Npc base plays them at his speed
 	-- / that, so his feet stay planted at every tier).
 	PLANTED_SPEEDS = table.freeze({ harlowWalk = 10, harlowRun = 20 }),
