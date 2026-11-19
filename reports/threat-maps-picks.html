@@ -125,6 +125,22 @@ table.grid tr:first-child td { border-top: 0; }
   </section>
 
   <section>
+    <h2>Agent test: click once, ring stat, longer nights, music fade, ring hit (19 Nov)</h2>
+    <p>Muted Play in the Shift place, solo, on night 1 of a Night Shift run. My test scripts read the game; they never wrote your profile. Everything is pushed (c5566d4e to c238b08a).</p>
+    <table class="grid">
+      <tr><th>Night length (T2)</th><td><b>Pass.</b> Night 1 ran 4:00 (240 s) with a goal of 190.</td></tr>
+      <tr><th>Click once (I1)</th><td><b>Pass.</b> One real mouse click: the vacuum stayed on after the button came up, cleaned the pile (Gloom 50), and turned itself off 2.4 s later. A second pile 6 studs away stayed at 0%: it never jumps to the next pile. A second click stopped it (pile left at 52%). Walking 25 studs away stopped it about a second later (pile left at 34%). A click with no pile in reach turns it off again after 0.3 s.</td></tr>
+      <tr><th>Quiet widens the ring (S2)</th><td><b>Pass.</b> Rings at Quiet 1: 111°, 88°, 63°. At Quiet 5: 132°, 103°, then 132°, 114°. Without the stat a ring is never wider than 120°, so the widening is on. Pippa is Quiet 2. (I set Quiet on the test character only, then put it back.)</td></tr>
+      <tr><th>EXTRA TIME! (T3)</th><td><b>Pass after a fix.</b> At 160 of 190 Gloom (84%) the clock hit 0:00 and the night got exactly 30 s more, once. Then it ended: FIRED, 160/190. <b>The words did not show</b> (the HUD below still says CLEAN THE GLOOM at 0:19). I fixed it (55fb822e): the meter now says <b>EXTRA TIME!</b> and the line under it EXTRA TIME. Please look for it in your check.</td></tr>
+      <tr><th>Chase music after a catch</th><td><b>Pass.</b> The chase music was playing at full volume, all 5 parts. On the catch it began fading at once (no 4 s wait): 1.0 → 0.47 → 0 in about 2.5 s, then stopped. A new chase 0.8 s later did not bring it back (no new sting). The manager also really caught me twice during the test, and the music behaved the same.</td></tr>
+      <tr><th>Ring Hit sound</th><td><b>Pass (loads).</b> Asset 112432955475175 loaded (fetch Success, IsLoaded, 0.45 s long), and hits played it. I was muted, so the volume is yours to judge by ear.</td></tr>
+      <tr><th>All specs</th><td>7786 of 7787 passed. The one failure was my own test's mistake (not the game); fixed in c238b08a.</td></tr>
+    </table>
+    <figure style="margin:0;display:grid;gap:6px"><img src="threat-maps/extra-time-before-fix.jpg" alt="Night 1 in extra time: the timer reads 0:19 after 4:00 ran out, Gloom 160 / 190, but the meter still says CLEAN THE GLOOM." style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)"><figcaption class="status">Before the fix: the extra 30 s ran (0:19), but the meter still said CLEAN THE GLOOM. Now it says EXTRA TIME!.</figcaption></figure>
+    <p><b>Your check (about 10 minutes):</b> click a pile once and steer the ring with the mouse; let a night run out a little short of the goal and look for EXTRA TIME!; get caught during a chase and listen to the music fade; and say if the ring hit is loud enough.</p>
+  </section>
+
+  <section>
     <h2>Your play-check: Night Shift (about 15 minutes)</h2>
     <p>Everything below is built and pushed. Coats carrying over and the hub's mode pick were checked in your 2-player test (above). Here's what's still yours to look at.</p>
     <p class="when">Setup</p>
