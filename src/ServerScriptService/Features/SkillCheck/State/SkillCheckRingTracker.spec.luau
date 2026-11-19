@@ -292,6 +292,46 @@ return function()
 		end)
 	end)
 
+	describe("the steadiness widening", function()
+		local WEEKLY = table.clone(CONFIG)
+		WEEKLY.widthWeekStep = 0.1
+		WEEKLY.widthWeekFloor = 0.6
+
+		local function ringFor(tracker, userId, progress, week, opening)
+			tracker:step(userId, true, progress, 10, week, opening)
+			return tracker:step(userId, true, progress, 10 + CONFIG.firstDelay, week, opening)
+		end
+
+		local function near(a, b)
+			return math.abs(a - b) < 1e-9
+		end
+
+		it("keeps the opening as it was with no steadiness or a steadiness of 1", function()
+			local tracker = SkillCheckRingTracker.new(CONFIG, rolls({ 0 }))
+			expect(ringFor(tracker, 1, 0, nil, nil).width).to.equal(120)
+			expect(ringFor(tracker, 2, 0, nil, 1).width).to.equal(120)
+		end)
+
+		it("widens both ends of a pile by the steadiness", function()
+			local tracker = SkillCheckRingTracker.new(CONFIG, rolls({ 0 }))
+			expect(near(ringFor(tracker, 1, 0, nil, 1.08).width, 129.6)).to.equal(true)
+			expect(near(ringFor(tracker, 2, 1, nil, 1.08).width, 64.8)).to.equal(true)
+		end)
+
+		it("widens whatever the week leaves", function()
+			local tracker = SkillCheckRingTracker.new(WEEKLY, rolls({ 0 }))
+			-- Week 3 narrows to 96; a steadiness of 1.16 makes it 111.36.
+			expect(near(ringFor(tracker, 1, 0, 3, 1.16).width, 111.36)).to.equal(true)
+		end)
+
+		it("judges a widened ring by its own width", function()
+			local tracker = SkillCheckRingTracker.new(CONFIG, rolls({ 0.25 }))
+			-- First gap at 90; 120 x 1.16 = 139.2 wide, so 20.4..159.6 plus 8 = 12.4..167.6.
+			local ring = ringFor(tracker, 1, 0, nil, 1.16)
+			expect(tracker:report(1, ring.id, 165, ring.arriveAt).hit).to.equal(true)
+		end)
+	end)
+
 	describe("forget and clear", function()
 		it("forgets one player's ring and schedule", function()
 			local tracker = SkillCheckRingTracker.new(CONFIG, rolls({ 0 }))

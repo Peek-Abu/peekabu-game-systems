@@ -5,7 +5,7 @@
 	VacuumConstants.PILE_TAG part),
 	rings come one after another (SkillCheckRingTracker, every SkillCheckConstants.STEP_INTERVAL): the server picks each
 	ring's opening, its width (narrower as the pile's progress rises, and a step narrower each Night Shift week from week
-	2, SkillCheckConstants.WIDTH_WEEK_STEP) and its arrival on the server clock, and sends it to that player alone (SkillCheckEvents.Ring). Their client draws it and, at the arrival, reports the icon's angle
+	2, SkillCheckConstants.WIDTH_WEEK_STEP, and wider by the player's employee's Quiet, EmployeeStatFormulas.ringOpening) and its arrival on the server clock, and sends it to that player alone (SkillCheckEvents.Ring). Their client draws it and, at the arrival, reports the icon's angle
 	(SkillCheckEvents.Report, rate-limited and checked by SkillCheckReportRules behind RequestHandler). The server judges
 	it against the opening; a report for another ring is ignored, and none in the window is a miss. Each verdict goes
 	back to the player (SkillCheckEvents.Result, their client's clunk or tick); a miss is a loud noise at the player
@@ -38,6 +38,7 @@ local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local SkillCheckReportRules = require(ServerScriptService.Features.SkillCheck.Rules.SkillCheckReportRules)
+local EmployeeStatFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeeStatFormulas)
 local SkillCheckRingTracker = require(ServerScriptService.Features.SkillCheck.State.SkillCheckRingTracker)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
@@ -120,7 +121,9 @@ local function step()
 	local week = if shift.runMode == "night" then shift.week else nil
 	for _, player in Players:GetPlayers() do
 		local pile, progress = pileOf(player)
-		local ring = tracker:step(player.UserId, running and pile ~= nil, progress, now, week)
+		-- Quiet widens the opening (owner pick S2): 1 bar plays like today.
+		local opening = EmployeeStatFormulas.ringOpening(EmployeeStatFormulas.barsOn(player.Character, "quiet"))
+		local ring = tracker:step(player.UserId, running and pile ~= nil, progress, now, week, opening)
 		if ring ~= nil then
 			counters.rings += 1
 			SkillCheckEvents.packets.Ring.sendTo(ring, player)

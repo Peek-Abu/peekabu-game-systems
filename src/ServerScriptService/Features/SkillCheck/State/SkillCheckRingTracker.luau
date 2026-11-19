@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	SkillCheckRingTracker: each player's closing rings (the k1 skill check). `step` is told, every beat, whether a player
-	is vacuuming a pile, how far along it is and the Night Shift week (nil in Quick shift); once they have been on a pile `firstDelay` seconds it starts a ring:
+	is vacuuming a pile, how far along it is, the Night Shift week (nil in Quick shift) and how much wider their
+	opening is (`opening`, their employee's Quiet, EmployeeStatFormulas.ringOpening; nil = 1); once they have been on a pile `firstDelay` seconds it starts a ring:
 	a fresh id, an opening `minShift` or more round from their last one (SkillCheckAngleFormulas.nextGap, from the
 	injected `random`), as wide as the pile's progress allows (gapWidth: narrower toward the end; both ends narrowed by the week,
 	weekScale, when the config has a weekly step) and arriving `travel` seconds later. One ring at a time per player; a ring in flight is judged even if they leave the pile (letting go
@@ -43,7 +44,8 @@ export type SkillCheckRingTracker = {
 		onPile: boolean,
 		progress: number,
 		now: number,
-		week: number?
+		week: number?,
+		opening: number?
 	) -> SkillCheckTypes.Ring?,
 	report: (
 		self: SkillCheckRingTracker,
@@ -98,7 +100,7 @@ function SkillCheckRingTracker.new(config: Config, random: () -> number): SkillC
 	end
 
 	local tracker: SkillCheckRingTracker = {
-		step = function(_self, userId, onPile, progress, now, week)
+		step = function(_self, userId, onPile, progress, now, week, opening)
 			local state = playerOf(userId)
 			if not onPile then
 				state.armed = false
@@ -114,9 +116,11 @@ function SkillCheckRingTracker.new(config: Config, random: () -> number): SkillC
 			lastId += 1
 			local gap = SkillCheckAngleFormulas.nextGap(state.lastGap, random(), config.minShift)
 			local stepPerWeek, floor = config.widthWeekStep, config.widthWeekFloor
-			local scale = if stepPerWeek ~= nil and floor ~= nil
-				then SkillCheckAngleFormulas.weekScale(week, stepPerWeek, floor)
-				else 1
+			local scale = (
+				if stepPerWeek ~= nil and floor ~= nil
+					then SkillCheckAngleFormulas.weekScale(week, stepPerWeek, floor)
+					else 1
+			) * (opening or 1)
 			local ring: SkillCheckTypes.Ring = {
 				id = lastId,
 				gap = gap,

@@ -77,6 +77,13 @@ return function()
 		expect(EmployeeStatFormulas.noiseCut({ 1, 5 })).to.equal(1)
 	end)
 
+	it("widens the skill check ring's opening by Quiet, today's opening at 1 bar", function()
+		expect(EmployeeStatFormulas.ringOpening(1)).to.equal(1)
+		expect(math.abs(EmployeeStatFormulas.ringOpening(3) - 1.08) < 1e-9).to.equal(true)
+		expect(math.abs(EmployeeStatFormulas.ringOpening(5) - 1.16) < 1e-9).to.equal(true)
+		expect(EmployeeStatFormulas.ringOpening(0)).to.equal(1)
+	end)
+
 	it("gives every employee's spread the same total", function()
 		local total = nil
 		for _, name in EmployeeRegistry.names() do

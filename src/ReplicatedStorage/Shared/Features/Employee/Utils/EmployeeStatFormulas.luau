@@ -14,11 +14,14 @@
 	- `carriedWeight(weight, bars)`: a load's weight with Strength taken off (before Carry's slowdown).
 	- `suctionRate(player, target)`: how fast the player's vacuum cleans (the Suction effect; an Interaction channel's
 	  `rate`, for Vacuum's piles and Cargo's grime).
+	- `ringOpening(bars)`: how much wider the skill check ring's opening is (owner pick S2, 2026-11-19: Quiet also means
+	  careful, so a quiet employee is steadier on the ring; a miss is still a loud noise): 1 + Quiet's gain, the same
+	  4% a bar as its noise cut.
 	- `noiseCut(bars)`: the radius factor of a noise several players make at once (a shared pile): the loudest
 	  maker's, so a quiet employee never hides a loud one; 1 with no maker.
 
 	The owner of each value reads it: Sprint (Speed, Stamina, Quiet on sprint feet), Cargo's load (Strength), Vacuum and
-	Cargo's grime (Suction, Quiet on the vacuum).
+	Cargo's grime (Suction, Quiet on the vacuum), SkillCheck's rings (Quiet's ringOpening).
 
 	@class EmployeeStatFormulas
 ]=]
@@ -85,6 +88,10 @@ end
 
 function EmployeeStatFormulas.suctionRate(player: Player, _target: Instance?): number
 	return EmployeeStatFormulas.effect("suction", EmployeeStatFormulas.barsOn(player.Character, "suction"))
+end
+
+function EmployeeStatFormulas.ringOpening(bars: number): number
+	return EmployeeStatFormulas.effect("quiet", bars)
 end
 
 function EmployeeStatFormulas.noiseCut(makers: { number }): number

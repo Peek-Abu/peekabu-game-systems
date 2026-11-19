@@ -116,14 +116,15 @@ local STAT_LABEL: { [EmployeeProfileRegistry.Stat]: string } = {
 	quiet = "Quiet",
 }
 
--- What each stat does, in one short line (kid reading level; the design's approved words). Quiet is about every map's
+-- What each stat does, in one short line (kid reading level; the design's approved words; Quiet also widens the skill
+-- check ring, owner pick S2 11-19). Quiet is about every map's
 -- monster, not one.
 local STAT_HINT: { [EmployeeProfileRegistry.Stat]: string } = {
 	speed = "Run faster.",
 	stamina = "Run longer.",
 	strength = "Carry big stuff faster.",
 	suction = "Clean faster.",
-	quiet = "Monsters hear you less.",
+	quiet = "Monsters hear you less. Easier rings.",
 }
 
 local STAT_ICON: { [EmployeeProfileRegistry.Stat]: UIAssets.ToonIcon } = {
