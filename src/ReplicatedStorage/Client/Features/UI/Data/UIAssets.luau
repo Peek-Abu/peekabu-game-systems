@@ -166,8 +166,11 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	-- iconize.py. OccupantPortraitAssets shows a neutral stand-in for any slot left "", never Harlow's.
 	brambleCalm = "rbxassetid://113499760594559",
 	brambleHunt = "rbxassetid://113099808413297",
-	managerCalm = "rbxassetid://79215225592922",
-	managerHunt = "rbxassetid://126690679697372",
+	-- The clockhead Manager's portraits (calm; hunting with the wider smile and the hands mid-spin): Blender renders of
+	-- the uploaded clock head on his real body through iconize.py (owner U1 "these are a pass!" 2026-11-19; Icey Labs,
+	-- decals 93332946291754 / 86503659561614; source in characters/manager/clockhead/ui).
+	managerCalm = "rbxassetid://134360346458907",
+	managerHunt = "rbxassetid://103257042643485",
 	monitor = "rbxassetid://115152845494708",
 	mop = "rbxassetid://135344307549758",
 	-- Today's Pippa waving (owner picks 2026-11-13, rendered from her v13 model with no hand in her head): coral, the
@@ -225,19 +228,22 @@ end
 UIAssets.toonPhotos = table.freeze({
 	-- The Office's places card: a real Studio Play shot of today's Office, the Manager waiting in his office doorway
 	-- with the lights low, graded like the School card (P1 placeholders, owner pick "Lights low" 2026-11-15; Icey Labs,
-	-- decal 81502937170609; source in characters/ui/implemented/upload/photos/office-2026-11-15).
-	officeCard = "rbxassetid://98404010123546",
+	-- decal 81502937170609; source in characters/ui/implemented/upload/photos/office-2026-11-15). The clockhead head
+	-- composited onto the same shot (owner U1 yes 2026-11-19; decal 91942907499018; characters/manager/clockhead/ui).
+	officeCard = "rbxassetid://77191780612017",
 	-- The three SOON places' cards: each front built from our own yard pieces in Studio, taped shut, shot at dusk and
 	-- graded like the School card (P1 placeholders, owner yes 2026-11-15; Icey Labs, decals 126741071058199 /
 	-- 101057075096880 / 124768571529726; source in characters/ui/implemented/upload/photos/sites-2026-11-15).
 	hospitalCard = "rbxassetid://70554632250088",
 	motelCard = "rbxassetid://106881096176586",
 	mallCard = "rbxassetid://120948393336511",
-	managerPortrait = "rbxassetid://136047524517573",
+	-- The clockhead Manager's board portrait (owner U1 yes 2026-11-19; Icey Labs, decal 126289995635426).
+	managerPortrait = "rbxassetid://107816153296338",
 	-- The Office's trip-card picture: a real Studio Play shot of today's Office, Pippa from behind with her vacuum and
 	-- the Manager across the open-plan room, graded 16:9 like schoolWide (P1 placeholders, owner yes 2026-11-15; Icey
-	-- Labs, decal 93654867486186; source in characters/ui/implemented/upload/photos/office-2026-11-15).
-	officeWide = "rbxassetid://112756914310404",
+	-- Labs, decal 93654867486186; source in characters/ui/implemented/upload/photos/office-2026-11-15). The clockhead
+	-- head composited onto the same shot (owner U1 yes 2026-11-19; decal 100060304076450).
+	officeWide = "rbxassetid://134538524584899",
 	-- The School's trip-card picture (the Office's is officeWide): a real Studio shot of Pippa from behind with Bramble
 	-- down a Maple Hill locker hall, graded like officeWide (owner K5 yes 2026-11-13, replacing the AI picture; Icey
 	-- Labs, decal 93629730256648). An empty slot would draw the School map card's look instead (ShiftTransitViewModel.slip).
@@ -261,7 +267,7 @@ UIAssets.toonPhotos = table.freeze({
 	guideHide = "rbxassetid://93863428782398", -- decal 127988143607985
 	guideLoadUp = "rbxassetid://135811094128961", -- decal 89585096801660
 	guideManagerBack = "rbxassetid://91345355678790", -- decal 99766470767209
-	guideManagerCut = "rbxassetid://118067372604187", -- decal 108126864461604
+	guideManagerCut = "rbxassetid://82216674095820", -- decal 82920551973337 (clockhead, owner U1 yes 2026-11-19)
 	guideBrambleBack = "rbxassetid://93014438530395", -- decal 85093706450462
 	guideBrambleCut = "rbxassetid://131353849368499", -- decal 100407953750316
 	guideSoonBack = "rbxassetid://129093281003077", -- decal 95751654599901
