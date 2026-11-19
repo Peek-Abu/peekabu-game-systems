@@ -77,7 +77,7 @@ local ROLES: { Role } = {
 }
 
 local STOPS: { Stop } = {
-	{ id = "dust", goal = "piles", sign = "Hold to vacuum the Gloom!", steps = true },
+	{ id = "dust", goal = "piles", sign = "Press once to vacuum the Gloom!", steps = true },
 	{ id = "treasure", goal = "banked", sign = "Clean the treasure. Leave the trash!" },
 	{ id = "quiet", goal = "walk", sign = "Shh! He hears running." },
 	{ id = "hide", goal = "escape", sign = "He's coming! Run or hide!" },
@@ -90,7 +90,10 @@ end
 local COACH_POSES: { CoachPose } = { "point", "warn", "cheer", "shh", "hide" }
 
 local COACH: { [string]: CoachLine } = {
-	dust = { text = "Listen up, rookie! Follow the gold arrows. Hold the vacuum on the purple goo.", pose = "point" },
+	dust = {
+		text = "Listen up, rookie! Follow the gold arrows. Press once by the purple goo to vacuum it.",
+		pose = "point",
+	},
 	treasure = { text = "Grab that mug. Take it to the truck. Leave the trash!", pose = "point" },
 	carrying = { text = "Good. Now put it in the truck.", pose = "point" },
 	quiet = { text = "Uh oh. The lights! Keep moving. Stay on the arrows.", pose = "warn" },
@@ -103,12 +106,12 @@ local COACH: { [string]: CoachLine } = {
 	caught = { text = "Shake it off. Run, or hide before he sees you.", pose = "shh" },
 	shop = { text = "This is the Shop. Spend your Gleam here.", pose = "point" },
 	trucks = { text = "Hop on a truck with your crew. Go!", pose = "cheer" },
-	vacuum = { text = "This is your vacuum. Pick it. Then hold to suck up Gloom.", pose = "point" },
+	vacuum = { text = "This is your vacuum. Pick it. Then press once to suck up Gloom.", pose = "point" },
 	power = { text = "This is your power. Tap it now. Try it!", pose = "point" },
 }
 
 local GOALS: { [string]: GoalCard } = {
-	dust = { title = "SUCK UP THE GLOOM!", line = "Walk to the purple goo. Hold to vacuum it.", icon = "vacuum" },
+	dust = { title = "SUCK UP THE GLOOM!", line = "Walk to the purple goo. Press once to vacuum it.", icon = "vacuum" },
 	treasure = { title = "SAVE THE TREASURE!", line = "Take the mug to the truck. Leave the trash.", icon = "monitor" },
 	quiet = { title = "FOLLOW THE ARROWS!", line = "The lights are going out. Keep going!", icon = "flashlight" },
 	hide = { title = "GET AWAY FROM HIM!", line = "Run away, or hide under the glowing desk.", icon = "!" },
@@ -330,9 +333,9 @@ local TrainingConstants = {
 		-- Owner 11-13: training is skippable (the hub card's button, and the note after it).
 		skipButton = "SKIP TRAINING",
 		skipped = "Skipped! You can play training any time.",
-		tourVacuum = "This is your vacuum. Pick it. Then hold to suck up Gloom.",
+		tourVacuum = "This is your vacuum. Pick it. Then press once to suck up Gloom.",
 		tourPower = "This is your power. Tap it now. Try it!",
-		tourGloom = "Now hold to suck up all the purple Gloom!",
+		tourGloom = "Now press once at each pile to suck up all the purple Gloom!",
 		tourRun = "Run! Hold Shift to run fast.",
 		tourRunPad = "Run! Press the left stick to run fast.",
 		tourRunTouch = "Run! Hold the SPRINT button.",

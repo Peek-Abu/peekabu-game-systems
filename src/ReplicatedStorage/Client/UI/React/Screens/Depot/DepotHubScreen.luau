@@ -235,10 +235,10 @@ local function DepotHubScreen(
 	end
 	local bindings = InputServiceClient:bindingsFor(VacuumConstants.ACTION)
 	local input = UserInputService:GetLastInputType()
-	local control = "Hold the vacuum button near dust."
+	local control = "Press the vacuum button once near dust."
 	if input == Enum.UserInputType.Touch then
 		-- Short enough for the Guide card's two phone lines.
-		control = "Hold VACUUM near dust."
+		control = "Tap VACUUM once near dust."
 	elseif bindings ~= nil then
 		local keys = if string.sub(input.Name, 1, 7) == "Gamepad" then bindings.gamepad else bindings.keyboard
 		local key = if keys ~= nil then keys[1] else nil
@@ -247,7 +247,7 @@ local function DepotHubScreen(
 			local name = if key == Enum.UserInputType.MouseButton1
 				then "the left mouse button"
 				else ShiftHudViewModel.keyName(key)
-			control = `Hold {name} near dust to clean.`
+			control = `Press {name} once near dust to clean.`
 		end
 	end
 	local body: { [string]: React.ReactNode } = {}

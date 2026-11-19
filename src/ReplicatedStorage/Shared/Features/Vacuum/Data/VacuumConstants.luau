@@ -95,9 +95,14 @@ return table.freeze({
 	-- The hidden Part under a pile its art is fitted to, once, at full size (VacuumPileArtSystem); every client shows
 	-- that art at the pile's own size (VacuumPullSystem).
 	PILE_ART_HOST = "PileArtHost",
-	-- The hold-to-vacuum Input action and how often the client re-aims.
+	-- The vacuum Input action and how often the client re-aims.
 	ACTION = "vacuum",
 	AIM_INTERVAL = 0.1,
+	-- Click once to clean (owner pick I1, 2026-11-19; VacuumLatchRules): one press keeps the vacuum on until the pile is
+	-- clean, the player walks out of reach or presses again, so the mouse, a thumb or the right stick is free for the
+	-- skill check ring. false = the old hold-to-vacuum. A press finds its pile within LATCH_GRACE seconds or stops.
+	LATCH = true,
+	LATCH_GRACE = 0.3,
 	-- Which pile is being cleaned (VacuumTargetRules, studs flat to a pile's rim): within 2 of the floor head,
 	-- or 1 of the feet, or 5 of the feet inside a cone (dot 0.5, 60 degrees each side) round the body's facing;
 	-- never one more than 6 up or down. The server re-checks every tick with TARGET_SLACK more studs, as it

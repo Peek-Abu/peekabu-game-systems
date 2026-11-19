@@ -27,7 +27,7 @@ export type Step = {
 	line: string,
 	hue: UIToonConstants.Hue,
 	photo: string,
-	-- The live control (the vacuum step only), e.g. "Hold the left mouse button near dust to clean."
+	-- The live control (the vacuum step only), e.g. "Press the left mouse button once near dust to clean."
 	hint: string?,
 }
 

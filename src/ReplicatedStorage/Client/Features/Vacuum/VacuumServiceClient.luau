@@ -1,7 +1,9 @@
 --!strict
 --[=[
-	VacuumServiceClient: hold to vacuum (Cleanup Crew spec §4). While the `vacuum` action is held (left
-	mouse, gamepad R2, or the Shift HUD's touch button through beginVacuum / endVacuum), it re-aims every
+	VacuumServiceClient: click once to vacuum (owner pick I1, 2026-11-19; VacuumLatchRules). A press of the `vacuum`
+	action (left mouse, gamepad R2, or the Shift HUD's touch button through pressVacuum / releaseVacuum) latches the
+	vacuum on until its pile is clean, the player walks out of reach, starts carrying or puts it away, or presses again;
+	with VacuumConstants.LATCH off it is the old hold. While on (Cleanup Crew spec §4), it re-aims every
 	AIM_INTERVAL at the pile the vacuum is on (VacuumTargetRules: the wand's floor head and the body's facing,
 	not the camera; the pile already being cleaned is kept while it is in reach) and keeps Interaction's channel
 	on it; letting go stops the channel, and the pile keeps its progress. Nothing is sent while carrying. A grimy
@@ -24,7 +26,9 @@ local Workspace = game:GetService("Workspace")
 
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local VacuumLatchRules = require(ReplicatedStorage.Client.Features.Vacuum.Rules.VacuumLatchRules)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local VacuumMotionRigSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMotionRigSystem)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
@@ -39,6 +43,8 @@ local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.Input
 local InteractionServiceClient = require(ReplicatedStorage.Client.Features.Interaction.InteractionServiceClient)
 
 local holding = false
+-- Fires with `holding` whenever the vacuum turns on or off (the phone's VACUUM button stays lit while latched on).
+local changed: SignalTyped.Signal<boolean> = SignalTyped.new()
 -- N12 hysteresis: the last aimed pile and whether the aim already missed once this hold.
 local lastTarget: Instance? = nil
 -- Bumped by every beginVacuum so a stale aim loop from a quick release and re-press exits.
@@ -143,9 +149,13 @@ end
 
 export type VacuumServiceClient = {
 	dependencies: { string },
+	changed: SignalTyped.Signal<boolean>,
 	init: (self: VacuumServiceClient) -> (),
 	start: (self: VacuumServiceClient) -> (),
 	stop: (self: VacuumServiceClient) -> (),
+	-- A press / a release of the vacuum button (the latch decides: start, stop, or nothing).
+	pressVacuum: (self: VacuumServiceClient) -> (),
+	releaseVacuum: (self: VacuumServiceClient) -> (),
 	beginVacuum: (self: VacuumServiceClient) -> (),
 	endVacuum: (self: VacuumServiceClient) -> (),
 	isVacuuming: (self: VacuumServiceClient) -> boolean,
@@ -153,6 +163,7 @@ export type VacuumServiceClient = {
 }
 
 local VacuumServiceClient: VacuumServiceClient = {
+	changed = changed,
 	dependencies = {
 		"InputServiceClient",
 		"InteractionServiceClient",
@@ -166,7 +177,7 @@ local VacuumServiceClient: VacuumServiceClient = {
 			InputActionRegistry.register(VacuumConstants.ACTION, {
 				context = "gameplay",
 				bindings = { keyboard = { Enum.UserInputType.MouseButton1 }, gamepad = { Enum.KeyCode.ButtonR2 } },
-				description = "Hold to vacuum the pile in front of you",
+				description = "Press once to vacuum the pile in front of you",
 			})
 		end
 	end,
@@ -176,9 +187,9 @@ local VacuumServiceClient: VacuumServiceClient = {
 			unbinders,
 			InputServiceClient:bind(VacuumConstants.ACTION, function(phase)
 				if phase == "begin" then
-					self:beginVacuum()
+					self:pressVacuum()
 				else
-					self:endVacuum()
+					self:releaseVacuum()
 				end
 			end)
 		)
@@ -210,23 +221,48 @@ local VacuumServiceClient: VacuumServiceClient = {
 		table.clear(unbinders)
 	end,
 
+	pressVacuum = function(self)
+		if VacuumLatchRules.press(VacuumConstants.LATCH, holding) == "end" then
+			self:endVacuum()
+		else
+			self:beginVacuum()
+		end
+	end,
+
+	releaseVacuum = function(self)
+		if VacuumLatchRules.release(VacuumConstants.LATCH) then
+			self:endVacuum()
+		end
+	end,
+
 	--[=[
-		Starts vacuuming whatever pile the player faces, re-aiming until endVacuum.
+		Starts vacuuming whatever pile the player faces, re-aiming until endVacuum (latched: until its pile is clean or
+		out of reach).
 	]=]
-	beginVacuum = function(_self)
+	beginVacuum = function(self)
 		if holding or not selected() then
 			return
 		end
 		holding = true
+		changed:Fire(true)
 		generation += 1
 		local mine = generation
 		lastTarget = nil
 		missed = false
+		local startedAt = os.clock()
+		local hadTarget = false
+		-- The pile a latch started on (it never moves on to another).
+		local locked: Instance? = nil
 		task.spawn(function()
 			while holding and mine == generation do
 				local target = if CarryServiceClient:isCarrying() or not selected() then nil else aimedPile(lastTarget)
+				if target ~= nil and not VacuumLatchRules.allows(VacuumConstants.LATCH, locked, target) then
+					target = nil
+				end
 				if target ~= nil then
 					lastTarget = target
+					locked = locked or target
+					hadTarget = true
 					missed = false
 					InteractionServiceClient:startChannel(target)
 				elseif
@@ -243,6 +279,18 @@ local VacuumServiceClient: VacuumServiceClient = {
 					lastTarget = nil
 					missed = false
 					InteractionServiceClient:stopChannel()
+					if
+						not VacuumLatchRules.keepWithoutTarget(
+							VacuumConstants.LATCH,
+							hadTarget,
+							os.clock() - startedAt,
+							VacuumConstants.LATCH_GRACE
+						)
+					then
+						-- Latched: the pile is clean or out of reach (or nothing was ever in reach); the next pile is a new press.
+						self:endVacuum()
+						return
+					end
 				end
 				task.wait(VacuumConstants.AIM_INTERVAL)
 			end
@@ -250,8 +298,12 @@ local VacuumServiceClient: VacuumServiceClient = {
 	end,
 
 	endVacuum = function(_self)
+		local was = holding
 		holding = false
 		InteractionServiceClient:stopChannel()
+		if was then
+			changed:Fire(false)
+		end
 	end,
 
 	equipVacuum = function(_self)

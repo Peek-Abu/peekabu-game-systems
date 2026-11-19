@@ -89,7 +89,15 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	local arc = ShiftHudViewModel.arcFor(math.min(viewport.X, viewport.Y))
 	local vacuuming = view ~= nil and view.primary == "VACUUM"
 	local carrying = me ~= nil and type(me[CarryConstants.PUBLIC_FIELD]) == "string"
-	-- Whether this widget started a vacuum hold that has not ended yet.
+	-- Whether the vacuum is on: the VACUUM button stays lit while a tap has it latched on.
+	local vacuumOn, setVacuumOn = React.useState(VacuumServiceClient:isVacuuming())
+	React.useEffect(function()
+		local connection = VacuumServiceClient.changed:Connect(setVacuumOn)
+		return function()
+			connection:Disconnect()
+		end
+	end, {})
+	-- Whether this widget started the vacuum (a tap latches it on, VacuumLatchRules; a second tap stops it).
 	local held = React.useRef(false)
 	local beginVacuum = React.useCallback(function()
 		if not VacuumServiceClient:equipVacuum() and carrying then
@@ -98,18 +106,23 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			return
 		end
 		held.current = true
-		VacuumServiceClient:beginVacuum()
+		VacuumServiceClient:pressVacuum()
 	end, { carrying })
-	local endVacuum = React.useCallback(function()
+	local releaseVacuum = React.useCallback(function()
+		if held.current then
+			VacuumServiceClient:releaseVacuum()
+		end
+	end, {})
+	local stopVacuum = React.useCallback(function()
 		if held.current then
 			held.current = false
 			VacuumServiceClient:endVacuum()
 		end
 	end, {})
-	-- A held VACUUM ends when the big button turns into THROW or the arc goes away (unmounting destroys a held button
-	-- before its InputEnded fires).
+	-- The vacuum this widget started ends when the big button turns into THROW or the arc goes away (unmounting destroys
+	-- a held button before its InputEnded fires).
 	React.useEffect(function()
-		return endVacuum
+		return stopVacuum
 	end, { vacuuming })
 	-- What the helper holds right now: the interaction prompt, the hiding prompt, or nothing.
 	local pressing = React.useRef("none")
@@ -183,9 +196,9 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			spot = arc.primary,
 			large = true,
 			available = view.primaryAvailable,
-			ready = false,
+			ready = vacuuming and vacuumOn,
 			onHoldBegin = if view.primaryAvailable and vacuuming then beginVacuum else nil,
-			onHoldEnd = if vacuuming then endVacuum else nil,
+			onHoldEnd = if vacuuming then releaseVacuum else nil,
 			onActivated = if vacuuming
 				then nil
 				else function()
