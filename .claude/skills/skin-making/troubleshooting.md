@@ -1,5 +1,26 @@
 # Troubleshooting: symptom -> first check -> fix
 
+### Sleeve patterns that slide or stop matching the concept (Backstage Cappy)
+
+A procedural shader reading Geometry.Position reads the DEFORMED position. In the manual pose preview this made
+the left sleeve's diamonds slide, change shape and appear as unrelated cream patches. Use explicit cloth UVs or
+another stable rest-coordinate attribute; check rest and bent-arm views from the same angles as the reference.
+Wrap a repeated sleeve pattern around its intended circumference rather than leaving the visible back blank.
+Do not enlarge the elbow into a balloon solely to improve a contact count: judge the outline against the concept.
+
+For multiple animated anchors in an upload-free physics prototype, parent each chain root to its own animated
+native anchor and follow the actual outfit's LowerTorso root space. Putting the same body motion directly on a
+flat simulated root can disagree with SmartBone's cached parent/rest transforms. Record actual solver transforms
+and compare physics-only deviation against the moving native anchor; raw mesh-root-space movement includes
+the character animation and is not a cloth swing/flip measurement. Keep a test export with actual deform bones;
+vertex groups and a JSON manifest alone are not an FBX physics rig.
+
+SmartBone aligns a bone's UpVector with its child link. Orient prototype bind frames along the chain rather than
+giving every bone identity rotation; otherwise a downward tail can rotate at rest. Place every chain joint on
+the actual garment and stop at that angle's real hem. Backstage's constant fallback points for missing low
+vertices created zigzagging chains in empty space; fixing the surface placement reduced idle physics deviation
+from about .41 to .073 studs. Do not tune stiffness or colliders to conceal an invalid rest chain.
+
 ### Approved materials and production completeness (Bell Jester r17)
 
 Keep the reviewed material route during installation. TextureID + Fabric/Metal and SurfaceAppearance-only are not
