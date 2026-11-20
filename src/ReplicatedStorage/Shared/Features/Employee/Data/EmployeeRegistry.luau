@@ -228,20 +228,18 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				facesFolder = nil,
 				accessories = {},
 			},
-			-- Gloom Locker Epic (Cosmetic Pippa.BellJester), a Gloom Carnival skin: a built jester outfit as one skinned
-			-- outfit over her own body (harlequin romper with puffed legs and cream frills, a scalloped capelet with a gold
-			-- cord and bells, a neck ruffle, cuffs, slim boots with curled toes and bells; her own tail copied). The outfit
-			-- hides her torso and feet itself (its HideParts), so nothing is listed in hidePieces and a place without the
-			-- art leaves her Classic. Fitted gear: a red bow on the chest (UpperTorso). One look, no styles; her fur keeps
-			-- its palette. The bells and the bow cast no shadow (their shadows read as smudges on the cream diamonds).
-			-- Icey Labs: outfit 105264153238774, bow 126687199561393. Built in
-			-- characters/skins/release/gloom_carnival/r2_pippa (p7_cut.py, p7_export.py, p7_bow.py).
+			-- The approved Bell Jester remake keeps this existing cosmetic identity. Its continuous romper, fitted
+			-- capelet and curled shoes include Pippa's original bow/bell and visible native neck/tail regions, so it
+			-- needs no separate bow gear or preview script. The owner removed both shoe bells and their hangers.
+			-- HideParts belongs to the outfit; a place without the art leaves her Classic. One look, no styles.
+			-- Icey Labs model138544683982705 revision6; source characters/skins/remakes-skill-2026-11-17/bell-jester.
+			-- The previous PippaBellJester outfit and PippaBellJesterBow gear remain in both places for rollback.
 			BellJester = {
 				name = "BellJester",
 				paletteTextureId = nil,
 				facesFolder = nil,
-				accessories = { "PippaBellJesterBow" },
-				outfit = "PippaBellJester",
+				accessories = {},
+				outfit = "PippaBellJesterRemake",
 			},
 			-- Legendary (Cosmetic Pippa.BubbleBuddy): the skinned raincoat, goggles and boots outfit, plus the bubble wand and
 			-- duck float the Bubbles emote shows (characters/skins/runtime-candidates-2026-10-26/bubble_buddy/v2-2026-10-28).

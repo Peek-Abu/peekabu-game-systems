@@ -48,11 +48,12 @@ return function()
 			end
 		end)
 
-		it("gives Pippa a Bell Jester skin: its romper outfit and bow, her own fur kept", function()
+		it("gives Pippa the approved Bell Jester remake with its native bow integrated", function()
 			local skin = EmployeeRegistry.get("Pippa").skins.BellJester
 			expect(skin).to.be.ok()
-			expect(skin.outfit).to.equal("PippaBellJester")
-			expect(table.concat(skin.accessories, ",")).to.equal("PippaBellJesterBow")
+			expect(skin.outfit).to.equal("PippaBellJesterRemake")
+			-- The remake contains her original bow and bell, so separate gear would duplicate them.
+			expect(#skin.accessories).to.equal(0)
 			-- The outfit covers what it replaces itself (its HideParts), so without the art she stays Classic.
 			expect(skin.hidePieces).never.to.be.ok()
 			-- One look: no styles, and her fur keeps its own palette.
