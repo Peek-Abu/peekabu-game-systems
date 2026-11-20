@@ -8,6 +8,11 @@ shirt/yoke/collar, a higher fitted coat neckline and a small bow-seat adjustment
 is preserved. Upper collar weights blend toward Head, lower rows retain torso/hip support; all867current keys
 were checked for head contact. A low neckline passing the head gate is not proof of a reference-matching fit.
 
+R11 owner correction: raising the neckline is not the same as placing the COLLAR AND NOTCHED LAPELS at the top.
+Measure the collar point, notch, main lapel point and bow as one composition against the reference. R10 filled the
+skin gap but left the lapel points low. R11 rebuilt the upper folds around the bow near the chin; it did not just
+raise a shirt band again. Relocate the actual lapel chains and recheck runtime physics when those free points move.
+
 ### Same-colour checks, elbow folds and actual lapel tips (Backstage r08)
 
 Inspect the ACTUAL visible face assignments before dismissing a colour mismatch as lighting. Backstage r08's
