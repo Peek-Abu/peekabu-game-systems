@@ -2,9 +2,12 @@
 
 ### Same-colour checks, elbow folds and actual lapel tips (Backstage r08)
 
-Verify a suspected colour mismatch unlit before recolouring: sleeve and coat matched within one8-bit value here.
-For a two-colour pattern, a Non-Color mask mixing the same cloth RGB inputs removes duplicated colour/shader paths.
-Different facing normals still catch different light. Do not describe shading as a confirmed palette error.
+Inspect the ACTUAL visible face assignments before dismissing a colour mismatch as lighting. Backstage r08's
+unlit named-plum swatches matched, but that test compared the wrong coat surface:680 outward back faces used the
+darker LINING material. The owner correctly saw lighter sleeves at the shoulder. R09 corrected the outer-face
+assignments and checked the actual front/back garment unlit. Matching shader inputs alone does not prove that
+the outside uses those inputs. A Non-Color pattern mask can share the same cloth RGB, but does not repair wrong
+material indices. Check texture/normal paths and real face assignment before changing the palette.
 
 Covering a rounded elbow cap by shifting the ENTIRE bend past the joint made the inner crease look oversized.
 Check the actual hinge direction: here both elbows bend toward native -Y. A crease-aware weight field can keep
@@ -16,6 +19,9 @@ those points and on the gold edging, then use sleeve-volume colliders if the clo
 Broad positional masks can miss the actual end. Re-sweep piping around a changed centreline; independently
 warping tube vertices across a fold-selection boundary created fins. Cap/bevel sharp mitres rather than stretching
 them into blades. Seat buttons against a forward outer cloth face, not the thin closure rim that turns them sideways.
+The reference may place buttons on the OUTER PANELS, away from the opening/trim. Correct orientation at the rim
+is still wrong placement. Check their lateral location and edge clearance against the concept; Backstage r09
+moved both coat buttons outward about.09stud and left roughly.026stud beyond the button radius to the trim.
 
 ### Sleeve patterns that slide or stop matching the concept (Backstage Cappy)
 
