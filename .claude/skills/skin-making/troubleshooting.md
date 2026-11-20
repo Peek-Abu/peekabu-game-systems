@@ -1,5 +1,22 @@
 # Troubleshooting: symptom -> first check -> fix
 
+### Same-colour checks, elbow folds and actual lapel tips (Backstage r08)
+
+Verify a suspected colour mismatch unlit before recolouring: sleeve and coat matched within one8-bit value here.
+For a two-colour pattern, a Non-Color mask mixing the same cloth RGB inputs removes duplicated colour/shader paths.
+Different facing normals still catch different light. Do not describe shading as a confirmed palette error.
+
+Covering a rounded elbow cap by shifting the ENTIRE bend past the joint made the inner crease look oversized.
+Check the actual hinge direction: here both elbows bend toward native -Y. A crease-aware weight field can keep
+the inside near the real pivot and retain cap coverage at the rear. Treat this as a fitted garment choice, not
+universal constants. Also inspect nearby lapels: a fold wrapped under the arm can look like extra sleeve webbing.
+
+Lapel chains must reach the prominent FREE POINTS, not an arbitrary vertical strip of chest. Verify weights at
+those points and on the gold edging, then use sleeve-volume colliders if the cloth rests against clothing.
+Broad positional masks can miss the actual end. Re-sweep piping around a changed centreline; independently
+warping tube vertices across a fold-selection boundary created fins. Cap/bevel sharp mitres rather than stretching
+them into blades. Seat buttons against a forward outer cloth face, not the thin closure rim that turns them sideways.
+
 ### Sleeve patterns that slide or stop matching the concept (Backstage Cappy)
 
 A procedural shader reading Geometry.Position reads the DEFORMED position. In the manual pose preview this made
