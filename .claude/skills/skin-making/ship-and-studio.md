@@ -30,6 +30,16 @@ Every placing script (`place_remake.luau`, `place_tex.luau`, `place_v4.luau` in 
 `InsertService:LoadAsset(decalId)` -> the Decal's `Texture`. Put one SurfaceAppearance (ColorMap / NormalMap /
 RoughnessMap) on each MeshPart and clear `TextureID`.
 
+That is the PBR route, not a mandatory conversion of an already approved material setup. Preserve the reviewed
+shader/material path when installing it. Bell Jester's approved TextureID + Fabric/Metal setup remained that
+way in production; changing it to SurfaceAppearance-only during installation changed the appearance. Any new
+PBR route needs its own visual comparison. A successful fetch does not prove the right colour/material.
+
+Package everything the worn skin depends on. Exact exposed native regions lost through whole-part HideParts
+(Bell Jester neck/tail) must be included as normal production meshes or another supported production route.
+An EditableMesh patch that only exists in the preview script is not a shipped dependency. Preserve source
+visible geometry, UVs and weights; close hidden cut boundaries without remodeling the exposed body.
+
 **Fitted gear** (a hat, glasses, a bow; precedent `r2_pippa/tools/place_belljester.luau`): a Model named
 `<Employee><Skin><Piece>` under `...CleanupCrew.Accessories`, its parts Anchored, CanCollide / CanQuery / CanTouch
 false, `CastShadow` false for small shiny bits; `Model.WorldPivot` = the TEMPLATE's mount part CFrame
@@ -51,6 +61,9 @@ copy: run the placing script in each place instead of pasting.
    `Camera.Focus` (focus-radius systems like the tail spring stop without it), ScreenGuis hidden. Judge unlit AND in the
    game light.
 3. Check the shared poses with the skin on: vacuum hold, hide, sit, carry. Report clipping there; fixes stay generic.
+   Showcase all planned simulated cloth with physics ACTIVE: rest, walk/run, stop/settle, crouch and real jump/
+   landing, plus relevant clips. Capture normal-speed motion and views showing front/back clearance; record active
+   trees/chains and clipping/jitter/flip observations. Do this before owner handoff, not after a request for physics.
 4. Stop the Play, delete the temps, report what you removed.
 5. The owner tries `employeeoutfittest <OutfitModel>`. Every round ends with the exact command he types.
    `employeeoutfittest` only fits OUTFIT Models. For a gear-only skin (a hat, glasses) there is no test command: leave

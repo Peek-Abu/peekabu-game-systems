@@ -50,6 +50,8 @@ code file and the rarity ladder. Details: [gates.md](gates.md), [textures.md](te
 | One garment = one piece | Never cut a garment across meshes or body parts; never several overlapping pieces for one garment. |
 | One exact colour per plain cloth | Flat concept colour; texture detail varies around it, never shifts it. No AI paint on plain cloth. No contrasting band unless asked. |
 | Rigid props stay props | Props the owner liked (hat, flower, boots) are reused, not rebuilt. |
+| Deliberate prop construction | Shoes, bells, bows and ornaments need coherent silhouettes, real openings and convincing attachment points. A pile of intersecting blobs/tubes is a blockout, not a finished prop. See [footwear.md](footwear.md). |
+| Cloth motion is part of the skin | Decide moving vs rigid pieces during ideation. Build physics for the moving pieces and showcase it in Studio before handoff; never wait for the owner to request a separate physics pass. See [smartbone.md](smartbone.md). |
 | Ask before effects | No goo, drips or glow unless that skin's owner answer says so. No face on Gloom art. No 4-point sparkle star. |
 | Generic poses stay generic | Shared poses (hide, sit, vacuum, carry) never get per-character or per-skin fixes. A character's own clips may be edited. |
 | The owner approves each visual step | Section 8. Never mark anything done. |
@@ -66,10 +68,10 @@ PIECE, not per skin: Showstopper is a built robe + built bloomers/boots + a reus
 | A truly snug piece (bodysuit, tight shirt, leggings) the owner asks to be snug | One closed skinned shell grown from the real body (ray cast, ~0.03-0.05 clear; automatic weights work on it [8]), or Layered Clothing on the approved cages already on the templates [6]. It stays 3D only through what stands OFF it: raised emblems, belts, seams, cuffs and collars as real folds or rigid pieces, plus the texture round. Say on the plan page that snug alone read "SUPER 2d" [9] | automatic / rule weights, or cages | Painting emblems, lapels, toggles or trim onto it [9] |
 | Sleeves, trousers, bloomers, romper legs | **Closed lofts / puffed tubes riding their own limb** [11]; bands and cuffs are rings OF THE SAME MESH; several pieces of one garment unioned into one shell (textures.md); a ball round each hip keeps thigh tops covered in a crouch [11] | arm / leg parts, blend at elbow and knee; the layer under a skirt follows the thigh exactly as much as the skirt side | Loose rings (holes); height-cut sleeve weights (side gap) [8]; three overlapping pieces (seams) |
 | Lapels, collar, cuffs, trim, pockets | **A real fold of the same mesh**, standing off 0.15 (0.10 minimum at a tight spot), a notch where lapel meets collar; gold piping as ONE **mitred swept tube** per run, lifted 0.02 clear [11] | same as the cloth under it | Colour zones or painted lapels ("looks 2D"); fan-filled sheets; plain swept tubes (pinch at corners) or tubes + balls (beaded) [11] |
-| Capelet, short cape | A lined shell standing off ~0.30 front and back, side flare capped (~28 % of the stand-off over the arms, or it sticks out "like wings") [11]; swinging cape: [smartbone.md](smartbone.md) | UpperTorso (+ chains) | |
+| Capelet, short cape | A lined shell fitted to the actual supporting chest/back garment. Choose the gap from the concept and owner: a close cape starts near 0.06 inter-layer clearance PLUS its own lining thickness. Do not treat ~0.30 stand-off as a universal rule; it made Bell Jester float. Limit side flare over arms, seat the bow on the fitted cloth, then test swinging chains/colliders ([smartbone.md](smartbone.md)). | UpperTorso (+ chains) | Oversized rest shape held away by oversized colliders; using collision as a fitting method |
 | A layer over another (apron, waistcoat) | Its own closed piece standing off the cloth under it (>= 0.05; >= 0.06 if either one swings on SmartBone), copying that cloth's weights point by point, chains included. Not yet shipped (Grill Boss's apron was never judged): gate it hard | copied from below | |
 | Swinging cloth (skirt, tails, lapel fringe, cape) | SmartBone chains ON TOP of the weights: 8 chains round a full skirt, ~0.06 clear of any puff under it; pattern pieces hung by cloth sim give the rest shape [12]. Coat tails that should NOT swing: part of the coat surface, standing out clear of what is under them, weights chest + hips only (Backstage Cappy, passed) [11] | a share moves onto the chains | The simple tail spring with many chains ("twitch, clip, rumple") [12]; colliders bigger than what you see |
-| Boots, shoes | Built closed shapes; reuse THAT character's liked pair (another character's boots, e.g. Prickles' `r2_built.boots()`, are a shape start to rebuild on these legs); thick walls (feet must not speck through on a run) [props]; shaft on the shin, foot on the foot; the character's own legs show above them | shin + foot | Hiding legs to make boots fit ("why are his legs gone!?") [1]; AI boots [10] |
+| Boots, shoes | Built closed shapes with a coherent upper/vamp/toe, readable sole/heel appropriate to the design, a real opening and clean cuff. Reuse only after a CURRENT close-up quality comparison against the concept and the game's best existing footwear; old approval is not a quality exemption. Show front/side/underside and worn motion. Another character's good boots are a construction reference, never a reason to copy its styling. Thick walls; shaft on shin, foot on foot, own legs visible above. See [footwear.md](footwear.md). | shin + foot, controlled ankle blend | Disconnected primitive foot/curl/ankle blobs passed as finished footwear; hiding legs to make boots fit; unrepaired/generated boots passed without fit/quality review [10] |
 | Gloves, mittens | A closed shell grown from the hand (ray cast, ~0.02-0.03 clear), 100 % on the hand, cuff a ring of the same mesh; the hand is hidden only because the glove truly covers it (ask first: hands are base parts). Check prop grips and the vacuum hold with them on | 100 % hand | Bulky gloves that push held props or the vacuum grip off the paw |
 | Hat, crown, glasses, bow, ace card, earrings | Rigid **fitted gear** (`MountPart`) or a mesh inside the outfit at 100 % on its part; reuse a liked one; CastShadow off on small shiny bits; a piece that won't match the reference becomes its own prop [11] | 100 % one part | Accessory (no ScaleTo) [7]; moving or copying a base piece (flower, spines) into it [props]; quick kit props [2] |
 | Held / signature prop (Legendary) | Reuse first; else the Office two-pass procedure (scan texture, then a hand-built model baked with it; texture-pipeline skill); AI image-to-3D (TRELLIS, never Hunyuan3D for a shipped prop: licence) only for a one-off organic rigid shape, then repaired; hard-surface and thin pieces always hand-built; glued to the hand in clip space, shown by clip markers | Motor6D on the hand; lives in the outfit's `Props` (with a `Hand` attribute; worn ones add `Holster`), or `Assets.CleanupCrew.EmoteProps` as the fallback any skin can use; listed in `EmotePropRegistry` | fwjelaa / quick kit props [2]; AI surface left raw |
@@ -92,7 +94,10 @@ pose, front is -Y, its left is +X, 1 unit = 1 stud. Scripts: [scripts/](scripts/
 into your build folder and change paths, pieces and numbers).
 
 1. **Plan page first** (section 8): concept crop next to the plain character, every piece with its build from section
-   2, the rarity, what stays visible. Yes/no by piece name. Ask about effects and any contrasting bands.
+   2, the rarity, what stays visible, and its motion treatment (rigid, skinned, or simulated cloth). Propose the cape,
+   flaps, tails or other loose regions that should move; a focused ideation question is fine. Once agreed, implement
+   them as part of this skin, without another "now implement cloth physics" prompt. Explain intentionally rigid
+   regions. Ask about effects and any contrasting bands.
 2. **Blockout** (`ss_blockout.py`): size every piece from the concept (px per stud from the head width and height).
    Flat concept colours. Front, side and three-quarter. Shape answers before detail.
 3. **Reuse approved props** (old hat, built boots). Remake cloth, not liked props.
@@ -118,8 +123,10 @@ into your build folder and change paths, pieces and numbers).
 9. **Offline gates** (section 4). All pass before any Studio work.
 10. **Textures** ([textures.md](textures.md)): real UVs + colour / normal / roughness maps before it ships. Judge unlit,
     neutral, then warm depot light.
-11. **Ship** ([ship-and-studio.md](ship-and-studio.md)): test asset, place in both places, engine check with a test
-    character, the owner's `employeeoutfittest`, then registration on his OK.
+11. **Cloth and Studio showcase**: implement the agreed moving regions using [smartbone.md](smartbone.md), then
+    demonstrate actual simulation in Studio, including movement, stops, crouch and real jumps. Held-chain renders
+    alone do not satisfy this step. Ship ([ship-and-studio.md](ship-and-studio.md)): test asset, place in both places,
+    engine check with a test character, the owner's `employeeoutfittest`, then registration on his OK.
 
 ## 4. Gates (every one, every round, before Studio)
 
@@ -137,6 +144,7 @@ Commands and real numbers: [gates.md](gates.md). Log each in `GATES.md`.
 | Concept side by side, same angle | shape matches; owner says yes |
 | After textures | the same numbers as the untextured build, plus the map checks in [textures.md](textures.md) |
 | In engine (after upload) | client fetch status `Success` for every mesh and map; shared poses (vacuum, hide, sit) looked at with the skin on; SmartBone measures if any |
+| Cloth showcase | Every planned moving region demonstrated with physics active in Studio at normal speed; rest silhouette preserved, stops settle, crouch/jumps checked for clipping, flipping and jitter. Intentionally rigid pieces named in the plan. No pending physics task hidden behind a static approval. |
 
 Validate any new gate by reproducing a known approved number first.
 
@@ -170,7 +178,7 @@ re-posing every clip that starts, ends or holds it, then overwriting them in pla
   same page each round.
 - **Yes/no questions by piece name** ("Hat: yes / no?", "Lapels stand off enough: yes / no?"), split into look, fit
   and rules. Never "approve 11 decisions".
-- **Order**: plan page -> blockout renders -> each round's renders + gate sheets next to the concept -> only after a
+- **Order**: plan page (including cloth-motion choices) -> blockout renders -> each round's renders + gate sheets next to the concept -> Studio cloth showcase with agreed physics active -> only after a
   test player looked right in Studio: `employeeoutfittest` in game -> his OK to make it the real skin -> his real-play
   check. **He is never the first to see it in game.**
 - Kid-simple words, the plain answer first. Real numbers, before/after, from the same angle.
@@ -183,6 +191,10 @@ Full recipe: [smartbone.md](smartbone.md). SmartBone 2 is in the game (`wally.to
 outfit opts in by attributes. Chains ride ON TOP of the weights; joints on the cloth surface; the outfit's own
 colliders the size of what you see, sized against bone heads; `TailBoneLift` 0.15 + shared cap 0.05 so the hem never
 flips; soft settings stiffness 0.35, elasticity 4, damping 0.18, bend 35. Gate in engine per move.
+
+**Implement it during the skin work, not as an owner-requested follow-up.** Put motion choices on the ideation page;
+build and showcase the agreed simulated regions before asking for the final worn-skin approval. Not every material
+needs simulation: retain deliberate rigid construction, but do not silently classify loose cloth as rigid to skip work.
 
 **Plan for it at build time, not after:** SmartBone moves only the joints, so the cloth BETWEEN two chains is a
 straight span that cuts into anything round under it. A new swinging skirt gets **8 chains around** (not 6) and **about

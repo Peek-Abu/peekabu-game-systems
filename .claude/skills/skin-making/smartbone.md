@@ -3,6 +3,22 @@
 Only for cloth that should SWING. Stiff coat tails are part of the coat surface with chest + hips weights
 ([SKILL.md](SKILL.md) section 2).
 
+## Required planning and Studio showcase
+
+Cloth motion belongs to the skin deliverable, not a separate task the owner must discover and request. During
+ideation, list each cape, skirt, tail, lapel/flap or loose trim region, whether it should move, and how. Asking
+"Should the cape and front flaps swing while the bow stays rigid?" is appropriate at that stage. Once settled,
+build the chains, weights and colliders during the skin work. Deliberately rigid construction remains valid;
+explain that choice rather than quietly skipping physics.
+
+Before the final skin handoff, show the actual imported/worn model in Studio with simulation active, at normal
+speed: rest -> walk/run -> stop/settle, crouch, real jump/landing, and relevant fidget/emote/shared holds. Include
+front and side/back views that reveal the affected cloth. Record settings, active trees/chains, movement and
+clipping/jitter/flip observations in the ledger. The owner should be reviewing working cloth, not being asked
+to approve a static skin with physics left for later. A held-chain pose gate or an offline drape is useful
+preparation but does not prove the runtime physics. Preserve the agreed rest silhouette; physics is not a
+replacement for fitting the garment.
+
 Tested on Showstopper Prickles, rounds 1-4 (2026-11-17). Round 3 shipped as `PricklesShowstopperV3` (owner: "good
 enough especially for kids"); round 4 + per-bone ceilings ships as `PricklesShowstopperV4` (owner: "Yes its good
 enough!"). **Round 4 (bones on the cloth surface) + `TailBoneLift` is the recipe for every new skin**: build steps
@@ -16,6 +32,12 @@ below, then the last two sections. Check `EmployeeRegistry` for which outfit is 
 - **Chains ride ON TOP of the shipped weights.** Never replace the thigh-follow weights that keep crouch clean. Only a
   share of each point's weight moves onto the chains (see "Weights").
 - It does not fix clipping by itself. SmartBone pushes **bones** away from colliders, not the cloth between them.
+
+## Close-fitting cape or lapel (owner correction, Bell Jester 2026-11-18)
+
+The owner wanted the bow/front flap and back cape to rest closer to Pippa. A universal .30-stud stand-off made it float. First fit the actual rest shape over the supporting garment: for the tested .035 lining, start near .095 outer-surface distance to leave .06 real layer clearance. Preserve thickness by applying the SAME displacement field to outer and inner walls; projecting both independently to the same radius collapses the lining. Keep neckline/head clearance and shoulders appropriate to the concept. Reseat the bow and bell against that fitted surface.
+
+Then size chest/back/arm colliders to the visible supporting volume and place chain points on the new cloth. One low torso capsule may miss the upper chest; split coverage according to the actual contour rather than growing a low capsule until it shoves the cape outward. A collider prevents inward penetration at bones; it does not attract floating cloth onto the body, and it does not guarantee clearance across the full span between chains. Compare the rest silhouette before/after physics, then check full-mesh run/fidget/crouch/jump contacts. Do not use enlarged colliders as the garment fitting method.
 
 ## Game wiring (code on game/cleanup-crew)
 

@@ -106,7 +106,11 @@ frame, no skin. Run it before blaming the outfit.
   SurfaceAppearance map ([troubleshooting.md](troubleshooting.md) for a Failure).
 - The skin on builder-made characters in the game's idle and light, unlit too; the live clips looped.
 - The shared poses with the skin on (vacuum hold, hide, sit, carry): report clipping; fixes stay generic.
-- SmartBone measures if it swings ([smartbone.md](smartbone.md) "Gates").
+- **Cloth showcase before handoff:** every region marked simulated in the ideation plan has physics active in
+  Studio. Show normal-speed rest -> walk/run -> stop/settle, crouch and real jump/landing, plus relevant clips,
+  from views exposing the front/back. Record active chains/trees, rest-shape drift, swing, jitter, flips and
+  full-surface clipping ([smartbone.md](smartbone.md) "Gates"). A held-chain pose pass is not a physics pass.
+  If a planned cloth region is still rigid, keep this gate open; do not wait for the owner to ask for physics.
 
 ## 9. Gate ledger
 
