@@ -108,8 +108,11 @@ into your build folder and change paths, pieces and numbers).
    motion comes later from SmartBone); solidify with rim -> a closed shell.
 5. **Close everything.** Sleeves one closed loft each; bloomer legs from hip INTO the boot shaft; one garment one shell.
    Recalculate every lofted normal OUTWARD (lofts come out inward; Roblox culls back faces).
-6. **Head clearance.** Every vertex 0.05 below the head's underside (ray up from below). Drop the neckline so a collar
-   or hood roll clears without squashing. Big toon heads hide the upper chest: put chest detail lower.
+6. **Head clearance AND coverage.** Keep the garment clear of the head (start near 0.05 below its underside), while
+   matching the reference's neck/shoulder coverage. Do not simply drop the neckline until a head gate passes and
+   leave a broad exposed torso/neck band. Fit a complete shirt yoke/collar where needed and test an appropriate
+   head-to-torso weight blend across the actual clips. Keep the character's neck/head geometry unchanged. Big toon
+   heads hide the upper chest: place readable detail accordingly, without lowering the whole neckline.
 7. **Weights** (`ss_export_remake.py`), limit 4, normalised:
    - robe top + lapels: UpperTorso, blending to LowerTorso at the waist;
    - skirt: hips + thighs. Hem: front panels follow their own thigh 0.95, sides 0.68, back 0.40, centre back split

@@ -1,5 +1,13 @@
 # Troubleshooting: symptom -> first check -> fix
 
+### Too much exposed neck/upper torso (Backstage r10)
+
+Compare the actual collar and shoulder coverage with the reference, not only head penetration counts. A front-only
+shirt ending at2.17 and a low wide coat opening left a large skin band. R10 uses a continuous full-circumference
+shirt/yoke/collar, a higher fitted coat neckline and a small bow-seat adjustment. Native neck/head/body geometry
+is preserved. Upper collar weights blend toward Head, lower rows retain torso/hip support; all867current keys
+were checked for head contact. A low neckline passing the head gate is not proof of a reference-matching fit.
+
 ### Same-colour checks, elbow folds and actual lapel tips (Backstage r08)
 
 Inspect the ACTUAL visible face assignments before dismissing a colour mismatch as lighting. Backstage r08's
