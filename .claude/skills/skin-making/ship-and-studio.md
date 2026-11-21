@@ -60,6 +60,10 @@ copy: run the placing script in each place instead of pasting.
    after any upload or PATCH: all `Success`. Captures with a `BindToRenderStep` camera override that also sets
    `Camera.Focus` (focus-radius systems like the tail spring stop without it), ScreenGuis hidden. Judge unlit AND in the
    game light.
+   Save resolved image IDs in the review fixture during Edit assembly and preload/check those IDs on the client.
+   In the r12 Studio build, reading `SurfaceAppearance.ColorMap` from a LocalScript failed with "lacking capability
+   Plugin" after the model and solver had loaded. Runtime map introspection is not a reliable way to gather the
+   asset list; the verified upload/assembly metadata already provides it.
 3. Check the shared poses with the skin on: vacuum hold, hide, sit, carry. Report clipping there; fixes stay generic.
    Showcase all planned simulated cloth with physics ACTIVE: rest, walk/run, stop/settle, crouch and real jump/
    landing, plus relevant clips. Capture normal-speed motion and views showing front/back clearance; record active
