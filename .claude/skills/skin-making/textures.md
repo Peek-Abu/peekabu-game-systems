@@ -77,6 +77,15 @@ gold band) alone; a gold mask (hue 25-60) keeps felt and high roughness off meta
 
 ## Colour judging
 
+- When adapting/copying shader graphs, copy output defaults as well as inputs: `ShaderNodeRGB` stores its colour
+  on its output socket. Copying inputs alone made Backstage's plain zones white while the linked sleeve pattern
+  stayed coloured. Inspect the actual colour map and measure plain-zone means against the source before lighting
+  review. Normal/roughness success does not establish colour correctness.
+- Keep original pattern/prop UV layers when adding bake UVs, and explicitly select each source layer in its shader.
+  Reacquire UV layer references after Edit-mode unwrap operations. If legacy mesh attribute storage crashes
+  Blender5.1, rebuild only that storage in a separate copy; preserve vertex/face order, groups, corner normals and
+  source UVs, and compare geometry/weight/UV hashes before accepting it.
+
 - Judge **unlit first** (client Lighting: Ambient and OutdoorAmbient white, Brightness 0, shadows, lights and post
   effects off): that is where you see whether pieces match (hat vs coat).
 - Then neutral light, then the game's warm depot light. Red-leaning colours drift there: plum #683256 read maroon;

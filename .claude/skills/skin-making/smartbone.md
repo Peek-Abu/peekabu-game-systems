@@ -189,6 +189,14 @@ the same rules over and prove each in engine:
 - **Pose gate offline** still holds the chains rigid to their root: it shows the weights alone. Clipping into the body
   for a cape (no layer under it) = cape points inside the body parts, not the robe-poke count.
 
+## Disposable runtime recordings
+
+SmartBone2 0.5.2 cleanup can leave its calling thread desynchronized: `BoneTree:Destroy()` and
+`ColliderObject:Destroy()` end with `task.desynchronize()`. Save/relay the recorded transforms before
+`physics:Destroy()`, then explicitly `task.synchronize()` before any final Instance mutation or error handler.
+Backstage r11 completed201 samples but its export failed when it fired a RemoteEvent after cleanup. A completed
+simulation is not a successfully collected recording; verify the artifact exists and parses before stopping Play.
+
 ## Failed / rejected
 
 - Six skirt chains on the game's simple two-tail spring (round 4 of the remake, before SmartBone): twitched, clipped,
