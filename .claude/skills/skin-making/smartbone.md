@@ -197,6 +197,10 @@ SmartBone2 0.5.2 cleanup can leave its calling thread desynchronized: `BoneTree:
 Backstage r11 completed201 samples but its export failed when it fired a RemoteEvent after cleanup. A completed
 simulation is not a successfully collected recording; verify the artifact exists and parses before stopping Play.
 
+Record phase elapsed time separately from animation clip time. A stop/settle phase may hold clip time at zero
+while physics continues; a replay indexed only by clip time shows its first frame repeatedly. Use the recorded
+phase clock to select frames and retain the held clip time for skeletal pose sampling.
+
 ## Failed / rejected
 
 - Six skirt chains on the game's simple two-tail spring (round 4 of the remake, before SmartBone): twitched, clipped,
